@@ -2,7 +2,7 @@
 
 Player requests 4 and 5 of v4: the army clash a bit slower plus critical strikes for army attacks and duels (§1–§3), and the duel's hold-back block, new medium attack, new controls, duel criticals and an 8-hit combo system with parry breaks (§4–§14).
 
-Read `DESIGN-V2.md` §1 (common rules), `DESIGN-V3.md` §3 (parry) and `CONTRACT.md` first. Where this file conflicts with them, this file wins for the systems it covers. Platform order: browser first (this repo), then the Unity port (`../sanguozhi2-unity`, §16.4). All visuals assume the v4 art direction from the art pilot (Lanternvale: stylized low-poly, cozy Ghibli-warm, flat-shaded props, ink outlines, soft painted light with warm lantern pools). Every effect below is specified in that style: brush-stroke trails, ink splashes, vermillion seal stamps, warm gold rather than neon.
+Read `DESIGN-V2.md` §1 (common rules), `DESIGN-V3.md` §3 (parry) and `CONTRACT.md` first. **`INTEGRATION.md`** wins over this file for everything that crosses a system boundary (the battle multiplier caps of `SG.Mods`, the all-in duel budget for gear and titles, the `DUEL_ITEM_EFFECTS` whitelist below, save and migration, the test matrix). Otherwise this file wins for the systems it covers. Platform order: browser first (this repo), then the Unity port (`../sanguozhi2-unity`, §16.4). All visuals assume the v4 art direction from the art pilot (Lanternvale: stylized low-poly, cozy Ghibli-warm, flat-shaded props, ink outlines, soft painted light with warm lantern pools). Every effect below is specified in that style: brush-stroke trails, ink splashes, vermillion seal stamps, warm gold rather than neon.
 
 Status: design spec only. No game code was changed. Supporting files are in `design-v4/combat/`:
 
@@ -20,8 +20,8 @@ Status: design spec only. No game code was changed. Supporting files are in `des
 |---|---|---|
 | Clash length, normal (real seconds incl. fades) | 3.96 s | **4.86 s** (+23%); crit adds +0.43 s |
 | Clash length, 快 mode | 2.18 s (×2) | **2.18 s** (×2.5, unchanged length) |
-| Clash, enemy turn / 委任 | ×1.5 → 2.77 s / ×1.8 → 2.38 s | ×1.7 → **3.02 s** / ×2.0 → **2.63 s** |
-| Army crit chance | — | 2% + 0.15%/武力 above 50 + 0.4%/level above 1 + formation (−2 … +4%) + gear/title (≤ +6%), cap 25%. War 100, L10, 锋矢 ≈ 17% |
+| Clash, enemy turn / 委任 | ×1.5 → 2.77 s / ×1.8 → 2.38 s | ×1.7 → **3.02 s** / ×2.0 → **2.63 s**; at speed ≥ 1.5 the music plays `clash-short` with its accent on `melee1` (contact + 1.62 s ÷ speed) instead of the full stinger (§1.4) |
+| Army crit chance | — | 2% + 0.15%/武力 above 50 + 0.4%/**老练 level** (`vetLevel`, non-battle exp at half) above 1 + formation (−2 … +4%) + gear/title (≤ +6%), cap 25%. War 100, L10, 锋矢 ≈ 17%. All-on measured: 7.0–8.2 % of attacks, attacker win −0.2 … −1.5 pp (three army sets, INTEGRATION §9.2) |
 | Army crit damage | — | ×1.5 attack damage, target morale −5 more; counter-attacks never crit |
 | Army crit balance (estimate, 300 AI battles) | — | crit rate 6.6% of attacks, attacker win +1.4 pp, avg days −0.3, avg attack damage +4% |
 | Duel attack buttons | J light, K heavy, L guard | **J 轻 · K 中 · L 重** (hold to charge); K+L 跃劈 overhead |
@@ -32,7 +32,8 @@ Status: design spec only. No game code was changed. Supporting files are in `des
 | String time, first press → finisher hit | — | 1.26–1.62 s (base clock; ÷ spd 0.9–1.32 in real time) |
 | Damage scaling by combo hit | none | 100, 100, 90, 80, 72, 65, 60, 60 %; finisher floor 75%, special floor 60% |
 | Parry inside a combo | hitstun parry only on light3, window 0.6 × parry window | from **step 3** of any string; window × 0.55 (L) / 0.65 (M) / 0.80 (H) of the 0.15–0.22 s parry window; one try per hitstun |
-| Duel crit | — | 3–7% by 武力 + gear/title (≤ +8%) + counter-hit +15%, finisher +10%, tip hit +8%, low HP +5%; cap 35%; ×1.5 |
+| Duel crit | — | 3–7% by 武力 + gear/title (≤ +3 pp, inside the all-in duel budget, INTEGRATION §8.3) + counter-hit +15%, finisher +10%, tip hit +8%, low HP +5%; cap 35%; ×1.5 |
+| Gear in the duel | — | only the `DUEL_ITEM_EFFECTS` whitelist (§3); one budget per fighter `dmg % + 0.4 × (HP + ability HP + guard HP) ≤ 6`; legendary set vs none at equal 武力 69–73 % (measured, INTEGRATION §8.3) |
 | Duel length, AI 刘备 mirror | 38.4 s, 0% time-outs | target 20–40 s, ≤ 10% time-outs |
 
 ---
@@ -92,11 +93,11 @@ Then every literal absolute time t is written `tlMap(<v3 expression>)`. The sold
 
 Mode values: `Clash.mode = 'fast'` sets `speed = 2.5` (was 2). `battle-controller.js doAttack`: `speed = autoPlayer ? 2.0 : watching() ? 1.7 : 1`. The cut-in (`cutIn`, 1.1 s ÷ speed, floor 0.7 s) is unchanged. In 快 it now floors at 0.7 s more often, which is fine.
 
-Audio: the `SG.Sfx.stinger('clash', { speed })` phrase was written for the v3 length. Pass `speed: this.speed * 3.96 / 4.86` so it still lands on contact, or have the music module provide a v4-length variant (owner: the music task, request 7).
+Audio (consolidated with AUDIO-V4 §A8): at speed 1 the ruler-suite stinger starts on contact and its bar-2 downbeat lands 1.60 s later, on `melee1` (1.62 s; AUDIO-V4 replaces the old `speed × 3.96 / 4.86` workaround). **At speed ≥ 1.5** (enemy turn 1.7, 委任 2.0, 快 2.5) the 3.2 s phrase cannot fit: play the 1-bar `clash-short` instead, started so that its accent (the downbeat) lands at **contact + 1.62 / speed** (`melee1` at that speed). With a crit, the `clash-crit` stab is placed at **`tlMap(contact + 0.36)` ÷ speed** (the middle of the crit beat, §2.6) at every speed.
 
 ### 1.5 Acceptance
 
-`tests/clash.html` measures real durations with the HUD clock and asserts: normal 4.86 ± 0.10 s, fast 2.18 ± 0.08 s, crit adds 0.43 ± 0.05 s at speed 1. The per-chunk casualty sum still equals `troopsBefore − troopsAfter`. Triangle and draw-call budgets are unchanged (≤ 350k, ≤ 120). The Unity port keeps `Clash.cs` constants in step (§16.4).
+`tests/clash.html` measures real durations with the HUD clock and asserts: normal 4.86 ± 0.10 s, fast 2.18 ± 0.08 s, crit adds 0.43 ± 0.05 s at speed 1; the stinger accent at speeds **1.7 and 2.0** lands within ±0.2 s of `melee1` (`clash-short`'s downbeat at contact + 1.62 / speed; the same tolerance as speed 1), and the `clash-crit` stab within ±0.2 s of `tlMap(contact + 0.36) / speed`. The per-chunk casualty sum still equals `troopsBefore − troopsAfter`. Triangle and draw-call budgets are unchanged (≤ 350k, ≤ 120). The Unity port keeps `Clash.cs` constants in step (§16.4).
 
 ---
 
@@ -109,7 +110,7 @@ Only the attacker's strike in `BattleModel.attack(a, t)` can crit. The counter-a
 ```
 p(a) = clamp( 0.02
             + 0.0015 × max(0, a.gen.war − 50)          // 武力 100 → +7.5%
-            + 0.004  × (lvl(a) − 1)                    // lvl = Progress.enabled ? gen.level : 1 → L10 +3.6%
+            + 0.004  × (lvl(a) − 1)                    // lvl = Progress.enabled ? vetLevel(gen) : 1 (ENGAGEMENT §4.4: non-battle exp at half) → L10 +3.6%
             + FORM_CRIT[a.formation]                   // 阵型，下表
             + min(0.06, gearCrit(a) + titleCrit(a))    // 装备 + 官爵（第四版其它规格提供，合计封顶 6%）
             + (a.morale >= 90 ? 0.01 : 0)
@@ -117,6 +118,8 @@ p(a) = clamp( 0.02
             0, 0.25)
 critK(a) = 1.5 + min(0.3, gearCritMul(a))             // 传说 / 专属兵器可加会心伤害，至多 ×1.8
 ```
+
+Implemented once as `SG.Mods.critChance(u)` / `SG.Mods.critK(u)` in `js/battle-math.js` (INTEGRATION §3.2); `BattleModel.critChanceOf(gen, formationIdx)` (the character-menu preview) calls the same function with the same `vetLevel`, and sim.js (1d) checks it (a general with domestic exp only gets half the level term); the gear and title terms are providers (`gearCrit`, `titleCrit`, `gearCritMul`). The crit factor is outside the ×1.60 battle-multiplier cap (it is a roll, not a modifier).
 
 | 阵型 | 方圆 | 长蛇 | 鱼鳞 | 鹤翼 | 偃月 | 锋矢 | 雁行 | 衡轭 |
 |---|---|---|---|---|---|---|---|---|
@@ -144,7 +147,7 @@ Effect of a crit:
 - `SG.Balance`: `CritBase 0.02, CritPerWar 0.0015, CritWarFrom 50, CritPerLevel 0.004, CritCap 0.25, CritK 1.5, CritMorale 5, CritGearCap 0.06, CritMulCap 0.3`.
 - `SG.Defs.formations[i].crit` gets the FORM_CRIT value. `formation()` gains an 8th parameter, default 0.
 - `BattleModel.prototype.critChance(u) → p` and the static `BattleModel.critChanceOf(gen, formationIdx) → p` (for the character menu, task 9).
-- The hooks are read only if present: `SG.Gear?.stat(gen, 'critArmy')`, `SG.Gear?.stat(gen, 'critMulArmy')`, `SG.Titles?.bonus(gen, 'critArmy')`. The ITEMS-V4 and TITLES-V4 specs must use these key names or tell integration their mapping. See open question Q3.
+- The gear and title numbers arrive as `SG.Mods` providers (`gearCrit` = ITEMS `critArmy` ≤ 0.04, `titleCrit` = TITLES `critArmy` ≤ 0.02, `gearCritMul` = ITEMS `critMulArmy` ≤ 0.30; INTEGRATION §3.3). Q3 is resolved.
 
 ### 2.4 AI
 
@@ -169,7 +172,7 @@ Effect of a crit:
 - A gold brush slash arc (ribbon mesh with a painted-stroke alpha texture, ink-edged) sweeps the defenders' front line. 5–8 front soldiers are blasted (`fallKind 'blast'`, as the special uses).
 - Warm gold screen flash at 0.35 alpha. A vermillion **seal stamp** `会心一击` uses the existing `.sg-clash-stamp` with a seal variant `.seal` (square red stamp, brush characters, 0.42 s pop).
 - A 35% share of the defender's loss is applied as a chunk of kind `crit` at the impact frame. It shows as a gold `−N!` number in the HUD. The rest is split as today.
-- Shake 1.3. SFX `crit` plus a short war-cry hook `SG.Voice?.say(gen, 'crit')` (voices task, request 12).
+- Shake 1.3. SFX `crit` plus a short war-cry hook `SG.Voice?.say(gen, 'crit')` (voices task, request 12); the music's `clash-crit` stab at `tlMap(contact + 0.36) / speed` (§1.4).
 - In 快 the same beat plays at speed 2.5 (+0.17 s). With the clash off, only the board effect plays.
 
 ### 2.7 Balance targets (tests/sim.js new section (1d))
@@ -197,7 +200,7 @@ Duel crits reward good play first and luck second. Random crits alone feel unfai
 
 ```
 p = 0.03 + 0.04 × clamp((war − 50) / 50, 0, 1)        // 武力 ≤ 50 → 3%，100 → 7%
-  + min(0.08, gear.critDuel + title.critDuel)          // SG.Gear?.stat(gen,'critDuel')，SG.Titles?.bonus(gen,'critDuel')
+  + min(0.03, gear.critDuel + title.critDuel)          // counted inside the all-in duel budget (INTEGRATION §8.3)
   + 0.15 if counter-hit (破绽: the defender was in startup / charge / parrywhiff — the v3 ×1.2 case)
   + 0.10 if the hit is a string finisher (§8.7)
   + 0.08 if 刃尖 tip hit: move is M, H, cH, ovh or a string M/H step and dx ≥ 0.85 × that move's reach
@@ -216,6 +219,22 @@ cap 0.35
   - SFX `crit`. A KO by crit uses the KO slow-motion with the seal stamp `会心`.
   - Log entry gets `crit: true`. The outcome stats add `crits`.
 - **Expected effect**: about 5% of neutral hits, about 20% of counter-hits, about 15% of finishers, so 6–10% of all unguarded hits and about 5–8% more total damage. Targets are in §15.
+
+**Item effects in the duel: the whitelist `DUEL_ITEM_EFFECTS`** (consolidation; INTEGRATION §8.2). `duel-game.js` reads only these item fields; `build.js check` rejects anything else, so no item can add a rule the duel does not know:
+
+| Field | Meaning | Limit |
+|---|---|---|
+| `duelWar` | gear 武力 ÷ 3 added to the duel's 武力 | ≤ +3 |
+| `dHp`, `dDmg`, `dGuard` | HP, damage %, guard reduction pp | inside the all-in budget `dmg % + 0.4 × (HP + ability HP + 0.5 × guard pp) ≤ 6` (gear HP ≤ 10, dmg ≤ 3 %, guard ≤ 6 pp); TITLES' `dmgDuel` and ENGAGEMENT's 宿敌 rival bonus join the dmg term (sum ≤ 6 %) |
+| `crit`, `critDmg` (duel) | crit chance / multiplier | ≤ +3 pp with titles; multiplier ≤ +0.30 |
+| `dParry` | `window` (≤ 0.01 s), `guardWindow` (≤ 0.02 s: a guard that early before a hit parries), `counterK` (≤ 1.7), `cdMinus` | |
+| `dArmor` | `{ on: 'heavyStart' | 'lightTaken', dmgK 0.5–0.7 }`: no hitstun, the hit still deals `dmgK` of its damage | never full immunity |
+| `dProc` | on-hit `knockdown` (only on full-charge heavies or with p < 1), `knockback`, `stun`, `burn` | |
+| `dCombo` | `{ bonus ≤ 3 HP }` on a string step or finisher, `lightBonus ≤ 0.04` | |
+| `dProjectile` | `{ hp ≤ 4 per projectile set }`, always parryable | |
+| `dRegen`, `dLifesteal` (≤ 0.10), `dCounter { k ≤ 1.7 }`, `dRage`, `dLowHp (≤ ×1.15)`, `dDmgK (≤ 0.03)`, `dSpd`, `dReach` | | ability HP of all of them together ≤ 4 per duel (measured by section (15)) |
+
+Removed in the consolidation: `unblockable`, `unparryable`, `dashUnblockable`, `dPerfectGuard` (→ `dParry.guardWindow`), and `noBreak` (diplomacy). Strings stay per general, never per weapon.
 
 ---
 
@@ -1059,6 +1078,14 @@ All rule code stays Node-testable (`Sim`, `AI`, `scriptBot`, `simulate` exported
 
 **(14) Performance.** `D.simulate` of an AI 吕布 mirror ≤ 15 ms (Node). The Sim step stays allocation-free (the v3 pattern).
 
+**(15) Items in the duel and weapon parity** (consolidation; the duel-bots section INTEGRATION §8 asks for). `--quick` runs 60 duels per cell, nightly 300:
+
+- **Best-in-slot sets** (from `items.json`, per rarity, through `SG.Gear.duelMods`) vs ungeared, equal 武力 60 / 80 / 95: every rarity ≤ 75 % (the v3-Sim estimate with the final budget: common 55–58, uncommon 66–70, rare 60–63, epic 67–76, legendary 69–73 %; `integration/duel-gear-estimate.js`).
+- **15-武力 gap**: 65 + legendary set vs 80 ungeared ≤ 30 % (estimate 23 %).
+- **Abilities**: each `DUEL_ITEM_EFFECTS` ability alone, AI mirror at war 80: HP-equivalent effect (damage dealt − taken vs the same fighter without it) ≤ 4 per duel; all of one fighter's abilities together ≤ 4.
+- **Whitelist**: a scripted item with any non-whitelisted duel field throws at load (`SG.Items.validate`).
+- **Weapon-type parity**: each duel key vs 长剑 sword, no gear, equal 武力 80: 45–55 %. The v3 Sim today: pole weapons 39–47 % (spear and snake 39.3, guandao 41.0, ji 43.0), 刀 58.0, 双刀 56.7, 短戟 55.3, gladius **65.0** — P1 retunes reach / pow per key until all pass. **After P1, the tournament's `WIN_SCALE` is re-measured once with the v4 duel and frozen** (TOURNAMENT §10.1, INTEGRATION §8.4).
+
 ### 15.3 tests/sim.js
 
 - **(1d)** army crits (§2.7 targets), paired off / on.
@@ -1118,7 +1145,7 @@ All rule code stays Node-testable (`Sim`, `AI`, `scriptBot`, `simulate` exported
 
 New states: `crouch`, `str` (with `strIdx`), `ovh`, `cL`, `cM`, `cH`, `airM`, `airH`, `thrown`. `guard` and `guardstun` reuse `low`. Standalone `L` and `M` reuse the `str` machinery with `seq = null` when they don't start a string, so that one code path does every "attack with a type".
 
-### 16.3 Save data (version bump owned by integration; older saves load with empty maps)
+### 16.3 Save data (save version 4, INTEGRATION §6.1; COMBAT migrates last with DOMESTIC-FX, §6.2; older saves load with empty maps)
 
 ```js
 G.comboSeen    = { [genName]: 0..255 }                 // §12.2；本势力武将不存
@@ -1145,7 +1172,7 @@ G.comboMastery = { [genName]: { s: 0..3, done: n, onBeat: n, beatPract: n } }   
 
 | Phase | Content | Gate |
 |---|---|---|
-| P1 rules | combos data + tool + tests; Sim / AI / bots; army crit model; clash TL constants | duel-bots v4, sim, combos ALL OK |
+| P1 rules | combos data + tool + tests; Sim / AI / bots incl. section (15) items and weapon parity; army crit model (`SG.Mods.critChance`); clash TL constants and the stinger rule | duel-bots v4 (all 15 sections), sim, combos ALL OK; then `WIN_SCALE` is frozen (INTEGRATION §8.4) |
 | P2 view | clips (with fallback mapping first), VFX, HUD, touch, controls card; clash crit beat; board `critHit` | DESIGN-V2 §1 budgets; no `console.error`; phone layout |
 | P3 menus | 武艺 tab content, 演武, knowledge marking, settings | character-menu task integration |
 | P4 Unity | §16.4 | Unity harnesses equal JS refs |
@@ -1165,13 +1192,13 @@ G.comboMastery = { [genName]: { s: 0..3, done: n, onBeat: n, beatPract: n } }   
 
 - **Q1.** Default keys: J 轻 / K 中 / L 重 (recommended) or keep v3's K = heavy and put medium on L (`v3习惯` preset)?
 - **Q2.** Mixups (lows, overheads, crouch-guard) on by default (recommended), or shelve for a later version (`MIXUPS = false`)?
-- **Q3.** Gear and title hooks: ITEMS-V4 and TITLES-V4 must expose `critArmy`, `critMulArmy`, `critDuel`, `critMulDuel` with the caps here (gear + title ≤ +6% army, ≤ +8% duel, crit multiplier ≤ +0.3). Do legendary or unique weapons also change duel numbers (reach, damage, parry window)? If so, route them through one `SG.Gear.duelMods(gen)` with caps (proposed: reachK ≤ +5%, damage ≤ +6%, parry window ≤ +0.02 s). Strings themselves stay per general, never per weapon.
+- **Q3.** ~~Gear and title hooks~~ — resolved in the consolidation: army crit through `SG.Mods` providers (gear + title ≤ +6 %, multiplier ≤ +0.3); duel numbers through one `SG.Gear.duelMods(gen)` limited to the `DUEL_ITEM_EFFECTS` whitelist (§3) and the all-in budget (INTEGRATION §8.3: damage ≤ 3 %, parry window ≤ +0.01 s, reach ≤ +5 %). Strings stay per general, never per weapon.
 - **Q4.** Should a ruler's unique weapon (taken by slaying the ruler) also teach the finisher's VFX to the new owner? Proposed: VFX only, the string stays the wielder's own.
 - **Q5.** Low-武力 generals: all get 8-step strings (proposed). Alternative: war < 40 gets 6 steps (finisher at 6).
 - **Q6.** Should AI knowledge persist across battles in the save (AI "studies" famous generals)? Proposed: no; per battle and per tournament only.
 - **Q7.** Enemy-turn clash speed 1.7 and 委任 2.0: do they feel right with the slower clash? Playtest.
 - **Q8.** Gamepad (Gamepad API) mapping as a follow-up (□ 轻, △ 中, ○ 重, R1 格开, R2 绝技, stick back = guard)?
-- **Q9.** Do any titles grant "guard crush at 4 blocked steps" or similar string perks? Proposed: no rule-changing title perks in duels, only the capped crit and damage numbers, to keep the duel readable.
+- **Q9.** ~~Rule-changing title perks in duels~~ — resolved: none (TITLES §7.5); titles add only crit and damage inside the duel budget.
 
 ---
 

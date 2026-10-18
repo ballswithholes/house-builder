@@ -1,0 +1,5 @@
+== tactical classic: year-8 all-on armies from 8 campaigns, 480 battles per mode (gear, titles, bonds, crits, AP; sim.js (7g) style)
+  v4 battle effects off     : attacker win 45.6%, days 10.2, def/atk losses 1.12, troops lost per battle 3785, crit rate 0.0%
+  v4 battle effects on      : attacker win 45.4%, days 9.8, def/atk losses 1.11, troops lost per battle 3783, crit rate 7.0%
+  v4 battle effects onNoCrit: attacker win 45.4%, days 9.9, def/atk losses 1.11, troops lost per battle 3761, crit rate 0.0%
+  shift on − off -0.2 pp (target ≤ 4); damage per battle on / off ×0.999 (target ≤ 1.35)

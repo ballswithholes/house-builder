@@ -97,7 +97,7 @@ const CULTURE_LINGUA = {
 const SAKA_VOICE = { khotan: 1, kashgar: 1 };
 
 // ------------------------------------------------------------ cue catalogue --
-// who: gen (the acting general) · ruler · target (the other side) · any
+// who: gen (the acting general) · ruler · target (the other side) · any · herald / merchant (PROFILES, SG.Voice.profile)
 // pri: 3 critical (never dropped) · 2 important · 1 routine (dropped when busy / rate-limited)
 // fb: fallback cue when a lingua lacks this one; '~x' = procedural cry of kind x
 const CUES = {
@@ -187,6 +187,52 @@ const CUES = {
   'duel.guardcrush': { who: 'gen', pri: 2, fb: 'crit', zh: ['破！'], en: 'Break!' },
   'duel.finisher':   { who: 'gen', pri: 3, fb: 'special', zh: ['到此为止！'], en: 'This ends now!' },
   'duel.crit':       { who: 'gen', pri: 2, fb: 'crit', zh: ['着！'], en: 'Hit!' },
+  // ---- consolidation (INTEGRATION §10.2): every cue proposed by the nine specs, merged here with fallbacks ----
+  // TOURNAMENT §9.10
+  'tourney.open':     { who: 'ruler', pri: 3, fb: 'attack', zh: ['群雄毕至，比武开始！'], en: 'The heroes are gathered: let the contest begin!' },
+  'tourney.award':    { who: 'ruler', pri: 3, fb: 'grant', zh: ['天下第一，实至名归！'], en: 'First under heaven, and well deserved!' },
+  'tourney.lose':     { who: 'gen', pri: 1, fb: 'miss', zh: ['技不如人……'], en: 'Outmatched…' },
+  // UI-V4 §14.3 (merchant / herald speak through SG.Voice.profile, §B4)
+  'ui.generalsOpen':  { who: 'ruler', pri: 1, fb: 'ack', zh: ['众将何在？', '诸君听令！'], en: 'Where are my generals?' },
+  'ui.titleBoard':    { who: 'ruler', pri: 1, fb: 'grant', zh: ['论功行赏！'], en: 'Reward by merit!' },
+  'ui.shopOpen':      { who: 'merchant', pri: 1, fb: 'ack', zh: ['客官里面请！', '新到的好货！'], en: 'Come in, come in! Fresh goods!' },
+  'ui.save':          { who: 'gen', pri: 1, fb: 'ack', zh: ['已记录在案。'], en: 'It is recorded.' },
+  'ui.tourneyAnnounce': { who: 'herald', pri: 2, fb: 'tourney.open', zh: ['天下英雄，会于平乐！'], en: 'Heroes of the realm, gather at Pingle!', tpl: { city: '天下英雄，会于{city}！' } },
+  'ui.monthStart':    { who: 'ruler', pri: 1, fb: 'ack', zh: ['新的一月，诸事待理。'], en: 'A new month; much to do.' },
+  // ENGAGEMENT §16.5
+  'evt.card.nature':  { who: 'gen', pri: 1, fb: 'ack', zh: ['天有异象，请主公定夺。'], en: 'Heaven sends a sign. Your decision, my lord.' },
+  'evt.card.society': { who: 'gen', pri: 1, fb: 'ack', zh: ['城中有事，请主公定夺。'], en: 'Trouble in the city. What are your orders?' },
+  'evt.card.court':   { who: 'gen', pri: 1, fb: 'ack', zh: ['朝中有议，请主公裁决。'], en: 'The court awaits your ruling.' },
+  'evt.card.people':  { who: 'gen', pri: 1, fb: 'ack', zh: ['有人求见主公。'], en: 'Someone seeks an audience, my lord.' },
+  'evt.card.global':  { who: 'gen', pri: 2, fb: 'ack', zh: ['天下大势有变！'], en: 'The tide of the realm is turning!' },
+  'evt.choice.good':  { who: 'gen', pri: 1, fb: 'great', zh: ['此事办妥了！'], en: 'It is settled well!' },
+  'evt.choice.bad':   { who: 'gen', pri: 1, fb: 'miss', zh: ['事与愿违……'], en: 'It did not go as hoped…' },
+  'fest.open':        { who: 'ruler', pri: 2, fb: 'victory', zh: ['佳节同庆！', '与民同乐！'], en: 'Let us celebrate together!' },
+  'wenhui.win':       { who: 'gen', pri: 2, fb: 'great', zh: ['文章千古事！'], en: 'Writing endures a thousand ages!' },
+  'debate.stance.yinjing': { who: 'gen', pri: 1, fb: 'ack', zh: ['子曰——'], en: 'The Master said—' },
+  'debate.stance.sheyu':   { who: 'gen', pri: 1, fb: 'ack', zh: ['譬如——'], en: 'It is like—' },
+  'debate.stance.bonan':   { who: 'gen', pri: 1, fb: 'ack', zh: ['此言差矣！'], en: 'You are mistaken!' },
+  'oath.swear':       { who: 'gen', pri: 3, fb: 'thanks', zh: ['不求同年同月同日生，但愿同年同月同日死！'], en: 'Not born on the same day, but let us die on the same day!' },
+  'marriage.accept':  { who: 'target', pri: 2, fb: 'allyYes', zh: ['结秦晋之好！'], en: 'Let our houses be joined!' },
+  'submit.offer':     { who: 'target', pri: 3, fb: 'thanks', zh: ['愿举州相让。'], en: 'I offer you my province.' },
+  'victory.wangdao':  { who: 'ruler', pri: 3, fb: 'victory', zh: ['王道荡荡，天下归心！'], en: 'The Kingly Way prevails; all hearts turn to us!' },
+  // DOMESTIC-FX §5.18–§5.28 (ENGAGEMENT's commands and moments)
+  'cmd.build.start':  { who: 'gen', pri: 1, fb: 'work', zh: ['动工！'], en: 'Break ground!' },
+  'build.done':       { who: 'gen', pri: 2, fb: 'great', zh: ['大功落成！'], en: 'The work is complete!' },
+  'cmd.caravan.start': { who: 'gen', pri: 1, fb: 'move', zh: ['商队出发！'], en: 'The caravan sets out!' },
+  'caravan.return':   { who: 'gen', pri: 2, fb: 'great', zh: ['满载而归！'], en: 'Back with full loads!' },
+  'cmd.explore.start': { who: 'gen', pri: 1, fb: 'move', zh: ['探访名胜去！'], en: 'Off to explore!' },
+  'exped.find':       { who: 'gen', pri: 2, fb: 'great', zh: ['有所发现！'], en: 'A discovery!' },
+  'cmd.gift.start':   { who: 'gen', pri: 1, fb: 'work', zh: ['奉上薄礼。'], en: 'We present a humble gift.' },
+  'cmd.marriage.start': { who: 'ruler', pri: 2, fb: 'allyYes', zh: ['愿结姻亲。'], en: 'Let us be joined by marriage.' },
+  'cmd.tribute.start': { who: 'gen', pri: 1, fb: 'work', zh: ['岁贡已备。'], en: 'The tribute is ready.' },
+  'tribute.accept':   { who: 'target', pri: 2, fb: 'allyYes', zh: ['贡礼收下了。'], en: 'Your tribute is accepted.' },
+  'hostage.depart':   { who: 'gen', pri: 2, fb: 'move', zh: ['臣此去，必不辱命。'], en: 'I go, and will not disgrace you.' },
+  'hostage.return':   { who: 'gen', pri: 2, fb: 'thanks', zh: ['臣回来了！'], en: 'I have returned!' },
+  'cmd.truce.start':  { who: 'gen', pri: 1, fb: 'ack', zh: ['愿息干戈。'], en: 'Let the weapons rest.' },
+  'truce.accept':     { who: 'target', pri: 2, fb: 'allyYes', zh: ['暂且罢兵。'], en: 'We lay down arms for now.' },
+  'cmd.tradepact.start': { who: 'gen', pri: 1, fb: 'work', zh: ['互通有无。'], en: 'Let us trade freely.' },
+  'mission.done':     { who: 'ruler', pri: 2, fb: 'great', zh: ['国策已成！'], en: 'Our policy is achieved!' },
   // efforts are always procedural (§B5): light / heavy / hurt / ko / breath — no lines
 };
 
@@ -221,6 +267,30 @@ const T = {
   ber: ['Ih, agellid!', 'Ih!', '~shout', '~shout', '~hm', 'Ɣer zdat!', 'Ɣer zdat!', 'Agellid!', '~sigh', 'Ɣer zdat!', '~shout', '~shout', '~roar', 'Agellid! Agellid!', '~sigh', '~roar', 'Azul.', 'Ala!', 'Agellid!', 'Tanemmirt, agellid!'],
   os:  ['Хорз, æлдар!', 'Хорз!', '~shout', '~shout', '~hm', 'Размæ!', 'Размæ!', 'Хорз!', '~sigh', 'Размæ!', '~shout', '~shout', '~roar', 'Уæлахиз!', '~sigh', '~roar', 'Хорз.', 'Нæ!', 'Æлдар!', 'Бузныг, æлдар!'],
 };
+// ------------------------------------------------------------ start / great cues in the 14 A linguas (consolidation) --
+// INTEGRATION §10.2: the 26 'start' and 'great' cues players hear most, translated for every A lingua (zh is the master).
+// Machine-assisted drafts written for this spec; they pass the ASR gate of §B7 before shipping and want native review (Q).
+const EXT_IDS = ["cmd.develop.start", "cmd.develop.great", "cmd.industry.start", "cmd.industry.great", "cmd.town.start", "cmd.town.great", "cmd.recruit.great", "cmd.train.great", "cmd.search.start", "cmd.move.start", "cmd.transport.start", "cmd.attack.start", "cmd.build.start", "build.done", "cmd.caravan.start", "caravan.return", "cmd.explore.start", "exped.find", "cmd.gift.start", "cmd.marriage.start", "cmd.truce.start", "cmd.tradepact.start", "mission.done", "tourney.open", "tourney.award", "tourney.win"];
+const EXT = {
+  ja: ["新田を拓け！", "五穀豊穣！", "炉に火を入れよ！", "百錬の鋼なり！", "町を整えよ！", "町が賑わっております！", "万民が集いました！", "百戦錬磨の軍なり！", "人材を探してまいります。", "移駐せよ！", "兵糧を運べ！", "出陣！", "普請を始めよ！", "見事に落成いたしました！", "隊商、出立！", "満載で戻りました！", "名所を訪ねてまいります！", "何か見つけましたぞ！", "粗品を献上いたします。", "縁組を結びましょう。", "矛を収めましょう。", "互いに交易いたしましょう。", "国策、成就いたしました！", "群雄集えり、試合を始めよ！", "天下一、まことに見事！", "天下一なり！"],
+  ko: ["새 밭을 일구어라!", "오곡이 풍성하옵니다!", "화로에 불을 지펴라!", "백 번 단련한 강철이다!", "마을을 정비하라!", "저잣거리가 번성하옵니다!", "만백성이 모여들었습니다!", "백전의 군대로다!", "인재를 찾아 나서겠습니다.", "이동하라!", "군량을 호송하라!", "출정하라!", "공사를 시작하라!", "공사가 완공되었습니다!", "상단, 출발하라!", "가득 싣고 돌아왔습니다!", "명승지를 탐방하러 가겠습니다!", "무언가를 찾아냈습니다!", "약소한 예물을 바칩니다.", "혼인으로 맺어집시다.", "창을 거둡시다.", "서로 교역합시다.", "국책을 이루었습니다!", "영웅들이 모였다, 시합을 시작하라!", "천하제일, 그 이름에 걸맞도다!", "천하제일이다!"],
+  vi: ["Khai khẩn ruộng mới!", "Ngũ cốc được mùa!", "Đốt lò lên!", "Thép trăm lần tôi luyện!", "Sửa sang phố phường!", "Phố chợ phồn thịnh!", "Muôn dân quy phục!", "Đạo quân trăm trận!", "Thần đi tìm hiền tài.", "Chuyển quân!", "Áp tải lương thảo!", "Xuất chinh!", "Khởi công!", "Công trình đã hoàn thành!", "Đoàn buôn lên đường!", "Trở về đầy ắp hàng!", "Đi thám hiểm danh thắng!", "Có phát hiện rồi!", "Xin dâng lễ mọn.", "Xin kết thông gia.", "Xin tạm ngưng binh đao.", "Cùng nhau giao thương.", "Quốc sách đã thành!", "Anh hùng hội tụ, tỉ võ bắt đầu!", "Thiên hạ đệ nhất, thật xứng danh!", "Thiên hạ đệ nhất!"],
+  ms: ["Buka sawah baru!", "Panen melimpah!", "Nyalakan tungku!", "Baja seratus tempaan!", "Perbaiki kampung!", "Pasar ramai sekali!", "Rakyat berbondong-bondong datang!", "Pasukan seratus pertempuran!", "Hamba pergi mencari orang berbakat.", "Pindahkan pasukan!", "Kawal perbekalan!", "Berangkat perang!", "Mulai membangun!", "Bangunan telah selesai!", "Kafilah berangkat!", "Pulang dengan muatan penuh!", "Pergi menjelajah!", "Ada penemuan!", "Terimalah hadiah kecil ini.", "Mari bersatu lewat pernikahan.", "Mari letakkan senjata.", "Mari berdagang bersama.", "Kebijakan negara tercapai!", "Para pahlawan berkumpul, mulai bertanding!", "Nomor satu di bawah langit, sungguh layak!", "Nomor satu di bawah langit!"],
+  mn: ["Шинэ тариалан эхлүүл!", "Таван тариа арвин!", "Зуухаа асаа!", "Зуун удаа хатуужсан ган!", "Хотоо засварла!", "Зах худалдаа цэцэглэж байна!", "Түмэн олон нэгдэв!", "Зуун тулааны цэрэг!", "Хүн олохоор явъя.", "Нүүлгэ!", "Хүнс тээвэрлэ!", "Аян дайнд мордъё!", "Барилга эхлүүл!", "Барилга дууслаа!", "Жингийн цуваа мордлоо!", "Дүүрэн ачаатай ирлээ!", "Газар судлахаар явъя!", "Нэг юм оллоо!", "Өчүүхэн бэлэг өргөе.", "Ураг барилдъя.", "Зэвсгээ хураая.", "Харилцан худалдаа хийе.", "Төрийн бодлого биеллээ!", "Баатрууд цугларлаа, тэмцээн эхэлье!", "Тэнгэр доорх нэгдүгээр, үнэхээр зохистой!", "Тэнгэр доорх нэгдүгээр!"],
+  kk: ["Жаңа егістік ашыңдар!", "Мол астық!", "Пешті жағыңдар!", "Жүз рет шыңдалған болат!", "Қаланы жөндеңдер!", "Базар гүлденді!", "Мың сан халық жиналды!", "Жүз шайқастың әскері!", "Дарын іздеп барамын.", "Көшіріңдер!", "Азықты жеткізіңдер!", "Жорыққа аттан!", "Құрылысты бастаңдар!", "Құрылыс аяқталды!", "Керуен жолға шықты!", "Толы жүкпен оралдық!", "Жер шолуға барамыз!", "Бір нәрсе таптық!", "Шағын сыйлық ұсынамыз.", "Құда болайық.", "Қаруды тастайық.", "Өзара сауда жасайық.", "Мемлекеттік саясат орындалды!", "Батырлар жиналды, сайыс басталсын!", "Аспан астындағы бірінші, лайықты!", "Аспан астындағы бірінші!"],
+  ta: ["புதிய நிலத்தை உழுங்கள்!", "அமோக விளைச்சல்!", "உலையை மூட்டுங்கள்!", "நூறு முறை வடித்த எஃகு!", "ஊரைச் சீரமையுங்கள்!", "சந்தை செழிக்கிறது!", "மக்கள் திரண்டு வந்தனர்!", "நூறு போர் கண்ட படை!", "அறிஞரைத் தேடிச் செல்கிறேன்.", "இடம் மாறுங்கள்!", "உணவைக் காவலுடன் கொண்டு செல்லுங்கள்!", "போருக்குப் புறப்படு!", "கட்டத் தொடங்குங்கள்!", "கட்டடம் நிறைவுற்றது!", "வணிகக் குழு புறப்பட்டது!", "நிறைந்த சுமையுடன் திரும்பினோம்!", "ஆராயச் செல்கிறோம்!", "ஒன்று கண்டுபிடித்தோம்!", "சிறு காணிக்கை அளிக்கிறோம்.", "மண உறவால் இணைவோம்.", "ஆயுதங்களை வைப்போம்.", "ஒருவருக்கொருவர் வணிகம் செய்வோம்.", "அரசுத் திட்டம் நிறைவேறியது!", "வீரர்கள் கூடினர், போட்டி தொடங்கட்டும்!", "உலகில் முதல்வன், தகுதியானவன்!", "உலகில் முதல்வன்!"],
+  si: ["අලුත් කුඹුරු සාරනු!", "අස්වැන්න සරුයි!", "උදුන දල්වනු!", "සිය වරක් තැළූ වානේ!", "නගරය අලුත්වැඩියා කරනු!", "වෙළඳපොළ සමෘද්ධයි!", "දහස් ගණන් ජනයා එක්වූහ!", "සිය සටන් ජයගත් හමුදාව!", "දක්ෂයන් සොයා යමි.", "ස්ථාන මාරු කරනු!", "ආහාර ආරක්ෂාවෙන් ගෙනයනු!", "යුද්ධයට පිටත් වෙමු!", "ඉදිකිරීම අරඹනු!", "ඉදිකිරීම නිම විය!", "වෙළඳ කණ්ඩායම පිටත් විය!", "පිරුණු බඩු සමඟ ආපසු ආවෙමු!", "ගවේෂණයට යමු!", "යමක් සොයාගත්තා!", "කුඩා තෑග්ගක් පිළිගන්වමු.", "විවාහයෙන් එක්වෙමු.", "ආයුධ බිම තබමු.", "එකිනෙකා සමඟ වෙළඳාම් කරමු.", "රාජ්‍ය ප්‍රතිපත්තිය සාර්ථකයි!", "වීරයෝ රැස් වූහ, තරඟය අරඹමු!", "ලොව පළමුවැන්නා, සුදුසුමයි!", "ලොව පළමුවැන්නා!"],
+  fa: ["زمین تازه را شخم بزنید!", "خرمن پربار!", "کوره‌ها را بیفروزید!", "پولادِ صدبار آبدیده!", "کوی‌ها را آباد کنید!", "بازار پررونق است!", "هزاران تن به ما پیوستند!", "سپاهِ صد نبرد!", "به جستجوی کاردانان می‌روم.", "جابه‌جا شوید!", "آذوقه را بدرقه کنید!", "به جنگ!", "ساختن را آغاز کنید!", "بنا به پایان رسید!", "کاروان به راه افتاد!", "با بار پر بازگشتیم!", "به کاوش می‌رویم!", "چیزی یافتیم!", "پیشکشی ناچیز تقدیم می‌کنیم.", "با پیوند زناشویی یکی شویم.", "جنگ‌افزار فرو نهیم.", "با هم داد و ستد کنیم.", "سیاست کشور به انجام رسید!", "پهلوانان گرد آمدند، نبرد آغاز شود!", "نخستینِ جهان، به‌راستی سزاوار!", "نخستینِ جهان!"],
+  ka: ["ახალი ყანა მოხნეთ!", "უხვი მოსავალი!", "ქურა აანთეთ!", "ასჯერ წრთობილი ფოლადი!", "ქალაქი მოაწესრიგეთ!", "ბაზარი ჰყვავის!", "ათასობით ხალხი შემოგვიერთდა!", "ასი ბრძოლის ლაშქარი!", "წავალ და ნიჭიერებს მოვძებნი.", "გადაადგილდით!", "სურსათი გააცილეთ!", "ლაშქრობაში!", "მშენებლობა დაიწყეთ!", "მშენებლობა დასრულდა!", "ქარავანი გაემგზავრა!", "სავსე ტვირთით დავბრუნდით!", "დასაზვერად მივდივართ!", "რაღაც ვიპოვეთ!", "მცირე ძღვენს მოგართმევთ.", "ქორწინებით დავუკავშირდეთ.", "იარაღი დავყაროთ.", "ერთმანეთთან ვივაჭროთ.", "სახელმწიფო საქმე აღსრულდა!", "გმირები შეიკრიბნენ, დაიწყოს შეჯიბრი!", "ქვეყნად პირველი, ღირსეულად!", "ქვეყნად პირველი!"],
+  ar: ["احرثوا أرضاً جديدة!", "حصاد وفير!", "أوقدوا الأفران!", "فولاذ سُقي مئة مرة!", "أصلحوا الأحياء!", "الأسواق مزدهرة!", "أقبل الناس بالآلاف!", "جيش المئة معركة!", "سأبحث عن الأكفاء.", "انتقلوا!", "احرسوا المؤن!", "إلى الحرب!", "ابدؤوا البناء!", "اكتمل البناء!", "انطلقت القافلة!", "عدنا بأحمال وافرة!", "نمضي للاستكشاف!", "وجدنا شيئاً!", "نقدّم هدية متواضعة.", "فلنتصاهر.", "فلنضع السلاح.", "فلنتبادل التجارة.", "تحققت سياسة الدولة!", "اجتمع الأبطال، فليبدأ النزال!", "الأول تحت السماء، وعن جدارة!", "الأول تحت السماء!"],
+  cy: ["Arddwch dir newydd!", "Cynhaeaf toreithiog!", "Cyneuwch y ffwrneisi!", "Dur a dymherwyd ganwaith!", "Trwsiwch y strydoedd!", "Mae'r farchnad yn ffynnu!", "Daeth miloedd atom!", "Byddin can brwydr!", "Af i chwilio am ddoniau.", "Symudwch!", "Hebryngwch y cyflenwadau!", "I ryfel!", "Dechreuwch adeiladu!", "Mae'r gwaith wedi'i orffen!", "Mae'r fintai fasnach ar ei ffordd!", "Yn ôl â llwythi llawn!", "Awn i archwilio!", "Darganfyddiad!", "Cyflwynwn rodd fechan.", "Unwn trwy briodas.", "Rhown yr arfau i lawr.", "Masnachwn â'n gilydd.", "Cyflawnwyd polisi'r deyrnas!", "Daeth yr arwyr ynghyd, dechreued yr ornest!", "Cyntaf dan y nef, a haeddiannol!", "Cyntaf dan y nef!"],
+  ga: ["Treabhaigí talamh nua!", "Fómhar flúirseach!", "Lasaigí na foirnéisí!", "Cruach a cruadhaíodh céad uair!", "Deisígí na sráideanna!", "Tá an margadh faoi bhláth!", "Tháinig na mílte chugainn!", "Arm céad cath!", "Rachaidh mé ar lorg daoine cumasacha.", "Bogaigí!", "Tionlacaigí na soláthairtí!", "Chun cogaidh!", "Tosaígí ag tógáil!", "Tá an obair críochnaithe!", "Tá an carbhán ar a bhealach!", "Ar ais le hualaí lána!", "Ar aghaidh linn ag taiscéaladh!", "Fuaireamar rud éigin!", "Bronnaimid bronntanas beag.", "Bímis aontaithe trí phósadh.", "Leagaimis na hairm.", "Déanaimis trádáil le chéile.", "Tá polasaí na ríochta curtha i gcrích!", "Tá na laochra bailithe, tosaíodh an comórtas!", "An chéad duine faoin spéir, go tuillte!", "An chéad duine faoin spéir!"],
+};
+// non-general speakers (SG.Voice.profile): a culture-default voice per lingua, a little slower and lower for the herald
+const PROFILES = {
+  herald:   { voice: ['m', 'm2', 'f'], rate: 0.92, pitch: -1.5, gain: 1.0, note: 'the tournament herald, ui.tourneyAnnounce' },
+  merchant: { voice: ['m2', 'm', 'f'], rate: 1.06, pitch: +1.0, gain: 0.95, note: 'the 胡商 / 海商 and the shopkeeper, ui.shopOpen' },
+};
 // ruler interjection overrides (title-words of the court language, spoken before / instead of the line)
 const RULER_TAG = {
   fa: { attack: 'شاهنشاه! به پیش!', victory: 'پیروز!' },        // Parthian / Middle Persian pērōz, šāhān šāh
@@ -250,6 +320,7 @@ for (const [lg, arr] of Object.entries(T)) {
   LINES[lg] = {};
   CORE.forEach((id, i) => { LINES[lg][id] = String(arr[i]).split('|'); });
 }
+for (const [lg, arr] of Object.entries(EXT)) EXT_IDS.forEach((id, i) => { (LINES[lg] = LINES[lg] || {})[id] = [arr[i]]; });
 
 // ------------------------------------------------------------ Node check --
 const SPEED = { zh: 4.6, ja: 7.5, ko: 5.5, vi: 4.4, ms: 5.5, mn: 11, kk: 11, pra: 11, sa: 11, ta: 11, si: 11, fa: 11, syc: 12, ka: 12, ar: 11, gez: 6, la: 13, grc: 12, got: 12, cy: 13, ga: 13, txb: 10, xbc: 10, xmr: 10, ber: 10, os: 10 };
@@ -272,6 +343,20 @@ function check() {
     if (!c.en) fails.push('cue ' + id + ' has no gloss');
   }
   for (const f of Object.values(FACTION_LINGUA)) if (!LINGUA[f]) fails.push('faction lingua unknown ' + f);
+  // consolidation: every A lingua has the 26 start / great cues; every cue id named in a spec exists (INTEGRATION §10.2)
+  for (const id of EXT_IDS) if (!CUES[id]) fails.push('extended cue missing in catalogue: ' + id);
+  for (const [lg, L] of Object.entries(LINGUA)) if (L.conf === 'A' && lg !== 'zh') for (const id of EXT_IDS) if (!LINES[lg][id] || !LINES[lg][id][0]) fails.push(`${lg}: start / great cue ${id} missing`);
+  for (const [who] of Object.entries(PROFILES)) for (const [lg, L] of Object.entries(LINGUA)) if (L.conf === 'A' && !PROFILES[who].voice.some(v => L.voices[v])) fails.push(`profile ${who}: no voice in ${lg}`);
+  for (const [id, c] of Object.entries(CUES)) if ((c.who === 'herald' || c.who === 'merchant') && !PROFILES[c.who]) fails.push('cue ' + id + ' needs profile ' + c.who);
+  const fs = require('fs'), path = require('path');
+  const NOT_CUES = /\.js$|^tourney\.(crowd|roar|drum3|gong|lots|seal|petals)$|^crowd\.|^item\.<|^(build\.start|caravan\.depart|exped\.depart|exped\.return)$|<id>\.great$/;
+  const EXPAND = { 'evt.card.<category>': ['nature', 'society', 'court', 'people', 'global'].map(k => 'evt.card.' + k), 'debate.stance.<id>': ['yinjing', 'sheyu', 'bonan'].map(k => 'debate.stance.' + k) };
+  const docs = fs.readdirSync(path.join(__dirname, '..')).filter(f => f.endsWith('.md')).map(f => path.join(__dirname, '..', f));
+  let refs = new Set();
+  for (const f of docs) for (const m of fs.readFileSync(f, 'utf8').matchAll(/`((?:cmd|ui|title|item|tourney|bat|clash|duel|evt|fest|wenhui|debate|oath|marriage|submit|victory|build|caravan|exped|tribute|truce|hostage|mission|news)\.[A-Za-z.<>_]+)`/g)) refs.add(m[1]);
+  let nRefs = 0;
+  for (const r of refs) { if (NOT_CUES.test(r)) continue; for (const id of EXPAND[r] || [r]) { nRefs++; if (!CUES[id]) fails.push('cue named in a spec but not in the catalogue: ' + id); } }
+  console.log(`spec cue references checked: ${nRefs} (in ${docs.length} docs)`);
   for (const [r, s] of Object.entries(SIGNATURE)) { const m = /^([a-z]+):/.exec(s); if (m && !LINGUA[m[1]]) fails.push('signature lingua unknown ' + r); }
   // clip count, duration, size (Opus 16 kbps mono ≈ 2.2 KB/s incl. container, measured §B6.4)
   let clips = 0, secs = 0, cries = 0;
@@ -295,5 +380,5 @@ function check() {
   console.log(fails.length ? 'FAIL\n  ' + fails.join('\n  ') : 'ALL OK');
   process.exitCode = fails.length ? 1 : 0;
 }
-module.exports = { LINGUA, FACTION_LINGUA, CULTURE_LINGUA, SAKA_VOICE, CUES, CORE, LINES, RULER_TAG, SIGNATURE };
+module.exports = { LINGUA, FACTION_LINGUA, CULTURE_LINGUA, SAKA_VOICE, CUES, CORE, EXT_IDS, LINES, PROFILES, RULER_TAG, SIGNATURE };
 if (require.main === module) check();

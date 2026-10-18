@@ -2,7 +2,7 @@
 
 Player request 14 of v4: **on the first month of each year a 武林大会. Each ruler sends up to 5 generals. A grand, epic stadium that features major historical buildings and places. The top 3 win prizes: 1st a random rare weapon / armour / skill / equipment, 2nd a lower tier, 3rd lower still; all three get gold.** This spec covers the event end to end: invitations and the host, who is sent (AI rules and the player's selection screen), the format (draw size, byes, seeding, rounds), how matches are fought (the v4 duel, played, watched or simulated), the rules (no deaths, light injuries), prizes and their weight in the item economy, the ceremony and presentation, and the **万国擂台**, a stadium built from landmarks of the period across the cultures of the game.
 
-Read `DESIGN-V2.md` §1 (common rules), `DESIGN-V3.md` §3–§4, `CONTRACT.md`, and the sibling v4 specs `UI-V4.md` (§12: the tournament's screen layouts), `COMBAT-V4.md` (the duel), `ITEMS.md` (§8.9 prize pools, §2.4 `duelWar`), `ENGAGEMENT.md` (§3.2 prestige, §5 calendar, §13 文会 and hooks), `TITLES.md`, `AUDIO-V4.md` (§A3 fanfares, §B cues) and `CITY-VIEW.md` (§3 culture families, §9 budgets) first. Where this file conflicts with them, this file wins for the systems it owns: the tournament's schedule, host, entry, format, match rules, injuries, reward amounts, records, the stadium and the tournament's presentation and music. The others win for their systems: ITEMS for which items exist and how they behave, COMBAT-V4 for duel mechanics, ENGAGEMENT for prestige and the calendar, AUDIO-V4 for voices and suites. Platform order: browser first (this repo), then the Unity port (§15). Every visual assumes the v4 art direction from the art pilot (`js/lowpoly.js`, `js/lp-pilot.js`): Lanternvale-style stylized low-poly, cozy Ghibli-warm palette, flat-shaded props and buildings with per-face brightness jitter, soft-lump foliage with the warm-top / cool-teal ramp, ink outlines on buildings, props and figures, soft painted light with warm lantern pools at night. Presentation uses paper, lacquer, brush strokes, ink splashes, gold leaf and vermillion seals, never neon.
+Read `DESIGN-V2.md` §1 (common rules), `DESIGN-V3.md` §3–§4, `CONTRACT.md`, and the sibling v4 specs `UI-V4.md` (§12: the tournament's screen layouts), `COMBAT-V4.md` (the duel), `ITEMS.md` (§8.9 prize pools, §2.4 `duelWar`), `ENGAGEMENT.md` (§3.2 prestige, §5 calendar, §13 文会 and hooks), `TITLES.md`, `AUDIO-V4.md` (§A3 fanfares, §B cues) and `CITY-VIEW.md` (§3 culture families, §9 budgets) first. **`INTEGRATION.md`** wins over this file for everything that crosses a system boundary (prize pools, the save and its migration order, the month pipeline, the shared `gen.injury`, registries and the CPU budgets). Where this file conflicts with the other specs, this file wins for the systems it owns: the tournament's schedule, host, entry, format, match rules, injuries, reward amounts, records, the stadium and the tournament's presentation and music. The others win for their systems: ITEMS for which items exist and how they behave, COMBAT-V4 for duel mechanics, ENGAGEMENT for prestige and the calendar, AUDIO-V4 for voices and suites. Platform order: browser first (this repo), then the Unity port (§15). Every visual assumes the v4 art direction from the art pilot (`js/lowpoly.js`, `js/lp-pilot.js`): Lanternvale-style stylized low-poly, cozy Ghibli-warm palette, flat-shaded props and buildings with per-face brightness jitter, soft-lump foliage with the warm-top / cool-teal ramp, ink outlines on buildings, props and figures, soft painted light with warm lantern pools at night. Presentation uses paper, lacquer, brush strokes, ink splashes, gold leaf and vermillion seals, never neon.
 
 Status: design spec only. No game code was changed and nothing was committed. Supporting files in `design-v4/tourney/` (all read-only on the game data):
 
@@ -20,19 +20,19 @@ Status: design spec only. No game code was changed and nothing was committed. Su
 
 | Topic | Rule |
 |---|---|
-| When | Month 1 of every year from **191** (start year + 1). The host is announced in the month-12 news; the tournament is the scheduled card of month 1, after the 正旦 year review (ENGAGEMENT §5.1). The player may defer it (「稍后」) and start it any time in month 1; 「结束本月」 runs it first if it is still pending |
+| When | Month 1 of every year from **191** (start year + 1). The host is announced in the month-12 news; the tournament card of month 1 comes after the 正旦 year review and is **outside ENGAGEMENT's R1 card budget** (INTEGRATION §6.5). The player may defer it (「稍后」) and start it any time in month 1; 「结束本月」 runs it first if it is still pending |
 | Host | 191: the holder of 洛阳 (classic) / 罗马 (world). Then the eligible living faction with the highest prestige (ENGAGEMENT §3.2), never the same faction within 3 years; its capital is the host city. Host: prestige +20, capital order +5, home banners, its family's gate on the stadium |
 | Entry | Every living faction may send **up to 5** of its generals with base 武力 ≥ 60, not captive, not injured. AI: base 武力 ≥ **72** (classic) / **75** (world), best 5 by seed score; a courtesy entry (best general, 武力 ≥ 65) when none qualifies; AI rulers fight only at 武力 ≥ 85 (or 康茂德). The player picks on the 英雄帖 card (recommended five pre-filled) |
 | Field (measured, 191) | Classic **46** entrants from 17 / 18 factions → 64 draw, 18 byes. World **71** from 44 / 70 factions → 128 draw, 57 byes (a 7-match play-in) |
 | Format | Single elimination. Draw S = 2^⌈log₂ N⌉ (8 … 128); the top S − N seeds get byes; S/4 seeds placed in bands (1–2, 3–4, 5–8, 9–16, 17–32); generals of one faction kept apart; final **best of three**; a third-place match |
 | Match | The v4 duel (COMBAT-V4) on the stadium's stage: HP 100, 60 s, KO or time; the higher seed is side a and wins exact ties. Gear (`duelWar`), titles, strings, crits and parries all apply. **No deaths, no capture.** A KO loss injures with 6–22% (−5 effective 武力 for 2 months) |
 | Who controls | Each player entrant: 亲自 (play), 观战 (the AI fights him; the player watches) or 自动 (simulated). AI vs AI: simulated in ≤ 15 ms per duel, sliced; any match can be watched and gives the same result (per-match seeded RNG) |
-| Prizes | **1st**: a random rare item (75%) or a 武林秘传 rare skill (25%), 400 gold, prestige +50, fame +1, exp +80, loyalty +6, 「武林魁首」 for a year. **2nd**: an uncommon item (choose 1 of 3) or a tier-2 秘传 (15%), 200 gold, +25, exp +50. **3rd**: a common item of his culture (choose 1 of 3), 100 gold, +12, exp +35. **All entrants**: exp +20, +12 per match won. **Three titles** → 金刚杵 (legendary); classic: five titles → 赫拉克勒斯之棍 |
+| Prizes | **1st**: a random rare item (75%) or a 武林秘传 rare skill (25%), 400 gold, prestige +50, fame +1, exp +80, loyalty +6, 「武林魁首」 for a year. **2nd**: an uncommon item (choose 1 of 3) or a tier-2 秘传 (15%), 200 gold, +25, exp +50. **3rd**: a common item of his culture (choose 1 of 3), 100 gold, +12, exp +35. **All entrants**: exp +20, +12 per match won. **Three titles** → 金刚杵 (legendary), both scenarios. 赫拉克勒斯之棍 is world-only (slay 康茂德); the classic tournament awards no five-title relic and never a ruler-unique (INTEGRATION §7.2). Numbering: 191 = 第一届, **193 = 第三届** |
 | Without fighting | 竞猜 (predict the champion at the last 16: +60 gold, prestige +5), 赞助 (100 / 300 / 800 gold → prestige +3 / +9 / +24), watch any match |
 | Stadium | **万国擂台**: 18 × 9 m stone stage in a 23 m sand arena; stands to r 41 m; 16 slots of 22.5°: 12 culture-family sectors (CITY-VIEW §3), each fronted by a landmark **facade** (≤ 7 × 9 m, recognisable below 6 m: inside the duel camera's frame) and crowned by a landmark seen from the air, plus the host's 主门 (default: Han 阙 and the 平乐观 华盖), the **万国之门** (Persepolis' Gate of All Nations — the entrants' gate), the 裁判台 and the 奖台. The ring rotates so the backdrop behind each duel is the fitting sector |
 | Budgets | Duel view ≤ 110 k triangles drawn (incl. ink shells, crowd) and ≤ 60 draw calls on desktop; ≤ 70 k / ≤ 45 on phones; aerial ≤ 250 k / ≤ 90. Crowd 2 400 / 900 instanced pegs. Build ≤ 150 ms in ≤ 8 ms slices while the 英雄帖 card is open. Block-out measured: duel view 56–69 k drawn, aerial 145 k |
-| Balance (measured, v3 duel sim) | Classic, 200 tournaments: 吕布 29%, 关羽 22.5%, 张飞 15.5%, 马超 7%, 16 different champions; the top seed wins 29%, a top-4 seed 74%; 25% of duels are won by the lower `duelWar`. 48 all-AI classic campaigns × 15 years: factions alive at the end 4.56 with / 4.44 without; prize gold 1.7% of all factions' gross income (world 0.3%); the 金刚杵 is won in 48 / 48 runs, median after 9 tournaments |
-| Time | An AI-only tournament computes in 0.28 s (classic) / 0.44 s (world) with the v3 sim (v4 ≤ 0.7 / 1.1 s), shown in ≤ 60 s. A player with five strong entrants plays a median 9–15 duels (8–12 min); 「全部自动」 takes ≤ 90 s with the ceremony |
+| Balance (measured, v3 duel sim) | Classic, 200 tournaments: 吕布 29%, 关羽 22.5%, 张飞 15.5%, 马超 7%, 16 different champions; the top seed wins 29%, a top-4 seed 74%; 25% of duels are won by the lower `duelWar`. 48 all-AI classic campaigns × 15 years: factions alive at the end 4.56 with / 4.44 without; prize gold 1.7% of all factions' gross income (world 0.3%); the 金刚杵 is won in 48 / 48 runs, median after 9 tournaments. All v4 on (INTEGRATION §9): every gate passes; 24.9 entrants per classic tournament (the average over 25 years as realms fall), 2.3 injuries |
+| Time | An AI-only tournament computes in 0.28 s (classic) / 0.44 s (world) with the v3 sim (v4 ≤ 0.7 / 1.1 s, sliced; exempt from the 60 ms per-faction month cap, INTEGRATION §6.6), shown in ≤ 60 s. A player with five strong entrants plays a median 9–15 duels (8–12 min); 「全部自动」 takes ≤ 90 s with the ceremony |
 | Music | Arena piece 「群英会」 (♩112, the 12 culture families' lead instruments take turns in a 24-bar 万国轮奏), the night final 「月下决」, a KO hit; entrants walk on to their ruler's `fanfare`; the champion's ruler's `victory` |
 
 ---
@@ -100,8 +100,8 @@ Parallel work rule (DESIGN-V2 §3): each task edits only its own files and lists
 | `StrategyAI.endMonth` that turns month 11 into 12 | `SG.Tourney.announce(G)`: picks next year's host (§3.2), writes `G.tourney.next = { year, host, city }`, pushes the news line 「明年正月，天下英雄会于{city}。{host}主办第{n}届武林大会。」 (for every faction; the player's news shows it with the host's seal) |
 | Month 12 | The 年历 ribbon shows the tournament; the 英雄榜 page shows the coming host. The player can prepare: train, buy gear (ITEMS shops), 切磋 (ENGAGEMENT §13.4), the 演武 yard (COMBAT-V4 §12.4) |
 | `endMonth` that turns 12 into 1 | Injuries from last year are long gone. If the announced host is dead or lost its capital, re-pick and add 「会址改于{city}。」 |
-| Month 1, after the year review | The scheduled card (ENGAGEMENT §5.1 priority: 归附 offer > tribute demand > **武林大会** > …). 「报名」 runs the tournament at once; 「稍后」 leaves an agenda slip (UI-V4 §12.1) so the player can first use the month (buy gear, train, move generals); pressing 「结束本月」 with the tournament still pending runs it before the AI's turn. Either way it resolves completely within month 1, before `runAI`. Then `G.tourney.held = year`, save |
-| First tournament | `FIRST_YEAR = StartYear + 1` = **191** in both scenarios (announced in the 190-12 news). The new-game intro adds one line: 「每年正月，天下诸侯遣将会于擂台，是为武林大会。」 |
+| Month 1, after the year review | The tournament card. It is **outside ENGAGEMENT's R1 budget** (INTEGRATION §6.5): it never pushes another scheduled card to month 2, and AI tribute demands and 归附 offers are never generated for month 1, so January shows at most this card and one other. 「报名」 runs the tournament at once; 「稍后」 leaves an agenda slip (UI-V4 §12.1) so the player can first use the month (buy gear, train, move generals); pressing 「结束本月」 with the tournament still pending runs it before the AI's turn. Either way it resolves completely within month 1, before `runAI`. Then `G.tourney.held = year`, `G.tourney.count + 1`, save |
+| First tournament | `FIRST_YEAR = StartYear + 1` = **191** in both scenarios (announced in the 190-12 news). The number in every text is `n = G.tourney.count + 1` (191 第一届, 192 第二届, **193 第三届**; INTEGRATION §6.5). The new-game intro adds one line: 「每年正月，天下诸侯遣将会于擂台，是为武林大会。」 |
 
 A browser closed in the middle of a tournament reloads the month-1 save made before it (§3.4): the tournament starts again from the draw. All AI results replay identically (§5.5); only the player's own matches are fought again.
 
@@ -109,7 +109,7 @@ A browser closed in the middle of a tournament reloads the month-1 save made bef
 
 ```
 eligible(f) = f.alive && cityCount(f) ≥ 1 && capital(f) exists           // capital = the ruler's city
-            && cityLevel(capital) ≥ 2                                     // CITY-VIEW §8.5 / §4 (县城 or better); without CITY-VIEW: town ≥ 300
+            && cityLevel(capital) ≥ 2                                     // the rules table SG.Balance.CityLevel (INTEGRATION §12; 县城 or better), never the view module
             && f ∉ G.tourney.hosts (the last two hosts), unless fewer than 3 factions are eligible
 host = argmax over eligible f of  prestige(f)                             // ENGAGEMENT §3.2
        tie-break: cityCount(f), then effFame(f), then lower id
@@ -168,7 +168,7 @@ The entry screen shows every own general with a reason when he cannot enter: 「
 ### 4.2 AI selection
 
 ```
-seedScore(gen) = duelWar(gen)                       // ITEMS §2.4: base 武力 + min(6, ⌊gear 武力 / 2⌋), minus injury (§6.3)
+seedScore(gen) = duelWar(gen)                       // ITEMS §2.4: base 武力 + min(3, ⌊gear 武力 / 3⌋), minus injury (§6.3; INTEGRATION §8.3)
                + 0.6 × level                        // DESIGN-V3 levels 1–10
                + 1.5 × min(3, championships(gen))   // past titles
                + 10 × [gen is the reigning champion]
@@ -288,6 +288,7 @@ When the player declines, has no eligible general, or the screen is absent, `SG.
 
 ### 5.5 Determinism and the random-number contract
 
+- **Duel speed**: settings row 48 (单挑速度) does not apply to matches the player fights; they always run at 100 % (UI-V4 §7, INTEGRATION §8.5). Watched matches may be slowed.
 - Every tournament decision draws from its own streams: `rng(tag, …k) = SG.SeededRandom(hash32(G.seed, year, 'tourney', tag, …k))`. Tags: `host` (unused: host choice is deterministic), `draw`, `match:<id>:<game>`, `injury:<id>`, `prize:<place>`, `offer:<place>`, `skill:<place>`, `bond`.
 - The duel engine draws from `SG.Random`. For every match (simulated, watched or played) the screen calls `prev = SG.Random.swap(mulberry32(hash32(G.seed, year, 'duel', id, game)))` before and `SG.Random.restore(prev)` after. **The main stream is therefore exactly where it was before the tournament**, whatever the player watched, played or skipped. `SG.Random.swap` / `restore` are 6 lines in `core.js` (the `rng` closure is swapped and returned).
 - Nothing else may draw from `SG.Random` while a rendered tournament duel runs: the stadium, crowd, petals and camera use `SG.SeededRandom` only.
@@ -298,7 +299,7 @@ When the player declines, has no eligible general, or the screen is absent, `SG.
 | Item | Value |
 |---|---|
 | Compute, one AI duel | v3 sim 5.8–6.1 ms (Node, measured); v4 target ≤ 15 ms (COMBAT-V4) |
-| Compute, a whole AI tournament | v3: 277 ms classic, 443 ms world; v4 ≤ 0.7 / 1.1 s, sliced at ≤ 6 ms per frame (no frame over 8 ms of JS) |
+| Compute, a whole AI tournament | v3: 277 ms classic, 443 ms world; v4 ≤ 0.7 / 1.1 s, sliced at ≤ 6 ms per frame (no frame over 8 ms of JS). **Exempt from the 60 ms per-faction month cap** of `tests/world.js` (INTEGRATION §6.6, §13); the January month transition keeps the ≤ 8 s total |
 | Average AI duel length | 28.1 s (classic) / 28.5 s (world); 0% time-outs (v3); COMBAT-V4 target 20–40 s |
 | A played match incl. walk-on and result | ≈ 40 s (4 s walk-on, 1.2 s face-off, ~30 s duel, 3–4 s result) |
 | Player with five strong entrants | median **9–15 duels** a tournament (classic 董卓: 12, max 22; 孙坚: 11; 袁绍: 10; 刘备 with two entrants: 8; world 董卓: 15) → 8–12 minutes with everything played |
@@ -337,11 +338,11 @@ p = 0.06
   + 0.06 if the KO blow was a string finisher or a special
 p = p × 0.5 if he carries a 医药 treasure (ITEMS type `medicine`: 金创药, 神农本草经, 青囊书, 盖伦医书 …)
 p = min(p, 0.22); time-out losses never injure
-injured → gen.injury = { until: G.monthIndex + 2, war: 5 }        // months 1 and 2
+injured → gen.injury = { until: G.monthIndex + 2, war: 5, away: false }        // months 1 and 2; the one shared record (INTEGRATION §6.4)
           if his faction employs a famous healer (华佗; world: 盖伦) → until = G.monthIndex + 1   // 「神医妙手」
 ```
 
-- Effect while `G.monthIndex < until`: **−5 effective 武力** in battles and duels (ITEMS `eff()` and `duelWar()` subtract `SG.Tourney.injuryWar(gen)`), a bandage chip 「负伤」 on every portrait list, and no tournament entry (irrelevant in practice).
+- Effect while `G.monthIndex < until`: **−5 effective 武力** in battles and duels (ITEMS `eff()` and `duelWar()` subtract `injury.war`; ENGAGEMENT's event injuries use the same record with `away: true`), a bandage chip 「负伤」 on every portrait list, and no tournament entry (irrelevant in practice).
 - Expected count: about 8% of losses → ≈ 3–4 injured generals a year in the classic scenario, 5–6 in the world. Too small to change a war; enough to make "send everyone" a decision.
 - The loser's final reaction in the duel shows it: he stays down on one knee, and a medic runs onto the stage with a stretcher (2 figures, ≤ 1.5 s, skippable).
 
@@ -359,7 +360,7 @@ injured → gen.injury = { until: G.monthIndex + 2, war: 5 }        // months 1 
 
 | Place | Item / skill | Gold (to his city) | Prestige (faction) | Fame | Exp | Loyalty | Other |
 |---|---|---|---|---|---|---|---|
-| **1st 魁首** | random **rare** item (75%) or **武林秘传** rare skill (25%) (§7.2–7.3) | 400 | +50 | +1 | +80 | +6 | 「武林魁首」 badge for a year; `wins + 1`; three titles → 金刚杵; classic, five titles → 赫拉克勒斯之棍 (§7.4); his ruler's `victory` music |
+| **1st 魁首** | random **rare** item (75%) or **武林秘传** rare skill (25%) (§7.2–7.3) | 400 | +50 | +1 | +80 | +6 | 「武林魁首」 badge for a year; `G.tourney.wins + 1`; three titles → 金刚杵 (§7.4); his ruler's `victory` music |
 | **2nd 亚军** | **uncommon** item, choose 1 of 3 (85%), or a tier-2 秘传 (15%) | 200 | +25 | — | +50 | +4 | |
 | **3rd 季军** | **common** item of his culture, choose 1 of 3 | 100 | +12 | — | +35 | +3 | |
 | every entrant | — | — | — | — | +20, +12 per match won (byes do not count) | +2 (non-rulers) | `G.tourney.stats` record |
@@ -377,15 +378,16 @@ Bonds (ENGAGEMENT §11, adopted): two finalists of different factions, both with
 
 ```
 pool = champion-pool items not yet awarded (12 tournament-only rares, each once; weight 3)
-     ∪ shop rares of the scenario with no instance in the world (weight 1)
+     ∪ shop rares of the scenario not owned by any faction (weight 1; a shop's own stock copy does not count, INTEGRATION §7.2)
+     never: ruler-unique, signature, hidden or city-treasure items (both scenarios)
 filter: the item's req passes on the champion's base attributes (ITEMS §2.2)
 weight × 2 if equipping it raises his ITEMS §13.1 value for its slot
-classic, from 193 on (the third tournament; ITEMS §8.9's year): with 15% the draw is replaced by one item of the `foreign` pool (67 items, ≤ 1 epic per tournament; ITEMS §8.9)
+classic, from the 第三届 (193) on: with 15% the draw is replaced by one item of the `foreign` pool (19 items: world-only rares and epics of absent cultures, ruler-uniques filtered out; ≤ 1 epic per tournament; ITEMS §8.9)
 pool empty → an uncommon of his culture + 300 gold
 skill instead of item: 25% (rng('skill', 1)); if he already has a 秘传, the item is drawn instead
 ```
 
-The 12 tournament-only rares are the event's own treasures: 干将·莫邪, 太阿剑, 越女剑, 万人刀, 新亭侯刀, 夔牛鼓, 角斗士头盔, 奥林匹亚橄榄冠, 拳斗皮带, 野见宿祢力带, 斯基泰黄金梳, 冒顿鸣镝 (ITEMS §8.9 table). Their weight 3 means they come out first: an estimate (75% item × ≈ 75% tournament-only share while about half of the shop rares are stocked somewhere) gives ≈ 0.55 a year, so about half of them are awarded in the first ten years, and the shop rares carry the pool afterwards (22 in the classic scenario, 50 in the world).
+The 12 tournament-only rares are the event's own treasures: 干将·莫邪, 太阿剑, 越女剑, 万人刀, 新亭侯刀, 夔牛鼓, 角斗士头盔, 奥林匹亚橄榄冠, 拳斗皮带, 野见宿祢力带, 斯基泰黄金梳, 冒顿鸣镝 (ITEMS §8.9 table). Their weight 3 means they come out first: an estimate (75% item × ≈ 75% tournament-only share while about half of the shop rares are stocked somewhere) gives ≈ 0.55 a year, so about half of them are awarded in the first ten years, and the shop rares carry the pool afterwards (50 in each scenario: the classic one sells the world-only shop rares as 舶来 curios in its trade cities, ITEMS §6.3).
 
 **2nd place**: three distinct **offers** of uncommons (`SG.Items.offers(gen, 'uncommon', 3, rng('offer', 2))`): 60% of each offer from the placer's culture, 40% from any culture; each passes his requirements; at least one is for the slot where he gains most. The player chooses on a three-card table (§9.8); the AI takes the highest valued. **3rd place**: the same with three commons of his culture.
 
@@ -400,20 +402,20 @@ Every prize item goes into the general's slot when it is better (the player is a
 
 ### 7.4 Championships and relics
 
-- `G.tourney.wins[name]` counts titles (this replaces ITEMS' `G.items.titles` and resolves TITLES Q8's name clash).
+- `G.tourney.wins[name]` counts titles (the one count, INTEGRATION §6.4: it replaces ITEMS' `G.items.titles` and resolves TITLES Q8's name clash).
 - **3 titles**: the first general to reach three receives **金刚杵** (legendary, ITEMS §9: 「因陀罗之雷」), presented from the shrine niche above the 主门 where it has waited since the first tournament (§8.6). Measured (48 classic campaigns × 15 years): awarded in **48 / 48** runs, a median of **9 tournaments** in (≈ 199); holders: 吕布 23, 张飞 10, 关羽 4, 许褚 3, 典韦 3, 马超 2, others 3. World (12 runs × 12 years, 11 tournaments each): 7 / 12, a median of 6 tournaments in where awarded (吕布 4, 太史慈, 关羽, 马超).
-- **Classic, 5 titles**: the first general to reach five receives 赫拉克勒斯之棍 (ITEMS: 「大秦使节所献」). Measured: the most titles by one general in 15 years is a median of 4 (max 8), so it is awarded in a minority of runs.
+- **No five-title relic.** 赫拉克勒斯之棍 is world-only (ITEMS §9: slay 康茂德); the classic scenario's legendaries are 赤兔, 传国玉玺 and 金刚杵 (INTEGRATION §7.2). `RELICS` (§10.1) has only `title3`.
 - After a relic is awarded it is an ordinary singleton (ITEMS §2.3); the niche stays empty and the stadium shows the holder's name on a plaque.
 
 ### 7.5 Records and the 英雄榜
 
 `G.tourney.history` keeps the last 40 tournaments: year, host, city, field size, draw, podium (names, factions), the final's score, the prize id, and the biggest upset (winner, loser, `duelWar` gap). `G.tourney.stats[name] = { e, w, best }` (entries, match wins, best place).
 
-The **英雄榜** page (layout UI-V4 §12.8; opened from the announcement card, the main menu's 「武林」 entry, and each general's 战绩 tab of the character menu) shows:
+The **英雄榜** page (layout UI-V4 §12.8; opened from the announcement card, from **菜单 → 卷宗 → 英雄榜** (the tile in UI-V4 §6's 卷宗 grid; there is no separate 「武林」 menu entry) and from each general's **履历** tab of the character menu) shows:
 
 - 历届魁首: a vertical scroll of years with the champion's portrait, faction seal, host city and final score; three-time champions in gold.
 - 记录: most titles, most match wins, longest unbeaten run, biggest upset, most entrants in one year, youngest / oldest champion (from `gen.born`), most podiums by a faction.
-- A general's 战绩 tab: entries, wins, best place, titles, injuries.
+- A general's **履历** tab (character menu, UI-V4 §9): entries, wins, best place, titles (`G.tourney.wins`), injuries.
 - Achievements are ENGAGEMENT's (天下第一 30 prestige, §14.2); this spec proposes three more: 慧眼识英 (3 correct predictions, +10), 满门英杰 (three of the semifinalists from one's own faction, +30), 以弱胜强 (a player-controlled win against a `duelWar` 15 or more higher, +15).
 
 ### 7.6 Taking part without fighting (request 13)
@@ -435,7 +437,7 @@ The **英雄榜** page (layout UI-V4 §12.8; opened from the announcement card, 
 | For a median 5-city realm (≈ 290 gold / month) | a 1st place is worth ≈ 5.8 months of income, a 2nd ≈ 1.8, a 3rd ≈ 0.6 |
 | ITEMS reference | a rare is "≈ 2 years of one median city" (ITEMS §4.4): the champion earns one rare a year |
 
-Reading: the tournament is a large prize for the one faction that wins it and almost nothing in the world economy. A small realm with one great fighter (刘备 with 关羽 and 张飞: a top-3 place in 75% of AI-simulated tournaments, more with a skilled player) gains a rare a year, which is the intended "skill pays" reward; ENGAGEMENT's scripted engaged player keeps all prize gold (文会 + 武林) within its 8% cap (ENGAGEMENT §17.1). The prizes never touch the 24 epic and legendary items except the designed 金刚杵 and the classic 赫拉克勒斯之棍 and the classic 异域奇珍 rule.
+Reading: the tournament is a large prize for the one faction that wins it and almost nothing in the world economy. A small realm with one great fighter (刘备 with 关羽 and 张飞: a top-3 place in 75% of AI-simulated tournaments, more with a skilled player) gains a rare a year, which is the intended "skill pays" reward; ENGAGEMENT's scripted engaged player keeps all prize gold (文会 + 武林) within its 8% cap (ENGAGEMENT §17.1). The prizes never touch the 24 epic and legendary items except the designed 金刚杵 and the classic 异域奇珍 rule.
 
 ---
 
@@ -581,7 +583,7 @@ All variants keep the royal box (the host ruler sits there: an LP figure with th
 
 ### 8.9 Light, time of day, lanterns, effects
 
-- **Mood by round**: `SG.LP.Mood` hour = 10 + 8.5 × (round index / index of the 四强 round) for the rounds up to the semifinals (10:00 … 18:30: late morning for the first round, about 16:00 for the 八强, golden hour for the 四强 and the 季军战), then 20:30 for the final and the ceremony (night).
+- **Mood by round**: `SG.LP.Mood` hour = 10 + 8.5 × (round index / index of the 四强 round) for the rounds up to the semifinals (10:00 … 18:30: late morning for the first round, about 16:00 for the 八强, golden hour for the 四强 and the 季军战), then 20:00 for the final and the ceremony (night; the end of the shared 07:00–20:00 clock, INTEGRATION §10.7).
 - **Lanterns**: six red ribbed lanterns per slot on the podium wall (96), four on the stage corners, two at each gate; at dusk they light. Nearest 12 (desktop) / 6 (phone) are point lights (`mood.addLamp`), the rest emissive with halo sprites. The Pharos and the beacon tower burn at night (emissive + one point light each, counted in the 12).
 - **Effects** (pooled particles, ≤ 2 extra draw calls each): petals in the host colours and gold on a KO in the final and during the ceremony (≤ 600), dust puffs on the stage at knockdowns, smoke from the beacon by day, a slow ink-wash vignette at the edges during the walk-on.
 - **Shadows**: the duel keeps its own shadow camera fitted to the stage (16 m); the ring receives but does not cast into the duel's shadow map (cheap and clean).
@@ -729,13 +731,15 @@ Then the **results card**: every reward of the player's faction (items, gold, pr
 
 | Cue | Speaker | 中文 | Pri | Fallback | Status |
 |---|---|---|---|---|---|
-| `tourney.open` | host ruler | 群雄毕至，比武开始！ | 3 | `attack` | new, proposed |
+| `tourney.open` | host ruler | 群雄毕至，比武开始！ | 3 | `attack` | registered (voice-lines.js) |
 | `tourney.enter` | entrant | 天下英雄，尽在此地！ | 2 | `duel` | in AUDIO-V4 |
-| `tourney.award` | host ruler | 天下第一，实至名归！ | 3 | `grant` | new, proposed |
+| `tourney.award` | host ruler | 天下第一，实至名归！ | 3 | `grant` | registered |
 | `tourney.win` | champion | 天下第一！ | 3 | `victory` | in AUDIO-V4 |
-| `tourney.lose` | loser | 技不如人…… | 1 | `miss` | new, proposed |
-| `ui.tourneyAnnounce` | herald | 天下英雄，会于平乐！ (non-洛阳 hosts: 天下英雄，会于{city}！) | 2 | — | proposed by UI-V4 §14.3 |
-| `duel.accept` | opponent on the match card | (COMBAT / AUDIO) | 2 | `duel` | used by UI-V4 §12.4 |
+| `tourney.lose` | loser | 技不如人…… | 1 | `miss` | registered |
+| `ui.tourneyAnnounce` | herald (`SG.Voice.profile('herald')`) | 天下英雄，会于平乐！ (non-洛阳 hosts: 天下英雄，会于{city}！) | 2 | `tourney.open` | registered |
+| `duel.accept` | opponent on the match card | (COMBAT / AUDIO) | 2 | `duel` | registered |
+
+All tournament cues are merged into `design-v4/audio/voice-lines.js` (AUDIO-V4 §B2, INTEGRATION §10.2); `tourney.open`, `tourney.award` and `tourney.win` are among the start / great cues translated into the 14 A linguas.
 
 ### 9.11 UI language
 
@@ -777,12 +781,12 @@ SG.TourneyData = {
   PRIZE_WEIGHT: { tourneyOnly: 3, shopRare: 1, upgrade: 2 },
   PREDICT: { gold: 60, prestige: 5, opensAt: 16 },
   SPONSOR: [{ id: 'small', gold: 100, prestige: 3 }, { id: 'mid', gold: 300, prestige: 9, relation: 5 }, { id: 'name', gold: 800, prestige: 24, banners: true }],
-  RELICS: { title3: 'vajra', title5: { classic: 'clava' } },
+  RELICS: { title3: 'vajra' },        // no five-title relic: 赫拉克勒斯之棍 is world-only (INTEGRATION §7.2)
   BONDS: { rivalWar: 85, rivalP: 0.30, sameFactionAffinity: 10 },
   ROUND_NAMES: { playIn: '预赛', first: '首轮', 32: '三十二强', 16: '十六强', 8: '八强', 4: '四强', 2: '决赛', third: '季军战' },
   PLAY_IN_FRACTION: 1 / 8,            // a round 1 with fewer than S/8 matches is the 预赛; the next round is the 首轮
-  WIN_SCALE: 6,                       // winChance(a, b) = 1 / (1 + exp(−(duelWar a − duelWar b) / 6))
-  HOURS: { first: 10, last: 18.5, final: 20.5 },
+  WIN_SCALE: 6,                       // winChance(a, b) = 1 / (1 + exp(−(duelWar a − duelWar b) / 6)); re-measured once after COMBAT P1, then FROZEN (INTEGRATION §8.4)
+  HOURS: { first: 10, last: 18.5, final: 20 },   // the event drives the shared day clock (INTEGRATION §10.7: 07:00–20:00; the final at its night end)
   SLOTS: [ /* 16 rows: { id, name, phi, family?, facade, crown, grade, refs } — the table of §8.3 */ ],
   HOST_GATE: { hua: 'hua', roman: 'roman', persia: 'persia', indic: 'indic', nile: 'pylon', arabia: 'pylon', steppe: 'timber', oasis: 'timber', north: 'timber', wa: 'timber', han3: 'timber', nanhai: 'timber' },
   CROWN_STYLE: { roman: 'olive', persia: 'olive', arabia: 'olive', nile: 'olive', north: 'olive' },   // else 印绶
@@ -853,17 +857,18 @@ G.tourney = {
   next: { year, host, city } | null,     // announced
   held: 0,                               // last year held
   hosts: [f, f],                         // the last two hosts (rotation)
-  wins: { [genName]: n },                // championships (replaces ITEMS G.items.titles)
+  count: 0,                              // tournaments held (the 第{n}届 number = count + 1)
+  wins: { [genName]: n },                // championships: the one count (INTEGRATION §6.4)
   reigning: genName | null,
   stats: { [genName]: { e, w, best } },  // entries, match wins, best place
   history: [{ y, host, city, n, S, p: [n1, n2, n3], f: [f1, f2, f3], fin: '2:1', prize, upset: { w, l, gap } }],  // ≤ 40
   predictHits: 0,
 }
-gen.injury       = { until: monthIndex, war: 5 }   // optional; dropped on load when expired
+gen.injury       = { until: monthIndex, war: 5, away: false }   // the shared record (INTEGRATION §6.4); dropped on load when expired
 gen.bonusSpecial = 'specialId'                     // optional (§7.3)
 ```
 
-- About 2–4 KB after 30 years. The version bump is shared with the other v4 specs (integration owns the number). v3 saves load with an empty `G.tourney` (`held = year − 1` so a save in month 1 of a later year does not trigger a tournament mid-month; `next` is set at the following month 11).
+- About 2–4 KB after 30 years. Save version 4; this spec migrates **fourth**, after ITEMS, TITLES and ENGAGEMENT (INTEGRATION §6.2). v3 saves load with an empty `G.tourney` (`held = year − 1` so a save in month 1 of a later year does not trigger a tournament mid-month; `next` is set at the following month 11).
 - The tournament state `T` is never saved (§3.1).
 
 ---
@@ -890,7 +895,7 @@ gen.bonusSpecial = 'specialId'                     // optional (§7.3)
 | `core.js` | `SG.Random` | `swap(fn) → prev`, `restore(prev)` |
 | `model.js` | `newGeneral`, `GameState` constructor, `toJSON` / `fromJSON` | `injury`, `bonusSpecial`; `G.tourney` (§10.4), migration |
 | `strategy-ai.js` | `endMonth` | at month 11 → 12 `SG.Tourney.announce(G)` (news line); drop expired injuries; when `SG.TourneyFlow` is absent and `SG.Tourney.due(G)` after the month turns: `SG.Tourney.autoAll(G)` |
-| `strategy-screen.js` | `run()` | §3.4 hook; 英雄榜 entry (menu task's 「武林」); news formatting with the host seal; 「负伤」 chip in general lists; the character menu's 战绩 tab reads `G.tourney.stats` |
+| `strategy-screen.js` | `run()` | §3.4 hook; 英雄榜 entry (UI-V4 §6: 菜单 → 卷宗 → 英雄榜); news formatting with the host seal; 「负伤」 chip in general lists; the character menu's 履历 tab reads `G.tourney.stats` |
 | `duel-game.js` | `play`, `DuelScreen` constructor / `doSkip`, `simulate` | §10.3 |
 | `items.js` (ITEMS) | `tourneyPrize`, `offers`, `eff`, `duelWar` | §7.2, §6.3; drop `G.items.titles` |
 | `specials.js` | `known` | append `gen.bonusSpecial` |
@@ -918,13 +923,13 @@ gen.bonusSpecial = 'specialId'                     // optional (§7.3)
 | AUDIO-V4 §A3 | the arena piece, fanfares on walk-on, champion's `victory` | §9.10 (pieces written and validated); cues `tourney.open`, `tourney.award`, `tourney.lose` proposed |
 | CITY-VIEW §6.5 | landmarks | the stadium uses its own copies of several CITY-VIEW landmarks (Colosseum, Pharos, Hatra, Sanchi, Meroë); the recipes can share code (the 30-m city scale vs the stadium's 7-m facades differ) |
 | UI-V4 (requests 1, 9, 11 and the screens of 14) | screen layouts, round names, buttons, voices | UI-V4 §12 owns the layouts of the announcement card, entry screen, bracket, match card, duel ribbon, podium and 英雄榜 (`mockups/10-tourney.html`); this spec adopts its round names (预赛 / 首轮 / … / 四强 / 决赛), its 「稍后」 agenda slip (the tournament can wait within month 1), its per-match buttons 亲自出战 / 观战 / 只看结果, and supplies `estimate` / `winChance` for its stars and win bar. Additions requested from UI-V4: the offer table for 2nd / 3rd placers (§9.8), 竞猜 and 赞助 rows on the entry screen (§7.6), the 「负伤」 chip, the injury line on the result card |
-| Character menu (request 9) | per-general record | 战绩 tab rows (§7.5) |
+| Character menu (request 9) | per-general record | 履历 tab rows (§7.5; UI-V4 §9.3) |
 
 ---
 
 ## 14. Test plan and balance targets
 
-### 14.1 `tests/tourney.js` (new, Node, exit code = failures; `--quick` for 12 seeds)
+### 14.1 `tests/tourney.js` (new, Node, exit code = failures; `--quick`: 3 tournaments, 12 seeds × 6 years for the balance item; part of the ≤ 6 min quick CI, INTEGRATION §13)
 
 1. **Draw** (port of `tourney-proto.js bracket`): 400 random fields of 5–128 entrants: deterministic per seed; S correct; everyone placed; byes only opposite ranks 1..B; never bye vs bye; seeds 1 and 2 meet only in the final; the top four seeds in four quarters; seed bands respected; `seedOrder(8) = 1 8 4 5 2 7 3 6`, `seedOrder(16)` as standard.
 2. **Separation**: on 200 fields with 5 factions of 5, same-faction round-1 pairs ≤ 1% of draws; cost never worse than a random draw's.
@@ -932,11 +937,13 @@ gen.bonusSpecial = 'specialId'                     // optional (§7.3)
 4. **RNG contract**: run a full AI tournament; the main `SG.Random` stream's next value equals the value it would have without the tournament; the same `G.seed` and year → identical bracket, results, injuries and prizes; a match simulated twice → identical log.
 5. **Formats**: final best of three (2–3 games), the 3rd-place match, round names, play-in naming, N < 4 → no tournament.
 6. **Injury probabilities**: 10 000 forced KO losses per case: 6 / 16 / 12 / 22% (and halves with medicine) within ±1 pp; healer shortening; `eff` and `duelWar` −5 while injured, 0 after.
-7. **Prizes**: pool weights (10 000 draws: tournament-only share ≈ 3 / (3·12 + shop) per item ±2%), requirement filter, each tournament-only rare awarded once, the empty-pool fallback, 异域奇珍 from 193 at 15% ±2 pp (classic, 2 000 runs), offers distinct and valid, the bonus skill slot (once; tier; no assassinate), 金刚杵 on the third title and 赫拉克勒斯之棍 on the fifth (classic), relics only once.
+7. **Prizes**: pool weights (10 000 draws: tournament-only share ≈ 3 / (3·12 + shop) per item ±2%), requirement filter, each tournament-only rare awarded once, the empty-pool fallback, 异域奇珍 from 193 at 15% ±2 pp (classic, 2 000 runs), offers distinct and valid, the bonus skill slot (once; tier; no assassinate), 金刚杵 on the third title (both scenarios), no five-title relic and no ruler-unique in any classic pool (INTEGRATION §7.2), relics only once.
 8. **Rewards**: gold to the right city; prestige and fame through ENGAGEMENT; exp amounts; loyalty caps; bonds probability (2 000 forced finals: 30% ±3 pp).
 9. **Save / load**: round trip of `G.tourney`, `injury`, `bonusSpecial`; v3 migration; a save made in month 1 before the tournament replays the same AI results.
 10. **Off switch**: `SG.Tourney.enabled = false` → every v3 / v4 output identical over a 5-year all-AI run (hash, like `tests/world.js --classic-hash`).
-11. **Balance runs** (§14.4), classic 48 seeds × 15 years paired with and without, world 24 × 12.
+11. **Balance runs** (§14.4), classic 48 seeds × 15 years paired with and without, world 24 × 12 (nightly).
+12. **Calendar** (INTEGRATION §6.5): the tournament card never takes ENGAGEMENT's R1 slot; numbering `第{count + 1}届` (193 = 第三届 in a new game).
+13. **CPU**: the January AI resolution ≤ 1.1 s world (sliced, no slice > 6 ms); `tests/world.js` exempts it from the 60 ms per-faction cap and asserts the rest of the month.
 
 ### 14.2 Additions to existing suites
 
@@ -999,7 +1006,7 @@ gen.bonusSpecial = 'specialId'                     // optional (§7.3)
 
 | Phase | Content | Gate |
 |---|---|---|
-| P1 rules | `tourney-data.js`, `tourney.js`, `SG.Random.swap`, save fields, `autoAll` in `endMonth`, tests §14.1 | `tests/tourney.js` ALL OK; sim / world / items suites unchanged |
+| P1 rules | `tourney-data.js`, `tourney.js`, `SG.Random.swap`, save fields, `autoAll` in `endMonth`, tests §14.1 | `tests/tourney.js` ALL OK; sim / world / items suites unchanged; after COMBAT P1, `WIN_SCALE` and §14.4 are re-measured once with the v4 duel and frozen (INTEGRATION §8.4) |
 | P2 screens | card, bracket, montage, match flow with the **existing duel arena** (terrain `plain`) as a stand-in, ceremony as 2D cards, results, 英雄榜 | `tests/tourney.html`; playable end to end |
 | P3 stadium | `stadium-kit.js`, `stadium.js`, the duel stage hook, crowd, banners, lighting, camera rigs | §8.10 budgets on desktop and phone |
 | P4 polish | music, SFX, voices, petals, relic beat, host gates, reduced motion | no console errors; playtest targets |

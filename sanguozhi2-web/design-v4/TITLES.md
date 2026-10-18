@@ -2,7 +2,7 @@
 
 Player request 10 of v4: **rulers assign titles to generals**. Titles have level requirements; some need one attribute above 80 and the best need one above 90. Which title family a general can hold depends on his **highest attribute**. Titles give gameplay benefits for domestic development, diplomacy, training, or fighting and duelling, and the families are balanced against each other.
 
-Read `DESIGN-V2.md` §1 (common rules), `DESIGN-V3.md` §4 (levels), `CONTRACT.md`, and the sibling v4 specs `COMBAT-V4.md` (crit hooks, duel caps, its Q3 and Q9), `ITEMS.md` (gear stats, envoy rule, budgets) and `DOMESTIC-FX.md` (command icon, button and sting for 授官) first. Where this file conflicts with them, this file wins for the systems it owns: title catalogue, eligibility, ruler rank and seats, title benefits, title loyalty rules, AI granting and the 官制 screen. Platform order: browser first (this repo), then the Unity port (`../sanguozhi2-unity`, §10.5). Every visual assumes the v4 art direction from the art pilot (Lanternvale: stylized low-poly, cozy Ghibli-warm, flat-shaded props, ink outlines, soft painted light with warm lantern pools). The ceremony uses brush strokes, paper, lacquer, seal stamps and warm gold, never neon.
+Read `DESIGN-V2.md` §1 (common rules), `DESIGN-V3.md` §4 (levels), `CONTRACT.md`, and the sibling v4 specs `COMBAT-V4.md` (crit hooks, duel caps, its Q3 and Q9), `ITEMS.md` (gear stats, envoy rule, budgets) and `DOMESTIC-FX.md` (command icon, button and sting for 授官) first, and **`INTEGRATION.md`**, which wins over this file for everything that crosses a system boundary (caps and the order of combination in `SG.Mods`, the formulas of `SG.Econ`, the AI's spending through `SG.AIBudget`, save and migration, the month pipeline). Where this file conflicts with the other specs, this file wins for the systems it owns: title catalogue, eligibility, ruler rank and seats, title benefits, title loyalty rules, AI granting and the 官制 screen. Platform order: browser first (this repo), then the Unity port (`../sanguozhi2-unity`, §10.5). Every visual assumes the v4 art direction from the art pilot (Lanternvale: stylized low-poly, cozy Ghibli-warm, flat-shaded props, ink outlines, soft painted light with warm lantern pools). The ceremony uses brush strokes, paper, lacquer, seal stamps and warm gold, never neon.
 
 Status: design spec only. No game code was changed and nothing was committed. Supporting files:
 
@@ -32,9 +32,9 @@ Status: design spec only. No game code was changed and nothing was committed. Su
 | Loyalty protection | Defection check uses loyalty + 4 / 8 / 12 / 16 / 20. Enemy 拉拢 × (1 − 0.1 × tier). Enemy 离间 loss × (1 − 0.08 × tier) |
 | Best of each family (汉) | 大将军: 攻 / 防 +12%, 主将统率 +3%, 城防 +10, 会心 +2pp, 单挑 会心 +3pp, 伤害 +2%. 军师将军: 计策威力 +22%, 成功 +6pp, 全军识破 +6pp, 登用 +8pp, 同盟 +10pp. 丞相: 开发 +22%, 本城金 / 秋收 +10%, 本城忠诚 +2/月, 全国金 +2.5%, 秋收 +2% |
 | Value parity | Value index per tier (§7.8): T1 ≈ 7, T2 ≈ 12, T3 ≈ 20, T4 ≈ 33, T5 ≈ 53. Every post within ±20% of its tier mean (actual spread ≤ 12%) |
-| Caps shared with gear | Army crit: title ≤ 0.02 + gear ≤ 0.04, COMBAT cap 0.06. Duel crit: ≤ 0.03 + ≤ 0.05, cap 0.08. Duel damage: ≤ 0.02 + ≤ 0.04, cap 0.06 |
-| AI | Deterministic, no `SG.Random` draws. Each month it fills seats from T5 down, three families in turn, by merit (attribute + 3 × level). It never revokes |
-| Balance (prototype, §12) | Classic 96 seeds (two sets of 48) × 25 years: factions alive at year 10 are 4.6 with titles off and 4.4 / 4.4 with titles on / on + domestic exp; the two seed sets of titles-off alone differ by 0.6. Median time to the first > 25% faction is 2.2 y (off) and 2.25 / 2.3 y. World 24 × 15 years: no measurable shift. Tactical: titles on both sides shift attacker win by about 1 pp; attacker-only vs defender-only swing about 2–3 pp |
+| Caps shared with gear | `SG.Mods` (INTEGRATION §3): army crit title ≤ 0.02 + gear ≤ 0.04, cap 0.06; 攻 / 防: title + commander aura is **one factor** of the battle product, which is capped at ×1.60; 开发 title + gear + project ≤ +80 %; city income ≤ +35 %; duel crit and damage inside the all-in duel budget (INTEGRATION §8.3) |
+| AI | Deterministic, no `SG.Random` draws. Each month, in the **discretionary phase of `endMonth`** (INTEGRATION §6.3), it fills seats from T5 down, three families in turn, by merit (attribute + 3 × level), paying 礼金 from the `SG.AIBudget` purse (kind `title`, first in the discretionary order). It never revokes |
+| Balance (prototype, §12) | Classic 96 seeds (two sets of 48) × 25 years: factions alive at year 10 are 4.6 with titles off and 4.4 / 4.4 with titles on / on + domestic exp; the two seed sets of titles-off alone differ by 0.6. Median time to the first > 25% faction is 2.2 y (off) and 2.25 / 2.3 y. World 24 × 15 years: no measurable shift. Tactical: titles on both sides shift attacker win by about 1 pp; attacker-only vs defender-only swing about 2–3 pp. **With every v4 system on** (INTEGRATION §9): classic alive y10 4.77 / 4.48 vs 4.94 / 4.29 off, world y15 43.42 vs 44.29; title gifts 2.0 % (classic) / 1.8 % (world) of gross income |
 
 ---
 
@@ -230,7 +230,7 @@ rank(f):  if up > stored → stored = up                                        
 `Titles.grant(f, g, postId, nameIdx?) → { ok, why, office, cost, loyalty, passedOver, ceremony: 'small'|'medium'|'grand' }`
 
 1. Checks (§2.2) plus: the tier has a free seat (`active(f, tier) < caps[tier]`, or the general already holds this tier and is moving laterally). The post has a free seat. `g.office?.month !== G.monthIndex` (one office change per general per month). There is enough gold for the gift.
-2. **Gift (礼金)** = `grantGold[new] − (current ? grantGold[current] : 0)` (promotion pays the difference, lateral costs 0). It is paid by the general's city if that city has enough, otherwise by the richest own city. The AI also leaves a reserve behind: 100 + 3 months of base salary (`3 × SalaryPerGeneral × officers` of that city, §8). The cost shows on the confirm card, `礼金 200 金（自 许昌）`.
+2. **Gift (礼金)** = `grantGold[new] − (current ? grantGold[current] : 0)` (promotion pays the difference, lateral costs 0). It is paid by the general's city if that city has enough, otherwise by the richest own city. The AI pays through `SG.AIBudget` (INTEGRATION §5): kind `title`, from the faction's discretionary purse, never below the city reserve `R(c) = 150 + 8 × officers` (§8). The cost shows on the confirm card, `礼金 200 金（自 许昌）`.
 3. **Loyalty**: `+max(0, loyGrant[new] − loyGrant[g.officeBest])`, then `g.officeBest = max(g.officeBest, new)`. `officeBest` resets to 0 when the general changes faction. So re-granting after a revoke gives no second bonus, and revoke + regrant can never farm loyalty.
 4. **Passed over (不平)**: let X get tier t in family F. Every other non-ruler officer Y of the faction with F ∈ families(Y) who could hold a tier-t post (eligibility ignoring seats), currently holds less than t, and has `merit(Y) ≥ merit(X) + 10` loses 4 loyalty. Here `merit = base(F) + 3 × level`. It applies to at most 3 generals, highest merit first, once per grant, floor 0. The confirm card warns first: `张辽、徐晃自恃功高，将心生不平（忠诚 −4）`. The AI grants by merit, so it rarely triggers the rule.
 5. The new office is `g.office = { post, name, tier, fam, since: monthIndex, seq, faction, month: monthIndex, suspended: false }`. The game adds a log line (`拜关羽为荡寇将军。`) and plays the ceremony (§9.5).
@@ -296,36 +296,37 @@ All hooks read `SG.Titles?.bonus(gen, key)` and similar, and return 0 or identit
 
 | Key | Unit | Scope | Hook (exact) |
 |---|---|---|---|
-| `atk` | pct | self | `atkPower(u) ×= 1 + bonus(u.gen,'atk') + sideBonus(M, u.side,'cmdAtk')` |
-| `def` | pct | self | `defFactor(u) ×= 1 + bonus(u.gen,'def') + sideBonus(M, u.side,'cmdDef')` |
+| `atk` | pct | self | provider `titleAtk` + `cmdAtk`: `1 + bonus(u.gen,'atk') + sideBonus(M, u.side,'cmdAtk')` is **one factor** of `SG.Mods.atkMul` (INTEGRATION §3.2; product of all factors ≤ ×1.60) |
+| `def` | pct | self | the same for `SG.Mods.defMul` |
 | `cmdAtk`, `cmdDef` | pct | side | `sideBonus(M, s, k) = bonus(cu.gen, k)` where `cu = M.commander(s)`, alive and not confused; else 0 |
-| `morale` | flat | self | `BattleModel` constructor: `u.morale = min(100, u.morale + bonus(gen,'morale'))` after the v3 formula |
-| `critArmy` | pp | self | COMBAT-V4 §2 `titleCrit(a)`; summed with gear and clamped to 0.06 there |
-| `critDuel`, `dmgDuel` | pp, pct | self | COMBAT-V4 §3 `title.critDuel` (gear + title ≤ 0.08); `dmgDuel` adds to `SG.Gear.duelMods(gen).dmg` (gear + title ≤ 0.06) |
-| `train` | flat | self | `Commands.train(g)`: `+ bonus(g,'train')` to the gain (cap 100 unchanged) |
+| `morale` | flat | self | `SG.Mods.startMorale`: `min(100, base + min(25, gear + title morale))` |
+| `critArmy` | pp | self | `SG.Mods.critChance`: `min(0.06, gear + title)` (INTEGRATION §3.2) |
+| `critDuel`, `dmgDuel` | pp, pct | self | duel: added to the gear terms **inside the all-in duel budget** (dmg % + 0.4 × HP ≤ 6, duel crit counted ≤ 3 pp; INTEGRATION §8.3) |
+| `train` | flat | self | `Econ.trainGain`: `min(12, gear + title + project)` added to the gain (cap 100 unchanged) |
 | `garrison` | flat | city | `SG.cityDefense(c) = 20 + town/12 + max_{o ∈ officersIn(c)} bonus(o,'garrison')`. Read by `Conquest.autoResolve` (defK) and the AI's attack test, so titled defenders deter attacks |
 | `tac` | pct | self | `tacK(u, e) ×= 1 + bonus(u.gen,'tac')`: the four original tactics, new tactics and intel-based specials |
 | `tacHit` | pp | self | original tactics: `p = clamp(0.5 + ΔI/110 + bonus(u,'tacHit') − sideRes(t.side), 0.12, 0.92)`; new tactics: `tacticChance` adds the same before its clamp |
 | `tacRes` | pp | side | `sideRes(s) = max over alive units of side s of bonus(gen,'tacRes')`. Enemy tactic success against any unit of that side drops by it |
-| `search` | pp | self | `Commands.search`: `p = 0.22 + intel/260 + virtue/420 + bonus(g,'search')` |
-| `hire` | pp | self | `hireChance(target, recruiter, f) = clamp(v3 + bonus(recruiter,'hire') + promise, 0.05, 0.95)` |
-| `dip` | pp | self | `allyChance(f, target, gift, envoy) += bonus(envoy,'dip')`. The 同盟 flow gains an envoy picker, the same picker ITEMS §3.4 needs (`max(dip of ruler, dip of envoy)` for gear) |
-| `persuade` | pp | self | `persuadeChance(agent, target, f) = clamp((v3 + bonus(agent,'persuade')) × (1 − persuadeRes(target)), 0, 0.9)` |
-| `discord` | pp | self | `discord(agent, target)`: success `p + bonus(agent,'discord')`; loss `d = max(1, round(d × (1 − discordRes(target))))` |
-| `dev` | pct | self | `develop(c, g, k)`: `gain = round((DevelopBase + pol/6 + R(0,4)) × (1 + bonus(g,'dev') + gearPct))`, applied by the general who presides (the general picker shows the expected gain) |
-| `income` | pct | city | `endMonth`: `c.gold += round((industry×0.12 + town×0.05) × (1 + cityBonus(c,'income') + natBonus(owner,'natIncome')))` |
-| `harvest` | pct | city | `endMonth`, month 7: `harvest × (1 + cityBonus(c,'harvest') + natBonus(owner,'natHarvest'))` |
-| `recruit` | pct | city | `recruit` / `recruitMax`: troops per gold `5 × (1 + cityBonus(c,'recruit') + gear)` |
+| `search` | pp | self | `Econ.searchP`: `min(0.90, 0.22 + eff intel/260 + virtue/420 + gear + bonus(g,'search') + project)` |
+| `hire` | pp | self | `Econ.hireP = clamp(v3 + gear + bonus(recruiter,'hire') + promise, 0.05, 0.95)` |
+| `dip` | pp | self | `Econ.allyP(f, target, gift, envoy)` adds `bonus(envoy,'dip')` (one clamp at 0.90). The 同盟 flow gains an envoy picker, the same picker ITEMS §3.4 needs (`max(dip of ruler, dip of envoy)` for gear) |
+| `persuade` | pp | self | `Econ.persuadeP = clamp(v3 + gear + bonus(agent,'persuade'), 0, 0.9) × (1 − persuadeRes(target))` |
+| `discord` | pp | self | `Econ.discordP`: success `clamp(v3 + gear + bonus(agent,'discord'), 0.1, 0.9)`; loss `d = max(1, round(d × (1 − discordRes(target))))` |
+| `dev` | pct | self | `Econ.develop(c, g, k, roll)`: `gain = round(g0 × (1 + min(0.80, gear kind % + bonus(g,'dev') + project)))`, applied by the general who presides (the general picker shows the expected gain; `lastResult.mods.title` feeds DOMESTIC-FX's chip) |
+| `income` | pct | city | `Econ.cityGold(c)`: `cityBonus(c,'income') + natBonus(owner,'natIncome')` are terms of the one income sum, clamped to −10 … +35 % with items, projects, pacts and order (INTEGRATION §4.2) |
+| `harvest` | pct | city | `Econ.harvest(c, roll)`, month 7: terms of the harvest sum, clamped to −20 … +35 % (INTEGRATION §4.3) |
+| `recruit` | pct | city | `Econ.troopsPerGold`: `5 × (1 + min(0.40, cityBonus(c,'recruit') + gear + project))` |
 | `pop` | pct | city | `endMonth`: population growth `× (1 + cityBonus(c,'pop'))` |
-| `loyAura` | flat | city | `endMonth`, after the defection check: every non-ruler officer in the city `+loyAura`, not above 95 (the same rule as ITEMS `loyal`; the two do not stack: take the max) |
+| `loyAura` | flat | city | `SG.Mods.loyAura(c)` in phase 5 of `endMonth`, after the defection check: every non-ruler officer in the city `+max(title, item aura)`, not above 95 |
 | `natIncome`, `natHarvest` | pct | nation | `natBonus(f, k) = max over active offices in f` (the single best holder, never a sum) |
 
-**City administrator.** `cityBonus(c, k) = bonus(admin(c), k)`. `admin(c)` is the governor (`c.governor`). When the governor is the ruler, who holds no office, it is the highest-tier active 文官 office holder stationed in the city, acting as 长史, with ties going to higher 政治 then lower id. The city panel shows `主政：荀彧（尚书令）`. This differs from gear (ITEMS §3.4 uses the ruler's own gear when he governs) because rulers have no office.
+**City administrator.** `cityBonus(c, k) = bonus(admin(c), k)`. `admin(c)` is the governor (`c.governor`). When the governor is the ruler, who holds no office, it is the highest-tier active 文官 office holder stationed in the city, acting as 长史, with ties going to higher 政治 then lower id. The city panel shows `主政：荀彧（尚书令）`. **ITEMS uses the same administrator** for city-scope gear (INTEGRATION §4.6: one rule for both specs; when no 文官 office-holder is in the ruler's city, the ruler is the administrator and his own gear counts).
 
 **Loyalty protection** (any office, active or suspended):
 
 ```
-endMonth defection:  loyEff = loyalty + effLoy[tier]; skip if loyEff ≥ 40; p = (40 − loyEff) / 400 × (1.2 − virtue/100)
+endMonth defection:  loyEff = SG.Mods.effLoy(g) = loyalty + max(effLoy[tier], ENGAGEMENT bond shield)   // the larger shield, never the sum
+                     skip if loyEff ≥ 40; p = (40 − loyEff) / 400 × (1.2 − virtue/100)
 persuadeRes(t) = 0.1 × tier, discordRes(t) = 0.08 × tier
 ```
 
@@ -371,18 +372,21 @@ persuadeRes(t) = 0.1 × tier, discordRes(t) = 0.08 × tier
 
 ### 7.5 Duel: numbers only (answers COMBAT-V4 Q9)
 
-Titles change the duel only through `critDuel` (≤ 0.03) and `dmgDuel` (≤ 0.02), inside COMBAT-V4's caps. No title changes duel rules: no guard crush, no longer strings, no extra parry window. The duel stays readable, and each general's 8-hit string (COMBAT-V4 §8) is his own and not his title's.
+Titles change the duel only through `critDuel` (≤ 0.03) and `dmgDuel` (≤ 0.02), inside the all-in duel budget shared with gear (INTEGRATION §8.3). No title changes duel rules: no guard crush, no longer strings, no extra parry window. The duel stays readable, and each general's 8-hit string (COMBAT-V4 §8) is his own and not his title's.
 
 ### 7.6 Caps shared with gear
 
-| Number | Title max (post) | Gear max (ITEMS) | Clamp (COMBAT-V4) |
+| Number | Title max (post) | Gear max (ITEMS) | Clamp (`SG.Mods.CAPS`, INTEGRATION §3.1) |
 |---|---|---|---|
 | Army crit | 0.02 (w4b, w5) | 0.04 | 0.06 |
-| Duel crit | 0.03 (w4b, w5) | 0.05 | 0.08 |
-| Duel damage | 0.02 (w3b, w4b, w5) | 0.04 | 0.06 |
+| Duel crit | 0.03 (w4b, w5) | 0.03 | counted ≤ 3 pp in the all-in duel budget |
+| Duel damage | 0.02 (w3b, w4b, w5) | 0.03 | dmg % + 0.4 × HP ≤ 6 (the duel budget) |
 | 计策威力 | 0.22 (i5) | 0.40 | none; tactics stay within the v3 ratio checks (§12.3) |
-| 攻 / 防 | 0.12 + 0.03 command | 0.40 / 0.45 | none; the combined title + gear + level multiplier is checked in §12.3 |
+| 攻 / 防 | 0.12 + 0.03 command | 0.40 / 0.45 | product of gear × (title + command) × bond × aura ≤ ×1.60 |
+| 开发 | 0.22 (p5) | 0.60 | gear + title + project ≤ +0.80 |
+| 本城金 / 秋收 | 0.10 + national 0.025 | items `income` / `harvest` | one sum with projects, pacts and order: −10 … +35 % / −20 … +35 % |
 | 本城忠诚 / 月 | 2 | 3 (`loyal`) | max of the two, not the sum; cap 95 |
+| Loyalty shield | 4 … 20 | — | max of title and bond shield (`Mods.effLoy`) |
 
 ### 7.7 Random-number contract and switches
 
@@ -408,7 +412,7 @@ For scale: one level of 老练 (+4% attack, defence and tactic power) is about 8
 
 ## 8. AI granting rules
 
-`Titles.aiManage(f)` runs for every AI faction once a month at the start of `StrategyAI.runAI`, before its city loop. It also runs once in `GameState.newGame` for all AI factions. It costs no token and draws no random numbers.
+`Titles.aiManage(f)` runs for every AI faction once a month in the **discretionary phase of `StrategyAI.endMonth`** (INTEGRATION §6.3 step 7: after `Titles.monthStart`, before ITEMS' gear purchases, ENGAGEMENT's projects and festivals). It also runs once in `GameState.newGame` for all AI factions. It costs no token and draws no random numbers.
 
 ```
 aiManage(f):
@@ -420,8 +424,9 @@ aiManage(f):
              first the family with the fewest active holders at tier ≥ t (三家轮流),
              then the highest merit = maxBase + 3 × level (ties: lower id)
       post = preferred branch if it has a free seat, else the other branch, else the tier's only post
-      gift: the own city with the most gold above its reserve (100 + 3 × SalaryPerGeneral × its officers)
-            must hold gift + reserve, otherwise stop this tier
+      gift: payer = SG.AIBudget.payer(f, gift, 'title')      // the own city with the most gold above R(c) = 150 + 8 × officers
+            no payer, or the discretionary purse < gift → stop this tier (INTEGRATION §5)
+            SG.AIBudget.spend(payer, gift, 'title')
       grant(best, post)                                 // a promotion frees a lower seat, filled when the loop reaches it
 ```
 
@@ -597,9 +602,9 @@ SG.Titles = {
 | | `GameState.newGame` | after `autoGovernor`: `SG.Titles?.refresh` for each faction, then `aiManageAll()` |
 | | `toJSON` / `fromJSON` | §10.4; migration: offices null, rank recomputed |
 | | `SG.maxTroops` | unchanged (no troop-cap effect; §12.1) |
-| | `Commands.develop / train / recruit / recruitMax / search / hireChance / hire / allyChance / ally / discord / persuadeChance / persuade` | §7.1 hooks; `ally` and `allyChance` gain an optional `envoy`; `hire` takes an optional `promise` and grants on success; `persuade` / `hire` call `Titles.validate` |
-| `strategy-ai.js` | `StrategyAI.endMonth` | income, harvest and population multipliers; defection with `effLoy`; `loyAura` after defections; `Titles.monthStart()` at the end, so offices are valid for the next month |
-| | `StrategyAI.runAI` | `Titles.aiManage(f.id)` before each AI faction's city loop |
+| | `Commands.develop / train / recruit / recruitMax / search / hireChance / hire / allyChance / ally / discord / persuadeChance / persuade` | §7.1: the formulas are `SG.Econ`'s (INTEGRATION §4); this module registers its providers (`titleDev`, `titleCity`, `titleNat`, `titleSearch` …, INTEGRATION §3.3); `ally` and `allyChance` gain an optional `envoy`; `hire` takes an optional `promise` and grants on success; `persuade` / `hire` call `Titles.validate` |
+| `strategy-ai.js` | `StrategyAI.endMonth` | income, harvest and population through `SG.Econ`; defection with `SG.Mods.effLoy`; `loyAura` after defections; `Titles.monthStart()` (phase 6), then `Titles.aiManage(f.id)` for each AI faction in the discretionary phase (phase 7, INTEGRATION §6.3) |
+| | `StrategyAI.runAI` | unchanged (no titles call) |
 | | `Conquest.apply / release / execute / succession / aiDecideCaptives`, `GameState.checkFactionDeath` | `Titles.validate` / `refresh` |
 | | `SG.cityDefense` (in `model.js`) | `+ Titles.garrison(c)` |
 | `battle-model.js` | constructor | `morale` |
@@ -627,8 +632,8 @@ G.officeSeq    = n               // grant counter (tie-break for suspension orde
 
 - `name` is an index into the resolved name list. It is clamped on load if the data changed. Names are always re-resolved from data, never stored as text.
 - About 30 bytes per titled general, so roughly 6 KB in a late world game.
-- The version bump is owned by integration (shared v4 save version with ITEMS and COMBAT). v3 saves load with no offices; `rank` is computed on load, `aiManageAll` runs at the next month start, and `GameState.migratedFrom` already tells the UI to show one hint (`新增官爵制度：主公可在「官制」中授官`).
-- **Name clash with ITEMS §15**: `G.items.titles` there counts 武林大会 wins (championship titles). Q8 proposes renaming it `G.items.championships`.
+- Save version 4 (INTEGRATION §6.1); TITLES migrates **second**, after ITEMS (INTEGRATION §6.2). v3 saves load with no offices; `rank` is computed on load, `aiManageAll` runs at the next month start, and `GameState.migratedFrom` already tells the UI to show one hint (`新增官爵制度：主公可在「官制」中授官`).
+- **Name clash with ITEMS §15** — resolved: tournament titles are `G.tourney.wins` (INTEGRATION §6.4); ITEMS has no such field.
 
 ### 10.5 Unity port (after the browser build is stable)
 
@@ -647,7 +652,7 @@ G.officeSeq    = n               // grant counter (tie-break for suspension orde
 
 Titles need levels, and in v3 only battles give exp. A 文官 who never fights stays level 1 and can never pass 九品. The prototype shows the gap. In classic AI games at year 10 there are on average 1.2 AI 文官 at 七品 or higher on the whole map without domestic exp, and 3.5 with it (§8). In the world, domestic exp raises the number of level-7+ officers at year 15 from about 11 to about 80 per game. 文官 at 三品 and above stay rare for the AI, because the candidates are few and mostly hermits (§8).
 
-Request 13 ("make the non-battle game rewarding") belongs to another v4 spec. **If that spec defines domestic exp, its numbers win.** Otherwise this fallback applies (`Progress.gain(gen, n, 'domestic')`, cap **20 per general per month**, AI included):
+Request 13 ("make the non-battle game rewarding") belongs to ENGAGEMENT, which **owns domestic exp** (ENGAGEMENT §4: `gen.dexp`, routine cap 20 per general per month; the item exp multiplier is applied before that cap, INTEGRATION §3.4; `vetLevel`, which drives 老练 and crits, counts non-battle exp at half). The table below is the fallback this spec used before ENGAGEMENT existed; it is kept for reference (`Progress.gain(gen, n, 'domestic')`, cap **20 per general per month**, AI included):
 
 | Command | Exp to |
 |---|---|
@@ -687,6 +692,8 @@ All-AI campaigns, same seeds, variants: off, on (titles), dom (titles + domestic
 | World: defections per seed | 3.5 | 3.5 | 2.3 | | ≤ off + 4 |
 | Tactical, classic year-8 titled armies (8 campaigns, 480 battles per mode): attacker win with title effects none / both / attacker only / defender only | 43.5% | 42.5% / 44.8% / 41.3% | | an earlier snapshot set: 46.3 / 45.6 / 47.9 / 45.0 | both − none within ±3 pp; attacker-only − defender-only swing 1–8 pp (measured 3.5) |
 | Tactical: defender ÷ attacker losses, none / both / attacker only / defender only | 0.92 | 0.93 / 0.98 / 0.88 | | | the titled side trades 3–10% better (measured ≈ 5–6%) |
+
+**With every v4 system on** (the consolidation's all-on prototype, INTEGRATION §9; titles paid through `SG.AIBudget`, granted in the discretionary phase): classic 2 × 48 seeds × 25 y, alive y10 4.77 / 4.48 vs off 4.94 / 4.29; first > 25 %: 2.08 / 2.00 y vs 2.33 / 2.08; defections 1.54 / 3.27 vs 2.04 / 6.31 (the larger-shield rule of `Mods.effLoy` halves cascades); titles granted 14 959 per 48 runs; title gifts 2.0 % of gross income (world 1.8 %); no city below 0 after a gift. World 24 × 15 y: alive y15 43.42 vs 44.29. All gates pass.
 
 Rejected options, all measured: monthly salary at any level (3/5/8/12/18, 2/3/5/8/12, 1/2/4/6/10, 0/0/4/6/10) cost 0.7–1.5 factions alive at year 10 and multiplied defections. A troop-cap bonus of +100 … +500 (also at half size) cost about 0.5 factions alive at year 10 and sped up the first > 25% faction by 0.3–0.6 y. A gift of 100–800 was too steep. An AI recruit reserve (env `KEEP`) made no measurable difference, so it is not part of the spec.
 
@@ -755,13 +762,13 @@ The proxy blocked WebFetch in this session for wikipedia.org, wikisource.org and
 
 ## 14. Open questions
 
-- **Q1. Domestic exp ownership** (§11). Does the request-13 spec own it? The fallback's 20 per month cap also changes 老练 levels in battles.
+- **Q1. Domestic exp ownership** (§11) — resolved: ENGAGEMENT §4 owns it (cap 20 / month); 老练 and crits use `vetLevel` with non-battle exp at half (ENGAGEMENT §4.4, INTEGRATION §3.2).
 - **Q2. Should ruler rank change anything besides seats?** For example, AP bonus, diplomacy weight, or declaring 王 / 皇帝 provoking neighbours. Proposed: v4 seats only, with flavour in names and frames.
 - **Q3. Seat caps for the world's one-general factions.** These 15 factions never use titles. Accepted, or give every faction one free 九品 seat for its first hired officer?
 - **Q4. Titles in 武林大会** (request 14): should the tournament show offices on the bracket and give a champion's office ceremony? Proposed: show them; prizes stay items (ITEMS §8.9).
-- **Q5. A 'grand' ceremony needs `figure.js` kneel / bow clips and a seal prop.** Add them to the art pilot's list?
+- **Q5. A 'grand' ceremony needs `figure.js` kneel / bow clips and a seal prop** — resolved: one bow and one kneel clip shared with TOURNAMENT and ENGAGEMENT (INTEGRATION §10.5; ASSETS.md).
 - **Q6. AI use of 许官.** Off in v4 to keep the AI hire path unchanged. Turn it on later with a merit check?
 - **Q7. Gift payer.** The holder's city first, then the richest own city. Should a capital-only treasury be simpler for the player?
-- **Q8. Field-name clash with ITEMS §15** (`G.items.titles` = tournament wins). Rename it to `championships`?
+- **Q8. Field-name clash with ITEMS §15** — resolved: `G.tourney.wins` (INTEGRATION §6.4).
 - **Q9. Naming conflicts with in-game offices.** The han R1 ruler rank is 郡守 to avoid «太守» (the city office). The han T3-A post is 刺史 while 州牧 is the R2 ruler rank. Acceptable to the writers?
 - **Q10. AI civil offices.** Without a monthly 政绩 exp for city administrators (for example 4 + 2 × tier per month, inside the 20/month cap), AI 文官 almost never reach 五品 (§8). Add it in the request-13 spec?

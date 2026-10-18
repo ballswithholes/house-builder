@@ -2,7 +2,7 @@
 
 Player request 8 of v4: zoom into a city to see its model — farms, stables, barracks and the rest — and see them look better, with more features, as the city advances. This file specifies that view: the building set per culture family, how each building's look follows the city's numbers in five visual stages, the layout, the life in the streets, the camera, the way the domestic vignettes of `DOMESTIC-FX.md` play inside it, the budgets and the module plan. It also carries the city-side half of request 13 (a non-battle game that feels rewarding to build).
 
-Read `DESIGN-V2.md` §1 (common rules) and §6 (culture codes), `DESIGN-V3.md`, `CONTRACT.md`, the sibling v4 specs `DOMESTIC-FX.md` (vignettes, tiers, stings), `ITEMS.md` (the 市场 tiers, 府库, mounts) and `titles.json` first. Where this file conflicts with them, this file wins for the city view; the others win for their rules. Platform order: browser first, then the Unity port (§12). The art direction is the v4 art pilot's (`js/lowpoly.js`, `js/lp-pilot.js`): Lanternvale-style stylized low-poly, cozy Ghibli-warm palette, flat-shaded props and buildings with per-face brightness jitter, soft-lump foliage with the warm-top / cool-teal ramp, ink outlines on buildings, props and figures (not on terrain, crops, grass or particles), soft painted light, golden hour by day and warm lantern pools at night. Every building below is to be modelled with `SG.LP.MeshBuilder` in that style; `SG.LPPilot.gateTower` is the reference for the Han gate and the quality bar.
+Read `DESIGN-V2.md` §1 (common rules) and §6 (culture codes), `DESIGN-V3.md`, `CONTRACT.md`, the sibling v4 specs `DOMESTIC-FX.md` (vignettes, tiers, stings), `ITEMS.md` (the 市场 tiers, 府库, mounts) and `titles.json` first, and **`INTEGRATION.md`** (it wins for cross-system rules: the city-level table `SG.Balance.CityLevel` that rules read, the triangle budget that now includes ENGAGEMENT's projects, the shared day clock). Where this file conflicts with the other specs, this file wins for the city view; the others win for their rules. Platform order: browser first, then the Unity port (§12). The art direction is the v4 art pilot's (`js/lowpoly.js`, `js/lp-pilot.js`): Lanternvale-style stylized low-poly, cozy Ghibli-warm palette, flat-shaded props and buildings with per-face brightness jitter, soft-lump foliage with the warm-top / cool-teal ramp, ink outlines on buildings, props and figures (not on terrain, crops, grass or particles), soft painted light, golden hour by day and warm lantern pools at night. Every building below is to be modelled with `SG.LP.MeshBuilder` in that style; `SG.LPPilot.gateTower` is the reference for the Han gate and the quality bar.
 
 Status: design spec only. No game code was changed. Supporting prototypes in `design-v4/domestic/` (Node, read-only on the game data):
 
@@ -23,9 +23,9 @@ Status: design spec only. No game code was changed. Supporting prototypes in `de
 | Buildings | **16**: 城墙·城门, 官署/宫城, 农田, 仓廪, 市, 兵器铺, 工坊, 民居, 兵营, 校场, 马厩, 学馆, 祠庙, 酒肆, 府库, 港/津渡 (coastal or river cities) + a historical **landmark** in 29 cities + the 草庐 spawned by 搜索 |
 | Stages | 5 per building (S1–S5), driven by live stats: 农田 = 土地, 工坊 = 产业, 民居 = 町, 城墙 = 防御 (20 + 町/12), 市 / 兵器铺 = ITEMS shop tier, 兵营 = troops, 校场 = training, 马厩 = strong generals + mounts, 学馆 = officers' 智力, 祠庙 = 德 + population, 府库 = gold, 港 = 产业 + 町 … Thresholds 300 / 450 / 600 / 800 for the three develop stats; 5 % hysteresis on the way down |
 | Pacing | a stage step takes 7–13 开发 of one stat (政治 90 → 50); measured: about 11 % of 开发 commands cause a stage-up (DOMESTIC-FX §4.3) — a visible upgrade every 2–3 months for an active player |
-| City level | 邑 · 县城 · 郡城 · 大郡 · 都会 = mean of the five core buildings; at game start (world, 196 cities) 63 / 97 / 31 / 5 / 0 |
-| Budgets | big building ≤ **3 000** triangles per stage, small prop ≤ **400**; whole scene drawn (with ink-outline shells) ≤ 250 k desktop / ≤ 150 k phone (estimate for an all-S5 capital: 193 k / 119 k); draw calls ≤ 90 / ≤ 55; build ≤ 120 ms in ≤ 8 ms slices; 60 fps desktop, 30 fps iPhone class |
-| Life | crowd 10–56 (desktop) / 6–24 (phone) by population, soldiers by troops, oxen, horses, camels or elephants by family, smoke by industry, boats by harbour stage; seasons by month and latitude; the sun moves from 07:00 to 20:00 as the month's tokens are spent; lanterns light at dusk |
+| City level | 邑 · 县城 · 郡城 · 大郡 · 都会 = mean of the five core buildings, read from the **rules table `SG.Balance.CityLevel`** (thresholds, hysteresis, hubs; INTEGRATION §12) so ENGAGEMENT and ITEMS use the same numbers; at game start (world, 196 cities) 63 / 97 / 31 / 5 / 0 |
+| Budgets | big building ≤ **3 000** triangles per stage, small prop ≤ **400**, ENGAGEMENT project ≤ **900** (wonder ≤ 2 000; medium LOD halves them); whole scene drawn (with ink-outline shells) ≤ 250 k desktop / ≤ 150 k phone (estimate for an all-S5 capital with all 13 projects: 216 k / 129 k; without projects 193 k / 119 k); draw calls ≤ 90 / ≤ 55; build ≤ 120 ms in ≤ 8 ms slices; 60 fps desktop, 30 fps iPhone class |
+| Life | crowd 10–56 (desktop) / 6–24 (phone) by population, soldiers by troops, oxen, horses, camels or elephants by family, smoke by industry, boats by harbour stage; seasons by month and latitude; the sun moves from 07:00 to 20:00 as the month's tokens are spent (the one shared day clock, INTEGRATION §10.7); lanterns light at dusk |
 | Camera | drag pan, wheel / pinch zoom 16–150 m, Q/E / right-drag / two-finger twist rotate, pitch 30°–58° by distance (±10° tilt), tap a building = info chip with stage progress and context commands, double-tap = focus, idle orbit after 25 s |
 
 ---
@@ -60,8 +60,8 @@ The city scene is built in idle time when the city is selected (§9.3); if it is
 
 ### 2.4 The dock and overlays
 
-- **Desktop / iPad**: the dock replaces the city panel on the left (same width), with: city name, family name, city-level badge (邑 · 县城 · 郡城 · 大郡 · 都会, with five small towers filled by level), the stats (土地 产业 町 金 粮 防御 兵力 人口) each with a thin stage bar for the building it drives, the generals list (portraits; tap → the character menu of request 9), the command grid (DOMESTIC-FX §7), and ◀ ▶ / 「出城」.
-- **Phone landscape (844 × 390)**: the dock collapses to a bottom bar with the command grid as one scrollable row (56 × 60 px buttons) and a pull-up drawer for stats and generals. The top bar keeps its current height.
+- **Desktop / iPad**: the dock replaces the city panel **on the right** (UI-V4 §5: the city panel is the right column, 376 px; the city view keeps it there so the player's eye and hand do not move), with: city name, family name, city-level badge (邑 · 县城 · 郡城 · 大郡 · 都会, with five small towers filled by level), the stats (土地 产业 町 金 粮 防御 兵力 人口) each with a thin stage bar for the building it drives, the generals list (portraits; tap → the character menu of request 9), the command dock (UI-V4 §5's 4 × 4 grid, DOMESTIC-FX §7.1), and ◀ ▶ / 「出城」.
+- **Phone landscape (844 × 390)**: the dock collapses to a bottom bar: the same 16 tiles of UI-V4 §5 in one scrollable row (56 × 60 px), grouped by the **four group stripes** (治 · 人 · 运 · 策, the stripe colours of UI-V4 §5.9) and snapping per group, inside the safe-area insets (UI-V4 §15.1); stats and generals are a pull-up drawer. The top bar keeps its current height.
 - **Building chip** (tap a building): a small paper panel anchored above the building (`SG.UI.follow`), 260 px wide: the building's family name and generic name (「仓楼 · 仓廪」), stage S3 / 5 with the stage name (「仓楼」), the driver line (`粮 7 200 · 存粮 64 %`), the progress line to the next stage (「土地 452 / 600 → S4 仓城」), one-line effect explanation from the rules (「土地 × 2.2 = 秋收」), and up to two context buttons (§3.2). Tapping elsewhere closes it.
 - **Name labels** appear over the buildings when the camera is closer than 40 m (decluttered like the map's city labels, max 8 visible).
 - **Scaffold markers**: a small bamboo-scaffold glyph floats above any building whose driver is within 8 % of its next threshold — the "almost there" nudge.
@@ -136,6 +136,8 @@ Stages are integers 0–4 shown as S1–S5. `count(v, t)` = how many thresholds 
 | `tavern` | 酒肆 | 町 (lantern sign = discovered free talents present) | 250 / 400 / 550 / 750 | 250 / 300 / 340 / 380 / 400 |
 | `treasury` | 府库 | 金 | 500 / 1 500 / 4 000 / 10 000 | 400 / 600 / 900 / 1200 / 1600 |
 | `harbour` | 港 / 津渡 | 产业 + 町, +1 stage for a tier ≥ 3 trade hub; only coastal or river cities | 500 / 750 / 1000 / 1400 | 700 / 1200 / 1800 / 2400 / 3000 |
+
+The thresholds of the five core buildings (农田, 工坊, 民居, 城墙, 市) and the city level are the rules table `SG.Balance.CityLevel` (INTEGRATION §12: ENGAGEMENT's prestige for each new level and the wonder's level ≥ 郡城 read it, and ITEMS' shop tier is the market's driver); this file's other eleven buildings are view-only and stay in `js/city-layout.js`. ENGAGEMENT's 13 projects (scaffold → shell → finished model, ENGAGEMENT §8.4) attach to their anchor buildings and count in the scene budget (§9.5).
 
 The **landmark** (≤ 3 000 triangles, §6.5) appears in its city from S3 of the city level (or always in a capital), and the **草庐** cottage (≤ 400) is spawned only by the 搜索 vignette.
 
@@ -375,7 +377,7 @@ One per famous city, ≤ 3 000 triangles, placed in the landmark slot (outside t
 
 ### 6.6 Time of day, seasons, weather, festivals
 
-- **Clock**: in the player's command phase the city's hour is `7 + 13 × tokensUsed / tokensTotal` (07:00 at the month's start, 20:00 when the last token is used); during the AI phase and the news it is 20:30. Mood keys (`SG.LP.Mood.set` with hours): 07–09 golden morning, 10–15 noon, 15–18 golden, 18–19.5 dusk, ≥ 19.5 night with lantern pools (palace gate, tavern, market, temple, main-street posts every 12 m). Viewing a foreign city uses the current hour. A small sun-dial glyph in the dock shows the hour.
+- **Clock** (`SG.Clock.hour()`, the one day clock shared with the map light and the shell, INTEGRATION §10.7): in the player's command phase the city's hour is `7 + 13 × tokensUsed / tokensTotal` (07:00 at the month's start, 20:00 when the last token is used); during the AI phase and the news it is 20:30. Mood keys (`SG.LP.Mood.set` with hours): 07–09 golden morning, 10–15 noon, 15–18 golden, 18–19.5 dusk, ≥ 19.5 night with lantern pools (palace gate, tavern, market, temple, main-street posts every 12 m). Viewing a foreign city uses the current hour. A small sun-dial glyph in the dock shows the hour.
 - **Seasons** from the month and the city's latitude: spring (2–4) blossom trees (peach and plum in 华夏 and 三韩, almond in 安息 and 罗马), summer (5–7) lush, autumn (8–10) golden fields and red maples, winter (11–1) snow north of 32° N and in the steppe, bare trees; tropics (latitude < 23.5°) stay green with monsoon rain showers in months 6–9 (light rain particles, wet ground tint). Month 7 fields are golden (the harvest, DOMESTIC-FX §9.1).
 - **Weather**: decorative, deterministic per (city, month): drizzle, snow, morning mist, a dusty haze in the oases and Arabia. Never at a vignette's Reveal (the director clears it for 2 s).
 - **Festivals** (decor and crowd only; no rule effect unless another spec adds one): 华夏 庙会 in month 3 (ITEMS §14.2 market festival: lanterns and extra stalls), 高句丽 东盟 in month 10 (「以十月祭天，国中大会，名曰东盟」), 鲜卑 spring gathering on the 饶乐水 in month 3 (后汉书·鲜卑传), 罗马 Saturnalia in month 12, 安息 Nowruz in month 3.
@@ -496,7 +498,8 @@ Set by `settings.quality` ('auto' by default): 'auto' picks `high` on desktop GP
 |---|---|---|
 | One big building, any stage | ≤ 3 000 triangles (before outline shells) | same geometry, medium LOD drops small props |
 | One small prop / house variant / crowd figure | ≤ 400 / ≤ 400 / ≤ 300 | ≤ 400 / ≤ 400 / ≤ 260 |
-| Scene triangles drawn incl. outline shells | ≤ 250 k (estimate: start median 92 k, all-S5 capital 193 k) | ≤ 150 k (start median 59 k, all-S5 capital 119 k) |
+| One ENGAGEMENT project (scaffold, half shell or finished, ENGAGEMENT §8.4) | ≤ 900 triangles; the wonder ≤ 2 000 | medium LOD: half (≤ 450 / ≤ 1 000) |
+| Scene triangles drawn incl. outline shells | ≤ 250 k (estimate: start median 92 k, all-S5 capital 193 k, **with all 13 projects 216 k**) | ≤ 150 k (start median 59 k, all-S5 capital 119 k, **with all 13 projects 129 k**) |
 | Draw calls | ≤ 90 | ≤ 55 |
 | Point lights (lantern pools) | ≤ 12 active (nearest to the camera target), the rest emissive + halo sprites | ≤ 6 |
 | Shadow map | 2048, fitted to the plot | 1024 |
@@ -506,7 +509,7 @@ Set by `settings.quality` ('auto' by default): 'auto' picks `high` on desktop GP
 | Geometry memory | ≤ 30 MB (family libraries + 2–3 city scenes) | ≤ 18 MB |
 | Textures | none (vertex colours); labels and chips are DOM | — |
 
-The estimates come from `domestic/city-stages.js` (`triEstimate`): per-building stage budgets + houses + props (40–120) + crowd + trees (30) + terrain (9 k) + capital extras, × (1 + outlined share 0.8 desktop / 0.6 phone).
+The estimates come from `domestic/city-stages.js` (`triEstimate(st, ctx, tier)`): per-building stage budgets + houses + props (40–120) + crowd + trees (30) + terrain (9 k) + capital extras + **`ctx.projects`** (900 each, wonder 2 000, halved on the phone tier), × (1 + outlined share 0.8 desktop / 0.6 phone). `node design-v4/domestic/city-stages.js` checks the all-S5 capital with every project against both budgets (ALL OK).
 
 ---
 
@@ -536,7 +539,7 @@ The estimates come from `domestic/city-stages.js` (`triEstimate`): per-building 
 
 | File | Status | Content |
 |---|---|---|
-| `js/city-layout.js` | new | pure logic (Node-testable): `FAMILY`, skins (`CITY_SKIN` table), `BUILDINGS`, `stageOf / stages / cityLevel` (port of `domestic/city-stages.js`), `TEMPLATES`, `resolve / lots / tiles / layout` (port of `domestic/city-templates.js`), landmarks table, water side from a terrain sampler function or sea links |
+| `js/city-layout.js` | new | pure logic (Node-testable): `FAMILY`, skins (`CITY_SKIN` table), `BUILDINGS`, `stageOf / stages / cityLevel` (port of `domestic/city-stages.js`; the five core thresholds, hysteresis and hubs are read from `SG.Balance.CityLevel`, INTEGRATION §12), `TEMPLATES`, `resolve / lots / tiles / layout` (port of `domestic/city-templates.js`), landmarks table, water side from a terrain sampler function or sea links |
 | `js/city-kit.js` | new | building recipes per family × skin × stage with `SG.LP.MeshBuilder`, part tags, house variants, props, the 草庐, landmark recipes (lazy), crop and herd instances |
 | `js/city-life.js` | new | crowd and animals (instanced, vertex animation), smoke, boats, birds, seasons, weather, clock → Mood, festivals |
 | `js/city-view.js` | new | the screen (push / pop, transitions), camera controller, input, building picking (bounds raycast), dock and chips (DOM), labels, scaffold markers, the director API (§7.3), idle pre-build and LRU, quality tier, diorama rendering helper `renderInto(rect)` for DOMESTIC-FX |
@@ -593,7 +596,7 @@ The estimates come from `domestic/city-stages.js` (`triEstimate`): per-building 
 
 ## 14. Open questions
 
-1. **Commands in the city view on phones.** The bottom-bar command row is tight at 844 × 390 with 15 commands; an alternative is the radial menu on the tapped building only (context commands, §3.2) plus a 「全部指令」 button.
+1. ~~Commands in the city view on phones~~ — resolved: one scrollable bottom row of the 16 tiles, grouped by the four group stripes and snapping per group (§2.4, UI-V4 §5.9); building chips keep their two context commands.
 2. **Scars and Dong Zhuo's burning of 洛阳.** The scars need the last-siege month per city; if the integration does not want a save field, derive it from `G.log` entries. Modelling the 190–191 burning of 洛阳 as a scenario event would make the landmark's ruins state meaningful; that is a scenario decision, not this spec's.
 3. **Enemy cities' interiors.** The game shows enemy stats openly, so the full city view is consistent; a 「远望」 (outside-only, misted interior) mode for enemy cities is cheap to add if the scouting design of another task wants it.
 4. **Skins per city.** The `CITY_SKIN` table (e.g. 潘提卡彭 as a Greek city in the roman family, 柳城 / 宁城 in 华夏) is short now; more exceptions will appear during art review.

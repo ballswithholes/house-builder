@@ -4,7 +4,7 @@ This spec covers the player's v4 requests **1** (menu and settings buttons on th
 
 Read first: `DESIGN-V2.md` §1 (common rules: classic scripts + IIFE, no network, everything generated in code, Chinese UI text, ≥ 44 px touch targets, 844×390 / 1280×720 / 1920×1080 / 1024×768, 8 ms JS per frame, no `pageerror`), `DESIGN-V3.md`, `CONTRACT.md`, `UI-CLASSES.md` (the `SG.UI` contract and `sg-*` class names), and the sibling v4 specs: `DOMESTIC-FX.md` (command icons, command buttons §6–§7, vignettes, the 「内政演出」 setting), `ITEMS.md` (§5.3–§5.5 icons and rarity, §6.7 shop flow, §14.1 the 装备 tab API), `TITLES.md` (§9 官制 board, grant flow, ceremony, 官爵 tab API), `COMBAT-V4.md` (§5.3 duel settings, §12.1 the 武艺 tab content), `ENGAGEMENT.md` (§16 the top-bar widgets and menu entries it asks for), `AUDIO-V4.md` (§B10.4 audio settings rows, voice cues), `CITY-VIEW.md` (§2 入城 and the dock, §9.4 quality tiers, §10 camera) and the tournament spec (`design-v4/TOURNAMENT.md`, being written in parallel; this file follows its decisions as of its progress log: single elimination, draw size 2^⌈log₂N⌉ between 8 and 128 with byes, final best-of-three plus a third-place match, the 平乐观 stadium with sixteen landmark façades).
 
-Precedence: this file wins for **how things look, move and sound in the shell** (top bar, city panel layout, dock layout, menu, settings, generals list, character menu frame, the visual skin of every screen) and for the component library. The sibling specs win for **what their screens contain** (ITEMS for items, TITLES for offices, COMBAT for the 武艺 content, ENGAGEMENT for its widgets, the tournament spec for brackets and prizes). Platform order: browser first, then the Unity port (§18). Every visual assumes the v4 art direction (Lanternvale: stylized low-poly, cozy Ghibli-warm, flat-shaded props, soft-lump foliage with a warm-top / cool-teal ramp, ink outlines, soft painted light with warm lantern pools at night).
+Precedence: **`INTEGRATION.md`** wins for cross-system rules (the settings and icon registries' full row lists, voice cues, the shared day clock, the month-start time budget, the test matrix). Otherwise this file wins for **how things look, move and sound in the shell** (top bar, city panel layout, dock layout, menu, settings, generals list, character menu frame, the visual skin of every screen) and for the component library. The sibling specs win for **what their screens contain** (ITEMS for items, TITLES for offices, COMBAT for the 武艺 content, ENGAGEMENT for its widgets, the tournament spec for brackets and prizes). Platform order: browser first, then the Unity port (§18). Every visual assumes the v4 art direction (Lanternvale: stylized low-poly, cozy Ghibli-warm, flat-shaded props, soft-lump foliage with a warm-top / cool-teal ramp, ink outlines, soft painted light with warm lantern pools at night).
 
 **Deliverables of this task**
 
@@ -31,11 +31,11 @@ The mockups are design documents, not game code: they use `rem` exactly like the
 | Commands | 16 tiles in 4 groups: 治 开发 营建 征兵 训练 · 人 搜索 登用 赏赐 任命 · 运 移动 输送 交易 市场 · 策 通商 探索 外交 出征; hotkeys `1–9 0 - =` `Z X C V` |
 | Top-bar buttons | 武将 · 官制 · 势力 · 大事 · 设置 · 菜单 (+ the 结束本月 seal); badges are red-wax dots |
 | Menu | 7 entries: 继续 · 记录 · 读取 · 卷宗 · 设置 · 操作说明 · 返回标题; **4 save slots** (月初自动 + 3 manual), each with a map thumbnail and ruler portrait |
-| Settings | 6 tabs (音频 · 画面 · 游戏 · 镜头 · 操作 · 辅助), 50 rows; one registry `SG.Settings`, each owner keeps its own `localStorage` key |
+| Settings | 6 tabs (音频 · 画面 · 游戏 · 镜头 · 操作 · 辅助), 53 rows (INTEGRATION §10.1); one registry `SG.Settings`, each owner keeps its own `localStorage` key |
 | Character menu | 8 tabs: 总览 · 装备 · 武艺 · 计略 · 部队 · 官爵 · 关系 · 履历; 300 px 3D stage (turntable, 4 poses: 待机 · 演武 · 骑乘 · 得胜); prev / next through the list that opened it; actions 赏赐 · 赐宝物 · 移动 · 授官 · 演武 · 罢免 · 习得新招 |
 | Generals list | 8 columns (portrait, name + office, level, 武 · 智 · 政 with gear stripes, 兵 · 训, 忠, 所在, 6 gear icons); 4 family filters, 5 status filters, 8 sort keys; list ↔ card view; tabs 我方 · 他国 · 在野 |
 | Motion | 5 duration tokens (80 / 140 / 220 / 380 / 650 ms), one spring (k 420, c 26), ≤ 12 ambient loops on the strategy screen, everything on `transform` / `opacity`; reduced-motion keeps all information and drops all movement |
-| UI sound | 22 synthesized UI sounds (§14.1), −32 to −16 dBFS, hover sounds rate-limited to 1 / 80 ms; 6 new voice cues proposed to AUDIO-V4 |
+| UI sound | 22 synthesized UI sounds (§14.1), −32 to −16 dBFS, hover sounds rate-limited to 1 / 80 ms; 6 shell voice cues, registered in AUDIO-V4 (`voice-lines.js`) |
 | Budgets | strategy-screen DOM ≤ 900 nodes; procedural textures ≤ 25 ms total in ≤ 8 ms idle slices (≈ 120 KB of data URLs); icons cached as strings; counters write text at ≤ 30 Hz |
 | Saves | classic save 56 KB, world 196 KB today (measured); v4 adds ≈ 90–120 KB; 4 slots × ≤ 330 KB + thumbnails (≤ 12 KB each) ≈ 1.4 MB of the ≈ 5 MB `localStorage` quota |
 | Tests | `tests/ui-v4.html` (component sheet + automatic checks), `tests/ui-layout.html` (5 viewports, 14 screens: overlap, touch targets, text size, clipping), `tests/settings.js` and `tests/saves.js` (Node: registry, migration, defaults, slots, quota); targets in §19 |
@@ -129,6 +129,7 @@ All colours are CSS custom properties on `:root` (`css/style.css`), also exporte
 | `--good` / `--bad` (on paper) | `#2e6e3a` / `#a8371f` | gains / losses on paper | — |
 | `--good-hi` / `--bad-hi` (on lacquer) | `#8ddc93` / `#ff8f73` | gains / losses on lacquer | — |
 | DOMESTIC-FX §6.1 icon tokens | `--cinnabar #c8382c --jade #4f9a76 --ochre #c99a2e --indigo #3b4f7a --teal #3aa5a0 --plum #8a5fc0 --ember #e07a3a --amber #d9933a` | icon accents | — |
+| `--combo-l` / `--combo-m` / `--combo-h` | `#5fb3a8` `#e0a24a` `#d2553a` | the combo glyphs ● 轻 (teal circle) · ◆ 中 (amber diamond) · ▲ 重 (vermillion triangle) everywhere: the duel HUD ribbon, touch buttons, the 武艺 tab, the tournament entry list and match cards (COMBAT-V4 §5, §8, §12.1). Fills only, always with the ink outline; the shape carries the meaning for colour-blind players | — |
 
 Measured contrast (WCAG 2.x relative luminance; the colour checker in `tests/ui-v4.html` recomputes these):
 
@@ -255,7 +256,7 @@ Colour is never the only signal (§16).
 
 ### 3.8 Light and time of day
 
-The UI shares the world's light: `--night` (0 … 1) is set on `<html>` by `SG.Shell` from the map's mood (`SG.LP.Mood` night factor when the art pilot's renderer drives the world map; otherwise 0). At `--night` > 0.3 the top-beam lanterns light (their glow pools opacity = `--night`), paper pages get a warm inner glow (`inset 0 0 60px rgba(255,190,110,.45 × night)`), and selected-city rings and the end-month seal brighten (`03-main-night-desk.png`). Proposed (Q2): the strategy map's sun moves through the month as tokens are spent (month start 08:00 → each token +⌊10 h / tokens⌋ → 18:00 when none are left; AI turns at dusk; month transition through night to dawn), so "a month passes" is seen in the light.
+The UI shares the world's light: `--night` (0 … 1) is set on `<html>` by `SG.Shell` from the map's mood (`SG.LP.Mood` night factor when the art pilot's renderer drives the world map; otherwise 0). At `--night` > 0.3 the top-beam lanterns light (their glow pools opacity = `--night`), paper pages get a warm inner glow (`inset 0 0 60px rgba(255,190,110,.45 × night)`), and selected-city rings and the end-month seal brighten (`03-main-night-desk.png`). **One day clock** (INTEGRATION §10.7, shared with CITY-VIEW §6.6): `SG.Clock.hour()` = 07:00 at the month's start → 20:00 when the last token is used (`7 + 13 × tokensUsed / tokensTotal`), 20:30 (night) for the AI turns and the news, dawn at the month transition; the map's sun follows it when the map renderer adopts `SG.LP.Mood` (Q2), so "a month passes" is seen in the light. The former 08:00 → 18:00 proposal is replaced.
 
 ---
 
@@ -502,7 +503,7 @@ Press → if tokens remain, a paper confirm card 「还有 2 枚令牌未用，�
 | +1.2 | dawn | wash fades, `--night` → 0, quiver refills (§5.3), income tags roll | `ui-token-refill`, `ui-coins` |
 | +1.6 | news | month news and the agenda (v3 news cards, restyled) | — |
 
-Any click / Space skips to the next beat; reduced motion replaces the whole sequence with a 0.3 s cross-fade and the month banner. In month 1 the ENGAGEMENT year review (年鉴) plays before the news.
+Any click / Space skips to the next beat; reduced motion replaces the whole sequence with a 0.3 s cross-fade and the month banner. In month 1 the ENGAGEMENT year review (年鉴) plays before the news. **Month-start budget** (INTEGRATION §6.6): the non-interactive beats of a month start — the year review, achievement seals, stage-up celebrations, the harvest montage and this transition — total **≤ 8 s**; whatever would exceed it becomes an agenda slip (§5.5) or a news line instead of playing (order of priority: the transition, the year review, the harvest montage, stage-ups, seals). The AI turns and v4 month phases (INTEGRATION §6.3) compute under the scroll in ≤ 8 ms JS slices; the January tournament's AI-only resolution is outside the 60 ms per-faction cap.
 
 ### 5.8 Ambient motion on the strategy screen
 
@@ -533,7 +534,7 @@ At most 12 animated elements at once on this screen; all loops pause when the ta
 | Toasts | above the end-month seal, left-aligned |
 | Long-press | 450 ms on any icon button or tile → name and description tag (no hover on touch) |
 
-In the city view (CITY-VIEW §2.4) the phone dock becomes the bottom bar CITY-VIEW describes (one scrollable row of the same tiles, grouped by the four group stripes, snap per group) and the ledger becomes a pull-up drawer.
+In the city view (CITY-VIEW §2.4) the phone dock becomes the bottom bar CITY-VIEW describes (one scrollable row of the same 16 tiles, grouped by the four group stripes, snap per group) and the ledger becomes a pull-up drawer; on desktop the dock stays on the right.
 
 ### 5.10 Battle, clash and duel HUDs
 
@@ -665,11 +666,15 @@ UI-owned rows live in `sanguozhi2_ui_v4`. Reads and writes are wrapped in try / 
 | 45 | 辅助 | 高对比度 | 关 · 开 (opaque paper, no texture behind text, 3 px outlines, no glows) | 关 | UI |
 | 46 | 辅助 | 色觉辅助 | 关 · 红绿 · 蓝黄 (patterns on faction pennants and family bars, gain / loss also as ▲ ▼) | 关 | UI |
 | 47 | 辅助 | 闪光 | 正常 · 无闪光 (no white flashes, seal flashes become colour fades) | 正常 | UI |
-| 48 | 辅助 | 单挑速度 | 100 % · 85 % · 70 % (the whole duel runs slower, AI included, so fairness holds) | 100 % | UI (read by COMBAT `duel-game.js` time scale) |
+| 48 | 辅助 | 单挑速度 | 100 % · 85 % · 70 % (the whole duel runs slower, AI included) | 100 % | UI (read by COMBAT `duel-game.js` time scale in battle duels and watched matches; **not in tournament matches the player fights**, which run at 100 % because slowed AI reactions would favour the human in a prize duel — the entry screen notes it; INTEGRATION §8.5) |
 | 49 | 辅助 | 朗读 | 关 · 开 (system speech synthesis for dialogue, local only) | 关 | AUDIO |
 | 50 | 辅助 | 字幕底板 | 透明 · 实底 | 透明 | UI |
 
-50 rows. Rows that do not apply are hidden (`when`): desktop-only rows on touch devices and vice versa. A row whose owner module is not loaded does not appear (the registry is the contract).
+| 51 | 游戏 | 内政委任 | 小事委任 · 全部询问 (ENGAGEMENT R2: minor event cards answered with ★ and listed in the news) | 小事委任 | ENGAGEMENT · `sanguozhi2_engage_v4.delegate` |
+| 52 | 游戏 | 节庆照此办理 | button 「清除记忆」, shows the remembered festival choice (ENGAGEMENT R3; the value is in the save, `faction.eng.festivalAuto`) | — | ENGAGEMENT |
+| 53 | 游戏 | 武林大会 | 每次询问 · 自动派遣（推荐五人） · 只看结果 | 每次询问 | TOURNAMENT · `sanguozhi2_tourney_v4.entry` |
+
+53 rows (INTEGRATION §10.1). Rows that do not apply are hidden (`when`): desktop-only rows on touch devices and vice versa. A row whose owner module is not loaded does not appear (the registry is the contract).
 
 Interactions: sliders tick (`ui-bead`) every 10 %; 试听 plays a 1.5 s sample of that channel (a guzheng phrase, `ui-coins`, a voice line of the player's ruler); toggles stamp; segments clack. `恢复本页默认` asks once. On the title screen the same window opens with all tabs.
 
@@ -738,14 +743,14 @@ Row height 52 px; ≈ 10 visible at 1280×720; virtualised beyond 40. Click sele
 |---|---|---|
 | **总览** | this spec | two columns: **能力** (武 智 政 with 13 px brush bars to 110, gear hatch, source note `青龙偃月刀 +6`, 「最高：武 → 武官」), **战场与单挑** six stat cards (攻击 ×1.42 · 防御 ×1.33 · 会心 9 % · 计策威力 +24 % · 单挑体力 118 · 机动 5, each with its breakdown line), **招式** chips (必杀 vermillion, 计策 indigo, the open slot as a dashed jade chip, the combo string as glyphs with mastery stars); right column: **官爵** card (insignia, post, family and grade, since when, green effect line), **装备** strip (six 48 px slots, click → 装备 tab), **生平** (the history paragraph with a 「史」 seal and its source; world generals use v3 `generalInfo`, classic generals need new short bios — Q7), **忠诚 · 羁绊** (heart + number, bond portraits with their bond names) |
 | **装备** | ITEMS §14.1 content (`SG.Gear.slots / candidates / equip / unequip / summary`, `SG.ItemArt.icon`) | six slot cards in a 2 × 3 paper-doll grid (兵器 · 副手 / 铠甲 · 头盔 / 坐骑 · 宝物), each with icon in rarity frame, slot label, item name in rarity colour, key stats; the selected slot glows; a **candidates column** (府库 first, then this city's market with prices; deltas in green / red; requirement failures greyed with the reason); a **summary row** of before → after numbers (攻击, 机动, 会心, 单挑体力); the **abilities** of equipped rare+ items with 「演示」 (plays the item fx on a dummy in the stage) |
-| **武艺** | COMBAT §12.1 content (`SG.Combos.of(gen)`, mastery, knowledge) + 必杀 (v3 `Progress`) | the 招式谱 row: 8 seals (● 轻 vermillion, ◆ 中 indigo, ▲ 重 ochre; the finisher larger with a gilt ring) with the key for the current device above each (J / K / L or the touch glyph) and two chips below (damage share; safety tag 安全 / 小破绽 / 大破绽 / 可迟滞 / 可被看破 / 终结); right: finisher name in brush Kai, totals line (全中约 28 % · 用时 1.4 秒 · 终结会心 +10 %), mastery stars, 「演武场」 seal (COMBAT §12.4); below: a preview viewport (the stage's 演武 pose, or a second small viewport on desktop) and the 必杀 cards (专属 first; tier tags; open slot card → v3 learn dialog restyled) |
+| **武艺** | COMBAT §12.1 content (`SG.Combos.of(gen)`, mastery, knowledge) + 必杀 (v3 `Progress`) | the 招式谱 row: 8 seals (● 轻 teal `--combo-l`, ◆ 中 amber `--combo-m`, ▲ 重 vermillion `--combo-h` — the COMBAT-V4 glyph colours, §3.2; the finisher larger with a gilt ring) with the key for the current device above each (J / K / L or the touch glyph) and two chips below (damage share; safety tag 安全 / 小破绽 / 大破绽 / 可迟滞 / 可被看破 / 终结); right: finisher name in brush Kai, totals line (全中约 28 % · 用时 1.4 秒 · 终结会心 +10 %), mastery stars, 「演武场」 seal (COMBAT §12.4); below: a preview viewport (the stage's 演武 pose, or a second small viewport on desktop) and the 必杀 cards (专属 first; tier tags; open slot card → v3 learn dialog restyled) |
 | **计略** | v3 `Progress` + `SG.Tactics` (+ ITEMS / TITLES tactic bonuses) | tactic cards in a grid (name, tier, power with all bonuses, terrain note, success estimate vs an average target), slot line (`已学 2 / 3 · 3 级可学下一计 · 上限中阶`), open slot card; office and item bonuses listed under a 「加成」 line |
 | **部队** | this spec over v3 rules | left: **兵力** big number with max (`SG.maxTroops`) and a bar, the city's recruit pool and the 征兵 forecast; **训练** number and bar with the decay note; 「征兵（城）」「训练（城）」 plaques that start the city command with him preselected; right: **惯用阵型** 4 × 2 cards of the eight formations (`Defs.formations`: icon of the unit layout, name, 攻 / 防 / 机动 multipliers, locks with the requirement 「需智 80」), selecting one sets `gen.formation` (the default formation at battle start, v3 field); **兵种 · 坐骑**: the unit type by culture with its figure icon, the mount slot |
 | **官爵** | TITLES §9.4 (`SG.TitleUI.tab(gen)`) | hosted as is, in the kit's skin |
 | **关系** | ENGAGEMENT §11.4 | a list of bonds (portrait, bond type with its shape icon: red knot 结义, green leaf 知己, blue brush 师徒, purple flame 宿敌, black crack 不和, affinity bar) and a small radial graph with him in the centre; click a portrait → that general's menu |
-| **履历** | this spec (data from the v4 logs: `gen.officeLog` (TITLES), battle stats, tournament results, item acquisitions, ENGAGEMENT achievements) | a vertical timeline of slips (`191年3月 · 汜水关 · 斩 华雄`), filters 全部 / 战功 / 官职 / 宝物 / 大会; a stats strip (战 n · 胜 n · 单挑 胜 n 负 n · 斩将 n · 冠 n) |
+| **履历** | this spec (data from the v4 logs: `gen.officeLog` (TITLES), battle stats, tournament results (`G.tourney.stats`, titles from `G.tourney.wins`: TOURNAMENT §7.5's per-general record lives here), item acquisitions, ENGAGEMENT achievements) | a vertical timeline of slips (`191年3月 · 汜水关 · 斩 华雄`), filters 全部 / 战功 / 官职 / 宝物 / 大会; a stats strip (战 n · 胜 n · 单挑 胜 n 负 n · 斩将 n · 冠 n) |
 
-Derived numbers in 总览 come from one aggregator so they always match the battle maths: `SG.CharSheet.derive(gen) → { atkK, defK, crit, tacK, duelHp, mob, lines: { atkK: ['老练 +24%', '装备 +14%', …] } }`, implemented in `character-screen.js` by calling the owners (`SG.Progress.vetK`, `SG.Gear.summary`, `SG.Titles.fx`, `battle-model.js` formulas through a pure helper `SG.BattleMath.unitPreview(gen)` to be added by the battle owner; INTEGRATION §17.4). Any owner that is not loaded simply contributes nothing.
+Derived numbers in 总览 come from one aggregator so they always match the battle maths: `SG.CharSheet.derive(gen) → { atkK, defK, crit, tacK, duelHp, mob, lines: { atkK: ['老练 +24%', '装备 +14%', …] } }`, implemented in `character-screen.js` by calling the owners (`SG.Progress.vetK`, `SG.Gear.summary`, `SG.Titles.fx`, `SG.BattleMath.unitPreview(gen)` in `js/battle-math.js`, the integration module that also holds `SG.Mods.atkMul` / `defMul` / `critChance`, so the sheet and the battle can never disagree; INTEGRATION §3.2, §17.4). Any owner that is not loaded simply contributes nothing.
 
 ### 9.4 Phone
 
@@ -817,7 +822,7 @@ The tournament spec (`design-v4/TOURNAMENT.md`, `SG.Tourney`) owns the event: el
 
 ### 12.1 Announcement (month 1)
 
-After the year review (ENGAGEMENT §16.4), an **event card** in ENGAGEMENT §16.2's format with a vermillion header band: a painted vignette of the venue (the stadium at golden hour), 「诏告天下：第四届武林大会于洛阳平乐观举行，天下英雄，各遣勇士五人」, the prizes line (冠军 稀有兵器 / 甲 / 宝物或招式 + 400 金 + 声望 50 · 亚军 精良品 + 200 金 · 季军 凡品 + 100 金), last year's champion with portrait and title count, and the 金刚杵 note (三冠者得). Buttons: **选派武将** (seal → entry), 「稍后」 (an agenda slip stays until the deadline), 「不参加」. A herald voice line (`ui.tourneyAnnounce`, §14.3) and the tournament fanfare.
+After the year review (ENGAGEMENT §16.4), an **event card** in ENGAGEMENT §16.2's format with a vermillion header band: a painted vignette of the venue (the stadium at golden hour), 「诏告天下：第{n}届武林大会于{city}{venue}举行，天下英雄，各遣勇士五人」 (templated: `n = G.tourney.count + 1`, `city` and `venue` from the host, INTEGRATION §6.5; e.g. 193: 「第三届武林大会于洛阳平乐观举行」), the prizes line (冠军 稀有兵器 / 甲 / 宝物或招式 + 400 金 + 声望 50 · 亚军 精良品 + 200 金 · 季军 凡品 + 100 金), last year's champion with portrait and title count, and the 金刚杵 note (三冠者得). Buttons: **选派武将** (seal → entry), 「稍后」 (an agenda slip stays until the deadline), 「不参加」. A herald voice line (`ui.tourneyAnnounce`, §14.3) and the tournament fanfare.
 
 ### 12.2 Entry 选派出战者
 
@@ -827,7 +832,7 @@ After the year review (ENGAGEMENT §16.4), an **event card** in ENGAGEMENT §16.
 
 ### 12.3 Bracket 签表
 
-- Header: seal 武, 「第四届 武林大会」, `洛阳 · 平乐观 · 193年正月 · 六十四人`, round tabs 首轮 · 三十二强 · 十六强 · 八强 · 四强 · 决赛 (plus 预赛 when there is a play-in) and **我方** (shows only the paths of own entrants), close.
+- Header: seal 武, 「第{n}届 武林大会」, `{city} · {venue} · {year}年正月 · {N}人` (e.g. 「第三届 武林大会」 `洛阳 · 平乐观 · 193年正月 · 六十四人`), the host ruler's seal `{hostName}主办`, round tabs 首轮 · 三十二强 · 十六强 · 八强 · 四强 · 决赛 (plus 预赛 when there is a play-in) and **我方** (shows only the paths of own entrants), close.
 - Canvas (paper): a window of three rounds at a time (16 players → final on desktop; 8 → final on phones), the two halves mirrored left and right, the final in the centre with a bronze cup, 「决赛 · 三局两胜 · 另有季军战」, a **prize pedestal** (the champion item's silhouette in its rarity frame, revealed at the podium) and the relic line. Match boxes 150 × 58 px: two rows (faction stripe · portrait 22 · name · duel strength); winner's number in vermillion, loser at 45 % and struck through; own entrants with a green inner line; **the current match** with a lantern glow; byes as 「轮空」; future slots as 「待定」. Brush connector lines.
 - A **mini-map** of the whole draw (64 or 128) at the top-left with the viewport rectangle; drag the canvas or the rectangle, pinch / wheel to zoom between the 3-round window and the full draw.
 - **Next-match card** (right, 300 px; phone 236 px): both portraits (64 px), names, strength and level, a win-estimate bar in the two faction colours (`胜率约 58%`), 「已见典韦招式 5 / 8」 and both combo strings with unseen steps as 「？」 (COMBAT §12.2), buttons **亲自出战** (seal; only when one side is the player's), 观战, 只看结果 (spectating default from setting 22), and the round's results log (`吕布 胜 甘宁（第 2 合 · 终结技「人中吕布」）`).
@@ -850,7 +855,7 @@ Bracket window of two rounds (8 → final) plus the next-match card (236 px); en
 
 ### 12.8 Hall of fame 英雄榜
 
-In 菜单 → 卷宗 and from the podium (「历届」): a scroll table of every tournament (year · venue · champion portrait · 2nd · 3rd), the title counts (冠 ×n per general, with the 金刚杵 holder marked), and records (most titles, longest streak, biggest upset by strength difference).
+In **菜单 → 卷宗 → 英雄榜** (the 卷宗 grid's tile, §6), from the announcement card and from the podium (「历届」); a general's own record is his **履历** tab (§9.3): a scroll table of every tournament (year · venue · champion portrait · 2nd · 3rd), the title counts (冠 ×n per general, with the 金刚杵 holder marked), and records (most titles, longest streak, biggest upset by strength difference).
 
 ---
 
@@ -941,7 +946,7 @@ The shell plays the ruler-suite pieces (AUDIO-V4 Part A): the map piece on the s
 
 ### 14.3 Voices for menu actions (request 12)
 
-Existing AUDIO-V4 cues used by the shell: `ui.generalOpen` (character menu), `cmd.endMonth` (end-month seal), `title.*` (官制), `item.epic` / `item.legendary` (reveals), `tourney.enter` / `tourney.win`, all `cmd.*` (commands). Proposed new cues for the audio task (all priority 1, each with its own cooldown ≥ 20 s, never more than one shell voice per 6 s, off under 语音频率 精简 / 关键 except where noted):
+Existing AUDIO-V4 cues used by the shell: `ui.generalOpen` (character menu), `cmd.endMonth` (end-month seal), `title.*` (官制), `item.epic` / `item.legendary` (reveals), `tourney.enter` / `tourney.win`, all `cmd.*` (commands). The six shell cues below are **registered** in `audio/voice-lines.js` (AUDIO-V4 §B2, INTEGRATION §10.2; all priority 1, each with its own cooldown ≥ 20 s, never more than one shell voice per 6 s, off under 语音频率 精简 / 关键 except where noted). The merchant and the herald are not generals: they speak through `SG.Voice.profile('merchant' | 'herald')` (a culture-default voice per lingua):
 
 | Cue | Speaker | Line (中文) | When |
 |---|---|---|---|
@@ -967,6 +972,8 @@ Existing AUDIO-V4 cues used by the shell: `ui.generalOpen` (character menu), `cm
 | portrait phone | `orientation: portrait` and width < 600 and coarse pointer | — | the v3 rotate hint (kept) |
 
 Safe areas: every edge-anchored element adds `env(safe-area-inset-*)` (v3 variables `--sg-sat` …); the phone top beam sits below the notch inset in landscape (left / right insets of 44–48 px on iPhones are added to the beam's padding, not to its height).
+
+**Inset viewport** (the worst phone case, tested): 844 × 390 with **47 px left and right insets** leaves 750 × 390 of usable width. Everything still fits by this **overflow order** (each step applies only if the previous one did not make room): 1 the agenda collapses to its 44 px icon column; 2 the calendar goes compact (`正月` + icon); 3 the top beam's bronze buttons lose their gaps (4 → 2 px) and the 城 counter hides behind the 金 · 粮 popup; 4 the ledger column of the city panel narrows from 214 to 180 px (stat bars keep their numbers, labels go to icons); 5 the end-month seal shrinks 62 → 56 px. The 4 × 4 dock never shrinks below 56 px tiles and touch targets never below 44 px.
 
 ### 15.2 Pointer and touch
 
@@ -1094,7 +1101,7 @@ SG.UITest.open(screen, opts) · SG.UITest.layoutReport() → { overlaps, small, 
 
 - **Tokens and data**: `tools/export-unity-ui.js` writes `UIStyle.g.cs` (all colour tokens, durations, easing control points, sizes in reference px), `UIIcons.g.cs` (the icon primitive lists, §3.6) and `UISettings.g.cs` (the 50 row definitions with defaults); `--check` mode fails CI when the web data changed without an export (as `export-unity-portraits.js` does).
 - **Textures**: `UIArt.cs` re-implements the paper / lacquer / silk / patina generators with the same xorshift seeds and draw lists into `Texture2D` (pixel loops), and draws the corner caps, brush lines, seals and lanterns with the existing `View/Raster.cs` (it already supports SVG path strings, gradients and strokes); frames become 9-sliced sprites (lacquer with caps in the corners).
-- **Icons**: rasterised at 64 and 128 px by `Raster.cs` from `UIIcons.g.cs` into one atlas at first use (≈ 140 icons, 2 × 1 MB), hover micro-loops as small `UITween` animations of the group transforms.
+- **Icons**: rasterised at 64 and 128 px by `Raster.cs` from `UIIcons.g.cs` into one atlas at first use (≈ 151 icons incl. DOMESTIC-FX's 11 addendum icons, 2 × 1 MB), hover micro-loops as small `UITween` animations of the group transforms.
 - **Fonts**: as v3 (`Font.CreateDynamicFontFromOSFont` with the Kai list for titles); stroke thickening with a 1 px `Outline` in the text colour; the brush effect for the few hero strings via a UI shader with a noise-displacement pass (`UI/BrushText`).
 - **Motion**: `UITween.cs` (no external packages) evaluates the same cubic-Béziers and the spring (k 420, c 26); `UIMotion.Reduced` from the setting or `Application.isMobilePlatform && …` accessibility flags.
 - **Screens**: `Strategy/Shell.cs` (beam, agenda, panel, dock, seal, month transition), `UI/MenuScreen.cs`, `UI/SettingsScreen.cs`, `UI/GeneralsScreen.cs`, `UI/CharacterScreen.cs` (the stage is a second camera rendering into a `RenderTexture` shown in a `RawImage`; Unity allows this cheaply), `UI/TourneyScreen.cs`. Settings in `PlayerPrefs` under the same keys and JSON shapes; save slots as files in `Application.persistentDataPath` (`save_auto.json`, `save_1.json` …, thumbnails as PNG).
@@ -1109,8 +1116,8 @@ SG.UITest.open(screen, opts) · SG.UITest.layoutReport() → { overlaps, small, 
 | Test | Checks | Target |
 |---|---|---|
 | `tests/ui-v4.html` (browser, self-checking) | renders the component sheet from the real code; contrast of every text token on its surfaces; icon silhouettes at 24 px pairwise ≥ 18 % different (DOMESTIC-FX §6.1); every icon path parses; texture generation slice times; each button kind has the 7 states; reduced-motion produces no running animations | all green; textures ≤ 8 ms per slice |
-| `tests/ui-layout.html` (browser) | loads `index.html?seed=7&uitest=1` in iframes at 1920×1080, 1280×720, 1024×768, 844×390, 667×375 (and 1280×720 at 130 % text) and opens 14 screens through `SG.UITest.open`: title, strategy (no city / city), dock disabled states, agenda full, month transition, menu (save, 卷宗, help), settings (each tab), 武将录, character (each tab), 市场, 官制, tournament (entry, bracket, match, podium) | no overlaps among beam / agenda / panel / seal / toasts; interactive elements ≥ 44 × 44 px on touch viewports and ≥ 32 × 32 on desktop; no text node < 13 px on short viewports; no clipped single-line labels (`scrollWidth > clientWidth`); nothing outside safe areas; no horizontal scroll; no `pageerror` or `console.error` |
-| `tests/settings.js` (Node) | 50 rows registered (with stubs for sibling owners), defaults, round trip through a fake `localStorage`, corrupted JSON → defaults, throwing storage (private mode) → in-memory, `export` / `import` identity, `reset(tab)` | exit code 0 |
+| `tests/ui-layout.html` (browser) | loads `index.html?seed=7&uitest=1` in iframes at 1920×1080, 1280×720, 1024×768, 844×390, **844×390 with 47 px left / right safe-area insets** (the overflow order of §15.1), 667×375 (and 1280×720 at 130 % text) and opens 14 screens through `SG.UITest.open`: title, strategy (no city / city), dock disabled states, agenda full, month transition, menu (save, 卷宗, help), settings (each tab), 武将录, character (each tab), 市场, 官制, tournament (entry, bracket, match, podium) | no overlaps among beam / agenda / panel / seal / toasts; interactive elements ≥ 44 × 44 px on touch viewports and ≥ 32 × 32 on desktop; no text node < 13 px on short viewports; no clipped single-line labels (`scrollWidth > clientWidth`); nothing outside safe areas; no horizontal scroll; no `pageerror` or `console.error` |
+| `tests/settings.js` (Node) | 53 rows registered (with stubs for sibling owners; INTEGRATION §10.1), defaults, round trip through a fake `localStorage`, corrupted JSON → defaults, throwing storage (private mode) → in-memory, `export` / `import` identity, `reset(tab)` | exit code 0 |
 | `tests/saves.js` (Node) | 4 slots write / read / delete / list, quota error with a 1 MB fake storage leaves the old slot intact, v3 save listed and loaded through migration, slot index rebuilt if missing | exit code 0 |
 | `node tests/sim.js`, `tests/world.js`, `tests/duel-bots.js` | unchanged: the UI never touches rules or `SG.Random` | ALL OK as before |
 | Screenshot review | `tools/ui-shots.mjs` (dev only, Playwright as in `design-v4/mockups/shoot.mjs`) captures the 30 mockup situations from the real game | reviewed against `design-v4/mockups/shots/` |
@@ -1123,7 +1130,7 @@ SG.UITest.open(screen, opts) · SG.UITest.layoutReport() → { overlaps, small, 
 | counter roll + token flight | ≤ 4 ms / frame, no dropped frames at 60 fps on desktop |
 | opening 武将录 with 120 generals (world) | first paint ≤ 50 ms, complete ≤ 250 ms in slices |
 | character menu open → stage figure visible | ≤ 300 ms (portrait placeholder at ≤ 50 ms) |
-| month transition (skippable) | ≤ 3.2 s with skip available after 0.25 s |
+| month transition (skippable) | presentation ≤ 3.2 s with skip available after 0.25 s; all non-interactive month-start beats ≤ **8 s** together (INTEGRATION §6.6), no JS slice > 8 ms |
 
 ### 19.3 Playtest targets (5 players × 30 minutes, desktop and phone)
 
@@ -1143,15 +1150,15 @@ SG.UITest.open(screen, opts) · SG.UITest.layoutReport() → { overlaps, small, 
 ## 20. Open questions
 
 - **Q1. Bundle a Kai font?** Mac / iOS / Windows have system Kai; Android / Linux get Noto Serif SC. A bundled OFL Kai subset (LXGW WenKai: ≈ 600 glyphs of fixed UI strings ≈ 250 KB; all general names ≈ 1 600 glyphs ≈ 650 KB, as base64 in a script so no network is used) would make all platforms match the mockups. Proposed: no for v4.0, revisit after a phone playtest.
-- **Q2. A day passing on the strategy map** (§3.8): the sun moves with spent tokens and night falls during AI turns. Needs the map renderer to adopt `SG.LP.Mood` (art pilot / map owner). The UI works either way (`--night` = 0).
+- **Q2. A day passing on the strategy map** (§3.8): the clock itself is decided (07:00–20:00, INTEGRATION §10.7); the map renderer still has to adopt `SG.LP.Mood` (art pilot / map owner). The UI works either way (`--night` = 0).
 - **Q3. Agenda size**: 4 slips is the cap; should players be able to hide the agenda entirely (a setting), or is the icon-collapse enough?
 - **Q4. Save export / import**: add 「导出记录」 (download the slot JSON) and 「导入记录」 (file picker) to the menu for backups and moving between devices? It needs no network; it does add a file-input path to test.
 - **Q5. Character stage on weak phones**: the static-portrait fallback loses the "see your gear on the model" payoff of request 9; should 画质 低 still render the figure at 30 fps with no shadows instead?
-- **Q6. Dock contents**: 16 fixed tiles (治 / 人 / 运 / 策) with no 授官 tile (TITLES §9.1), against DOMESTIC-FX §7.1's list that included 授官. This file follows TITLES; DOMESTIC-FX should drop 授官 from its grid list.
+- **Q6. Dock contents** — resolved: 16 fixed tiles (治 / 人 / 运 / 策), no 授官 tile; DOMESTIC-FX §7.1 now lists exactly this grid.
 - **Q7. Bios for classic generals**: world generals have v3 `generalInfo`; the ~160 classic generals need short, sourced bios (a research pass) or the 生平 block hides for them.
-- **Q8. City-view dock side**: CITY-VIEW §2.4 says the dock replaces the panel "on the left"; this file keeps the panel and dock on the right on desktop (one place for the player's eye) and the bottom bar on phones as CITY-VIEW describes. CITY-VIEW to confirm.
-- **Q9. Tournament numbering**: ITEMS §8.9 calls 193 "the 4th tournament" (first in 190), the tournament prototype starts its campaign runs in 191. The screens print `SG.Tourney`'s count; the specs should agree.
-- **Q10. New voice cues** (§14.3): six lines for the audio task's packs, including two culture-default voices (merchant, herald) that are not generals.
+- **Q8. City-view dock side** — resolved: right on desktop; the phone bottom bar with the four group stripes (CITY-VIEW §2.4 edited, §5.9).
+- **Q9. Tournament numbering** — resolved: the first is held in 191, `n = G.tourney.count + 1`, so 193 = 第三届 in every spec (INTEGRATION §6.5).
+- **Q10. New voice cues** — resolved: registered in `voice-lines.js`; merchant and herald through `SG.Voice.profile` (AUDIO-V4 §B4).
 - **Q11. Title-screen music**: play the last save's ruler suite under the title (a personal touch) or always the title theme?
 - **Q12. Light faction colours as text on paper**: the darkened `-t` variant keeps names legible but shifts some hues (yellow factions read ochre). Acceptable, or give every faction an authored text colour in `world-data.js`?
 

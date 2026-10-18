@@ -1,0 +1,10 @@
+== all-on player classic: 6 rulers × 6 seeds × 20 y (SEED0=500); policies v3 / all
+[v3] survival y1 100% / y3 100% / y5 100% / y10 100% / y15 100% / y20 94%
+      cities (survivors) 2.1 / 2.1 / 2.0 / 2.1 / 2.1 / 2.2; income 121 / 161 / 194 / 275 / 311 / 328; level 1.01 / 1.02 / 1.06 / 1.12 / 1.13 / 1.14
+[all] survival y1 100% / y3 100% / y5 100% / y10 100% / y15 100% / y20 100%
+      cities (survivors) 1.9 / 1.9 / 1.9 / 2.0 / 2.1 / 2.3; income 104 / 132 / 151 / 211 / 269 / 334; level 1.33 / 2.22 / 2.84 / 4.22 / 5.57 / 6.53
+      prestige 31 / 100 / 199 / 662 / 1420 / 2309; order 61.3 / 61.6 / 62.4 / 67.8 / 73.8 / 80.5
+      王道 (prestige 1 500, all held 6 months): 7/36 (19%) median 12.4 y
+      开发 tiers (player, n 6911): great 10.5%, good 25.3%; mean pct 0.015; mean gain 17.3 (g0 17.2)
+      秋收 tiers, consolidated rule (good = rollRaw ≥ 1.04, no land term): good 30.2%
+      秋收 tiers on rollRaw (n 1469): lean 15.3%, good 40.8%, great 7.3%; same records tiered on harvest / (land × 2.2): ≥ 1.10 45.7%, < 0.90 9.7%

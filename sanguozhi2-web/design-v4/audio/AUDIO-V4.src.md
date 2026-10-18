@@ -4,14 +4,14 @@ Player requests 7 (different rulers get different music suites) and 12 (voices f
 
 Read first: `DESIGN-V2.md` §1 (common rules: classic scripts, no network, everything synthesized or generated in code, `SG.Random` for rules), §4A (the music engine contract), §6 (culture codes); `CONTRACT.md`; `js/audio.js`, `js/music.js` header (notation), `js/music-han.js`, `js/music-world.js`; the v4 siblings `DOMESTIC-FX.md` (§8 stings, voice cue ids `cmd.*`), `COMBAT-V4.md` (§1 clash timeline, §2.6 crit beat, §13.3 sound names and voice hooks), `TITLES.md` (ceremony voice keys), `ITEMS.md` (reveal cry), `CITY-VIEW.md` §3 (the 12 culture families). Where this file conflicts with them, this file wins for music pieces, voices, the mix and the audio settings; the other owners win for their rules and pictures. Platform order: browser first, then the Unity port (§5). Every visual mentioned here (subtitle cards, the ruler-select preview) follows the v4 art direction: Lanternvale-style warm low-poly, ink outlines, paper and lantern light.
 
-This file is generated: `node design-v4/audio/gen-md.js` rebuilds it from `AUDIO-V4.src.md` and the data files, so the tables below are the data.
+This file is generated: `node design-v4/audio/gen-md.js` rebuilds it from `AUDIO-V4.src.md` and the data files, so the tables below are the data. **`INTEGRATION.md`** wins over this file for cross-system rules (the registries of cues and stings, the clash timing shared with COMBAT-V4, the test matrix).
 
 | Companion file (`design-v4/audio/`) | What it is |
 |---|---|
 | `suites.js` | Part A reference implementation: the 42 hand-composed leitmotifs, the generator, the piece builder. `node design-v4/audio/suites.js` builds suites for all 499 generals of both scenarios, validates every piece with the real `SG.Music.validate`, checks lengths, motif distinctness and the palette rule: **ALL OK** (1 611 pieces). `--list` prints every motif. |
 | `render-suites.mjs` | Renders suite pieces in Chromium through `tests/music.html` (`OfflineAudioContext`) → WAV + `render-stats.json` (peak, RMS, NaN) |
 | `render-stats.json` | 420 rendered pieces (42 hand suites × 10 kinds): 0 NaN, peak ≤ 0.61 |
-| `voice-lines.js` | Part B data: the 26 speech languages (linguas), faction → lingua, the 82-cue catalogue, the core lines in every lingua, signature lines. `node design-v4/audio/voice-lines.js` checks coverage and estimates clips and size: **ALL OK** |
+| `voice-lines.js` | Part B data: the 26 speech languages (linguas), faction → lingua, the **123-cue** catalogue (every cue the nine v4 specs name, merged in the consolidation), the core lines in every lingua, the 26 start / great cues in every A lingua, the herald / merchant profiles, signature lines. `node design-v4/audio/voice-lines.js` checks coverage, checks every cue id named in the spec docs, and estimates clips and size: **ALL OK** |
 | `tts-eval.json` | The offline TTS experiment of §B6 (85 clips, 26 models): length, synthesis time, Opus size, median F0, Whisper round trip |
 | `tts-lab/` | The scripts behind it (Python 3.11 venv: `piper-tts 1.8.0`, `sherpa-onnx 1.13.8`, `pyopenjtalk-plus`, `pypinyin`; model download lists; the formant-bark prototype `formant-bark.js`) |
 | `samples/` | 30 listening samples (876 KB Opus): 12 suite excerpts, 18 voice clips including the failures |
@@ -24,14 +24,14 @@ This file is generated: `node design-v4/audio/gen-md.js` rebuilds it from `AUDIO
 |---|---|
 | Music suites | **one per ruler**, keyed by the ruler (a general), for all **499** generals (any of them can inherit a realm): **42 hand-composed** (the 18 classic rulers, 4 likely heirs, 20 world rulers), **457 generated** deterministically and frozen into a data file |
 | Pieces per suite | 12: `map` · `council` · `battle` · `battle-defend` · `victory` · `defeat` · `fanfare` · `clash` · `clash-b` · `clash-short` · `clash-crit` · `ending` (the unifier's motif opens 「一统天下」); plus the duel's two "dueling motif" calls built per duel |
-| What makes a suite the ruler's | a 2-bar leitmotif (stated in a 4-bar map intro, a 2-bar tag at the end of every loop, a 2-bar battle call at the top of every loop, augmented in the defend piece, the whole of victory / defeat / fanfare / clash); the **lead swap** (the template's busiest melody voice plays the ruler's instrument for the whole loop); key ±2 semitones; tempo ×0.92–1.08 |
+| What makes a suite the ruler's | a 2-bar leitmotif (stated in a 4-bar map intro and again at the top of every map loop, a 10-bar **D section** after the B section of every map and battle loop (sequence a 2nd up, statement, inversion, augmentation), a 2-bar tag at the end of every loop, a 2-bar battle call at the top of every loop and — classic hua battles — before the B section, augmented in the defend piece, the whole of victory / defeat / fanfare / clash): **≥ 25 % of every map and battle loop's bars are motif-derived** (measured: map min 27 %, median 32 %; battle min 25 %, median 27 %); the **lead swap** (the template's busiest melody voice plays the ruler's instrument for the whole loop); key ±2 semitones; tempo ×0.92–1.08 |
 | Distinctness | motif distance ≥ **3** between any two of the 499 (heir ↔ founder ≥ 2 on purpose: the house cell); measured minimum 3, worst generator re-roll 8; every same-family pair of the 70 starting rulers also differs in lead instrument, tempo (≥ 3 %) or key (324 pairs, 0 identical) |
 | Cost | build 0.6 ms per suite, compile ≤ 4.4 ms per piece (sliced ≤ 8 ms by `compileAsync`), data 6 KB hand + ≈ 60 KB generated |
 | Render check | 420 pieces rendered in Chromium: **0 NaN**, peak 0.23–0.61, map RMS −25…−21 dB, battle −20…−17 dB (one real bug found and fixed: pitched percussion in a kit needs a `note`) |
 | v4 clash stinger | starts on contact, 2 bars at ♩150 = 3.2 s; bar 2 downbeat lands **1.60 s** after contact = v4 `melee1` (1.62 s); `clash-crit` adds the 0.4 s slow beat |
 | Speech languages | **26 linguas** for 70 factions and 18 culture codes; confidence A (modern language or modern stand-in) 14, B (classical, well attested) 7, C (attested words only) 5 |
-| Cues | **82** (20 core in every lingua, 62 extended with fallback chains); 3 priorities; procedural cries for efforts and where a language has no attested word |
-| v4.0 clips | **851** ≈ 17.4 min of speech ≈ **2.24 MB** at Opus 16 kbps (3.0 MB as the base64 JS packs `file://` needs); MP3 fallback 4.2 MB; full extended translation target ≤ 16 MB |
+| Cues | **123** (20 core in every lingua; 103 extended with fallback chains, of which the 26 start / great cues are translated into all 14 A linguas); 3 priorities; procedural cries for efforts and where a language has no attested word; two non-general speakers (herald, merchant) |
+| v4.0 clips | **1 381** ≈ 34 min of speech ≈ **4.38 MB** at Opus 16 kbps (≈ 5.9 MB as the base64 JS packs `file://` needs); MP3 fallback 8.2 MB; full extended translation target ≤ 16 MB (before the consolidation: 851 clips, 2.24 MB) |
 | Recommended voice tech | **(a) offline neural TTS** (Piper / Kokoro / Mimic3 voices via sherpa-onnx mirrors, phonemes injected cross-lingually for Latin, Greek, Gothic, Sanskrit, Prakrit, Ge'ez, Syriac …) for words + **(c) procedural formant cries** for efforts, crowds and fallback; **(b) Web Speech** only as an optional read-aloud for long text |
 | Measured TTS | synthesis RTF 0.05–0.25 warm (4 CPU, no GPU); Whisper-base round trip: de / tr / id 0.00, ja 0.00–0.36 (phonemes), ar 0.08, it 0.12, Latin-through-Italian 0.16, zh 0.17–0.23 (pinyin syllables, ≥ 6 syllables); failures found: one Greek model hallucinates 5–8 s, Kokoro Japanese through the sherpa front end, 2-syllable Chinese barks, female → male shifts beyond ×0.85 |
 | Opus bitrate | 16 kbps = same intelligibility as 24 / 32 kbps; 12 kbps degrades Latin (0.16 → 0.32) |
@@ -91,7 +91,7 @@ Writing a dozen full pieces for each of 70 rulers (≈ 800 pieces, hours of musi
 | duel calls `Ma` / `Mb` | han 「龙争虎斗」 | challenger's motif then defender's motif, each on his own family's lead (§A9) |
 | `ending` intro | 「一统天下」 | Mi on the choir (the unifier's motif opens the ending) |
 
-Honest scale of the difference: in a map loop about 6 s of every 130 s is the ruler's tune, plus the 12.6 s opening, plus the timbre, key and tempo of the whole loop; battle loops carry a 3.5 s call per ≈ 70 s plus timbre. That is enough to recognise "my" music and to hear a change of ruler, and it costs no new orchestration. Fully composed suites for the six most-played rulers (曹操, 刘备, 孙坚, 董卓, 康茂德, 卑弥呼: map + battle, written like `music-han.js`) are proposed for v4.1 (open question 6).
+Honest scale of the difference (before the consolidation): in a map loop about 6 s of every 130 s was the ruler's tune, battle loops carried a 3.5 s call per ≈ 70 s. The consolidation adds the **D section Mv** (§A7.1) and the loop-top restatement Mr, so **at least 25 % of the bars of every map and battle loop are motif-derived** (`tests/suites.js` asserts it: map min 27 %, battle min 25 %), plus the timbre, key and tempo of the whole loop. That is enough to recognise "my" music and to hear a change of ruler, and it costs no new orchestration. Fully composed suites for the six most-played rulers (曹操, 刘备, 孙坚, 董卓, 康茂德, 卑弥呼: map + battle, written like `music-han.js`) are proposed for v4.1 (open question 6).
 
 ## A3. Who hears which piece
 
@@ -171,6 +171,7 @@ For each of map, council, battle, battle-defend: deep-copy the template piece, t
 - `title = ruler + '·' + template title`; `transpose += suite.tr`; `bpm`, every section `bpm` / `bpmTo` × `suite.tempo` (× 0.88 council, × 0.85 defend outside hua); council outside hua drops the drums (`dr` removed), defend multiplies `dyn` by 0.88.
 - add voices `mL` (lead, pan +0.08, gain 0.95), `mA` (answer, pan −0.18, gain 0.8), `mP` (drone: strings for hua / han3 / wa / nanhai, kargyraa for steppe, drones elsewhere; octave −1, gain 0.55), `mB` (low strings, −2, 0.6); kit `mD` (family drum), `mG` (family gong).
 - add the motif sections (Mi intro, Mt tag, Mc call, Md augmented call) and place them: map / council `form = ['Mi', …template form, 'Mt']` (Mt is inside the loop because the loop runs to the end of the form); battle / defend insert `Mc` / `Md` before the template's `loopFrom` and make it the new `loopFrom`.
+- **D section `Mv`** (consolidation) right after the template's B section in every map and battle loop (mid-loop when the loop has no B): the motif sequenced a 2nd up on the answer instrument → the motif on the lead → its **inversion** (in scale steps around the first note) on the answer → the motif in augmentation (×2) on the lead, over the drone (`seqDeg` moves each respelled note along the template's scale, so the sequence stays in mode). The map also restates the intro as **`Mr`** at the top of every loop (the new `loopFrom`). In the classic (hua) battle the ruler's call is stated a second time as **`MB`** before the template's B section, so the 18 classic rulers' battles differ in the middle of the loop as well. `motifShare(P)` (bars of Mi / Mr / Mt / Mv / Mc / MB / Md ÷ loop bars) must be ≥ 0.25 for every map and battle piece.
 - harmony of the inserted sections is a tonic–fifth drone (the template's tonic, computed from `tonic` or the first scale degree) — safe in every mode the engine has; bass on the tonic an octave lower without the fifth.
 - octave of an added voice = the octave most used for that instrument across all registered pieces.
 
@@ -191,8 +192,8 @@ A battle call must cut through: a suite whose lead is flute, flute2, pluck or pl
 `clash.js` calls the stinger at **contact** (`onContact`). COMBAT-V4 §1.3: after contact come the slow-motion 0.24 TL at slowK 0.40 (0.60 s real) and the melee to `melee1`: (3.18 − 1.92 − 0.24) + 0.60 = **1.62 s** after contact at speed 1; then regroup, end and fade ≈ 1.1 s. So the suite stinger is **2 bars at ♩150** (3.2 s): bar 1 = the melee (head of the motif on brass over a drum build), the **downbeat of bar 2 lands 1.60 s after contact** on the rout / melee1 frame with a gong and the brass fifth, bar 2 rings over the regroup and into the board. `audio.js followPlan` keeps choosing the battle tempo's integer ratio but is narrowed to **132–168** (was 112–176) so the bar-2 accent stays within ±0.2 s of melee1 (132 → 1.82 s, 168 → 1.43 s). This replaces COMBAT-V4's suggested `speed × 3.96 / 4.86` workaround.
 
 - `clash` / `clash-b`: two variants (motif head + octave final; brass fifths swelling) rotated as today (`STINGER_GAP` 15 s unchanged).
-- `clash-short` (1 bar, 1.6 s): 快 mode (speed 2.5: contact → end ≈ 1.1 s).
-- `clash-crit`: the crit beat adds 0.43 s of slow motion (COMBAT-V4 §2.6): beat 1 the head note, beats 2–3 silence (the slow-mo), beat 4 a brass stab + tamtam on the crit impact, bar 2 as `clash`. Played instead of `clash` when `extra.crit`, ignoring `STINGER_GAP`.
+- `clash-short` (1 bar, 1.6 s): every clash at **speed ≥ 1.5** (enemy turn 1.7, 委任 2.0, 快 2.5), started so that its accent (downbeat) lands at **contact + 1.62 / speed** = `melee1` at that speed (COMBAT-V4 §1.4); `tests/clash.html` checks it at 1.7 and 2.0 (±0.2 s, as at speed 1).
+- `clash-crit`: the crit beat adds 0.43 s of slow motion (COMBAT-V4 §2.6): beat 1 the head note, beats 2–3 silence (the slow-mo), beat 4 a brass stab + tamtam on the crit impact, bar 2 as `clash`. Played instead of `clash` when `extra.crit`, ignoring `STINGER_GAP`; the stab is aligned to **`tlMap(contact + 0.36)` ÷ speed** (the middle of the crit beat) at every speed.
 
 API: `SG.Sfx.stinger('clash', { speed, suite: attackerRuler, crit })` — `suite` resolves `suite:<ruler>:clash…`, falling back to the v3 `clash` keys.
 
@@ -226,7 +227,7 @@ SG.Sfx.fanfare(name, { duck })     // overlay, like stinger(); never interrupts 
 
 ## A12. Validation
 
-- **Node** (`node design-v4/audio/suites.js`, becomes `tests/suites.js`): builds the 42 hand suites + every starting ruler + 60 sampled generals (134 suites, 1 611 pieces): `SG.Music.validate` clean (bar lengths, voices, instruments, kit lanes), every instrument exists, lengths: clash 3.0–3.4 s, clash-short 1.5–1.7 s, victory 12–16 s, fanfare 3.0–3.9 s; motif distances and the palette rule as §A6; 4 dueling-motif pieces. Result: **ALL OK** — distances min 3 (董卓 ~ 戈契赫尔), 324 palette pairs distinct.
+- **Node** (`node design-v4/audio/suites.js`, becomes `tests/suites.js`): builds the 42 hand suites + every starting ruler + 60 sampled generals (134 suites, 1 611 pieces): `SG.Music.validate` clean (bar lengths, voices, instruments, kit lanes), every instrument exists, lengths: clash 3.0–3.4 s, clash-short 1.5–1.7 s, victory 12–16 s, fanfare 3.0–3.9 s; **motif-derived share ≥ 25 % of every map and battle loop** (consolidation: map min 27 %, median 32 %; battle min 25 %, median 27 %); motif distances and the palette rule as §A6; 4 dueling-motif pieces. Result: **ALL OK** — distances min 3 (董卓 ~ 戈契赫尔), 324 palette pairs distinct.
 - **Chromium render** (`node design-v4/audio/render-suites.mjs <dir> 20 <rulers>`): every piece of the 42 hand suites, 20 s (victory / defeat 22 s, clash / fanfare 5 s) → 420 WAVs: **0 NaN**, peak ≤ 0.61, RMS map −25…−21 dB, council −29…−23, battle −20…−17, defend −21…−17, victory −20…−18, defeat −30…−22, fanfare −21…−18, clash −19…−17 dB; render 0.3–1.8 s per piece; `ending` and the +2 dB councils re-rendered for 曹操, 康茂德, 魁头, 区连: 0 NaN, ending −24…−23 dB, councils −27…−22 dB. Targets for `tests/music.html`: no NaN, peak ≤ 0.98, map / council RMS −30…−19 dB, battle / defend −22…−15 dB, short pieces −24…−16 dB. Council pieces outside hua are quieter (no drums): the builder raises their `gain` by +2 dB (× 1.26 when the drums are dropped), added after this render, so their window becomes ≈ −27…−21 dB.
 - **Listening**: `samples/music_*.opus` (曹操 / 刘备 / 卑弥呼 / 区连 maps, 康茂德 / 沃洛吉斯 / 魁头 battles, 胡维色迦 defend, 孙坚 victory, 董卓 / 康茂德 fanfares, 曹操 clash).
 - **Playtest target**: after one listen to two same-family rulers' map openings, ≥ 70 % of testers tell them apart blind; ≥ 4 of 5 recognise their own ruler's fanfare in a diplomacy dialog without the portrait.
@@ -245,7 +246,7 @@ SG.Sfx.fanfare(name, { duck })     // overlay, like stinger(); never interrupts 
 
 ## B2. The cue catalogue
 
-20 **core** cues exist in every lingua; 62 **extended** cues exist in Chinese now and fall back through `fb` to a core cue (or to a procedural cry `~kind`) where a lingua has no translation yet. `SG.Voice.say(gen, cue)` walks the chain. Priority: 3 critical (always plays), 2 important, 1 routine (§B10.3).
+20 **core** cues exist in every lingua; **103 extended** cues (the 62 of the first draft plus the 41 the other v4 specs proposed: ENGAGEMENT's event, festival, 文会, debate, oath, marriage, 归附 and 王道 cues, DOMESTIC-FX §5.18–§5.28's command and moment cues, TOURNAMENT's open / award / lose, UI-V4's six shell cues) exist in Chinese and fall back through `fb` to a core cue (or to a procedural cry `~kind`) where a lingua has no translation yet. **The 26 start / great cues players hear most** (`cmd.develop.start` … `cmd.attack.start`, the ENGAGEMENT command starts, `build.done`, `caravan.return`, `exped.find`, `mission.done`, `tourney.open`, `tourney.award`, `tourney.win`) are translated into all 14 A linguas (machine-assisted drafts written for this spec; they pass the §B7.2 ASR gate before shipping and want a native read, Q3). `node design-v4/audio/voice-lines.js` fails if a cue id named in any spec doc is missing (102 references checked). `SG.Voice.say(gen, cue)` walks the chain. Priority: 3 critical (always plays), 2 important, 1 routine (§B10.3).
 
 | Core cue | 中文 | Gloss | Speaker | Pri | Triggered by |
 |---|---|---|---|---|---|
@@ -409,6 +410,8 @@ SG.Voice.say(gen, cue, opts) → Promise<{ dur, text, zh, lingua } | null>
 SG.Voice.cry(gen, kind, opts)            // procedural efforts (§B5)
 SG.Voice.crowd(kind, n, opts)            // army shouts
 SG.Voice.profile(gen) → { lingua, voice, pitchK, presence, body, grit, tremolo, pan, space }   // pure, for tests
+SG.Voice.profile('herald' | 'merchant', lingua?) → the same record for a non-general speaker (PROFILES in voice-lines.js:
+    herald = the lingua's m → m2 → f voice, rate 0.92, pitch −1.5 st; merchant = m2 → m → f, rate 1.06, pitch +1 st)
 SG.Voice.preload(linguas) → Promise
 SG.Voice.settings                        // §B10.4
 SG.Voice.busy → bool
@@ -484,9 +487,9 @@ A speech bubble anchored to the speaker's portrait (`SG.UI.say` with speaker, ex
 
 | Item | Budget | v4.0 estimate |
 |---|---|---|
-| Voice packs, Opus 16 kbps, all linguas | ≤ 16 MB raw (≈ 2 h of speech) for the complete translation | 2.24 MB raw, 3.0 MB as base64 scripts (851 clips) |
-| MP3 fallback packs | ≤ 30 MB | 4.2 MB raw |
-| Per session download | ≤ 1.5 MB | zh 0.47 MB raw + up to 4 foreign packs ≤ 0.15 MB each |
+| Voice packs, Opus 16 kbps, all linguas | ≤ 16 MB raw (≈ 2 h of speech) for the complete translation | 4.38 MB raw, ≈ 5.9 MB as base64 scripts (1 381 clips; 2.24 MB / 851 before the consolidation) |
+| MP3 fallback packs | ≤ 30 MB | 8.2 MB raw |
+| Per session download | ≤ 1.5 MB | zh 0.75 MB raw + up to 4 foreign packs ≤ 0.32 MB each |
 | Decoded voice cache | ≤ 6 MB | LRU |
 | Procedural cries | code ≈ 6 KB, cache ≤ 0.5 MB | |
 | Music suite data | ≤ 100 KB | 6 KB hand + ≈ 60 KB frozen generated |
@@ -520,7 +523,9 @@ A speech bubble anchored to the speaker's portrait (`SG.UI.say` with speaker, ex
 | `js/duel-game.js` | music: `SG.MusicSuites.duel(a, b)` instead of `'duel'`; efforts `SG.Voice.cry(gen, 'light' / 'heavy' / 'charge' / 'hurt' / 'knockout')`; COMBAT-V4 hooks `crit` → `duel.crit`, `parry` → `duel.parry`, `guardcrush` → `duel.guardcrush`, `finisher` → `duel.finisher` (subtitle shows the finisher's name); start → challenger `duel`, target `duel.accept`; end → `duel.win` / `duel.lose` |
 | TITLES ceremony | `title.grant` (ruler) then `title.accept` (general); `promote`, `revoke`, `passedOver`, `rankUp` as TITLES lists |
 | ITEMS reveal | epic → `item.epic`, legendary → `item.legendary` |
-| Tournament (request 14) | walk-on → ruler `fanfare` + `tourney.enter`; champion → `tourney.win` + `victory@` his ruler |
+| Tournament (request 14) | announcement → herald `ui.tourneyAnnounce`; opening → host `tourney.open`; walk-on → ruler `fanfare` + `tourney.enter`; loss → `tourney.lose`; award → host `tourney.award`; champion → `tourney.win` + `victory@` his ruler |
+| ENGAGEMENT (`engage-screen.js`) | event card → `evt.card.<category>`; answer → `evt.choice.good` / `.bad`; festival → `fest.open`; 文会 → `wenhui.win`, debate stances `debate.stance.*`; bonds → `oath.swear`; diplomacy → `marriage.accept`, `tribute.accept`, `truce.accept`, `submit.offer`; victory → `victory.wangdao`; commands and moments as DOMESTIC-FX §5.18–§5.28 |
+| UI shell | `ui.generalsOpen`, `ui.titleBoard`, `ui.shopOpen` (merchant profile), `ui.save`, `ui.monthStart` (UI-V4 §14.3) |
 | `index.html` | the new scripts after `audio.js` (or none: `audio.js` loads them on demand like the music files) |
 
 ## 3. Test plan and targets
@@ -528,7 +533,7 @@ A speech bubble anchored to the speaker's portrait (`SG.UI.say` with speaker, ex
 ### 3.1 Node
 
 1. `tests/suites.js` (= `design-v4/audio/suites.js` check): ALL OK as §A12; plus `tools/build-suites.js --check` (frozen entries unchanged) and a determinism hash of all 499 suites.
-2. `tests/voice-lines.js` (= `voice-lines.js` check): every lingua has all 20 core cues; every extended cue's fallback chain ends in a core cue or a cry; every faction maps to a lingua; signature linguas exist.
+2. `tests/voice-lines.js` (= `voice-lines.js` check): every lingua has all 20 core cues; every A lingua has the 26 start / great cues; every extended cue's fallback chain ends in a core cue or a cry; every cue id named in a spec doc exists (the docs are scanned; 102 references today); the herald and merchant profiles find a voice in every A lingua; every faction maps to a lingua; signature linguas exist.
 3. `tests/voice-pick.js` (new): for all 499 generals of both scenarios, `SG.Voice.profile(gen)` returns a lingua with a pack and a base voice; women get `f` voices where the lingua has one; `pitchK` within 0.86–1.12; deterministic across runs; for every duel pair of the duel-bots roster the uniqueness rule holds; `tests/sim.js` state hash unchanged with voices on (no `SG.Random` use).
 
 ### 3.2 Browser
@@ -549,7 +554,7 @@ Length sanity, ASR gate (A languages error ≤ 0.5; zh with whisper-small ≤ 0.
 
 1. **Licences.** Korean (KSS data) and the Hindi / Turkish voices tested are non-commercial; eight voices say only "see URL". If the game is ever distributed beyond personal use, Korean needs another voice (recorded, or a commercially licensed one), and the eight must be checked. MMS-TTS would cover Latin, Ossetian, Amharic, Tigrinya, Kabyle, Khmer and Mongolian natively but is CC BY-NC 4.0.
 2. **Male voices for ko, vi, ms, ka** (female-only models; DSP cannot cross the gap). Options: ~25 core lines × 4 languages recorded by volunteers (≈ 20 min of studio time each), or newer permissive models when available.
-3. **Translation review.** Every B and C line needs a specialist read (Gothic, Syriac, Ge'ez, Prakrit, Sanskrit, archaic Tamil, Bactrian / Tocharian / Meroitic words); A lines a native read. The extended cues (62) are only in Chinese so far.
+3. **Translation review.** Every B and C line needs a specialist read (Gothic, Syriac, Ge'ez, Prakrit, Sanskrit, archaic Tamil, Bactrian / Tocharian / Meroitic words); A lines a native read — including the 26 start / great cues the consolidation drafted for the 13 non-Chinese A linguas (338 lines). The other 77 extended cues are only in Chinese so far.
 4. **Mongolian through a Kazakh voice** could not be verified (Whisper's Mongolian is too weak); a Mongolian speaker should listen.
 5. **Battle music owner**: the player's suite (proposed) or the foe's region (v3)? A setting could offer both.
 6. **Fully composed suites** for the six most-played rulers in v4.1 (map + battle each, ≈ 4 × 100 s of new music).

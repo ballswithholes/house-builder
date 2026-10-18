@@ -1,0 +1,33 @@
+== duel gear estimate (v3 Sim, AI vs AI, 300 duels per cell, sides alternated)
+-- config before: {"warDiv":2,"warCap":6,"hpCap":15,"dmgCap":4,"parryCap":0.02,"guardCap":8,"abilityCap":99,"budget":99}
+   common    BiS (duelWar +0, HP +7, dmg +1.5%, parry +0.01): equal war 60 / 80 / 95 → 57.7% / 54.7% / 58.0%; 65 + gear vs 80 → 7.7%
+   uncommon  BiS (duelWar +1, HP +10, dmg +3.0%, parry +0.02): equal war 60 / 80 / 95 → 63.7% / 60.0% / 61.7%; 65 + gear vs 80 → 9.7%
+   rare      BiS (duelWar +2, HP +37, dmg +5.0%, parry +0.02): equal war 60 / 80 / 95 → 93.0% / 86.7% / 87.7%; 65 + gear vs 80 → 42.7%
+   epic      BiS (duelWar +4, HP +64, dmg +6.5%, parry +0.02): equal war 60 / 80 / 95 → 97.3% / 97.7% / 98.7%; 65 + gear vs 80 → 73.3%
+   legendary BiS (duelWar +6, HP +88, dmg +6.5%, parry +0.02): equal war 60 / 80 / 95 → 99.3% / 99.7% / 100.0%; 65 + gear vs 80 → 94.0%
+-- config adopted: {"warDiv":3,"warCap":4,"hpCap":15,"dmgCap":4,"parryCap":0.02,"guardCap":8,"abilityCap":8,"budget":8}
+   common    BiS (duelWar +0, HP +7, dmg +1.5%, parry +0.01): equal war 60 / 80 / 95 → 55.0% / 59.0% / 61.7%; 65 + gear vs 80 → 7.7%
+   uncommon  BiS (duelWar +1, HP +10, dmg +3.0%, parry +0.02): equal war 60 / 80 / 95 → 60.0% / 65.0% / 66.3%; 65 + gear vs 80 → 14.0%
+   rare      BiS (duelWar +1, HP +21, dmg +5.0%, parry +0.02): equal war 60 / 80 / 95 → 78.3% / 78.7% / 79.7%; 65 + gear vs 80 → 22.0%
+   epic      BiS (duelWar +3, HP +21, dmg +6.5%, parry +0.02): equal war 60 / 80 / 95 → 84.0% / 84.3% / 84.0%; 65 + gear vs 80 → 27.7%
+   legendary BiS (duelWar +4, HP +21, dmg +6.5%, parry +0.02): equal war 60 / 80 / 95 → 86.3% / 88.3% / 87.3%; 65 + gear vs 80 → 32.3%
+-- weapon-type parity: each duel key vs 长剑 sword at equal war 80, no gear
+   guandao    pole  reach 2 pow 1.05: 41.0%
+   snake      pole  reach 2.05 pow 1: 39.3%
+   ji         pole  reach 2 pow 1.06: 43.0%
+   spear      pole  reach 2.05 pow 1: 39.3%
+   poleblade  pole  reach 1.95 pow 1.07: 46.0%
+   axe        pole  reach 1.88 pow 1.12: 45.3%
+   bigblade   pole  reach 1.88 pow 1.14: 44.7%
+   sword      one   reach 1.78 pow 1: 48.7%
+   dao        one   reach 1.75 pow 1: 58.0%
+   shortji    one   reach 1.8 pow 1: 55.3%
+   mace       one   reach 1.72 pow 0.97: 55.0%
+   twinsword  dual  reach 1.72 pow 0.96: 55.0%
+   twinji     dual  reach 1.75 pow 0.97: 51.3%
+   twindao    dual  reach 1.68 pow 1: 56.7%
+   gladius    one   reach 1.66 pow 1.03: 65.0%
+   lance      pole  reach 2.12 pow 1: 46.7%
+   handaxe    one   reach 1.7 pow 1.03: 54.3%
+   tachi      one   reach 1.76 pow 1: 46.3%
+   outside 45–55 %: guandao 41.0, snake 39.3, ji 43.0, spear 39.3, bigblade 44.7, dao 58.0, shortji 55.3, twindao 56.7, gladius 65.0

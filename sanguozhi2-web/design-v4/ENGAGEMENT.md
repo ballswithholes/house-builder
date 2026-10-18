@@ -2,7 +2,7 @@
 
 Player request 13 of v4: **make the non-battle game more fun and rewarding, so the player does not always need to fight.** This spec also carries the engagement side of request 3 (items found outside shops), request 8 (city building projects that show in the zoomed city), request 10 (experience for domestic work, which titles need) and request 14 (the yearly calendar around the 武林大会, and a non-combat counterpart, the 文会).
 
-Read `DESIGN-V2.md` §1 (common rules), `DESIGN-V3.md` §4 (levels), `CONTRACT.md`, and the sibling v4 specs `ITEMS.md`, `TITLES.md`, `DOMESTIC-FX.md` and `COMBAT-V4.md` first. Where this file conflicts with them, this file wins for the systems it owns: 民心 (city order), 声望 (prestige), 邦交 (relations and pacts beyond the v3 alliance), 羁绊 (relationships between generals), random events, 国策 (missions), 营建 (city projects), 商队 (trade caravans sent by the player), 探索 (expeditions), 文会, festivals, 功业 (achievements), victory paths and the score, and **domestic experience** (this answers `TITLES.md` §11, Q1 and Q10). The others win for their systems: ITEMS for items, shops and the visiting 胡商 / 海商; TITLES for offices; DOMESTIC-FX for how commands look and sound; the city-view spec (`CITY-VIEW.md`, referenced by DOMESTIC-FX) for models; the tournament spec for the rules of the 武林大会; COMBAT-V4 for duels. Platform order: browser first (this repo), then the Unity port (§23). Every visual assumes the v4 art direction from the art pilot (Lanternvale: stylized low-poly, cozy Ghibli-warm, flat-shaded props and buildings, soft-lump foliage with the warm-top / cool-teal ramp, ink outlines, soft painted light with warm lantern pools at night). Cards are paper and lacquer, effects are brush strokes, ink splashes, gold leaf and vermillion seals, never neon.
+Read `DESIGN-V2.md` §1 (common rules), `DESIGN-V3.md` §4 (levels), `CONTRACT.md`, and the sibling v4 specs `ITEMS.md`, `TITLES.md`, `DOMESTIC-FX.md` and `COMBAT-V4.md` first, and **`INTEGRATION.md`**, which wins over this file for everything that crosses a system boundary (the caps and order of combination in `SG.Mods`, the formulas of `SG.Econ` — the order term lives there now —, the AI's spending through `SG.AIBudget`, save and migration, the month pipeline, the shared `gen.injury`). Where this file conflicts with the other specs, this file wins for the systems it owns: 民心 (city order), 声望 (prestige), 邦交 (relations and pacts beyond the v3 alliance), 羁绊 (relationships between generals), random events, 国策 (missions), 营建 (city projects), 商队 (trade caravans sent by the player), 探索 (expeditions), 文会, festivals, 功业 (achievements), victory paths and the score, and **domestic experience** (this answers `TITLES.md` §11, Q1 and Q10). The others win for their systems: ITEMS for items, shops and the stock of the visiting 胡商 / 海商 (this spec owns the one card that brings them, 「行商过境」, INTEGRATION §7.5); TITLES for offices; DOMESTIC-FX for how commands look and sound; the city-view spec (`CITY-VIEW.md`, referenced by DOMESTIC-FX) for models; the tournament spec for the rules of the 武林大会; COMBAT-V4 for duels. Platform order: browser first (this repo), then the Unity port (§23). Every visual assumes the v4 art direction from the art pilot (Lanternvale: stylized low-poly, cozy Ghibli-warm, flat-shaded props and buildings, soft-lump foliage with the warm-top / cool-teal ramp, ink outlines, soft painted light with warm lantern pools at night). Cards are paper and lacquer, effects are brush strokes, ink splashes, gold leaf and vermillion seals, never neon.
 
 Status: design spec only. No game code was changed and nothing was committed. Supporting files:
 
@@ -21,9 +21,9 @@ Status: design spec only. No game code was changed and nothing was committed. Su
 | Topic | Rule |
 |---|---|
 | Loop | Month: events (0–1 card) → commands → projects, caravans, expeditions tick → end month → festival / 文会 / tournament when due → news. Year: 正旦 review (年鉴) and 武林大会 in month 1, 庙会 in 3, harvest in 7, 文会 in 9, a culture festival once a year |
-| Interruption budget | ≤ 1 random event card + ≤ 1 scheduled card per month (outside battles and the player's own commands). Everything else is a toast or a badge. Answering never costs a token |
-| 民心 order | 0–100 per city. Start 45 + 德/5 + 町/150 (30–75). Drifts to target 45 + 德/5 + buildings (+2 per month up, −1 down). 征兵 −1 per 3 000 recruits. Effects: income × (0.95 + order/1000), harvest × (1 + (order − 50)/1000), population growth × (0.5 + order/100), bandit and volunteer weights |
-| 声望 prestige | Unbounded score per faction. Sources: achievements, festivals, missions, projects, city levels, 文会 / 武林 placings, diplomacy, conquest (+5 per city, +20 per faction destroyed). Converts to 人望 (fame) +1 per 150, at most +10 together with event fame. Event 德 (virtue) bucket ±10 |
+| Interruption budget | ≤ 1 random event card + ≤ 1 scheduled card per month (outside battles and the player's own commands). The yearly **武林大会 card is outside the budget** (INTEGRATION §6.5), and no AI demand or 归附 offer is ever created for month 1 (they wait for month 2). Everything else is a toast or a badge. Answering never costs a token |
+| 民心 order | 0–100 per city. Start 45 + 德/5 + 町/150 (30–75). Drifts to target 45 + 德/5 + buildings (+2 per month up, −1 down). 征兵 −1 per 3 000 recruits. Effects: the order term (order − 50)/1000 inside `SG.Econ`'s income and harvest sums (±5 %, within the +35 % caps, INTEGRATION §4.2–§4.3), population growth × (0.5 + order/100), bandit and volunteer weights |
+| 声望 prestige | Unbounded score per faction. Sources: achievements, festivals, missions, projects, city levels, 文会 / 武林 placings, diplomacy, conquest (+5 per city, +20 per faction destroyed). Converts to 人望 (fame) +1 per 150, at most **+10 together with event and gear fame** (`SG.Mods.fameBonus`, INTEGRATION §3.4). Event 德 (virtue) bucket ±10 |
 | Domestic exp | TITLES §11 table (开发 6/8, 征兵 / 训练 3, 搜索 4/12, 登用 10/2, 同盟 12/3, 离间 / 拉拢 6–15/2) + 政绩 3 per month for each governor (+1 at order ≥ 75), + 3 to a project supervisor, + 2 in a city with a 书院. **Cap 20 per general per month.** Story exp (events, missions, 文会, caravans, expeditions, mentors) outside the cap. **老练 (battle veterancy) counts non-battle exp at half** (`vetLevel`, §4.4) |
 | Events | 33 kinds (nature, society, court, people, global), 9 regional variants (飓风, 马贼, 海寇 …), 7 named sage personas (5 with unique outcomes), 5 dated historical seeds. One draw per faction per month, p = min(0.55, 0.28 + 0.025 × cities): **4.2 per faction-year** classic, 3.1 world. AI resolves them with the same rules. Net value for the AI ≈ +0.3 … +0.8% of gross gold income |
 | 国策 missions | Player only. 3 slots; 2 offers every 3 months. 17 templates × 3 tiers; deadlines 6–24 months; reward 0.4 / 0.8 / 1.2 months of faction income, prestige 10 / 20 / 35, exp 20 / 35 / 50, item chance (tier 2: 25% uncommon; tier 3: 60% uncommon, 15% rare). No penalty for failure |
@@ -36,8 +36,8 @@ Status: design spec only. No game code was changed and nothing was committed. Su
 | Festivals | One culture festival per year (腊祭·大傩, 东盟, 茏城大会, 行像, 因陀罗节, 诺鲁孜, 农神节 …, 12 families, sources graded A / B / C). 盛大 (30 + 15 × cities gold, ≤ 400): all cities order +6, capital loyalty +3, prestige +10 (×1.5 with a temple); 从简: a third of the cost, +2 / +3; 免: nothing. Optional 投壶 mini-game |
 | 功业 achievements | 48 in 8 groups, each +5 … +80 prestige (a few +1 fame or virtue). The scripted engaged player unlocks 0.5–1.9 a year: 18–21 by year 20 (classic), 14 by year 15 (world) |
 | Victory | 霸业 (unify, v3). **王道**: prestige ≥ 1 500, average order ≥ 75, two 大郡 or one 都会, every neighbour at relation ≥ 30 or under a pact (and ≥ 4 factions), no attack started for 24 months, all held 6 months. 天命 (classic): 传国玉玺 + 洛阳 or 长安 + prestige 2 000. 万国来朝 (world): pacts with 12 factions in 5 regions + 8 000 trade profit + prestige 2 000. 天下榜 score and an optional 30-year score game |
-| Balance (all-AI, §19) | Classic 2 × 48 seeds × 25 y: factions alive at year 10 off 4.9 / 4.3 → on 5.0 / 4.9; median time to the first faction > 25% of cities 2.3 / 2.1 y → 1.9 / 2.2 y. World 24 seeds × 15 y: alive at year 15 44.3 → 43.5 (44.0 with AI tribute). Defection cascades 11 → 9 of 96 games |
-| Balance (scripted peaceful player, §19) | Classic 2 × 36 games × 20 y: survival 81–89% (v3 domestic-only 83%); prestige 715–866 at year 10, 2 400–3 135 at year 20; 王道 in 22–25% of runs (median 11–13 y). World 24 × 15 y: survival 100% (v3 92%), 3.0 cities at year 15 (v3 1.9), 王道 12.5% (median 12.7 y). Engagement income (missions, caravans, prizes, events, expeditions) 25–43% of the base income, spending (gifts, projects, festivals, supplies, dowries) 35–42%: the systems roughly pay for themselves and turn gold into cities, levels, items, prestige and a victory path |
+| Balance (all-AI, §19) | Classic 2 × 48 seeds × 25 y: factions alive at year 10 off 4.9 / 4.3 → on 5.0 / 4.9; median time to the first faction > 25% of cities 2.3 / 2.1 y → 1.9 / 2.2 y. World 24 seeds × 15 y: alive at year 15 44.3 → 43.5 (44.0 with AI tribute). Defection cascades 11 → 9 of 96 games. **With every v4 system on** (INTEGRATION §9: items, titles, tournament, AI spending through `SG.AIBudget`): alive y10 4.77 / 4.48 vs off 4.94 / 4.29, world y15 43.42 vs 44.29; cascades 6 vs 11 of 96 |
+| Balance (scripted peaceful player, §19) | Classic 2 × 36 games × 20 y: survival 81–89% (v3 domestic-only 83%); prestige 715–866 at year 10, 2 400–3 135 at year 20; 王道 in 22–25% of runs (median 11–13 y). World 24 × 15 y: survival 100% (v3 92%), 3.0 cities at year 15 (v3 1.9), 王道 12.5% (median 12.7 y). All v4 on (INTEGRATION §9.3): classic survival y20 89 / 100 % (v3 83 / 94 %), 王道 14 / 19 %; world 96 %, 王道 8 % (2 of 24 runs). Engagement income (missions, caravans, prizes, events, expeditions) 25–43% of the base income, spending (gifts, projects, festivals, supplies, dowries) 35–42%: the systems roughly pay for themselves and turn gold into cities, levels, items, prestige and a victory path |
 | RNG | Every rule here draws from its own seeded streams (`SG.SeededRandom(hash(G.seed, monthIndex, tag, …))`), never from `SG.Random`. With `SG.Engage.enabled = false` every v3 / v4 output is identical |
 
 ---
@@ -76,7 +76,7 @@ Short loop (minutes): a card, a command, a vignette, a number going up. Middle l
 
 | # | Rule |
 |---|---|
-| R1 | **Interruption budget**: at most 1 random event card and 1 scheduled card per month, outside battles and the player's own commands. Overflow becomes a line in the month news and takes the recommended option |
+| R1 | **Interruption budget**: at most 1 random event card and 1 scheduled card per month, outside battles and the player's own commands. Overflow becomes a line in the month news and takes the recommended option. The 武林大会 card of month 1 does not count (it is an annual ceremony with the 正旦 review); AI tribute demands and 归附 offers generated in December are due in month 2 (INTEGRATION §6.5) |
 | R2 | Every card has a **★ recommended** option (= what the AI would choose, §6.5) and a forecast line ("预计：粮 −264、民心 +8、声望 +4"). Setting 「内政委任」 (on by default for minor cards) answers minor cards with ★ and lists them in the news; chains, deserters, 归附, oaths, marriages and demands always ask |
 | R3 | **No upkeep**: projects, caravans and expeditions run by themselves; missions track and pay automatically; festivals remember 「以后照此办理」 |
 | R4 | **No punishment for ignoring**: missions expire silently; achievements never decay; an unanswered card (closed with ×) takes the safe free option, never the worst one |
@@ -148,8 +148,8 @@ target(c)   = clamp(45 + effVirtue(owner)/5 + Σ project.orderTarget + Σ buff o
 monthly     : order < target → order = min(target, order + 2);  order > target → order − 1
 recruit n   : order −= ceil(n / 3000)                               // 征兵 3 000 → −1
 conquered   : order = max(15, order − 15);   siege repelled: order −= 3
-income      : c.gold += round(baseIncome × (order/1000 − 0.05))     // ±5 %, 50 = neutral
-harvest     : + round(land × FoodPerLand × (order − 50)/1000)       // ±5 %
+income      : the term (order − 50)/1000 inside Econ.cityGold's sum   // ±5 %, 50 = neutral; one clamp −10 … +35 % (INTEGRATION §4.2)
+harvest     : the same term inside Econ.harvest's sum                 // ±5 %; one clamp −20 … +35 % (INTEGRATION §4.3)
 population  : natural growth × (0.5 + order/100)                    // ×0.5 … ×1.5
 ```
 
@@ -169,7 +169,7 @@ population  : natural growth × (0.5 + order/100)                    // ×0.5 �
 | Project completed / 奇观 completed / 奇观 standing | +10 / +50 / +5 per month |
 | Festival 盛大 / 从简 (×1.5 with a 祠庙 or 奇观) | +10 / +3 |
 | 文会 1st / 2nd / 3rd; host | +50 / +25 / +12; +20 |
-| 武林大会 1st / 2nd / 3rd | +50 / +25 / +12 (proposal to the tournament spec) |
+| 武林大会 1st / 2nd / 3rd | +50 / +25 / +12 (TOURNAMENT §7.1) |
 | Mission tier 1 / 2 / 3 | +10 / +20 / +35 |
 | Achievement | +5 … +80 (§14) |
 | Alliance / truce / marriage concluded | +5 / +5 / +20 (both sides for a marriage) |
@@ -181,12 +181,12 @@ population  : natural growth × (0.5 + order/100)                    // ×0.5 �
 **What prestige does**
 
 ```
-fameBonus(f)  = min(10, floor(prestige / 150) + eventFame(f))         // eventFame: +1 cards, 文会 crown, missions tier 3
-effFame(f)    = clamp(f.fame + fameBonus(f) + gearFame(f), 0, 100)   // gearFame: ITEMS §3.5 (≤ +20)
-effVirtue(f)  = clamp(f.virtue + clamp(eventVirtue(f), −10, 10) + gearVirtue(f), 0, 100)
+fameBonus(f)  = min(10, floor(prestige / 150) + eventFame(f) + gearFame(f))   // SG.Mods.fameBonus: ONE cap for all three (INTEGRATION §3.4)
+effFame(f)    = SG.Mods.fame(f)   = clamp(f.fame + fameBonus(f), 0, 100)
+effVirtue(f)  = SG.Mods.virtue(f) = clamp(f.virtue + clamp(eventVirtue(f) + gearVirtue(f), −10, +15), 0, 100)
 ```
 
-- `effFame` / `effVirtue` replace `faction.fame` / `virtue` everywhere v3 reads them (battle action points `2 + fame/20`, 搜索, 登用, 外交, 出奔), through the same accessors ITEMS introduces (`SG.Items.fame(f)` / `virtue(f)`; this spec adds its bonus inside them). The stored fields never change. With the cap of +10, prestige adds at most one battle action point to a faction.
+- `effFame` / `effVirtue` replace `faction.fame` / `virtue` everywhere v3 reads them (battle action points `2 + fame/20`, 搜索, 登用, 外交, 出奔), through `SG.Mods.fame(f)` / `virtue(f)` (INTEGRATION §3.4; this module provides `prestigeFame`, `eventFame`, `eventVirtue`). The stored fields never change; `syncFV` writes the event buckets, never `faction.fame`. With the cap of +10, prestige and gear together add at most one battle action point to a faction (measured all-on: AP 5.23 at year 25 vs 4.76 off; uncapped 5.94).
 - Gift and diplomacy: relation gains × min(1.5, 1 + prestige/2000); marriage chance + min(0.10, prestige/5000); 归附 chance + prestige/40 000.
 - Unlocks: 远方来献 needs 250, 祥瑞 needs 100; victory thresholds (§15).
 - Names (shown under the ruler's portrait in the top bar): 无闻 < 100 · 小有名气 100 · 闻名州郡 300 · 名动一方 600 · 天下闻名 1 000 · 四海归心 1 500 · 万世景仰 3 000.
@@ -272,7 +272,7 @@ vetLevel(gen) = Progress.levelFor(gen.exp − 0.5 × gen.dexp)
 Progress.vetK(gen) = 1 + VET_PER_LEVEL × (min(vetLevel(gen), MAX_LEVEL) − 1)
 ```
 
-Measured: the average 老练 multiplier of all AI generals at year 10 is ×1.095 with this rule against ×1.110 with full weight and ×1.079 in v3 (year 25: ×1.137 / ×1.171 / ×1.090). Tests (7g) / (7h) of `tests/sim.js` re-run with domestic exp on (§22.2).
+The same `vetLevel` sets the level term of army crits (COMBAT-V4 §2.1, INTEGRATION §3.2). Measured: the average 老练 multiplier of all AI generals at year 10 is ×1.095 with this rule against ×1.110 with full weight and ×1.079 in v3 (year 25: ×1.137 / ×1.171 / ×1.090). Tests (7g) / (7h) of `tests/sim.js` re-run with domestic exp on (§22.2).
 
 ---
 
@@ -283,7 +283,7 @@ Measured: the average 老练 multiplier of all AI generals at year 10 is ×1.095
 1. `StrategyAI.endMonth` (income × 民心, harvest, projects / caravans / expeditions tick, missions pay, AI events resolved, festival / 文会 / tournament when due) → the month news (DOMESTIC-FX §9 harvest montage, stage-ups).
 2. **Achievements** stamp in the news panel (seal animation, ≤ 3 shown, the rest as a line).
 3. **Event card** for the player's faction, if drawn (§6.1).
-4. **Scheduled card** if due, in priority order: 归附 offer > tribute demand > 武林大会 (month 1) > 文会 (month 9) > culture festival > AI alliance / marriage / trade offer > mission offer badge (never a card). Lower ones wait a month or become news lines (R1).
+4. **Scheduled card** if due, in priority order: 归附 offer > tribute demand > 文会 (month 9) > culture festival > AI alliance / marriage / trade offer > mission offer badge (never a card). Lower ones wait a month or become news lines (R1). The **武林大会** card (month 1) is shown in addition, after the year review, and does not use the slot; AI demands and 归附 offers are never generated for month 1 (they are created for month 2), so January shows at most the tournament and one other card (INTEGRATION §6.5).
 5. Month banner (`令牌 N 枚`), commands.
 
 The AI's events, festivals and diplomacy are resolved inside `endMonth` with the same rules (§6.5, §18).
@@ -391,7 +391,7 @@ roll p = clamp(base + Σ stat × coef of the option's agent + virtue × coef, 0.
 agent: gov (the city's administrator) · ruler · best of the city by 武力 (+ troops) / 智力 / 政治 / max(智, 政) · the event's subject
 ```
 
-An option is offered only if its cost fits the city's gold and food. For the AI (and for ★ in the player's card), the city must also keep a reserve of 60 + 6 × officers gold and two months of its troops' food (without it, AI cities spent down to 0 and triggered the v1 rule "gold < 0 → every officer −3 loyalty", starting defection cascades; §19.2). An option that would send away the last officer of a city, or an officer of a threatened city, is not offered (without this the world scenario lost 3.5 factions by year 15).
+An option is offered only if its cost fits the city's gold and food. For the AI (and for ★ in the player's card), the city must also keep its reserve **R(c) = 150 + 8 × officers gold and two months of its troops' food** (`SG.AIBudget.reserve`, INTEGRATION §5; kind `event`) (without it, AI cities spent down to 0 and triggered the v1 rule "gold < 0 → every officer −3 loyalty", starting defection cascades; §19.2). An option that would send away the last officer of a city, or an officer of a threatened city, is not offered (without this the world scenario lost 3.5 factions by year 15).
 
 ### 6.3 Catalogue
 
@@ -448,7 +448,7 @@ An option is offered only if its cost fits the city's gold and food. For the AI 
 ### 6.5 The AI's choice
 
 ```
-aiChoose(options): among affordable options (cost + reserve, §6.2), the highest ai × (aiIf satisfied ? 2 : 1)
+aiChoose(options): among affordable options (AIBudget.canSpend(city, cost, 'event'), §6.2), the highest ai × (aiIf satisfied ? 2 : 1)
 aiIf keys: foodOverHarv k (food > k × harv), goldOverInc k, goldOver n, troopsOver n, orderBelow n, minVirtue n,
            govPol n, genWar n (a general with 武 ≥ n in the city), threatened, notThreatened
 ```
@@ -545,7 +545,7 @@ The 国策 widget in the top bar: three bamboo-slip pips (empty, in progress wit
 | walls | 重城 | 500 | 120 | 町 ≥ 300 | city defence +10 (stacks with titles' 镇守) | walls (taller walls, corner towers) |
 | temple | 宗庙 | 400 | 90 | — | order target +8; plague does not spread into the city and costs half; festivals ×1.5 here | temple |
 | granary | 常平仓 | 300 | 70 | — | disaster food losses ×0.5; 交易 here buys 15% cheaper and sells 15% dearer | granary |
-| forge | 铁官 | 450 | 100 | 产业 ≥ 400 | 开发·产业 +10%; shop +1 uncommon slot; 征兵 −10% gold | workshop |
+| forge | 铁官 | 450 | 100 | 产业 ≥ 400 | 开发·产业 +10%; shop +1 uncommon slot; 征兵 **+10 % troops per gold** (inside the recruit cap, INTEGRATION §4.4) | workshop |
 | harbour | 津渡船坞 | 500 | 110 | coastal or river | sea caravans from here (+0.06 margin on sea legs); income +3% | harbour |
 | beacons | 烽燧亭障 | 250 | 60 | a border city | warning: an AI attack on this city is announced one month ahead (an 急报 card with the enemy's portrait and troops); auto-resolve defence ×1.05 | walls (watchtowers along the approach roads) |
 | wonder | 铜雀台 … | 2 000 | 300 | capital, once, city level ≥ 3 | prestige +5 per month; festivals ×1.5; capital order target +5; hosts the 文会 when the faction leads in prestige | palace |
@@ -571,15 +571,15 @@ The numbers never change; the name, model and icon do (`names` in `engagement.js
 - **Construction**: the anchor building gets scaffolding at 0–25% of the work (bamboo poles and reed mats for hua, timber cranes for roman, mud-brick stacks for persia / arabia / nile …), half-built shells at 25–75%, the finished model with a fresh-paint tint and ribbons for 3 months after 100%. Workers (4–10 instanced figures) carry loads along a path when the camera is near.
 - **Completion** is a great-tier vignette (DOMESTIC-FX §4) of the 营建 command: the scaffold drops in a puff of ink dust, the new model rises (DOMESTIC-FX's `d.upgrade`), a seal 「落成」, the sting `build:great`. It plays at the start of the next month like a stage-up (DOMESTIC-FX §9.2).
 - The city panel lists finished projects as small lacquer plaques under the city name and the active one with a progress ring and months left.
-- Budgets: a project adds at most 2 500 triangles (wonder 3 000; CITY-VIEW §9 budgets) and one draw call per kind (instancing).
+- Budgets: a project adds at most **900 triangles (wonder 2 000)**, halved in the medium LOD, counted in CITY-VIEW's `triEstimate` (INTEGRATION §12: a capital at S5 with all 13 projects draws 215 640 of 250 000 on desktop, 128 960 of 150 000 on phones), and one draw call per kind (instancing).
 
 ### 8.5 City levels and prosperity goals
 
-City level (邑 1, 县城 2, 郡城 3, 大郡 4, 都会 5) is the CITY-VIEW header badge (`cityLevel` in `domestic/city-stages.js`: the rounded mean of the farm, workshop, houses, walls and market stages). Each level first reached by a city gives prestige +10 × (level − 1), a seal in the news and the achievements 郡城气象 / 大郡繁华 / 天下名都. The city view shows the level as the gate's lantern count and banner.
+City level (邑 1, 县城 2, 郡城 3, 大郡 4, 都会 5) is the CITY-VIEW header badge: the rounded mean of the farm, workshop, houses, walls and market stages, read from the rules table **`SG.Balance.CityLevel`** (INTEGRATION §12; `domestic/city-stages.js` is its reference; trade hubs keep their market stage at their hub tier, the hub boost). Each level first reached by a city gives prestige +10 × (level − 1), a seal in the news and the achievements 郡城气象 / 大郡繁华 / 天下名都. The city view shows the level as the gate's lantern count and banner.
 
 ### 8.6 AI building (AI-relevant, on by default)
 
-Each AI city without a project, once in 6 months on average (`rng('aiproj', city) < 1/6`), starts the first buildable project of its list when its gold ≥ cost + 600: border cities 城墙 → 烽燧 → 演武场 → 市集 → 水利; inner cities 市集 → 水利 → 祠庙 → 常平仓 → 书院. Measured (§19.1): about 175 projects per classic game over 25 years (the AI's hoard after year 5 becomes buildings), campaign pace unchanged, city order +6 at year 25, the AI's border cities harder to take by +10 defence. Without it the AI's cities in the city view would look the same in year 20 as in year 5.
+Each AI city without a project, once in 6 months on average (`rng('aiproj', city) < 1/6`), starts the first buildable project of its list when `SG.AIBudget.canSpend(city, cost, 'project')` (the city keeps R(c) and the faction's discretionary purse holds the cost; projects come after title gifts and gear in the discretionary phase, INTEGRATION §5–§6.3): border cities 城墙 → 烽燧 → 演武场 → 市集 → 水利; inner cities 市集 → 水利 → 祠庙 → 常平仓 → 书院. Measured (§19.1): about 175 projects per classic game over 25 years (the AI's hoard after year 5 becomes buildings), campaign pace unchanged, city order +6 at year 25, the AI's border cities harder to take by +10 defence. Without it the AI's cities in the city view would look the same in year 20 as in year 5. All v4 on (INTEGRATION §9): projects take 5.8 % (classic) / 7.0 % (world) of AI gross income, festivals 0.6 / 1.1 %.
 
 ---
 
@@ -614,7 +614,7 @@ leader exp 10 + 4 × hops
 
 ### 9.3 Markets
 
-The visiting merchants (胡商 / 海商, ITEMS §6.5) arrive through the 行商过境 card (§6.3), so they count against the interruption budget and can be taxed or hosted instead. 庙会 (month 3) and shop restocks are ITEMS'. 交易 keeps the v3 food prices; the 常平仓 project and the 广积粮 plan adjust them.
+The visiting merchants (胡商 / 海商, ITEMS §6.5) arrive **only** through the 行商过境 card (§6.3; ITEMS rolls no event of its own, INTEGRATION §7.5), so they count against the interruption budget and can be taxed or hosted instead. Hosting (「看看货物」) opens their stock in the city's shop as `city.shop.merchant` (2 months); AI factions get the stock only when their card's ★ option is 「看看货物」. 庙会 (month 3) and shop restocks are ITEMS'. 交易 keeps the v3 food prices; the 常平仓 project and the 广积粮 plan adjust them.
 
 ---
 
@@ -649,7 +649,8 @@ v3 rule and chance, + rel/400, needs relation ≥ −20. Success: +10 relation, 
 
 - **纳贡 (offer tribute)**: you pay X gold per month for 12 months (default 8% of your base income, slider 5–20%), the receiver agrees not to attack you (non-aggression pact). p = clamp(0.40 + 2 × X / receiverIncome + rel/300, 0.05, 0.95). Payment is taken each month from your richest city; if you cannot pay, the pact ends and relation −20.
 - **索贡 (demand tribute)**: needs your troops ≥ 2 × theirs and a common border. p = clamp(0.15 + 0.15 × (ratio − 2) + effFame/400 + rel/400, 0.05, 0.75). Accepted: they pay 8% of their income to you for 12 months, both sides under non-aggression; you get +1 prestige per month paid. Refused: relation −20.
-- **AI demands of the player** (a scheduled card): an AI neighbour with ≥ 2.5 × the player's troops and relation ≤ 20, at most once a year (p 1/12 per month): 「岁贡金 X，否则兵戎相见」 (X = 8% of the player's income). Accept → a tribute pact. Refuse → relation −15 and for 12 months that AI needs 0.15 less troop ratio to attack the player (the only aggression bonus in this spec).
+- **AI demands of the player** (a scheduled card): an AI neighbour with ≥ 2.5 × the player's troops and relation ≤ 20, at most once a year (p 1/12 per month; never due in month 1, INTEGRATION §6.5): 「岁贡金 X，否则兵戎相见」 (X = 8% of the player's income). Accept → a tribute pact. Refuse → relation −15 and for 12 months that AI needs 0.15 less troop ratio to attack the player (the only aggression bonus in this spec).
+- Payments of an existing tribute pact are kind `tribute` of `SG.AIBudget`: the payer city keeps the floor `2 × SalaryPerGeneral × officers` (INTEGRATION §5.1); below it the payment is skipped that month (no pact break for the AI).
 - **AI to AI** (on by default): a faction next to a neighbour with ≥ 2.5 × its troops, at relation ≥ −30 and not at war, offers tribute with 12% per month; accepted with clamp(0.5 + rel/200, 0.1, 0.9). Measured: 5–6 tribute pacts per classic game, ≈ 145 per world game (many small kingdoms paying great powers); campaign pace unchanged (§19.1). The news shows them («车师向鲜卑纳贡»).
 - History: the 卑弥呼 mission of 239 to 魏 (tribute, the title 亲魏倭王 and gifts in return); Commodus' peace of 180 with the Marcomanni and Quadi (Cassius Dio 73.2: hostages, grain, recruits); the Han–Xiongnu 和亲 gifts.
 
@@ -670,7 +671,7 @@ for each AI faction H with ≤ 3 cities, monthly:
   candidates F adjacent to H with troops(F) ≥ 2 × troops(H), effVirtue(F) ≥ 50, and (rel(F, H) ≥ 50 or a marriage, or H paying F tribute for ≥ 12 months)
   p(F) = clamp(0.01 + (rel − 50)/1000 + 0.005 × min(10, ratio − 2) + effVirtue/2000 + prestige(F)/40 000, 0, 0.06)
   the best F rolls once (rng('submit', H))
-  F = player → a scheduled card (top priority): 「韩馥愿以冀州相让」 accept / decline (decline: relation +5)
+  F = player → a scheduled card (top priority; an offer rolled in December is due in month 2): 「韩馥愿以冀州相让」 accept / decline (decline: relation +5)
   F = AI → only AI-to-AI when `Engage.aiSubmit` is on (off in v4, §24 Q4)
 accept: every city of H changes owner (order +5), every general of H joins F (loyalty 60 + effVirtue/5, H's ruler +10, range 50–95),
         H dies without war, F prestige +30, achievement count; no further 归附 to F for 36 months (digestion)
@@ -724,7 +725,7 @@ A tab in the character menu (request 9's screen; this spec owns the content) and
 - On return (one roll stream per expedition, `rng('exped', id)`):
 
 ```
-mishap (site type, 4–15 %): the leader is injured (away 2 more months), exp 15, nothing else
+mishap (site type, 4–15 %): the leader is injured (`gen.injury = { until: +2 months, war: 0, away: true }`, INTEGRATION §6.4), exp 15, nothing else
 gold   = uniform(type range) × (1 + hops/4)          // 20–220 base
 item   : rare min(6 %, type rare + 0.5 % × hops) · else uncommon (10–15 %) · else common (20–30 %)  — pools by site culture and type (§12.3)
 exp    = 30 + 10 × hops to the leader
@@ -837,10 +838,10 @@ The 切磋 card's 「亲临观战」 starts a duel in the duel game with `mode: 
 
 The tournament spec owns the event (brackets, stadium, rules). This spec adds:
 
-- **Prestige** +50 / +25 / +12 for the champion's / second's / third's faction (to the tournament spec as the prestige line of its prizes; ITEMS §8.9 gives the item side and the gold 400 / 200 / 100).
+- **Prestige** +50 / +25 / +12 for the champion's / second's / third's faction (TOURNAMENT §7.1 adopted it; ITEMS §8.9 gives the item side, TOURNAMENT the gold 400 / 200 / 100).
 - **Bonds**: two finalists of different factions, both with 武力 ≥ 85, become 宿敌 with 30%; finalists of one faction gain affinity +10.
 - The 求战心切 card's 「荐其出战」 option, the 武林 mission, the 天下第一 achievement and the 演武场 project's +5 seeding.
-- Calendar: the tournament is the scheduled card of month 1 (§5.1); the year review (§16.4) plays first.
+- Calendar: the tournament card of month 1 is outside R1 (§1.3, §5.1); the year review (§16.4) plays first. Injuries use the shared `gen.injury = { until, war, away }` (INTEGRATION §6.4).
 
 ---
 
@@ -952,7 +953,7 @@ The one pushed screen of the year (it replaces the month news of month 1, ≤ 20
 
 ### 16.5 Sound, music and voices
 
-Every new command (营建, 通商, 探索, the 外交 sub-actions) gets an icon, button behaviour and a sting from DOMESTIC-FX's system: this spec gives the content (§21); DOMESTIC-FX's §6–§8 rules apply (unique silhouette, 4 tiers, culture families). Festival stings and the 文会 / 投壶 music are culture-family pieces for the music task (request 7: ruler suites; the festival piece can be the faction suite's dance movement). Voice cue ids for request 12: `evt.card.<category>`, `evt.choice.good` / `.bad`, `fest.open`, `wenhui.win`, `debate.stance.<id>`, `oath.swear`, `marriage.accept`, `submit.offer`, `victory.wangdao`.
+Every new command (营建, 通商, 探索, the 外交 sub-actions) gets an icon, button behaviour and a sting from DOMESTIC-FX's system: this spec gives the content (§21); **DOMESTIC-FX §5.18–§5.28** (the addendum written in the consolidation) defines the 11 icons, the 10 command stings (`build`, `caravan`, `explore`, `gift`, `marriage`, `tribute`, `hostage`, `truce`, `tradepact`, `submit`; 4 tiers × 12 families) and the moment stings `mission`, `festival@family`, `wenhui`, all validated by `node design-v4/domestic/stings.js`. Festival stings and the 文会 / 投壶 music are culture-family pieces for the music task (request 7: ruler suites; the festival piece can be the faction suite's dance movement). Voice cue ids for request 12: `evt.card.<category>`, `evt.choice.good` / `.bad`, `fest.open`, `wenhui.win`, `debate.stance.<id>`, `oath.swear`, `marriage.accept`, `submit.offer`, `victory.wangdao` — all registered in `design-v4/audio/voice-lines.js` with fallbacks (AUDIO-V4 §B2, INTEGRATION §10.2); the 胡商 speaks with `SG.Voice.profile('merchant')`.
 
 ### 16.6 Comfort
 
@@ -1002,7 +1003,7 @@ Net: the engagement systems roughly pay for themselves (classic +2 … +5%, worl
 | 民心 | yes | same formulas; AI recruits lower it | AI income within ±0.1%; order 33–39 early, 61–62 late |
 | Events | yes | same draw, `aiChoose` with reserve | +0.3 … +0.8% of AI gross; pace unchanged |
 | Historical seeds | yes | same | — |
-| Festivals | yes | 盛大 at 3× cost, else 从简 with reserve | prestige |
+| Festivals | yes | 盛大 at 3× cost, else 从简, through `SG.AIBudget` (kind `festival`, last in the discretionary order) | prestige; 0.6 % (classic) / 1.1 % (world) of AI gross income all-on |
 | Domestic exp | yes | same table and cap | average level 3.8 vs 3.0 at year 10; 老练 ×1.095 vs ×1.079 |
 | Prestige → fame | yes | same | ≤ +10 fame, ≤ +1 battle AP |
 | Relations and pacts | yes | AI skips pact partners and friends (≥ 60) as targets; bad relations never add aggression | pace unchanged (the rejected eager rule doubled it) |
@@ -1010,7 +1011,7 @@ Net: the engagement systems roughly pay for themselves (classic +2 … +5%, worl
 | AI → player proposals and demands | yes | §10.5, §10.9 | 0.5–0.7 alliance offers a year to a friendly player |
 | 归附 | to the player only (AI–AI off) | §10.8 | 0.1–0.75 per player game |
 | Bonds | yes | loyalty protection, battle bonuses (tactical only) | fewer defections in cascades; campaigns unaffected (auto-resolve ignores bonds) |
-| 营建 | yes (on) | §8.6 | 175 projects per classic game; pace unchanged |
+| 营建 | yes (on) | §8.6, through `SG.AIBudget` (kind `project`) | 175 projects per classic game; pace unchanged; 5.8 / 7.0 % of AI gross income all-on |
 | 文会 / 武林 | yes | AI entrants | prestige and items flow to strong courts |
 | Missions, caravans, expeditions, achievements, victory paths, mini-games | no | player-facing | — |
 
@@ -1090,7 +1091,7 @@ Two notes on reading it: the ai policy shows how deadly the v3 world is for a fa
 
 ## 20. Save data (v4)
 
-One save-version bump shared with the other v4 specs (integration owns the number). New fields:
+Save version 4 (INTEGRATION §6.1); this spec migrates **third**, after ITEMS and TITLES (INTEGRATION §6.2). New fields:
 
 ```js
 city.order = 0…100
@@ -1098,7 +1099,8 @@ city.eng   = { buffs: [{ mod, v, until }], flags: { plague: until, … }, cd: { 
 faction.prestige = int
 faction.eng      = { fameEv, virtueEv, cd: {…}, recent: {…}, refused: { [factionId]: until }, lastDemand, festivalAuto: 'grand'|'modest'|'skip'|null }
 gen.dexp = int                          // non-battle exp (§4.4)
-gen.away = { kind: 'caravan'|'exped'|'hostage'|'leave'|'injured', until, home, ref } | null
+gen.away = { kind: 'caravan'|'exped'|'hostage'|'leave', until, home, ref } | null
+gen.injury = { until, war, away } | null   // shared with TOURNAMENT (INTEGRATION §6.4): event injuries (坠马 …) set away: true
 G.engage = {
   rel: [int…] (n × n, saved as a run-length string), war: [monthIndex…] (n × n, sparse map 'a-b' → monthIndex),
   pacts: [{ a, b, kind, since, until, payer, pay, hostage }],
@@ -1122,18 +1124,18 @@ G.engage = {
 | File | Function | Change |
 |---|---|---|
 | `model.js` | `Commands.develop / train / recruit / search / hire / discord / persuade` | after the v3 body: `SG.Engage?.onCommand(cmd, res)` → domestic exp, order (recruit), counters; `Commands.lastResult` (DOMESTIC-FX) is the input |
-| `model.js` | `Commands.allyChance` | `+ Engage.rel(f, t)/400` before the clamp |
+| `model.js` | `Commands.allyChance` | `Econ.allyP` reads the provider `rel` (`+ rel/400` before its one clamp, INTEGRATION §4.5) |
 | `model.js` | `Commands.ally` | success → `Engage.addRel(f, t, 10)`, prestige +5 |
 | `strategy-ai.js` | `actCity` target filter, `threat()`, `recheckBattle` | `!g.allied(n.owner, f) && !Engage.noAttack(n.owner, f)` (pacts, relation ≥ 60): partners are neither targets nor threats |
 | `strategy-screen.js` | `cmdAttack` | pact partners stay in the list with a 「背约」 tag and a cost confirmation |
-| `model.js` | `GameState.generalsIn` | skip generals with `away.until > monthIndex` |
+| `model.js` | `GameState.generalsIn` | skip generals with `away.until > monthIndex` or `injury.away && injury.until > monthIndex` (INTEGRATION §6.4) |
 | `model.js` | `Progress.gain(gen, n, why)` | `why !== 'battle'` → `gen.dexp += added`; `Progress.vetK` uses `Engage.vetLevel(gen)` |
-| `strategy-ai.js` | `endMonth` | before the defection loop: `Engage.loyaltyShield()` (sworn / kin / spouse, restored after); after income: `Engage.monthEnd(news)` (order, income and harvest adjustments, projects, caravans, expeditions, missions, events, festivals, 文会, AI diplomacy and projects, achievements) |
+| `strategy-ai.js` | `endMonth` | the phases of INTEGRATION §6.3: bond shields enter `SG.Mods.effLoy` (the larger of title and bond shield); income and harvest through `SG.Econ` (the order term is a provider); phase 2 `Engage.monthEnd(news)` (order, projects, caravans, expeditions, missions, events, tribute, 文会, AI diplomacy, achievements); phase 7 `Engage.aiProjects()` and festival decisions through `SG.AIBudget`; phase 9 `syncFV` |
 | `strategy-ai.js` | `attackNeed(f, t)` | `+ Engage.needK(f, t)` (only the tribute-refusal −0.15) |
 | `strategy-ai.js` | `Conquest.prepare / apply` | war memory, relation changes, pact breaking, order on conquest, prestige, shared-victory affinity, `_lastBattle` |
 | `strategy-ai.js` | `SG.cityDefense` | `+ Engage.defense(c)` (walls +10, quake buffs) — TITLES adds its `garrison` in the same function |
 | `battle-model.js` | `atkPower`, `defFactor`, morale at start, rout handler | bond terms (§11.3) |
-| `duel-game.js` | `Fighter` | rival +4% damage; `mode: 'friendly'` |
+| `duel-game.js` | `Fighter` | rival +4% damage, added to the dmg term of the all-in duel budget (INTEGRATION §8.3: gear + title + rival ≤ 6 %); `mode: 'friendly'` |
 | `strategy-screen.js` | `run()` | month start: `Engage.monthStartCards()` → event card, scheduled card (R1); year review in month 1 |
 | `strategy-screen.js` | `refreshCityPanel` | commands 营建, 通商, 探索; 外交 opens the new screen; 民心 bar, project ring |
 | `strategy-screen.js` | `buildHud` | 声望 seal, 国策 slips, 年历 ribbon, 王道 tracker (with the main-interface task) |
@@ -1142,7 +1144,7 @@ G.engage = {
 | `game.js` | title, new game | 功业阁 shelf; 三十年之约 option |
 | ITEMS (`items.js`) | `pool(...)`, `fame(f)`, `virtue(f)`, search | the pools of §12.3; prestige and event buckets inside effFame / effVirtue; the treasure-map ×2 in the hidden-item roll |
 | TITLES (`titles.js`) | passed-over hook | `Engage.addAff(passed, holder, −10)` |
-| tournament spec | prizes | prestige +50 / +25 / +12; finalist bonds |
+| tournament spec | prizes | prestige +50 / +25 / +12; finalist bonds; `gen.injury` shared |
 
 ---
 
@@ -1156,7 +1158,9 @@ G.engage = {
 4. **Campaign balance**: the targets of §19.1 (classic 2 × 48 seeds × 25 years, world 24 seeds × 15 years; ≈ 5 minutes).
 5. **Player balance**: the scripted players of §19.3 with these targets (averaged over the two classic seed sets): v4 survival at year 20 ≥ v3 − 8 pp (classic) and ≥ v3 (world); v4 base income at year 20 ≥ 0.8 × v3 and v4 base income + net engagement gold ≥ v3; missions 4–10%, caravans 8–20%, expedition gold ≤ 5%, prize gold ≤ 8% of gross; achievements ≥ 0.5 in year 1 on average and 0.5–1.5 a year after; 王道 reached in 10–40% of v4 runs within 20 years (classic) with a median of 10–17 years, and never before year 6.
 6. **Anti-busywork** (in the v4 harness, counting what the player would see): ≤ 1 random card and ≤ 1 scheduled card in any month; random cards 3–7 a year for a 1–5 city realm; ≥ 35% of months without any card; no event twice for the faction within 6 months; no disaster twice in a city within 12 months; every card has a free AI-selectable option; no card offers an option the city cannot pay for.
-7. **Performance**: `Engage.monthEnd` ≤ 3 ms (classic) and ≤ 8 ms (world) CPU per month; `tests/world.js`'s 60 ms per-month cap still passes with Engage on.
+7. **Performance**: `Engage.monthEnd` ≤ 3 ms (classic) and ≤ 8 ms (world) CPU per month; `tests/world.js`'s 60 ms per-month cap still passes with Engage on (the January tournament is exempt, INTEGRATION §6.6).
+9. **Calendar** (INTEGRATION §6.5): 20 classic years with the scripted player: in every month 1 with `Tourney.due` the tournament card is offered; no January shows more than the tournament card + one other scheduled card (a pending 归附 offer may be that card, and comes first); no tribute demand or 归附 offer is created with `due.month === 1`; the tournament card never consumes the R1 slot.
+10. **AIBudget** (INTEGRATION §5.2): event answers, tribute payments, projects and festivals of the AI never leave a city below R(c) (tribute: below its floor); `stats.below0 = 0`.
 8. **Save**: round trip; v3 save migration; `enabled = false` writes no Engage fields.
 
 ### 22.2 Changes to existing tests
@@ -1185,15 +1189,15 @@ G.engage = {
 
 ## 24. Open questions
 
-- **Q1. Domestic exp and 老练.** This spec owns domestic exp (TITLES Q1) with TITLES' table and cap 20, plus 政绩 (TITLES Q10: 3 + 1 at order ≥ 75, + title tier). The half-weight 老练 rule (§4.4) is new: does the combat owner accept it, or prefer full weight?
+- **Q1. Domestic exp and 老练** — resolved in the consolidation: half weight, and the same `vetLevel` drives COMBAT's crit level term (INTEGRATION §3.2).
 - **Q2. 民心 strength.** ±5% income and ±5% harvest keep the AI economy neutral. Should order matter more (±10%) for the player's feel, at the cost of a re-tune?
 - **Q3. AI–AI tribute and AI projects** are on by default (measured neutral). Keep them on, or off for the first release?
 - **Q4. AI–AI 归附** is off: it would let strong AI courts absorb small ones without war and change world pace. Turn it on later with its own tests?
 - **Q5. Marriage text.** The marriage card is abstract (no general moves). Should famous marriages (孙夫人 → 刘备) be scripted with named women where history names them?
 - **Q6. Expedition items.** Should ITEMS add a small pool of expedition-only rares (one per site, e.g. a 楼兰 tablet, a Delphic tripod) rather than drawing from unowned shop rares?
-- **Q7. Tournament prestige and finalists' rivalry** are proposals to the tournament spec.
+- **Q7. Tournament prestige and finalists' rivalry** — resolved: TOURNAMENT §7.1 adopted the prestige line; the finalist bond rule stays here.
 - **Q8. 王道 thresholds** (prestige 1 500, order 75) are calibrated on a blind script; playtests may want 2 000 for classic and a separate number for the world.
-- **Q9. Event art.** One painted vignette per event × 12 families is 30 × 12 = 360 paintings; the minimum is one per event (30) with family tints. Which does the art pilot prefer?
+- **Q9. Event art.** One painted vignette per event × 12 families is 30 × 12 = 360 paintings; the minimum is one per event (30) with family tints. The consolidation's asset plan takes the minimum (30, `ASSETS.md` cut point); the art pilot may add family variants later.
 - **Q10. Festival grades C** (倭, 尼罗河, 南海) are designed fills. Do the writers want them named as such in the UI, or presented without the grade?
 - **Q11. 文会 frequency.** Once a year in month 9 next to the harvest (month 7). Every two years would make it rarer and grander.
 - **Q12. The 三十年之约** grading curve needs playtest data (the reference curve is the median score of the scripted v4 player).

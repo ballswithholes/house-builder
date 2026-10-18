@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>低多边形道具库</title>
+<style>
+  :root { --panel: rgba(20,16,24,.82); --line: #4a4555; --text: #f2ead8; --on: #7a3a24; --onb: #c8703a; }
+  html, body { margin: 0; height: 100%; background: #1d1a22; color: var(--text); font: 13px/1.4 "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif; }
+  #gl { display: block; }
+  body.view #gl { position: fixed; inset: 0; width: 100%; height: 100%; touch-action: none; }
+  #shot { display: block; margin: 0 auto; max-width: 100%; }
+  #ui { position: fixed; left: 0; right: 0; top: 0; display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 8px; background: var(--panel); z-index: 5; align-items: center; }
+  #ui button, #ui select { background: #2a2733; color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; font: inherit; min-height: 30px; cursor: pointer; }
+  #ui button.on { background: var(--on); border-color: var(--onb); }
+  #ui .note { opacity: .8; font-size: 12px; }
+  body.sheet { padding-top: 46px; }
+  body.shotmode #ui { display: none; }
+  body.shotmode { padding-top: 0; }
+  @media (max-width: 700px) { #ui button, #ui select { padding: 4px 6px; font-size: 12px; } }
+</style>
+</head>
+<body>
+<div id="ui"></div>
+<canvas id="gl"></canvas>
+<canvas id="shot" style="display:none"></canvas>
+<script src="../vendor/three.min.js"></script>
+<script src="../js/core.js"></script>
+<script src="../js/lowpoly.js"></script>
+<script src="../js/lp-props.js"></script>
+<script>
+'use strict';
+/* SG.LPProps 道具表（Lanternvale props_* 预览图的格式：每格一个道具，蓝色 1.75 m 参照人，1 m 网格）
+   URL 参数
+     shot=sheet（默认）道具表：group=tree|plant|…（缺省全部）names=a,b（只画这些）mood=noon|golden|dusk|night views=g|q|gq
+                 per=每行道具数 tile=单元像素 ss=超采样 lod=far（远景细节）seed=0..3 color=#势力色
+     shot=village 小村落场景（道具组合 + 灯光）mood=noon|golden|night w h
+     shot=perf    性能：n 棵树 / 丛实例化（mode=scatter）或逐个网格（mode=meshes）、静态合并（mode=batch）；报告 draw calls / 三角形
+     不带 shot：可交互的道具查看器（选择道具、拖动旋转、滚轮缩放、切换时间） */
+(function () {
+  if (THREE.ColorManagement) THREE.ColorManagement.enabled = false;
+  const Q = new URLSearchParams(location.search);
+  const qv = (k, d) => (Q.has(k) ? Q.get(k) : d);
+  const SHOT = Q.get('shot') || (Q.has('group') || Q.has('names') ? 'sheet' : '');
+  const LP = SG.LP, Props = SG.LPProps;
+  window.__lp = { ready: false, info: {}, error: null };
+  window.addEventListener('error', e => { window.__lp.error = String(e.message); });
+  const TILE = +qv('tile', 240), SS = +qv('ss', 2), MOOD = qv('mood', 'noon'), COLOR = qv('color', '#2f7d4a');
+  const gl = document.getElementById('gl'), shot = document.getElementById('shot');
+  const renderer = new THREE.WebGLRenderer({ canvas: gl, antialias: true, alpha: true, preserveDrawingBuffer: true });
+  renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+  renderer.toneMapping = THREE.NoToneMapping;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.setPixelRatio(1);
+  window.__lp.renderer = renderer;
+
+  const FONT = { a: '010101111101101', b: '110101110101110', c: '011100100100011', d: '110101101101110', e: '111100110100111', f: '111100110100100', g: '011100101101011', h: '101101111101101', i: '111010010010111', j: '001001001101010', k: '101101110101101', l: '100100100100111', m: '101111111101101', n: '110101101101101', o: '010101101101010', p: '110101110100100', q: '010101101110011', r: '110101110101101', s: '011100010001110', t: '111010010010010', u: '101101101101111', v: '101101101101010', w: '101101111111101', x: '101101010101101', y: '101101010010010', z: '111001010100111', _: '000000000000111', ' ': '000000000000000', 0: '111101101101111', 1: '010110010010111', 2: '110001010100111', 3: '110001010001110', 4: '101101111001001', 5: '111100110001110', 6: '011100111101111', 7: '111001010010010', 8: '111101111101111', 9: '111101111001110', '-': '000000111000000', '.': '000000000000010', '/': '001001010100100', ':': '000010000010000', '+': '000010111010000', '(': '010100100100010', ')': '010001001001010', ',': '000000000010100', '=': '000111000111000', '#': '101111101111101' };
+  function text(ctx, x, y, s, col) {
+    ctx.fillStyle = col || 'rgb(26,13,38)';
+    let cx = x;
+    for (const ch of String(s).toLowerCase()) {
+      const g = FONT[ch];
+      if (g) for (let r = 0; r < 5; r++) for (let c = 0; c < 3; c++) if (g[r * 3 + c] === '1') ctx.fillRect(cx + c * 2, y + r * 2, 2, 2);
+      cx += 8;
+    }
+  }
+  function gridGround(x0, x1, z0, z1, night) {
+    const M = new LP.MeshBuilder(3);
+    M.quad([x0, 0, z0], [x1, 0, z0], [x1, 0, z1], [x0, 0, z1], [0, 1, 0], [0.70, 0.74, 0.62]);
+    const c = [0.6, 0.64, 0.54];
+    for (let x = Math.ceil(x0); x <= x1; x++) M.quad([x - 0.02, 0.004, z0], [x + 0.02, 0.004, z0], [x + 0.02, 0.004, z1], [x - 0.02, 0.004, z1], [0, 1, 0], c);
+    for (let z = Math.ceil(z0); z <= z1; z++) M.quad([x0, 0.004, z - 0.02], [x1, 0.004, z - 0.02], [x1, 0.004, z + 0.02], [x0, 0.004, z + 0.02], [0, 1, 0], c);
+    return LP.mesh(M.toGeometry(), { outline: false, castShadow: false });
+  }
+  function person() {
+    const M = new LP.MeshBuilder(1);
+    M.color = [0.35, 0.45, 0.75];
+    M.capsule([0, 0, 0], 0.22, 1.75, 8);
+    return LP.mesh(M.toGeometry());
+  }
+  function camFor(target, yawDeg, pitchDeg, dist) {
+    const y = yawDeg * Math.PI / 180, p = pitchDeg * Math.PI / 180;
+    const dir = new THREE.Vector3(Math.sin(y) * Math.cos(p), Math.sin(p), Math.cos(y) * Math.cos(p));
+    return { pos: target.clone().addScaledVector(dir, dist), dir };
+  }
+  const opts = (name) => {
+    const o = { seed: +qv('seed', 0), color: COLOR };
+    if (Q.has('lod')) o.lod = Q.get('lod');
+    if (Q.has('variant')) o.variant = Q.get('variant');
+    return o;
+  };
+  /** items: [{ label, make() → obj, info: { tris, far } }] */
+  function sheet(items, views, perRow, mood) {
+    const ncol = perRow * views.length, rows = Math.ceil(items.length / perRow);
+    shot.width = TILE * ncol; shot.height = TILE * rows;
+    const ctx = shot.getContext('2d');
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, shot.width, shot.height);
+    const S = TILE * SS;
+    gl.width = S; gl.height = S; renderer.setSize(S, S, false);
+    const out = [];
+    items.forEach((it, idx) => {
+      const scene = new THREE.Scene();
+      const md = new LP.Mood(scene, { extent: 8, shadowSize: 1024, fogMax: 0 });
+      const obj = it.make();
+      scene.add(obj);
+      obj.updateMatrixWorld(true);
+      const b = new THREE.Box3().setFromObject(obj, true);
+      if (b.isEmpty()) b.set(new THREE.Vector3(-1, 0, -1), new THREE.Vector3(1, 1, 1));
+      const personX = b.max.x + 0.7;
+      const pm = person(); pm.position.x = personX; scene.add(pm);
+      b.union(new THREE.Box3(new THREE.Vector3(personX - 0.25, 0, -0.25), new THREE.Vector3(personX + 0.25, 1.75, 0.25)));
+      scene.add(gridGround(Math.floor(b.min.x) - 2, Math.ceil(b.max.x) + 2, Math.floor(b.min.z) - 2, Math.ceil(b.max.z) + 2));
+      Props.addLamps(obj, md);
+      md.set(mood);
+      const target = b.getCenter(new THREE.Vector3()), dist = b.getSize(new THREE.Vector3()).length() * 0.5 * 3.2 + 2;
+      const pts = [];
+      obj.traverse(m => { if (!m.isMesh || m.name === 'outline') return; const pa = m.geometry.attributes.position, st = Math.max(1, Math.floor(pa.count / 2500)); for (let i = 0; i < pa.count; i += st) pts.push(new THREE.Vector3().fromBufferAttribute(pa, i).applyMatrix4(m.matrixWorld)); });
+      for (let i = 0; i < 8; i++) pts.push(new THREE.Vector3(personX + (i & 1 ? 0.22 : -0.22), i & 2 ? 1.75 : 0, i & 4 ? 0.22 : -0.22));
+      views.forEach((v, vi) => {
+        const [yaw, pitch] = v === 'g' ? [0, 48] : v === 'q' ? [38, 28] : v === 'f' ? [0, 12] : [160, 25];
+        const c = camFor(target, yaw, pitch, dist);
+        const cam = new THREE.PerspectiveCamera(38, 1, 0.3, 400);
+        cam.position.copy(c.pos); cam.lookAt(target); cam.updateMatrixWorld(true);
+        const F = new THREE.Vector3(), Rr = new THREE.Vector3(), U = new THREE.Vector3();
+        cam.getWorldDirection(F); Rr.setFromMatrixColumn(cam.matrixWorld, 0); U.setFromMatrixColumn(cam.matrixWorld, 1);
+        let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+        for (const p of pts) { const d = p.clone().sub(cam.position), z = d.dot(F); const x = d.dot(Rr) / z, y = d.dot(U) / z; minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y); }
+        const need = Math.max(maxX - minX, maxY - minY) / 2;
+        cam.setViewOffset(1000, 1000, ((minX + maxX) / 2) / (need / 0.87) * 500, -((minY + maxY) / 2) / (need / 0.87) * 500, 1000, 1000);
+        cam.fov = 2 * Math.atan(need / 0.87) * 180 / Math.PI; cam.updateProjectionMatrix();
+        const pxPerM = TILE / (2 * need * dist), GAME_PX_PER_M = 1080 / (2 * 6.2);
+        LP.setViewport(S, S, 1080, 0.6); LP.globals.lpView.value.z = Math.max(0.55, (1.9 * pxPerM / GAME_PX_PER_M)) * SS / 2.2;
+        md.sun.target.position.copy(target); md.sun.position.copy(target).add(new THREE.Vector3(...md.state.dir).multiplyScalar(40));
+        md.sun.updateMatrixWorld(); md.sun.target.updateMatrixWorld();
+        const e = Math.max(8, b.getSize(new THREE.Vector3()).length() * 0.6), sc = md.sun.shadow.camera;
+        sc.left = -e; sc.right = e; sc.top = e; sc.bottom = -e; sc.far = 120; sc.updateProjectionMatrix();
+        LP.setTime(1.3);
+        renderer.setClearColor(0x000000, 0);
+        renderer.render(scene, cam);
+        const x0 = ((idx % perRow) * views.length + vi) * TILE, y0 = Math.floor(idx / perRow) * TILE;
+        const night = mood === 'night' || mood === 'dusk';
+        const g2 = ctx.createLinearGradient(0, y0, 0, y0 + TILE);
+        if (night) { g2.addColorStop(0, 'rgb(40,48,78)'); g2.addColorStop(1, 'rgb(26,30,52)'); } else { g2.addColorStop(0, 'rgb(204,219,235)'); g2.addColorStop(1, 'rgb(179,199,222)'); }
+        ctx.fillStyle = g2; ctx.fillRect(x0, y0, TILE, TILE);
+        ctx.drawImage(gl, 0, 0, S, S, x0, y0, TILE, TILE);
+        const tc = night ? 'rgb(236,226,206)' : 'rgb(26,13,38)';
+        text(ctx, x0 + 3, y0 + 3, it.label + ' ' + v, tc);
+        if (vi === 0) text(ctx, x0 + 3, y0 + TILE - 14, it.foot, tc);
+      });
+      md.dispose();
+      out.push({ label: it.label, tris: it.tris, far: it.far });
+    });
+    return out;
+  }
+  function propItems() {
+    const only = Q.has('names') ? Q.get('names').split(',') : null, group = Q.get('group');
+    const names = only || (group ? group.split(',').reduce((a, g) => a.concat(Props.names(g)), []) : Props.names(null));
+    const items = [];
+    for (const n of names) {
+      const variants = Q.has('variants') ? Q.get('variants').split(',') : [qv('variant', null)];
+      for (const vr of variants) {
+        const o = opts(n); if (vr) o.variant = vr;
+        const g = Props.geometry(n, o);
+        const info = Props.info(n);
+        const far = info.lod ? Props.geometry(n, Object.assign({}, o, { lod: 'far' })).tris : 0;
+        const size = g.size;
+        items.push({ label: (n + (vr ? '_' + vr : '')).toUpperCase(), tris: g.tris, far, make: () => Props.make(n, o), foot: `${g.tris}t${far ? '/' + far : ''} ${size[1].toFixed(1)}m` });
+      }
+    }
+    return items;
+  }
+
+  // ------------------------------------------------------------------ village diorama
+  function village(moodName) {
+    const scene = new THREE.Scene();
+    const night = moodName === 'night';
+    const fogCol = new THREE.Color(0.8, 0.86, 0.92);
+    scene.background = fogCol.clone();
+    scene.fog = new THREE.Fog(fogCol, 40, 130);
+    const mood = new LP.Mood(scene, { center: [0, 0, 0], extent: 26, shadowSize: 2048, fog: { base: [0.8, 0.86, 0.92] }, maxLamps: 8 });
+    // ground: a meadow with a dirt lane (vertex coloured) and decals
+    const M = new LP.MeshBuilder(9);
+    const W = 80, D = 70, cs = 1;
+    const lane = (x, z) => Math.max(0, 1 - Math.abs(x - 1.2 * Math.sin(z / 7)) / 2.2);
+    for (let j = 0; j < D / cs; j++) for (let i = 0; i < W / cs; i++) {
+      const x0 = -W / 2 + i * cs, z0 = -D / 2 + j * cs, x1 = x0 + cs, z1 = z0 + cs;
+      const vn = (x, z, s) => { const ix = Math.floor(x), iz = Math.floor(z), tx = x - ix, tz = z - iz, sx = tx * tx * (3 - 2 * tx), sz = tz * tz * (3 - 2 * tz), f = (i, j) => LP.hash01([i, j, s], 17); return (f(ix, iz) * (1 - sx) + f(ix + 1, iz) * sx) * (1 - sz) + (f(ix, iz + 1) * (1 - sx) + f(ix + 1, iz + 1) * sx) * sz; };
+      const col = (x, z) => { const n = vn(x * 0.16, z * 0.16, 1) * 0.7 + vn(x * 0.6, z * 0.6, 2) * 0.3; const g = LP.Paint.mix([0.56, 0.66, 0.33], [0.68, 0.76, 0.42], n); const l = Math.min(1, lane(x, z) * 1.6); return LP.Paint.mix(g, LP.Paint.mix([0.68, 0.52, 0.35], [0.74, 0.6, 0.42], vn(x, z, 3)), l * 0.95); };
+      M.triangleFacing([x0, 0, z0], [x1, 0, z0], [x1, 0, z1], [0, 1, 0], col(x0 + 0.6, z0 + 0.3));
+      M.triangleFacing([x0, 0, z0], [x1, 0, z1], [x0, 0, z1], [0, 1, 0], col(x0 + 0.3, z0 + 0.6));
+    }
+    scene.add(LP.mesh(M.toGeometry(), { outline: false, castShadow: false, detail: LP.grassDetail(), planar: 0.45, detailK: 0.85 }));
+    const placed = [];
+    const put = (name, o, x, z, yaw = 0, s = 1) => { const ob = Props.make(name, Object.assign({ color: COLOR }, o)); ob.position.set(x, 0, z); ob.rotation.y = yaw; ob.scale.setScalar(s); scene.add(ob); placed.push(ob); return ob; };
+    put('house_han', { seed: 0 }, -7, -6, 0.15);
+    put('house_han', { seed: 1 }, 7.5, -7, -0.2);
+    put('house_thatch', { seed: 2 }, -14, 2, 0.6);
+    put('well', {}, 4.2, 1.5, 0.3);
+    put('tree_huai', { seed: 1 }, -12, -12);
+    put('tree_willow', { seed: 0 }, 13, 4, 0.5);
+    put('tree_blossom', { seed: 2, variant: 'peach' }, -4, 7, 1);
+    put('bamboo', { seed: 1 }, 15, -10);
+    put('tree_pine', { seed: 2 }, -20, -16);
+    put('tree_pine_cloud', { seed: 0 }, 20, -18);
+    put('lamp_post', {}, -2.6, 2.5); put('lamp_post', {}, 3.4, 9);
+    put('lantern_hanging', {}, -4.4, -2.6, 0.15);
+    put('fence_wattle', { seed: 0 }, -10, 8, 0.2); put('fence_wattle', { seed: 1 }, -12.2, 8.4, 0.2);
+    put('vegetables', { seed: 1 }, -10.5, 11, 0.2);
+    put('cart', {}, 6.5, 5.5, -0.9);
+    put('crate', { seed: 0 }, 5.0, -2.6, 0.3); put('barrel', { seed: 1 }, 5.9, -2.2); put('sacks', {}, 4.2, -3.0, 0.4); put('jar', { seed: 2 }, -5.8, -2.4);
+    put('bush', { seed: 1 }, -1.8, -2.2); put('bush', { seed: 2, variant: 'flowering' }, 10, 1.2);
+    put('flowers', { seed: 3 }, 1.4, 4.2); put('flowers', { seed: 1 }, -6.5, 4.4);
+    put('rock_small', { seed: 0 }, 9, 10); put('rock_large', { seed: 1 }, -16, -4);
+    put('signpost', {}, 2.2, 12, 0.2);
+    put('banner', { seed: 0 }, -1.6, -5.2);
+    put('haystack', { seed: 0 }, 11.5, 10.5);
+    for (let i = 0; i < 6; i++) put('grass', { seed: i }, -18 + i * 7, 14 + (i % 2) * 2);
+    for (const ob of placed) Props.addLamps(ob, mood);
+    mood.set(moodName);
+    return { scene, mood };
+  }
+
+  // ------------------------------------------------------------------ perf
+  function perfScene(mode, n) {
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0.8, 0.86, 0.92);
+    scene.fog = new THREE.Fog(scene.background, 60, 220);
+    const mood = new LP.Mood(scene, { center: [0, 0, 0], extent: 60, shadowSize: 2048 });
+    mood.set('noon');
+    const kinds = ['tree_huai', 'tree_pine', 'tree_oak', 'bush', 'rock_small', 'tree_poplar'];
+    const rng = (() => { let r = 12345; return () => { r ^= r << 13; r >>>= 0; r ^= r >>> 17; r ^= r << 5; r >>>= 0; return (r & 0xffffff) / 16777216; }; })();
+    const ground = new LP.MeshBuilder(1); ground.quad([-120, 0, -120], [120, 0, -120], [120, 0, 120], [-120, 0, 120], [0, 1, 0], [0.62, 0.72, 0.4]);
+    scene.add(LP.mesh(ground.toGeometry(), { outline: false, castShadow: false }));
+    let tris = 0;
+    if (mode === 'scatter') {
+      const sc = new LP.Scatter({ chunk: +qv('chunk', 64), lodDist: +qv('lod', 70) });
+      for (let i = 0; i < n; i++) { const k = kinds[i % kinds.length]; const g = Props.scatter(sc, k, { seed: i }, (rng() - 0.5) * 200, 0, (rng() - 0.5) * 200, rng() * 6.28, 0.8 + rng() * 0.4); tris += g.tris; }
+      scene.add(sc.build());
+      return { scene, mood, sc, tris, stats: sc.stats };
+    }
+    if (mode === 'batch') {
+      const sb = new LP.StaticBatch({ chunk: 40 });
+      for (let i = 0; i < n; i++) { const k = kinds[i % kinds.length]; const g = Props.batch(sb, k, { seed: i }, { x: (rng() - 0.5) * 200, z: (rng() - 0.5) * 200, yaw: rng() * 6.28, scale: 0.8 + rng() * 0.4 }); tris += g.tris; }
+      scene.add(sb.build());
+      return { scene, mood, tris, stats: sb.stats };
+    }
+    for (let i = 0; i < n; i++) { const k = kinds[i % kinds.length]; const ob = Props.make(k, { seed: i }); ob.position.set((rng() - 0.5) * 200, 0, (rng() - 0.5) * 200); ob.rotation.y = rng() * 6.28; ob.scale.setScalar(0.8 + rng() * 0.4); scene.add(ob); tris += ob.userData.tris; }
+    return { scene, mood, tris, stats: { meshes: n } };
+  }
+
+  function sheetMode(fn) { document.body.classList.add('sheet'); gl.style.display = 'none'; shot.style.display = 'block'; return fn(); }
+  function run() {
+    const t0 = performance.now();
+    if (SHOT === 'sheet') {
+      window.__lp.info.rows = sheetMode(() => sheet(propItems(), qv('views', 'g').split(''), +qv('per', 6), MOOD));
+    } else if (SHOT === 'village' || SHOT === 'perf') {
+      const W = +qv('w', 1600), Hh = +qv('h', 900);
+      let D;
+      if (SHOT === 'village') D = village(MOOD); else D = perfScene(qv('mode', 'scatter'), +qv('n', 1500));
+      const cam = new THREE.PerspectiveCamera(+qv('fov', 38), W / Hh, 0.3, 600);
+      const target = new THREE.Vector3(+qv('tx', 0), +qv('ty', 1.5), +qv('tz', 0));
+      const c = camFor(target, +qv('yaw', 0), +qv('pitch', SHOT === 'perf' ? 38 : 42), +qv('dist', SHOT === 'perf' ? 90 : 34));
+      cam.position.copy(c.pos); cam.lookAt(target);
+      document.body.classList.add('shotmode');
+      gl.width = W; gl.height = Hh; renderer.setSize(W, Hh, false);
+      gl.id = 'shot'; shot.id = 'unused';
+      LP.setViewport(W, Hh);
+      const loop = !!Q.has('loop');
+      const frame = t => { LP.setTime(t); if (D.sc) D.sc.update(cam); renderer.render(D.scene, cam); };
+      frame(1.2);
+      window.__lp.D = D;
+      window.__lp.info = { tris: D.tris, stats: D.stats, calls: renderer.info.render.calls, rtris: renderer.info.render.triangles, programs: renderer.info.programs.length };
+      if (loop) { const clock = new THREE.Clock(); const f = () => { frame(clock.getElapsedTime()); requestAnimationFrame(f); }; requestAnimationFrame(f); }
+    } else {
+      // interactive viewer
+      document.body.classList.add('view');
+      renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+      const ui = document.getElementById('ui');
+      const sel = document.createElement('select');
+      for (const g of Props.groups) { const og = document.createElement('optgroup'); og.label = g; for (const n of Props.names(g)) { const op = document.createElement('option'); op.value = n; op.textContent = n + ' ' + (Props.info(n).label || ''); og.appendChild(op); } sel.appendChild(og); }
+      sel.value = qv('name', 'tree_huai');
+      ui.appendChild(sel);
+      let moodName = MOOD, seed = 0, lod = 'near';
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0.8, 0.86, 0.92);
+      scene.fog = new THREE.Fog(scene.background, 40, 160);
+      const mood = new LP.Mood(scene, { extent: 12, fog: { base: [0.8, 0.86, 0.92] } });
+      scene.add(gridGround(-12, 12, -12, 12));
+      let obj = null, lamps = [];
+      const rebuild = () => {
+        if (obj) scene.remove(obj);
+        for (const l of lamps) mood.removeLamp(l);
+        obj = Props.make(sel.value, { seed, lod, color: COLOR });
+        scene.add(obj);
+        lamps = Props.addLamps(obj, mood);
+        mood.set(moodName);
+        info.textContent = `${obj.userData.tris} tris · ${obj.userData.lp.size.map(v => v.toFixed(1)).join(' × ')} m`;
+      };
+      sel.onchange = rebuild;
+      const btn = (label, fn) => { const b = document.createElement('button'); b.textContent = label; b.onclick = () => fn(b); ui.appendChild(b); return b; };
+      for (const [m, l] of [['dawn', '清晨'], ['noon', '正午'], ['golden', '黄昏'], ['dusk', '傍晚'], ['night', '夜晚']]) btn(l, () => { moodName = m; mood.set(m); });
+      btn('种子', () => { seed = (seed + 1) & 3; rebuild(); });
+      btn('远/近', () => { lod = lod === 'near' ? 'far' : 'near'; rebuild(); });
+      const info = document.createElement('span'); info.className = 'note'; ui.appendChild(info);
+      const cam = new THREE.PerspectiveCamera(38, 1, 0.3, 600);
+      let yaw = 20, pitch = 32, dist = 22;
+      const target = new THREE.Vector3(0, 2.5, 0);
+      const place = () => { const c = camFor(target, yaw, pitch, dist); cam.position.copy(c.pos); cam.lookAt(target); };
+      const resize = () => { renderer.setSize(innerWidth, innerHeight, false); cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); const v = renderer.getDrawingBufferSize(new THREE.Vector2()); LP.setViewport(v.x, v.y); };
+      addEventListener('resize', resize); resize(); place(); rebuild();
+      let drag = null;
+      gl.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, yaw, pitch }; gl.setPointerCapture(e.pointerId); });
+      gl.addEventListener('pointermove', e => { if (!drag) return; yaw = drag.yaw - (e.clientX - drag.x) * 0.25; pitch = Math.max(5, Math.min(85, drag.pitch + (e.clientY - drag.y) * 0.2)); place(); });
+      gl.addEventListener('pointerup', () => { drag = null; });
+      gl.addEventListener('wheel', e => { dist = Math.max(4, Math.min(90, dist * (e.deltaY > 0 ? 1.08 : 0.93))); place(); e.preventDefault(); }, { passive: false });
+      const clock = new THREE.Clock();
+      const loop = () => { LP.setTime(clock.getElapsedTime()); renderer.render(scene, cam); requestAnimationFrame(loop); };
+      loop();
+    }
+    window.__lp.info.ms = Math.round(performance.now() - t0);
+    window.__lp.ready = true;
+  }
+  try { run(); } catch (e) { window.__lp.error = e.stack || String(e); console.error(e); }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+[uncapped] 关羽 L10, 金刚杵 + best def gear + 赤兔, 大将军, sworn brother: atk ×1.581 def ×1.471; exchange vs unequipped L1 ×4.30 (老练 alone ×1.85); crit 23.8% ×1.50
+      开发·产业 by 荀彧 (政治 98, eff 98): v3 24 → v4 38 (g0 24, pct 0.59: gear 0.27 title 0.22 project 0.10), ×1.58
+      city income: Σ = 0.510 → pct 0.510 (title 0.100, gear 0.250, projects 0.110, pact 0.000, order 0.050)
+      搜索 p: raw sum 0.914 → 0.914; fame bonus for AP: prestige 2 000 (+13) + 玉玺 (+15) → +28 (AP at base fame 80: 7 vs v3 6)
+      征兵 troops per gold 5.90 (v3 5); exp ×1.00
+[capped] 关羽 L10, 金刚杵 + best def gear + 赤兔, 大将军, sworn brother: atk ×1.581 def ×1.471; exchange vs unequipped L1 ×4.30 (老练 alone ×1.85); crit 23.8% ×1.50
+      开发·产业 by 荀彧 (政治 98, eff 98): v3 24 → v4 38 (g0 24, pct 0.59: gear 0.27 title 0.22 project 0.10), ×1.58
+      city income: Σ = 0.510 → pct 0.350 (title 0.100, gear 0.250, projects 0.110, pact 0.000, order 0.050)
+      搜索 p: raw sum 0.914 → 0.900; fame bonus for AP: prestige 2 000 (+13) + 玉玺 (+15) → +10 (AP at base fame 80: 6 vs v3 6)
+      征兵 troops per gold 5.90 (v3 5); exp ×1.00

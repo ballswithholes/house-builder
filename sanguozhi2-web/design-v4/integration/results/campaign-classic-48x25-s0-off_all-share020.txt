@@ -1,0 +1,15 @@
+== all-on campaign classic: 48 seeds (SEED0=0) × 25 y, all-AI; variants off / all  [252 s]
+[off] alive y1 11.85, y3 8.65, y5 6.48, y10 4.94, y15 4.65, y20 4.60, y25 4.60
+      largest faction y1 6.2, y3 10.1, y5 13.0, y10 17.1, y15 18.2, y20 18.6, y25 18.8; first > 25 %: median 2.33 y
+      defections per seed 2.04 (max 37); cascades (≥ 10) 3/48; v3 "gold < 0" penalties per seed 1.7
+      level avg 2.07 / 2.46 / 2.65 / 2.97 / 3.13 / 3.22 / 3.26; 老练 avg 1.043 / 1.058 / 1.066 / 1.079 / 1.085 / 1.089 / 1.090; city gold avg 252 / 277 / 428 / 1517 / 3726 / 7335 / 11667
+      battle AP avg 4.83 / 4.84 / 4.78 / 4.77 / 4.76 / 4.76 / 4.76
+[all] alive y1 12.38, y3 8.48, y5 6.60, y10 4.65, y15 4.38, y20 4.38, y25 4.35
+      largest faction y1 6.3, y3 10.6, y5 14.0, y10 17.4, y15 18.2, y20 18.3, y25 18.2; first > 25 %: median 2.17 y
+      defections per seed 2.46 (max 67); cascades (≥ 10) 2/48; v3 "gold < 0" penalties per seed 4.7
+      level avg 2.34 / 2.92 / 3.26 / 3.98 / 4.65 / 5.20 / 5.65; 老练 avg 1.046 / 1.066 / 1.076 / 1.099 / 1.117 / 1.132 / 1.143; city gold avg 226 / 223 / 285 / 871 / 2428 / 5116 / 8538
+      battle AP avg 4.83 / 4.90 / 4.99 / 5.14 / 5.20 / 5.23 / 5.24; fame bonus avg 1.08 / 3.20 / 5.39 / 8.50 / 9.35 / 9.65 / 9.76
+      AI spending / gross income: gear 10.30%, title gifts 2.02%, projects 5.62%, festivals 0.55%, tribute 0.04%; discretionary total 18.50%; refused {}; cities below 0 after a discretionary spend: 0
+      items: bought {"common":11412,"uncommon":10017,"rare":1798,"epic":0}, sold 17371, grants {"wenhui":3600,"tourney1":1027,"tourney2":1200,"tourney3":1200,"event":547}, hidden found 281; titles granted 14974; tournaments 1200 (entrants 24.6, injuries 2706, relic 48, 5.8 ms each)
+      income pct median 0.010, at the +35 % cap 0.00% of city-months; develop pct median 0.000 max 0.34; search p max 0.884; ally p max 0.000
+      strongest non-level stack on the map at y10 (lone commander): atk ×1.413 def ×1.239 (max atk ×1.520, def ×1.380; e.g. 马超)

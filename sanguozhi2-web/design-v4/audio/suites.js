@@ -150,6 +150,45 @@ function respellNote(n, sc) {
   return Object.assign({}, n, { acc: d === 1 ? '#' : d === -1 ? 'b' : '' });
 }
 const noteHead = n => n.rest ? '0' : n.acc + n.deg + (n.oct > 0 ? "'".repeat(n.oct) : ','.repeat(-n.oct));
+// D section (consolidation, AUDIO-V4 §A7): move a respelled note k steps along the template's scale (a melodic sequence)
+function seqDeg(n, k, sc) {
+  if (n.rest || n.bar) return n;
+  const abs = 12 * n.oct + DEG_SEMI[n.deg] + (n.acc === '#' ? 1 : n.acc === 'b' ? -1 : 0);
+  const steps = [];
+  for (let o = -3; o <= 3; o++) for (const pc of sc.pcs) steps.push(12 * o + pc);
+  let i = 0, best = Infinity;
+  steps.forEach((v, j) => { if (Math.abs(v - abs) < best) { best = Math.abs(v - abs); i = j; } });
+  const t = steps[Math.max(0, Math.min(steps.length - 1, i + k))];
+  const o = Math.floor(t / 12), sp = SPELL[((t % 12) + 12) % 12];
+  const mm = /^([#b]?)([1-7])$/.exec(sp);
+  return Object.assign({}, n, { acc: mm[1], deg: +mm[2], oct: o });
+}
+// inversion around the first pitched note, in scale steps (an ascending step becomes a descending one)
+function invDeg(ns, sc) {
+  const steps = [];
+  for (let o = -3; o <= 3; o++) for (const pc of sc.pcs) steps.push(12 * o + pc);
+  const absOf = n => 12 * n.oct + DEG_SEMI[n.deg] + (n.acc === '#' ? 1 : n.acc === 'b' ? -1 : 0);
+  const idxOf = a => { let i = 0, best = Infinity; steps.forEach((v, j) => { if (Math.abs(v - a) < best) { best = Math.abs(v - a); i = j; } }); return i; };
+  const first = ns.find(n => !n.rest && !n.bar);
+  if (!first) return ns;
+  const i0 = idxOf(absOf(first));
+  return ns.map(n => {
+    if (n.rest || n.bar) return n;
+    const t = steps[Math.max(0, Math.min(steps.length - 1, 2 * i0 - idxOf(absOf(n))))];
+    const o = Math.floor(t / 12), sp = SPELL[((t % 12) + 12) % 12];
+    const mm = /^([#b]?)([1-7])$/.exec(sp);
+    return Object.assign({}, n, { acc: mm[1], deg: +mm[2], oct: o });
+  });
+}
+// bars of a section = the longest voice line's barlines
+function sectionBars(sec) { let m = 0; for (const v of Object.values(sec)) if (typeof v === 'string') m = Math.max(m, (v.match(/\|/g) || []).length); return m; }
+// share of the loop's bars that are motif-derived (sections Mi, Mr, Mt, Mv, Mc, MB, Md); AUDIO-V4 §A12 target ≥ 0.25
+function motifShare(P) {
+  const i0 = Math.max(0, P.form.indexOf(P.loopFrom));
+  let all = 0, mot = 0;
+  for (const name of P.form.slice(i0)) { const b = sectionBars(P.sections[name] || {}); all += b; if (/^M[itrvcBd]$/.test(name)) mot += b; }
+  return all ? mot / all : 0;
+}
 // motif (4/4, 8 beats) → notation for a template meter; f = template beats per 4/4 beat
 function render(notes, meter, opts) {
   opts = opts || {};
@@ -167,7 +206,7 @@ function render(notes, meter, opts) {
     }
   }
   if (meter === 3) {                         // 3/4 (celt map): 8 beats → 3 bars of 3 = 9 beats, last note +1
-    f = 1; d = ev.map(n => n.dur); d[d.length - 1] += 1;
+    f = 1; d = ev.map(n => n.dur); { const sum = d.reduce((x, y) => x + y, 0); d[d.length - 1] += (3 - (Math.round(sum) % 3)) % 3; }   // pad to whole bars (8 beats → +1, augmented 16 → +2)
   }
   const bar = meter === 3 ? 3 : (f !== 1 ? meter : 4);
   // emit with barlines; split notes that cross a barline with a tie ')'
@@ -362,6 +401,13 @@ function buildSuite(MU, id, S, OCT) {
         const ans = render(ns, meter);
         o.mL = m1.str + ' ' + rests(ans.bars, mbar); o.mA = rests(bars, mbar) + ' ' + ans.str;
         o.mP = '!p ' + droneBars(bars + ans.bars, mbar, tAbs); o.mB = '!p ' + droneBars(bars + ans.bars, mbar, tAbs - 12, false);
+      } else if (spec === 'develop') {    // Mv (the D section): sequence a 2nd up on the answer → motif on the lead → inversion on the answer → motif in augmentation on the lead
+        const up = render(ns.map(n => seqDeg(n, 1, sc)), meter), dn = render(invDeg(ns, sc), meter);
+        const aug = render(ns, meter, { aug: 2 });
+        const total = up.bars + bars + dn.bars + aug.bars;
+        o.mA = '!mp ' + up.str + ' ' + rests(bars, mbar) + ' ' + dn.str + ' ' + rests(aug.bars, mbar);
+        o.mL = rests(up.bars, mbar) + ' !mf ' + m1.str + ' ' + rests(dn.bars, mbar) + ' !f ' + aug.str;
+        o.mP = '!pp ' + droneBars(total, mbar, tAbs); o.mB = '!p ' + droneBars(total, mbar, tAbs - 12, false);
       } else if (spec === 'tag') {        // Mt: motif quietly on the answer instrument
         o.mA = '!mp ' + m1.str; o.mP = '!pp ' + droneBars(bars, mbar, tAbs);
       } else if (spec === 'call') {       // Mc / Md: motif on lead over drums, bass pulse
@@ -382,7 +428,12 @@ function buildSuite(MU, id, S, OCT) {
   }
   // map: Mi before everything, Mt at the end of every loop
   const mapK = T('map');
-  wrap('map', mapK, { sections: { Mi: 'intro', Mt: 'tag' }, place: (P) => { P.form = ['Mi'].concat(P.form, ['Mt']); } });
+  // consolidation (AUDIO-V4 §A7): a D section Mv in the middle of the loop, so ≥ 25 % of the loop's bars come from the motif
+  // the D section goes right after the template's B section (the reviewer's placement); a template without B in its loop gets it mid-loop
+  const midLoop = (P, sec) => { const i0 = P.form.indexOf(P.loopFrom); const iB = P.form.indexOf('B', i0); if (iB >= i0) { P.form.splice(iB + 1, 0, sec); return; } const n = P.form.length - i0; P.form.splice(i0 + Math.max(1, Math.floor(n / 2)), 0, sec); };
+  wrap('map', mapK, { sections: { Mi: 'intro', Mr: 'intro', Mt: 'tag', Mv: 'develop' }, place: (P) => {
+    midLoop(P, 'Mv'); const i = P.form.indexOf(P.loopFrom); P.form.splice(i, 0, 'Mr'); P.loopFrom = 'Mr';   // Mr: the statement again at the top of every loop
+    P.form = ['Mi'].concat(P.form, ['Mt']); } });
   // council: map (or 庙堂 for hua) slower, drums out, motif tag
   const councilK = fam === 'hua' ? 'council' : mapK;
   wrap('council', councilK, { bpmK: fam === 'hua' ? 1 : 0.88, noDrums: fam !== 'hua', dyn: 0.9, leadInst: inst(fam, 'pluck'), sections: { Mi: 'intro', Mt: 'tag' }, place: (P) => { P.form = ['Mi'].concat(P.form, ['Mt']); } });
@@ -390,7 +441,13 @@ function buildSuite(MU, id, S, OCT) {
   wrap('ending', 'ending', { leadInst: 'choir', ansInst: inst(fam, 'brass1') === 'horn' ? 'horn' : inst(fam, 'brass1'), swap: false, sections: { Mi: 'intro' }, place: (P) => { P.form = ['Mi'].concat(P.form); } });
   // battle: Mc call at the top of every loop
   const batK = T('battle');
-  wrap('battle', batK, { martial: true, leadInst: inst(fam, S.lead === 'flute' || S.lead === 'flute2' || S.lead === 'pluck' || S.lead === 'pluck4' ? 'reed' : S.lead), sections: { Mc: 'call' }, place: (P) => { const i = P.form.indexOf(P.loopFrom); P.form.splice(i, 0, 'Mc'); P.loopFrom = 'Mc'; } });
+  // battle: Mc call at the top of every loop, the D section Mv in the middle; the classic (hua) battle also states the
+  // ruler's call MB before its B section, so the 18 classic rulers' battles are told apart there too (consolidation)
+  wrap('battle', batK, { martial: true, leadInst: inst(fam, S.lead === 'flute' || S.lead === 'flute2' || S.lead === 'pluck' || S.lead === 'pluck4' ? 'reed' : S.lead), sections: Object.assign({ Mc: 'call', Mv: 'develop' }, fam === 'hua' ? { MB: 'call' } : {}), place: (P) => {
+    const i = P.form.indexOf(P.loopFrom); P.form.splice(i, 0, 'Mc'); P.loopFrom = 'Mc';
+    if (fam === 'hua' && P.form.indexOf('B') > 0) P.form.splice(P.form.indexOf('B'), 0, 'MB'); else delete P.sections.MB;
+    midLoop(P, 'Mv');
+  } });
   // battle-defend: hua uses 孤城; others the battle template slowed, motif in augmentation on low brass / bow
   const defK = fam === 'hua' ? 'battle-defend' : batK;
   wrap('battle-defend', defK, { bpmK: fam === 'hua' ? 1 : 0.85, dyn: 0.88, aug: 2, leadInst: inst(fam, 'bow'), sections: { Md: 'call' }, place: (P) => { const i = P.form.indexOf(P.loopFrom); P.form.splice(i, 0, 'Md'); P.loopFrom = 'Md'; } });
@@ -532,7 +589,7 @@ function check() {
   const toBuild = Object.keys(suites).filter(n => HAND[n] || rulers.has(n));
   const others = Object.keys(suites).filter(n => !toBuild.includes(n));
   for (let i = 0; i < 60 && others.length; i++) toBuild.push(others[(i * 7919) % others.length]);
-  const durs = {};
+  const durs = {}, shares = {};
   let nKeys = 0;
   for (const name of toBuild) {
     const S = suites[name];
@@ -547,6 +604,7 @@ function check() {
       if (err && err.length) fails.push(key + ': ' + err.slice(0, 2).join(' / '));
       const d = MU.duration(key);
       (durs[kind] = durs[kind] || []).push(d ? d.total : NaN);
+      if (kind === 'map' || kind === 'battle') { const sh = motifShare(P); (shares[kind] = shares[kind] || []).push(sh); if (sh < 0.25) fails.push(key + ` motif-derived bars ${(100 * sh).toFixed(0)} % < 25 %`); }
       if (kind === 'clash' || kind === 'clash-b') { if (!(d.total > 3.0 && d.total < 3.4)) fails.push(key + ' clash length ' + d.total.toFixed(2)); }
       if (kind === 'clash-short' && !(d.total > 1.5 && d.total < 1.7)) fails.push(key + ' short length ' + d.total.toFixed(2));
       if (kind === 'victory' && !(d.total > 12 && d.total < 16)) fails.push(key + ' victory length ' + d.total.toFixed(2));
@@ -600,10 +658,11 @@ function check() {
   console.log(`distinctness: min distance ${minD} (${minPair}); threshold ${D_MIN}; generator re-rolls total ${rerolls}, worst ${maxAttempt}`);
   console.log(`built ${toBuild.length} suites → ${nKeys} pieces validated`);
   for (const [k, a] of Object.entries(durs)) { const v = a.filter(x => !isNaN(x)); console.log(`  ${k.padEnd(14)} n=${String(v.length).padStart(3)}  ${Math.min(...v).toFixed(1)}–${Math.max(...v).toFixed(1)} s`); }
+  for (const [k, a] of Object.entries(shares)) console.log(`  motif-derived share of the ${k} loop: min ${(100 * Math.min(...a)).toFixed(0)} %, median ${(100 * a.slice().sort((x, y) => x - y)[a.length >> 1]).toFixed(0)} % (target ≥ 25 %)`);
   console.log(fails.length ? 'FAIL\n  ' + fails.slice(0, 40).join('\n  ') + (fails.length > 40 ? `\n  … ${fails.length - 40} more` : '') : 'ALL OK');
   process.exitCode = fails.length ? 1 : 0;
   return { suites, fails };
 }
 
-module.exports = { HAND, FAMILY_OF, TEMPLATE_CULTURE, HUA, parseMotif, respellNote, scaleInfo, render, generate, signature, distance, buildSuite, temperOf };
+module.exports = { HAND, FAMILY_OF, TEMPLATE_CULTURE, HUA, parseMotif, respellNote, seqDeg, invDeg, scaleInfo, render, generate, signature, distance, buildSuite, temperOf, motifShare, check };
 if (require.main === module) check();

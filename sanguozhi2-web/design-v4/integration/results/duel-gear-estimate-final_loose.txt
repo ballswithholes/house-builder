@@ -1,0 +1,13 @@
+== duel gear estimate (v3 Sim, AI vs AI, 300 duels per cell, sides alternated)
+-- config final: {"warDiv":3,"warCap":3,"hpCap":10,"dmgCap":3,"parryCap":0.01,"guardCap":6,"abilityCap":4,"budget":6,"allIn":true}
+   common    BiS (duelWar +0, HP +7, dmg +1.5%, parry +0.01): equal war 60 / 80 / 95 → 57.7% / 54.7% / 58.0%; 65 + gear vs 80 → 7.7%
+   uncommon  BiS (duelWar +1, HP +10, dmg +3.0%, parry +0.01): equal war 60 / 80 / 95 → 70.0% / 65.7% / 67.7%; 65 + gear vs 80 → 13.3%
+   rare      BiS (duelWar +1, HP +7, dmg +4.5%, parry +0.01): equal war 60 / 80 / 95 → 59.7% / 63.0% / 62.7%; 65 + gear vs 80 → 16.3%
+   epic      BiS (duelWar +3, HP +7, dmg +4.5%, parry +0.01): equal war 60 / 80 / 95 → 75.7% / 67.0% / 66.7%; 65 + gear vs 80 → 18.7%
+   legendary BiS (duelWar +3, HP +7, dmg +4.5%, parry +0.01): equal war 60 / 80 / 95 → 68.7% / 72.0% / 73.0%; 65 + gear vs 80 → 23.0%
+-- config loose: {"warDiv":3,"warCap":3,"hpCap":12,"dmgCap":4,"parryCap":0.02,"guardCap":8,"abilityCap":6,"budget":8,"allIn":true}
+   common    BiS (duelWar +0, HP +7, dmg +1.5%, parry +0.01): equal war 60 / 80 / 95 → 60.0% / 61.0% / 58.7%; 65 + gear vs 80 → 7.7%
+   uncommon  BiS (duelWar +1, HP +10, dmg +3.0%, parry +0.02): equal war 60 / 80 / 95 → 64.0% / 60.3% / 65.3%; 65 + gear vs 80 → 10.7%
+   rare      BiS (duelWar +1, HP +12, dmg +4.5%, parry +0.02): equal war 60 / 80 / 95 → 67.3% / 71.3% / 65.3%; 65 + gear vs 80 → 13.3%
+   epic      BiS (duelWar +3, HP +10, dmg +5.5%, parry +0.02): equal war 60 / 80 / 95 → 71.7% / 68.0% / 76.7%; 65 + gear vs 80 → 21.0%
+   legendary BiS (duelWar +3, HP +10, dmg +5.5%, parry +0.02): equal war 60 / 80 / 95 → 74.7% / 77.0% / 74.7%; 65 + gear vs 80 → 21.3%

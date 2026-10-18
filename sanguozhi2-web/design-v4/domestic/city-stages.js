@@ -119,6 +119,9 @@ const TIER = {
   desktop: { houses: [10, 16, 24, 34, 46], props: [40, 60, 80, 100, 120], propTris: 150, crowd: [10, 18, 28, 40, 56], crowdTris: 300, trees: 30, treeTris: 220, terrain: 9000, budget: 250000, outlineShare: 0.8 },
   phone: { houses: [8, 12, 16, 22, 28], props: [24, 34, 44, 56, 64], propTris: 140, crowd: [6, 10, 14, 18, 24], crowdTris: 260, trees: 18, treeTris: 200, terrain: 6000, budget: 150000, outlineShare: 0.6 },
 };
+// ENGAGEMENT §8.2 projects in the city view (scaffold, shell and finished model share the budget)
+const PROJECT_TRIS = { default: 900, wonder: 2000 };
+const PROJECT_IDS = ['irrigation', 'tuntian', 'market', 'roads', 'academy', 'drill', 'walls', 'temple', 'granary', 'forge', 'harbour', 'beacons', 'wonder'];
 function triEstimate(st, ctx, tierName) {
   const T = TIER[tierName || 'desktop'];
   let tris = T.terrain;
@@ -135,6 +138,9 @@ function triEstimate(st, ctx, tierName) {
   tris += T.trees * T.treeTris;
   // landmark (one per famous city, ≤ 3000) and the capital palace variant
   if (ctx.capital) tris += 3000;
+  // ENGAGEMENT §8 projects (INTEGRATION finding 14): ≤ 900 triangles each, the wonder ≤ 2000; the medium LOD (phone tier) halves them
+  const projK = tierName === 'phone' ? 0.5 : 1;
+  for (const id of ctx.projects || []) tris += projK * (PROJECT_TRIS[id] || PROJECT_TRIS.default);
   return { tris: Math.round(tris), drawn: Math.round(tris * (1 + T.outlineShare)), budget: T.budget };
 }
 
@@ -173,7 +179,7 @@ function run(json) {
       est.push(triEstimate(st, ctx, 'desktop').drawn);
       estPhone.push(triEstimate(st, ctx, 'phone').drawn);
       const maxSt = {}; for (const b of BUILDINGS) maxSt[b.id] = st[b.id] < 0 ? -1 : 4;
-      const big = Object.assign({}, ctx, { c: Object.assign({}, c, { population: 2000000 }), capital: true });
+      const big = Object.assign({}, ctx, { c: Object.assign({}, c, { population: 2000000 }), capital: true, projects: PROJECT_IDS });   // every project incl. the wonder
       estMax.push(triEstimate(maxSt, big, 'desktop').drawn);
       estPhoneMax.push(triEstimate(maxSt, big, 'phone').drawn);
     }
@@ -187,6 +193,7 @@ function run(json) {
   const fails = [];
   for (const b of BUILDINGS) for (const t of b.tris) if ((b.cls === 'big' || b.cls === 'field') && t > 3000) fails.push(b.id + ' stage over 3000 tris');
   for (const b of BUILDINGS) if (b.cls === 'small' || b.cls === 'inst') for (const t of b.tris) if (t > 400) fails.push(b.id + ' small prop over 400 tris');
+  for (const id of PROJECT_IDS) if ((PROJECT_TRIS[id] || PROJECT_TRIS.default) > (id === 'wonder' ? 2000 : 900)) fails.push(id + ' project over its triangle budget');
   for (const sc of ['classic', 'world']) {
     if (out[sc].drawnDesktopMaxCity.max > TIER.desktop.budget) fails.push(sc + ' all-S5 city over desktop drawn budget');
     if (out[sc].drawnPhoneMaxCity.max > TIER.phone.budget) fails.push(sc + ' all-S5 city over phone drawn budget');
@@ -200,12 +207,12 @@ function run(json) {
     console.log('  city level S1..S5: ' + o.level.join(' / '));
     console.log('  drawn tris desktop (start) ', JSON.stringify(o.drawnDesktop));
     console.log('  drawn tris phone (start)   ', JSON.stringify(o.drawnPhone));
-    console.log('  drawn tris desktop (all S5)', JSON.stringify(o.drawnDesktopMaxCity));
-    console.log('  drawn tris phone (all S5)  ', JSON.stringify(o.drawnPhoneMaxCity));
+    console.log('  drawn tris desktop (all S5 + 13 projects)', JSON.stringify(o.drawnDesktopMaxCity));
+    console.log('  drawn tris phone (all S5 + 13 projects)  ', JSON.stringify(o.drawnPhoneMaxCity));
   }
   console.log('\ndevelops per stage step', JSON.stringify(out.developsPerStep));
   console.log(fails.length ? 'FAIL ' + fails.join('; ') : 'ALL OK');
 }
 
-module.exports = { FAMILY, FAMILIES, BUILDINGS, HUBS, LEVEL_NAMES, stageOf, stages, cityLevel, ctxFor, triEstimate, TIER, hubTier, shopTier };
+module.exports = { FAMILY, FAMILIES, BUILDINGS, HUBS, LEVEL_NAMES, PROJECT_TRIS, PROJECT_IDS, stageOf, stages, cityLevel, ctxFor, triEstimate, TIER, hubTier, shopTier };
 if (require.main === module) run(process.argv.includes('--json'));

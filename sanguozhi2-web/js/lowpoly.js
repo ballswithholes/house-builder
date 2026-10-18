@@ -1,80 +1,71 @@
 'use strict';
 /* ==========================================================================
-   三国志-霸王的世界 · 网页版 · 低多边形风格工具包（SG.LP）—— 美术试点（Lanternvale 风格）
+   三国志-霸王的世界 · 网页版 · 低多边形风格工具包（SG.LP）1.0 —— Lanternvale 风格的生产版
 
-   目标画风：与《Lanternvale》一致的风格化低多边形 —— 温暖、吉卜力式的配色，粗壮易读的剪影，
-   圆形物体 6–12 边，岩石 / 木头 / 建筑 / 道具用平面（分面）着色，树冠是平滑的「软团」
-   （抖动的二十面体 + 精确的椭球法线 + 全树冠的上暖下冷色阶），顶点色（不画贴图），
-   每面亮度抖动 0.04–0.08、近地面 AO ~0.3，角色 / 生物 / 道具描深色墨线（地形、草、贴花、粒子不描），
-   柔和的绘画式光照：黄金时刻提亮，夜晚整体调成冷蓝灰而灯笼周围是暖琥珀色光池，远景雾，单位下有柔和的圆形影子，
-   树叶 / 布 / 头发随风轻摆。
+   画风：与《Lanternvale》一致的风格化低多边形 —— 温暖、吉卜力式的配色，粗壮易读的剪影，圆形物体 6–12 边，岩石 / 木头 /
+   建筑 / 道具平面（分面）着色，树冠是平滑的「软团」（抖动二十面体 + 精确椭球法线 + 全树冠的上暖下青色阶），顶点色（不画贴图），
+   每面亮度抖动 0.04–0.08、近地面 AO ~0.3，角色 / 生物 / 道具描墨线（地形、草、贴花、粒子不描），柔和的绘画式光照：
+   黄金时刻提亮，夜晚冷蓝灰的夜色调与琥珀色灯池，远景雾，柔和圆影，树叶 / 布 / 头发随风轻摆。人物是真实成人比例（≈ 7.5 头身）。
+   预算：人物 ≤ ~3.1k 三角形，大建筑 ≤ ~3.2k，树 ≤ 1.5k，小道具 ≤ 400，草丛 ≤ 60。
 
-   本文件是 Lanternvale 工具链（MeshBuilder.cs、Materials3D.cs、SceneLighting.cs、LanternvaleCommon.cginc、
-   LowPoly / Outline / Shadow 着色器、PropKit / PropNature 的软团与色阶）在 three.js r158 上的移植。
-   与 Lanternvale 不同之处（按本游戏的约定改写）：
-   · 坐标：Y 向上、右手系（Lanternvale 世界是「上 = −Z」，模型本身同样是 Y 向上 +Z 朝前 —— 模型数据可直接照搬）。
-     人物 / 生物面朝 +Z，人物右手在 −X（与 figure.js 一致）；道具正面朝向镜头一侧由场景决定。
-   · 灯光：继续用 three.js 的灯光与阴影贴图（DirectionalLight = 太阳 / 月亮，可投影；HemisphereLight = 天空 / 地面环境光；
-     PointLight = 灯笼 / 火），但着色器不走 three 的 PBR，而是读取 three 的灯光 uniform，
-     按 Lanternvale 的光照模型计算：包裹式太阳漫反射（平滑过渡的绘画式明暗）、半球环境光、点光源的柔和衰减、
-     轮廓光（rim）、顶点 alpha 自发光（夜晚增强）、线性距离雾（带最大雾量）、夜色调（_LV_Grade）与暖色（_LV_Warmth）。
-     阴影贴图只压暗太阳项，强度可调（Lanternvale 本身没有投影；默认 0.7，保持柔和）。
-   · 色彩空间：游戏是 Gamma 工作流（ColorManagement 关闭、线性输出、无色调映射）。Lanternvale 在 Unity 的 Linear
-     色彩空间里计算光照，所以本着色器自己完成：顶点色 / 雾色按 sRGB → 线性解码，光照在线性空间计算，最后自己编码回 sRGB
-     输出（不依赖渲染器的 outputColorSpace）。灯光颜色视为「已是线性」：用 SG.LP.Mood 设置灯光时会自动转换；
-     自己建灯时用 SG.LP.lightColor('#hex') 取得线性颜色。若渲染器输出为 sRGB（three 默认），先调用 SG.LP.setOutputEncoded(false)。
+   本文件移植 Lanternvale 的 MeshBuilder / Materials3D / SceneLighting / DayNight 与 LowPoly、Outline、Shadow 着色器到 three.js r158。
+   · 坐标：Y 向上、右手系，1 单位 = 1 米。人物 / 生物面朝 +Z（右手在 −X，与 figure.js 一致）；道具正面朝 +Z（本游戏默认镜头从 +Z 看向 −Z）。
+   · 色彩：游戏是 Gamma 工作流（ColorManagement 关闭、渲染器线性输出、无色调映射）。LP 着色器把顶点色 / 雾色按 sRGB 解码，在线性空间
+     算光照，再自己编码回 sRGB（LP.setOutputEncoded(true)，SG.Gfx 已设好）。灯光颜色视为「线性」：用 LP.Mood 设置时自动转换；
+     自建 three 灯光时用 LP.lightColor('#hex')。
+   · 灯光：读取 three 的 DirectionalLight（太阳 / 月亮，第 0 盏可投影）、HemisphereLight（天空 / 地面）、PointLight（灯笼 / 火）的 uniform，
+     按 Lanternvale 的模型计算：包裹式太阳漫反射、半球环境光、点光柔和衰减、rim、自发光、夜色调、暖色、线性雾（带上限）。
+     场景的 LP.Mood 在该场景渲染前推送它的全局量、渲染后复原（两个场景——战略地图与单挑画面——互不串味）。
 
-   公开接口
+   接口（其他模块依赖的公开 API，1.0 起保持稳定）
    --------------------------------------------------------------------------
-   const mb = new SG.LP.MeshBuilder(seed)
-     变换栈：mb.push() / pop() / translate(x,y,z | [x,y,z]) / rotate(xDeg,yDeg,zDeg)（Unity 的欧拉顺序 Z→X→Y）/ rotateQ(q) /
-             scale(s | x,y,z) / aim(at, dir)（+Y 指向 dir 的新坐标系，记得 pop）/ setMatrix(m4)。镜像（负缩放）安全。
-     状态：  mb.color = [r,g,b]（sRGB 0..1，可用 SG.LP.Paint.hex('#..')）· emission 0..1（自发光，写入顶点 alpha）·
-             wind（风摆权重）+ windGradient / windY0 / windY1（按建模根坐标的高度渐变）· bone（刚性蒙皮骨骼序号）·
-             jitter（每面亮度抖动）· aoStrength / aoHeight（贴地变暗）
-     基本体：box(center, size, topColor?, faces?)（faces 如 'tfrl'：只建看得见的面）· boxOn(bottom, size, topColor?) · taperedBox(bottom, size, tx, tz?) ·
-             roof(bottom, width, depth, height, overhang?, thickness?, gables?)（硬山，屋脊沿 X）·
-             lathe(profile[[r,y],...], sides, smooth?, capBottom?, capTop?, ringColors?, angleOffsetDeg?) ·
-             cylinder(bottom, rB, rT, h, sides, smooth?, capB?, capT?) · cone(bottom, r, h, sides) · sphere(c, r|[rx,ry,rz], sides?, rings?, smooth?) ·
-             capsule(bottom, r, h, sides?) · blob(c, radii, detail?, jitter?, seed?, flattenBottom?) ·
-             segment(a, b, ra, rb, sides?, smooth?, caps?) · disc(c, r, sides?, down?) · plane(c, sx, sz, twoSided?) ·
-             torus(c, radius, tube, segments?, sides?) · extrude(polygon[[x,z]..], y0, y1) · blade(base, tip, width, side?) ·
-             triangle(a,b,c,col?) · triangleFacing(a,b,c,outward) · quad(a,b,c,d,outward) · quadTwoSided(a,b,c,d) · append(other)
-     角色 / 道具辅助（UnitMeshKit / PropKit 的移植）：shell · panel · band · body · flat · strip · curvedStrip · spike · curve ·
-             loft(rings, capStart?, capEnd?) · fan · obox(center, size, quat) · beam(a, b, w, h, upHint?) · rope(a, b, sag, r, segs?) ·
-             tuft(at, height, blades, col) · paperLantern(c, r, h, paper, lit, cap) ·
-             ribLantern(c, r, h, paper, lit, cap, tassel?, sides?, dayGlow?)（汉式灯笼：扁圆、竖肋明暗相间、金顶金底、流苏随风）
-     逐顶点改写：boneBy(startVertex, p => 骨骼序号)（同一部件跨骨骼铰接：袍裙上排挂骨盆、其余挂大腿；胡须上三分之一挂头、其余挂胸）·
-             windBy(startVertex, p => 风摆权重)（头发 / 尾巴：根部 0、梢部 1）
-     树叶：  mb.softLump(center, radii, detail, yawDeg, ramp, lumpiness?)（平滑着色的软团：精确椭球法线 + 树冠色阶 + 自身上亮下暗）
-     输出：  mb.toGeometry({ skinned: true }) → 非索引 BufferGeometry：position、normal（平面法线；软团为椭球法线）、
-             color（vec4：rgb = sRGB 反照率，a = 自发光）、lpWind（风摆权重）、lpSmooth（平滑法线，墨线用；其长度 = 该顶点的墨线宽度系数 MeshBuilder.ink）、
-             skinIndex / skinWeight（刚性：每个顶点 100% 绑在 bone 上）。geometry.userData.tris = 三角形数。
-             mb.triangleCount / vertexCount / random01() / range(a, b)
-   SG.LP.Paint   hex('#rrggbb') · shade(c, k) · mix(a, b, t) · hsv(c, hueShiftDeg, sat?, val?) · lin(c)（sRGB→线性）
-   SG.LP.canopyRamp(top, side, bottom, y0, y1, tune?) → (y) => colour；SG.LP.foliage(bucket, base, hueStep?, tune?) → { top, side, bottom }
-     SG.LP.FOLIAGE_TUNE = { topVal, warmMix, warmVal, coolMix, cool }：本游戏俯视镜头下的默认值（树冠顶不再比草地亮、底部更偏青），
-     传入 Lanternvale 原值 { topVal: 1.08, warmMix: 0.22, warmVal: 1.04, coolMix: 0.25, cool: '#355A63' } 即得其原样
-   SG.LP.MeshCache.get(key, build) → 共用几何体
-   材质（共用，按选项缓存）
-     SG.LP.material(opts?)        低多边形材质：{ side: THREE.FrontSide | DoubleSide, tint, rim, fogScale, windScale }
-     SG.LP.outlineMaterial(opts?) 墨线（反向外壳，BackSide，沿平滑法线外推恒定像素宽度，1080p 下约 2.2px）：
-                                  { color: '#241a21', width: 2.2, windScale }
-     SG.LP.mesh(geo, opts?)       → THREE.Mesh（opts.outline 默认 true：子网格 = 同一几何体的墨线外壳；castShadow / receiveShadow）
-     SG.LP.skinnedMesh(geo, skeleton, opts?) → THREE.SkinnedMesh（绑定到已有骨架，例如 figure.js 的人物 / 战马骨架；墨线同样蒙皮）
-     SG.LP.blobShadow(rx, rz, strength?, softness?) → 地面上的柔和圆形影子（Mesh，平放在 y = 0.01）
-     SG.LP.globals                全局 uniform（时间、风、夜色调、暖色、夜间自发光、rim、雾量上限、阴影强度、视口）
-     SG.LP.setTime(seconds)       风摆时钟；SG.LP.setViewport(w, h, refHeight = 1080) 墨线像素宽度的参照（每次渲染前 / 改变视口时）
-     SG.LP.lightColor(hex)        → THREE.Color（线性），给自建的 three 灯光用
-   氛围
-     const mood = new SG.LP.Mood(scene, { center:[x,y,z], extent: 20, shadow: true, shadowSize: 2048, shadowStrength: 0.7 })
-     mood.set('noon' | 'golden' | 'dusk' | 'night' | 小时数)  —— 按 Lanternvale DayNight 的关键帧：太阳方向 / 颜色 / 强度、
-          天空与地面环境光、rim、夜间自发光、夜色调、暖色、雾色（scene.fog 若存在）。
-          投影只是柔和的提示：白天 0.7，黄昏 0.45 且更柔（半径 6，太阳仰角不低于 26°，影长 ≤ 约 2 倍物高），
-          入夜渐降到 0.15，月光下（moonW ≥ 0.98）不再投影（Lanternvale 没有投影）
-     mood.addLamp([x,y,z], { color: '#ffe2a6', intensity: 0.9, range: 5.85, nightOnly: true, halo: true }) → { light, halo }
-          入夜时灯光转为琥珀色、照得更远（LampColor / LampRange），白天关闭（nightOnly）
-     mood.sun / mood.hemi / mood.lamps / mood.state
+   建模  const M = new SG.LP.MeshBuilder(seed)
+     变换栈：push() / pop() / translate(x,y,z | [x,y,z]) / rotate(xDeg,yDeg,zDeg)（Unity 欧拉顺序 Z→X→Y）/ rotateQ(q) / scale(s | x,y,z) /
+             aim(at, dir)（+Y 指向 dir 的新坐标系，记得 pop）/ setMatrix(m4)。镜像（负缩放）安全。
+     状态：  color = [r,g,b]（sRGB 0..1，SG.LP.Paint.hex('#..')）· emission 0..1（常亮自发光：火、晶石）· nightEmission 0..1（只在夜里亮：
+             窗纸、灯笼纸——白天不亮，由场景氛围点亮；优先于 emission）· wind（风摆权重）+ windGradient / windY0 / windY1 ·
+             bone（刚性蒙皮骨骼）· ink（墨线宽度系数，0 = 不描）· jitter（每面亮度抖动）· jitterAll（显式颜色也抖动）· aoStrength / aoHeight
+     基本体：box(center, size, topColor?, faces?) · boxOn · taperedBox · roof · lathe(profile, sides, smooth?, capB?, capT?, ringColors?, angleDeg?) ·
+             cylinder · cone · sphere · capsule · blob · facetBlob(…, colorOf(normal)) · segment(a, b, ra, rb, sides?, smooth?, caps?) · disc · plane ·
+             torus · extrude(poly[[x,z]..], y0, y1) · blade(base, tip, width, side?) · triangle · triangleFacing · quad · quadColors · quadTwoSided · append
+     辅助：  shell · panel · band · body · flat(pts[[x,y]..], thick) · strip · curvedStrip · spike · curve · loft(rings, capS?, capE?, colorOf?) · fan ·
+             obox · beam(a, b, w, h, up?) · rope · tuft · paperLantern / ribLantern(c, r, h, paper, lit, cap, tassel?, sides?, dayGlow?)（lit: true | false | 'night'）
+     逐顶点：boneBy(start, p => bone) · windBy(start, p => w)
+     树叶：  softLump(center, radii, detail, yawDeg, ramp, lumpiness?)；SG.LP.foliage(bucket, base, hueStep?, tune?)、SG.LP.canopyRamp(top, side, bottom, y0, y1, tune?)、
+             SG.LP.FOLIAGE_TUNE、SG.LP.byNormal(top, side, bottom, from?)
+     输出：  M.toGeometry({ skinned?, compact? }) → 非索引 BufferGeometry：position、normal、color（vec4：sRGB 反照率 + alpha 里的自发光编码 LP.EMIT）、
+             lpWind、lpSmooth（平滑法线，长度 = 墨线宽度系数）[、skinIndex / skinWeight]；compact（默认）= 法线 / lpSmooth 用 Int8、颜色用 Uint8
+             （每顶点 26 字节，原来 56）。geometry.userData.tris。M.triangleCount / vertexCount / random01() / range(a, b)
+     SG.LP.Paint（hex / shade / mix / hsv / lin / luma）· SG.LP.PAL（共用调色板）· SG.LP.MeshCache.get(key, build) · SG.LP.hash01 · SG.LP.V（vec3）
+   材质（共用实例，按选项缓存；不要改共用材质，逐物体外观用 look，逐实例颜色用 instanceColor）
+     SG.LP.material({ side, tint, rim, fogScale, windScale, flash, lit, detail + planar + detailK, map, alpha + opacity, depthWrite, polygonOffset })
+     SG.LP.outlineMaterial({ color, width (1080p 下的像素，默认 2.2), windScale, fogScale })   SG.LP.INK / INK_GOLD
+     SG.LP.setLook(obj, look | null) → 给整棵子树（含墨线）设外观：{ tint, flash 0..1, flashColor, fade 0..1（抖动溶解；1 = 实）, rim,
+             fogScale, windScale, lit（夜窗：true / false / 0..1）, opacity, ink（墨线色，如 SG.LP.INK_GOLD 表示选中）, inkWidth（倍数） }；
+             同一个 look 对象可随时改字段（绘制时读取）。SG.LP.getLook(obj)
+   网格  SG.LP.mesh(geo, opts?) → Mesh（opts.outline 默认 true：子网格 = 墨线外壳；castShadow / receiveShadow / look）
+         SG.LP.skinnedMesh(geo, skeleton, opts?) → SkinnedMesh（绑定已有骨架；墨线同样蒙皮）
+         SG.LP.lod(near, far, distance) → THREE.LOD · SG.LP.trisOf(obj)
+   实例化 SG.LP.instances(geo, capacity, opts) → InstancedMesh（+ 共享 instanceMatrix 的实例化墨线子网格；opts.tints = 逐实例颜色）
+         SG.LP.setInstance(im, i, x, y, z, yaw, scale, tint?) · setInstanceMatrix(im, i, m4, tint?) · commitInstances(im, count?)
+         new SG.LP.Scatter({ chunk, lodDist }) .add(geo | { near, far }, x, y, z, yaw, scale, tint?, { outline, farOutline, farShadow, castShadow })
+             .build() → Group（每种几何体每块一个实例化网格 + 一个实例化墨线）.update(camera)（按块切换近 / 远景）
+   合并  new SG.LP.StaticBatch({ chunk }) .add(geo, m4, { outline, castShadow, tint }) / .addAt(geo, x, y, z, yaw, scale) / .addObject(obj) .build()
+         SG.LP.mergeGeometries([{ geo, matrix, tint }]) → 一个紧凑几何体（独一无二的静态道具：城中建筑；重复的东西用 Scatter）
+   影子  SG.LP.blobShadow(rx, rz, strength?, softness?) → Mesh；new SG.LP.BlobShadows(capacity) .set(i, x, y, z, rx, rz, strength) .commit(n) .mesh（一次绘制）
+   贴花  SG.LP.decal(texture, w, h) → 竖立的牌匾 / 招牌 · SG.LP.groundDecal(texture, w, d, { color, opacity, y, rotation }) → 贴地（半透明，受光）
+         SG.LP.decalTexture('dirt' | 'path' | 'scorch' | 'puddle' | 'leaves' | 'flowers' | 'moss' | 'snow' | 'sand' | 'mud' | 'shadow', seed?)
+         SG.LP.boardTexture(text, { w, h, board, ink, line, vertical }) · SG.LP.grassDetail()（地面的笔触细节）
+   光晕  SG.LP.halo(color, size) → Sprite · new SG.LP.HaloBatch(capacity)（Mood 用它把所有灯的光晕画成一次）
+   全局  SG.LP.globals · setTime(s)（风摆时钟，SG.Gfx.render 每帧设）· setWind(strength, speed) · setViewport(w, h, refH = 1080, minPx)（SG.Gfx.resize 设）·
+         setOutputEncoded(bool) · setShadowStrength(k) · lightColor(hex) · resetGlobals()
+   氛围  const mood = new SG.LP.Mood(scene, { center, extent, shadow, shadowSize, shadowStrength, sun, hemi（接管已有的灯）, legacy（与原有材质共用灯时：
+             正午保持它们的原样）, baseDir（正午太阳方向）, fog: { base, golden, dusk, night, background }, fogMax, maxLamps: 8 })
+         mood.set('dawn' | 'morning' | 'noon' | 'afternoon' | 'golden' | 'dusk' | 'night' | 小时数) → mood；mood.state = { hour, night, golden, dir, … }
+         mood.addLamp([x,y,z], { color, intensity, range, nightOnly, halo, haloSize, flicker }) → lamp · setLampLit · moveLamp · removeLamp
+             所有灯共享 maxLamps 盏点光源（离镜头 / mood.focus 最近的亮灯优先），加灯不会重编译着色器；每盏灯都有光晕
+         mood.apply() / mood.update(camera)（场景钩子自动调用）· mood.dispose()
+         主场景的氛围：SG.Gfx.mood（见 js/art.js：SG.Gfx.setMood / addLamp / newMood）
    ========================================================================== */
 (function () {
   const SG = (window.SG = window.SG || {});
@@ -164,6 +155,16 @@
   }
   LP.ico = ico;
 
+  /**
+   * Emission code in the vertex colour's alpha (LP.EMIT): always-on emission e → a = 0.498·e (0 … 0.498); night-only
+   * emission e (MeshBuilder.nightEmission: windows, lantern paper) → a = 0.502 + 0.498·e. The shader decodes both; the
+   * scene's mood (or a look's `lit`) scales the night-only kind from 0 by day to 1 at night.
+   */
+  const EMIT = { day: 0.498, night0: 0.502 };
+  function encodeEmission(e) { return e < 0 ? EMIT.night0 + EMIT.day * clamp01(-e) : EMIT.day * clamp01(e); }
+  LP.EMIT = EMIT;
+  LP.encodeEmission = encodeEmission;
+
   /** Underside squash of soft foliage lumps (unit-sphere y below 0 is multiplied by this). */
   const SOFT_UNDER = 0.8;
 
@@ -181,6 +182,10 @@
       // state for the next primitives
       this.color = [1, 1, 1];
       this.emission = 0;
+      // nightEmission > 0: the next vertices glow only at night (windows, lantern paper): the scene's mood scales them from
+      // 0 by day to 1 at night (LP.Mood → lpNight), or per object with a look { lit: true | false }; it takes precedence
+      // over emission. Stored in this.E as a negative number (−e); toGeometry encodes both kinds in the colour's alpha.
+      this.nightEmission = 0;
       this.wind = 0;
       this.windGradient = false;
       this.windY0 = 0; this.windY1 = 1;
@@ -258,7 +263,7 @@
       this.P.push(px, py, pz);
       this.N.push(nx, ny, nz);
       this.C.push(clamp01(r), clamp01(g), clamp01(bb));
-      this.E.push(clamp01(this.emission));
+      this.E.push(this.nightEmission > 0 ? -clamp01(this.nightEmission) : clamp01(this.emission));
       this.W.push(w);
       this.B.push(this.bone | 0);
       this.K.push(this.ink);
@@ -749,22 +754,23 @@
     }
     /** Ribbed paper lantern centred on c (height h, radius r) with caps and a tassel; glows when lit. */
     paperLantern(c, r, h, paper, lit, cap, tassel, sides = 8) {
-      const keepC = this.color, keepE = this.emission, keepJ = this.jitter;
+      const keepC = this.color, keepE = this.emission, keepN = this.nightEmission, keepJ = this.jitter;
       this.jitter = 0.03;
-      // lit: warm papers turn honey-gold, coloured (red) papers glow a deeper orange of their own hue
-      const warmPaper = P.luma(paper) > 0.6;
-      this.color = lit ? (warmPaper ? P.mix(paper, PAL.glow, 0.55) : P.mix(paper, PAL.glowDeep, 0.35)) : paper;
-      this.emission = lit ? (warmPaper ? 0.95 : 0.85) : 0;
+      // lit: warm papers turn honey-gold, coloured (red) papers glow a deeper orange of their own hue; 'night' = by night only
+      const warmPaper = P.luma(paper) > 0.6, night = lit === 'night';
+      this.color = lit && !night ? (warmPaper ? P.mix(paper, PAL.glow, 0.55) : P.mix(paper, PAL.glowDeep, 0.35)) : paper;
+      this.emission = lit && !night ? (warmPaper ? 0.95 : 0.85) : 0;
+      this.nightEmission = night ? (warmPaper ? 0.95 : 0.85) : 0;
       this.push().translate(c);
       this.lathe([[r * 0.58, -h * 0.5], [r * 0.9, -h * 0.3], [r, 0], [r * 0.9, h * 0.3], [r * 0.58, h * 0.5]], sides, false, true, true);
-      this.emission = 0;
+      this.emission = 0; this.nightEmission = 0;
       this.color = cap;
       this.cylinder([0, h * 0.5 - 0.01, 0], r * 0.62, r * 0.5, h * 0.12, sides, false, false, true);
       this.cylinder([0, -h * 0.5 - h * 0.1, 0], r * 0.5, r * 0.62, h * 0.11, sides, false, true, false);
       this.color = tassel || PAL.vermilion;
       this.cylinder([0, -h * 0.5 - h * 0.32, 0], r * 0.08, r * 0.22, h * 0.22, Math.min(5, sides), false, true, false);
       this.pop();
-      this.color = keepC; this.emission = keepE; this.jitter = keepJ;
+      this.color = keepC; this.emission = keepE; this.nightEmission = keepN; this.jitter = keepJ;
     }
 
     // ------------------------------------------------ soft foliage (PropNature.SoftLump + PropKit.SoftenParts)
@@ -817,12 +823,15 @@
 
     // ------------------------------------------------ output
     /**
-     * Non-indexed BufferGeometry: position, normal, color (vec4: sRGB albedo + emission), lpWind, lpSmooth (smoothed
-     * normal for the ink outline), and with { skinned: true } rigid skinIndex / skinWeight (100 % on each vertex's bone).
+     * Non-indexed BufferGeometry: position, normal, color (vec4: sRGB albedo + emission code in alpha, see LP.EMIT), lpWind,
+     * lpSmooth (smoothed normal for the ink outline, its length = the ink width factor), and with { skinned: true } rigid
+     * skinIndex / skinWeight (100 % on each vertex's bone). opts.compact (default true) stores normal / lpSmooth as
+     * normalized Int8 and color as normalized Uint8 (26 bytes a vertex instead of 56); { compact: false } keeps floats.
      */
     toGeometry(opts) {
       opts = opts || {};
       this._soften();
+      const compact = opts.compact !== false;
       const nv = this.P.length / 3;
       // smoothed normals: sum of the normals of coincident vertices
       const sum = new Map(), keys = new Array(nv);
@@ -833,29 +842,35 @@
         if (s) { s[0] += this.N[i * 3]; s[1] += this.N[i * 3 + 1]; s[2] += this.N[i * 3 + 2]; } else sum.set(k, [this.N[i * 3], this.N[i * 3 + 1], this.N[i * 3 + 2]]);
       }
       const T = this.T, nt = T.length;
-      const pos = new Float32Array(nt * 3), nor = new Float32Array(nt * 3), col = new Float32Array(nt * 4), wind = new Float32Array(nt), sm = new Float32Array(nt * 3);
+      const pos = new Float32Array(nt * 3), wind = new Float32Array(nt);
+      const nor = compact ? new Int8Array(nt * 3) : new Float32Array(nt * 3);
+      const sm = compact ? new Int8Array(nt * 3) : new Float32Array(nt * 3);
+      const col = compact ? new Uint8Array(nt * 4) : new Float32Array(nt * 4);
+      const qn = compact ? v => Math.max(-127, Math.min(127, Math.round(v * 127))) : v => v;
+      const qc = compact ? v => Math.round(clamp01(v) * 255) : v => v;
       const skinned = !!opts.skinned;
       const si = skinned ? new Uint16Array(nt * 4) : null, sw = skinned ? new Float32Array(nt * 4) : null;
       for (let t = 0; t < nt; t++) {
         const i = T[t];
         pos[t * 3] = this.P[i * 3]; pos[t * 3 + 1] = this.P[i * 3 + 1]; pos[t * 3 + 2] = this.P[i * 3 + 2];
-        nor[t * 3] = this.N[i * 3]; nor[t * 3 + 1] = this.N[i * 3 + 1]; nor[t * 3 + 2] = this.N[i * 3 + 2];
-        col[t * 4] = this.C[i * 3]; col[t * 4 + 1] = this.C[i * 3 + 1]; col[t * 4 + 2] = this.C[i * 3 + 2]; col[t * 4 + 3] = this.E[i];
+        nor[t * 3] = qn(this.N[i * 3]); nor[t * 3 + 1] = qn(this.N[i * 3 + 1]); nor[t * 3 + 2] = qn(this.N[i * 3 + 2]);
+        col[t * 4] = qc(this.C[i * 3]); col[t * 4 + 1] = qc(this.C[i * 3 + 1]); col[t * 4 + 2] = qc(this.C[i * 3 + 2]); col[t * 4 + 3] = qc(encodeEmission(this.E[i]));
         wind[t] = this.W[i];
         // lpSmooth: the smoothed normal, its length the vertex's ink width factor (MeshBuilder.ink)
-        const s = V.mul(V.norm(sum.get(keys[i])), this.K[i] != null ? this.K[i] : 1);
-        sm[t * 3] = s[0]; sm[t * 3 + 1] = s[1]; sm[t * 3 + 2] = s[2];
+        const s = V.mul(V.norm(sum.get(keys[i])), this.K[i] != null ? clamp01(this.K[i]) : 1);
+        sm[t * 3] = qn(s[0]); sm[t * 3 + 1] = qn(s[1]); sm[t * 3 + 2] = qn(s[2]);
         if (skinned) { si[t * 4] = this.B[i]; sw[t * 4] = 1; }
       }
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-      g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
-      g.setAttribute('color', new THREE.BufferAttribute(col, 4));
+      g.setAttribute('normal', new THREE.BufferAttribute(nor, 3, compact));
+      g.setAttribute('color', new THREE.BufferAttribute(col, 4, compact));
       g.setAttribute('lpWind', new THREE.BufferAttribute(wind, 1));
-      g.setAttribute('lpSmooth', new THREE.BufferAttribute(sm, 3));
+      g.setAttribute('lpSmooth', new THREE.BufferAttribute(sm, 3, compact));
       if (skinned) { g.setAttribute('skinIndex', new THREE.BufferAttribute(si, 4)); g.setAttribute('skinWeight', new THREE.BufferAttribute(sw, 4)); }
       g.computeBoundingBox(); g.computeBoundingSphere();
       g.userData.tris = nt / 3;
+      g.userData.lp = true;
       return g;
     }
     clear() {
@@ -880,12 +895,15 @@
      * orange of its own hue. Centred on c; r = radius, h = height of the paper body.
      */
     ribLantern(c, r, h, paper, lit, cap, tassel, sides = 8, dayGlow = 0.2) {
-      const keepC = this.color, keepE = this.emission, keepJ = this.jitter, keepW = this.wind, keepG = this.windGradient;
+      const keepC = this.color, keepE = this.emission, keepN = this.nightEmission, keepJ = this.jitter, keepW = this.wind, keepG = this.windGradient;
       this.jitter = 0;
-      const body = lit ? P.mix(paper, PAL.glowDeep, 0.3) : paper;
+      // lit: true = always glowing; 'night' = glows by night only (the mood lights it); false = a faint day glow
+      const night = lit === 'night';
+      const body = lit && !night ? P.mix(paper, PAL.glowDeep, 0.3) : paper;
       const prof = [[r * 0.5, -h * 0.5], [r * 0.88, -h * 0.3], [r, 0], [r * 0.88, h * 0.3], [r * 0.5, h * 0.5]];
       this.push().translate(c);
-      this.emission = lit ? 0.85 : dayGlow;
+      this.emission = lit && !night ? 0.85 : dayGlow;
+      this.nightEmission = night ? 0.85 : 0;
       for (let j = 0; j < sides; j++) {
         const a0 = j * Math.PI * 2 / sides, a1 = (j + 1) * Math.PI * 2 / sides;
         const k = (j % 2 ? 0.86 : 1.0) * (1 + (this.random01() * 2 - 1) * 0.05);
@@ -897,7 +915,7 @@
           this.quad(A, B, Cc, D, out, P.shade(body, k * (i === 0 || i === prof.length - 2 ? 0.9 : 1)));
         }
       }
-      this.emission = 0;
+      this.emission = 0; this.nightEmission = 0;
       this.color = cap;
       this.cylinder([0, h * 0.5 - 0.01, 0], r * 0.56, r * 0.42, h * 0.13, sides, false, false, true);
       this.cylinder([0, -h * 0.5 - h * 0.12, 0], r * 0.42, r * 0.56, h * 0.13, sides, false, true, false);
@@ -906,7 +924,7 @@
       this.windGradient = false; this.wind = 0.6;
       this.strip([0, -h * 0.5 - h * 0.2, 0], [0, -h * 0.5 - h * 0.62, 0], r * 0.22, r * 0.3, [0, 0, 1], r * 0.06);
       this.pop();
-      this.color = keepC; this.emission = keepE; this.jitter = keepJ; this.wind = keepW; this.windGradient = keepG;
+      this.color = keepC; this.emission = keepE; this.nightEmission = keepN; this.jitter = keepJ; this.wind = keepW; this.windGradient = keepG;
     }
   }
   LP.MeshBuilder = MeshBuilder;
@@ -965,21 +983,37 @@
   };
 
   // ======================================================= materials ==
-  // Globals pushed once per frame (SceneLighting's shader globals, minus what three's lights already carry).
+  // Shader globals (Lanternvale's SceneLighting globals, minus what three's lights carry). The per-scene ones (marked *)
+  // are pushed by that scene's LP.Mood just before the scene renders and reset to their defaults right after it, so two
+  // scenes with different moods (the strategy map and a duel screen) never leak into each other.
   const G = {
-    lpMisc: { value: new THREE.Vector4(0, 0.06, 1.6, 0) },      // x: night glow, y: wind strength (m), z: wind speed, w: time (s)
-    lpRim: { value: new THREE.Vector4(1, 0.92, 0.78, 3) },      // rgb: rim colour (linear), a: rim power
-    lpGrade: { value: new THREE.Vector4(0, 0.8, 0.92, 1.22) },  // x: amount, yzw: tint of the graded luma
-    lpWarmth: { value: new THREE.Vector4(0, 0, 0, 0) },         // x: golden lift, y: lamp amber pull, z: lamp moon mask
-    lpFog: { value: new THREE.Vector4(0.85, 1, 0, 0) },         // x: max fog amount, y: 1 = fog colour is sRGB (decode)
-    lpShadow: { value: new THREE.Vector4(0.7, 0, 0, 0) },       // x: how much a cast shadow darkens the sun term
-    lpView: { value: new THREE.Vector4(1920, 1080, 1, 0) },     // xy: viewport (px), z: outline px per unit width (= h / 1080)
+    lpMisc: { value: new THREE.Vector4(0, 0.06, 1.6, 0) },      // x*: night glow boost of emission, y: wind strength (m), z: wind speed, w: time (s)
+    lpRim: { value: new THREE.Vector4(1, 0.92, 0.78, 3) },      // *rgb: rim colour (linear), a: rim power
+    lpGrade: { value: new THREE.Vector4(0, 0.8, 0.92, 1.22) },  // *x: night grade amount, yzw: tint of the graded luma
+    lpWarmth: { value: new THREE.Vector4(0, 0, 0, 0) },         // *x: golden lift, y: lamp amber pull, z: lamp moon mask
+    lpFog: { value: new THREE.Vector4(0.85, 1, 0, 0) },         // *x: max fog amount, y: 1 = fog colour is sRGB (decode)
+    lpShadow: { value: new THREE.Vector4(0.7, 0, 0, 0) },       // *x: how much a cast shadow darkens the sun term
+    lpNight: { value: new THREE.Vector4(0, 0, 0, 0) },          // *x: night-only emission scale (0 by day … 1 at night)
+    lpSunC: { value: new THREE.Vector4(1, 1, 1, 0) },           // *rgb: sun / moon colour × intensity (linear) used for directional light 0 when a = 1
+    lpSkyC: { value: new THREE.Vector4(1, 1, 1, 0) },           // *rgb: sky ambient × intensity (linear) used for hemisphere light 0 when a = 1
+    lpGroundC: { value: new THREE.Vector4(0, 0, 0, 0) },        // *rgb: ground ambient × intensity (with lpSkyC.a)
+    lpView: { value: new THREE.Vector4(1920, 1080, 1, 1) },     // xy: viewport (px), z: outline px per unit width (= h / 1080), w: minimum ink width (px)
     lpOut: { value: 1 },                                        // 1: encode linear → sRGB in the shader (Gamma workflow / linear output)
   };
   LP.globals = G;
+  const SCENE_KEYS = ['lpRim', 'lpGrade', 'lpWarmth', 'lpShadow', 'lpNight', 'lpSunC', 'lpSkyC', 'lpGroundC'];
+  const G_DEFAULT = {};
+  for (const k of SCENE_KEYS) G_DEFAULT[k] = G[k].value.clone();
+  G_DEFAULT.glow = 0; G_DEFAULT.fogMax = 0.85; G_DEFAULT.fogSrgb = 1;
+  /** Back to the defaults of the per-scene globals (LP.Mood calls it after its scene rendered). */
+  LP.resetGlobals = function () {
+    for (const k of SCENE_KEYS) G[k].value.copy(G_DEFAULT[k]);
+    G.lpMisc.value.x = G_DEFAULT.glow; G.lpFog.value.x = G_DEFAULT.fogMax; G.lpFog.value.y = G_DEFAULT.fogSrgb;
+  };
   LP.setTime = t => { G.lpMisc.value.w = t; };
   LP.setWind = (strength, speed) => { G.lpMisc.value.y = strength; if (speed != null) G.lpMisc.value.z = speed; };
-  LP.setViewport = (w, h, refHeight = 1080) => { G.lpView.value.set(w, h, h / refHeight, 0); };
+  /** Viewport in drawing-buffer pixels (ink width reference: refHeight px = full width; minPx: the thinnest ink line). */
+  LP.setViewport = (w, h, refHeight = 1080, minPx) => { G.lpView.value.set(w, h, h / refHeight, minPx != null ? minPx : G.lpView.value.w); };
   LP.setOutputEncoded = enc => { G.lpOut.value = enc === false ? 0 : 1; };
   LP.setShadowStrength = k => { G.lpShadow.value.x = k; };
   LP.lightColor = hex => { const c = P.lin(Array.isArray(hex) ? hex : P.hex(hex)); return new THREE.Color(c[0], c[1], c[2]); };
@@ -988,6 +1022,7 @@
 uniform vec4 lpMisc;
 uniform vec4 lpView;
 uniform float lpOut;
+uniform float uFade;
 vec3 lpLin( vec3 c ) { return mix( c / 12.92, pow( ( c + 0.055 ) / 1.055, vec3( 2.4 ) ), step( 0.04045, c ) ); }
 vec3 lpEnc( vec3 c ) { c = max( c, vec3( 0.0 ) ); return lpOut > 0.5 ? mix( c * 12.92, 1.055 * pow( c, vec3( 1.0 / 2.4 ) ) - 0.055, step( 0.0031308, c ) ) : c; }
 // Gentle wind sway in world space (Y up; the ground is XZ); weight 0 at the base of a plant, 1 at its tips.
@@ -999,6 +1034,13 @@ vec3 lpWindSway( vec3 wp, float w ) {
   wp.x += s * a;
   wp.z += 0.35 * s * a;
   return wp;
+}
+// 4 × 4 ordered dither threshold (Lanternvale's _Fade dissolve): 1/32 … 31/32
+float lpBayer( vec2 p ) {
+  vec2 q = mod( floor( p ), 4.0 );
+  float a = mod( q.x, 2.0 ), b = mod( q.y, 2.0 ), c = floor( q.x * 0.5 ), d = floor( q.y * 0.5 );
+  float fine = a * 2.0 + b * 3.0 - 4.0 * a * b, coarse = c * 2.0 + d * 3.0 - 4.0 * c * d;
+  return ( fine * 4.0 + coarse + 0.5 ) / 16.0;
 }
 `;
 
@@ -1013,6 +1055,9 @@ uniform float uWindScale;
 varying vec3 vViewPosition;
 varying vec3 vNormalV;
 varying vec4 vColor;
+#ifdef USE_INSTANCING_COLOR
+  varying vec3 vInstTint;
+#endif
 #ifdef LP_DETAIL
   uniform float uPlanar;
   varying vec2 vDetailUv;
@@ -1038,6 +1083,9 @@ void main() {
   gl_Position = projectionMatrix * mvPosition;
   vViewPosition = - mvPosition.xyz;
   vColor = color;
+  #ifdef USE_INSTANCING_COLOR
+    vInstTint = instanceColor;
+  #endif
   #ifdef LP_DETAIL
     vDetailUv = worldPosition.xz * uPlanar;
   #endif
@@ -1061,13 +1109,21 @@ uniform vec4 lpGrade;
 uniform vec4 lpWarmth;
 uniform vec4 lpFog;
 uniform vec4 lpShadow;
+uniform vec4 lpNight;
+uniform vec4 lpSunC;
+uniform vec4 lpSkyC;
+uniform vec4 lpGroundC;
 uniform vec3 uTint;
 uniform vec4 uFlash;
 uniform float uRimBoost;
 uniform float uFogScale;
+uniform float uLit;
 varying vec3 vViewPosition;
 varying vec3 vNormalV;
 varying vec4 vColor;
+#ifdef USE_INSTANCING_COLOR
+  varying vec3 vInstTint;
+#endif
 #ifdef LP_DETAIL
   uniform sampler2D uDetail;
   uniform float uDetailK;
@@ -1077,28 +1133,47 @@ varying vec4 vColor;
   uniform sampler2D uMap;
   varying vec2 vMapUv;
 #endif
+#ifdef LP_ALPHA
+  uniform float uOpacity;
+#endif
 const vec3 LV_LUMA = vec3( 0.3, 0.59, 0.11 );
 const vec3 LV_LAMP_AMBER = vec3( 1.3, 1.0, 0.5 );
+const vec3 LV_GLOW = vec3( 1.0, 0.66, 0.3 );
 // the sun's soft painterly ramp: wrapped diffuse eased in
 float lpSunRamp( vec3 n, vec3 l ) {
   float wrap = clamp( ( dot( n, l ) + 0.45 ) / 1.45, 0.0, 1.0 );
   return wrap * wrap * ( 3.0 - 2.0 * wrap );
 }
 void main() {
+  #ifdef LP_FADE
+    if ( uFade < 0.999 && uFade <= lpBayer( gl_FragCoord.xy ) ) discard;
+  #endif
   vec3 n = normalize( vNormalV );
   #ifdef DOUBLE_SIDED
     n = gl_FrontFacing ? n : - n;
   #endif
   vec3 albedo = lpLin( vColor.rgb ) * uTint;
+  #ifdef USE_INSTANCING_COLOR
+    albedo *= lpLin( vInstTint );
+  #endif
+  float alpha = 1.0;
   #ifdef LP_DETAIL
     // painted detail (Lanternvale's planar _MainTex on terrain): a tileable multiplier around 1 (texel 0.5 = 1)
     albedo *= mix( vec3( 1.0 ), texture2D( uDetail, vDetailUv ).rgb * 2.0, uDetailK );
   #endif
   #ifdef LP_MAP
-    // a painted decal (sign boards, plaques): the texture's sRGB colour times the vertex colour, lit like everything else
-    albedo *= lpLin( texture2D( uMap, vMapUv ).rgb );
+    // a painted decal (sign boards, plaques, ground decals): the texture's sRGB colour times the vertex colour, lit
+    vec4 lpTex = texture2D( uMap, vMapUv );
+    albedo *= lpLin( lpTex.rgb );
+    #ifdef LP_ALPHA
+      alpha = lpTex.a * uOpacity;
+      if ( alpha < 0.004 ) discard;
+    #endif
   #endif
-  float emission = vColor.a;
+  // emission code (LP.EMIT): a < 0.5 always-on, a ≥ 0.5 night-only (scaled by the mood's lpNight.x or the look's uLit)
+  float ea = vColor.a;
+  float emitNight = step( 0.5, ea );
+  float emission = mix( ea / 0.498, max( ea - 0.502, 0.0 ) / 0.498 * ( uLit >= 0.0 ? uLit : lpNight.x ), emitNight );
   vec3 pos = - vViewPosition;
   vec3 viewDir = normalize( vViewPosition );
   vec3 sunC = vec3( 0.0 );     // sun / moon (shadowed)
@@ -1109,13 +1184,17 @@ void main() {
   #pragma unroll_loop_start
   for ( int i = 0; i < NUM_DIR_LIGHTS; i ++ ) {
     {
+      vec3 lpDc = directionalLights[ i ].color;
+      #if UNROLLED_LOOP_INDEX == 0
+        if ( lpSunC.a > 0.5 ) lpDc = lpSunC.rgb;
+      #endif
       float lpR = lpSunRamp( n, directionalLights[ i ].direction );
       float lpS = 1.0;
       #if defined( USE_SHADOWMAP ) && ( UNROLLED_LOOP_INDEX < NUM_DIR_LIGHT_SHADOWS )
-        if ( receiveShadow ) lpS = getShadow( directionalShadowMap[ i ], directionalLightShadows[ i ].shadowMapSize, directionalLightShadows[ i ].shadowBias, directionalLightShadows[ i ].shadowRadius, vDirectionalShadowCoord[ i ] );
+        if ( receiveShadow && lpShadow.x > 0.001 ) lpS = getShadow( directionalShadowMap[ i ], directionalLightShadows[ i ].shadowMapSize, directionalLightShadows[ i ].shadowBias, directionalLightShadows[ i ].shadowRadius, vDirectionalShadowCoord[ i ] );
       #endif
-      sunU += directionalLights[ i ].color * lpR;
-      sunC += directionalLights[ i ].color * lpR * mix( 1.0, lpS, lpShadow.x );
+      sunU += lpDc * lpR;
+      sunC += lpDc * lpR * mix( 1.0, lpS, lpShadow.x );
     }
   }
   #pragma unroll_loop_end
@@ -1125,7 +1204,11 @@ void main() {
   for ( int i = 0; i < NUM_HEMI_LIGHTS; i ++ ) {
     {
       float lpH = dot( n, hemisphereLights[ i ].direction ) * 0.5 + 0.5;
-      amb += mix( hemisphereLights[ i ].groundColor, hemisphereLights[ i ].skyColor, lpH );
+      vec3 lpSky = hemisphereLights[ i ].skyColor, lpGround = hemisphereLights[ i ].groundColor;
+      #if UNROLLED_LOOP_INDEX == 0
+        if ( lpSkyC.a > 0.5 ) { lpSky = lpSkyC.rgb; lpGround = lpGroundC.rgb; }
+      #endif
+      amb += mix( lpGround, lpSky, lpH );
     }
   }
   #pragma unroll_loop_end
@@ -1167,14 +1250,17 @@ void main() {
   }
   float rim = pow( 1.0 - clamp( dot( n, viewDir ), 0.0, 1.0 ), max( lpRim.a, 0.5 ) );
   col += lpRim.rgb * rim * ( 0.22 * clamp( dot( light, LV_LUMA ), 0.0, 1.0 ) + uRimBoost );
-  col = mix( col, albedo * ( 1.0 + lpMisc.x ), clamp( emission, 0.0, 1.0 ) );
+  // night-only emitters (windows, lantern paper) glow a warm honey of their own luma; always-on ones keep their albedo
+  float lpMx = max( max( albedo.r, albedo.g ), albedo.b );
+  vec3 emitAlb = mix( albedo, LV_GLOW * max( lpMx, 0.35 ), 0.4 * emitNight );
+  col = mix( col, emitAlb * ( 1.0 + lpMisc.x ), clamp( emission, 0.0, 1.0 ) );
   #ifdef USE_FOG
     float lpDist = length( vViewPosition );
     float lpFogK = clamp( ( lpDist - fogNear ) / max( fogFar - fogNear, 0.01 ), 0.0, 1.0 ) * lpFog.x * uFogScale;
     col = mix( col, lpFog.y > 0.5 ? lpLin( fogColor ) : fogColor, lpFogK );
   #endif
   col = mix( col, lpLin( uFlash.rgb ), clamp( uFlash.a, 0.0, 1.0 ) );
-  gl_FragColor = vec4( lpEnc( col ), 1.0 );
+  gl_FragColor = vec4( lpEnc( col ), alpha );
 }
 `;
 
@@ -1205,11 +1291,11 @@ void main() {
   vec4 pos = projectionMatrix * mvPosition;
   // lpSmooth's length = the vertex's ink width factor (1 on most geometry; 0 = no ink)
   float ink = min( length( objectNormal ), 1.0 );
-  vec3 nw = ink > 0.00001 ? normalize( mat3( lpModel ) * objectNormal ) : vec3( 0.0 );
+  vec3 nw = ink > 0.02 ? normalize( mat3( lpModel ) * objectNormal ) : vec3( 0.0 );
   vec2 nc = ( projectionMatrix * viewMatrix * vec4( nw, 0.0 ) ).xy;
   float l = length( nc );
   if ( l > 0.00001 ) {
-    float px = uWidth * lpView.z * ink;
+    float px = max( uWidth * lpView.z, lpView.w ) * ink;
     pos.xy += ( nc / l ) * ( px * 2.0 / lpView.xy ) * pos.w;
   }
   gl_Position = pos;
@@ -1226,6 +1312,9 @@ uniform vec3 uInk;
 uniform float uFogScale;
 varying float vDist;
 void main() {
+  #ifdef LP_FADE
+    if ( uFade < 0.999 && uFade <= lpBayer( gl_FragCoord.xy ) ) discard;
+  #endif
   vec3 col = lpLin( uInk );
   #ifdef USE_FOG
     float k = clamp( ( vDist - fogNear ) / max( fogFar - fogNear, 0.01 ), 0.0, 1.0 ) * lpFog.x * uFogScale;
@@ -1237,46 +1326,151 @@ void main() {
 
   function withGlobals(u) { for (const k in G) u[k] = G[k]; return u; }
   const MATS = new Map();
-  /** The LowPoly material (shared per option set). */
+  const toRGB = c => (c == null ? null : Array.isArray(c) ? c : c.isColor ? [c.r, c.g, c.b] : typeof c === 'number' ? [((c >> 16) & 255) / 255, ((c >> 8) & 255) / 255, (c & 255) / 255] : P.hex(c));
+  LP.toRGB = toRGB;
+  /**
+   * The LowPoly material, shared per option set: { side, tint, rim, fogScale, windScale, flash: [r,g,b,a], lit (−1 = the
+   * mood decides, 0, 1), detail + planar + detailK (painted planar detail), map (decal texture), alpha + opacity
+   * (transparent decal: alpha from the map), depthWrite, polygonOffset }. Never modify a shared material: per-object
+   * looks go through LP.setLook, per-instance tints through instanceColor.
+   */
   LP.material = function (opts) {
     opts = opts || {};
     const side = opts.side != null ? opts.side : THREE.FrontSide;
-    const tint = opts.tint || [1, 1, 1];
-    const key = ['lp', side, tint.join(','), opts.rim || 0, opts.fogScale != null ? opts.fogScale : 1, opts.windScale != null ? opts.windScale : 1, opts.flash ? opts.flash.join(',') : '', opts.detail ? opts.detail.uuid + ':' + (opts.planar || 0.25) + ':' + (opts.detailK != null ? opts.detailK : 1) : '', opts.map ? opts.map.uuid : ''].join('|');
+    const tint = toRGB(opts.tint) || [1, 1, 1];
+    const fogScale = opts.fogScale != null ? opts.fogScale : 1, windScale = opts.windScale != null ? opts.windScale : 1;
+    const lit = opts.lit === true ? 1 : opts.lit === false ? 0 : opts.lit != null ? +opts.lit : -1;
+    const alpha = !!opts.alpha && !!opts.map, opacity = opts.opacity != null ? opts.opacity : 1;
+    const key = ['lp', side, tint.join(','), opts.rim || 0, fogScale, windScale, opts.flash ? opts.flash.join(',') : '', lit,
+      opts.detail ? opts.detail.uuid + ':' + (opts.planar || 0.25) + ':' + (opts.detailK != null ? opts.detailK : 1) : '', opts.map ? opts.map.uuid : '',
+      alpha ? 'a' + opacity : '', opts.depthWrite === false ? 'nodw' : '', opts.polygonOffset || '', opts.fade ? 'fade' : ''].join('|');
     let m = MATS.get(key);
     if (m) return m;
+    const tl = P.lin(tint), flash = opts.flash || [1, 1, 1, 0];
     const u = THREE.UniformsUtils.merge([THREE.UniformsLib.lights, THREE.UniformsLib.fog, {
-      uTint: { value: new THREE.Vector3(...P.lin(tint)) }, uFlash: { value: new THREE.Vector4(...(opts.flash || [1, 1, 1, 0])) },
-      uRimBoost: { value: opts.rim || 0 }, uFogScale: { value: opts.fogScale != null ? opts.fogScale : 1 }, uWindScale: { value: opts.windScale != null ? opts.windScale : 1 },
+      uTint: { value: new THREE.Vector3(tl[0], tl[1], tl[2]) }, uFlash: { value: new THREE.Vector4(flash[0], flash[1], flash[2], flash[3] || 0) },
+      uRimBoost: { value: opts.rim || 0 }, uFogScale: { value: fogScale }, uWindScale: { value: windScale }, uFade: { value: 1 }, uLit: { value: lit },
     }]);
     if (opts.detail) { u.uDetail = { value: opts.detail }; u.uPlanar = { value: opts.planar || 0.25 }; u.uDetailK = { value: opts.detailK != null ? opts.detailK : 1 }; }
     if (opts.map) u.uMap = { value: opts.map };
+    if (alpha) u.uOpacity = { value: opacity };
     m = new THREE.ShaderMaterial({ uniforms: withGlobals(u), vertexShader: LP_VERT, fragmentShader: LP_FRAG, lights: true, fog: true, vertexColors: true, side });
-    if (opts.detail || opts.map) { m.defines = {}; if (opts.detail) m.defines.LP_DETAIL = 1; if (opts.map) m.defines.LP_MAP = 1; }
+    m.defines = {};
+    if (opts.detail) m.defines.LP_DETAIL = 1;
+    if (opts.map) m.defines.LP_MAP = 1;
+    if (alpha) m.defines.LP_ALPHA = 1;
+    if (opts.fade) m.defines.LP_FADE = 1;
+    if (alpha) { m.transparent = true; m.depthWrite = false; }
+    if (opts.depthWrite === false) m.depthWrite = false;
+    if (opts.polygonOffset) { m.polygonOffset = true; m.polygonOffsetFactor = opts.polygonOffset; m.polygonOffsetUnits = opts.polygonOffset; }
     m.name = 'LP LowPoly';
+    m.userData.lpKind = 'lit';
+    m.userData.lpBase = { tint: [tl[0], tl[1], tl[2]], flash: [flash[0], flash[1], flash[2], flash[3] || 0], rim: opts.rim || 0, fog: fogScale, wind: windScale, lit, opacity };
+    m.userData.lpOpts = Object.assign({}, opts);
+    m.userData.lpFade = !!opts.fade;
     MATS.set(key, m);
     return m;
   };
-  /** Ink outline: inverted hull of constant pixel width along the smoothed normal (BackSide). */
+  /** Ink outline: inverted hull of constant pixel width along the smoothed normal (BackSide). { color, width, windScale, fogScale } */
   LP.outlineMaterial = function (opts) {
     opts = opts || {};
-    const ink = opts.color ? (Array.isArray(opts.color) ? opts.color : P.hex(opts.color)) : LP.INK;
+    const ink = toRGB(opts.color) || LP.INK;
     const width = opts.width != null ? opts.width : 2.2;
-    const key = ['out', ink.join(','), width, opts.windScale != null ? opts.windScale : 1, opts.fogScale != null ? opts.fogScale : 1].join('|');
+    const windScale = opts.windScale != null ? opts.windScale : 1, fogScale = opts.fogScale != null ? opts.fogScale : 1;
+    const key = ['out', ink.join(','), width, windScale, fogScale, opts.fade ? 'fade' : ''].join('|');
     let m = MATS.get(key);
     if (m) return m;
     const u = THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
-      uInk: { value: new THREE.Vector3(...ink) }, uWidth: { value: width }, uWindScale: { value: opts.windScale != null ? opts.windScale : 1 }, uFogScale: { value: opts.fogScale != null ? opts.fogScale : 1 },
+      uInk: { value: new THREE.Vector3(ink[0], ink[1], ink[2]) }, uWidth: { value: width }, uWindScale: { value: windScale }, uFogScale: { value: fogScale }, uFade: { value: 1 },
     }]);
     m = new THREE.ShaderMaterial({ uniforms: withGlobals(u), vertexShader: OUT_VERT, fragmentShader: OUT_FRAG, fog: true, side: THREE.BackSide });
+    if (opts.fade) m.defines = { LP_FADE: 1 };
     m.name = 'LP Outline';
+    m.userData.lpKind = 'outline';
+    m.userData.lpBase = { ink: ink.slice(), width, wind: windScale, fog: fogScale };
+    m.userData.lpOpts = Object.assign({}, opts);
+    m.userData.lpFade = !!opts.fade;
     MATS.set(key, m);
     return m;
   };
   /** Default ink colour (Materials3D.Ink). */
   LP.INK = [0.14, 0.10, 0.13];
+  /** Gold ink for hovered / selected things (Lanternvale's highlight outline). */
+  LP.INK_GOLD = [0.98, 0.78, 0.3];
 
-  /** Mesh with the LowPoly material and (opts.outline !== false) an ink-outline child sharing the geometry. */
+  // ------------------------------------------------------------ looks --
+  // Per-object looks on shared materials (Lanternvale's Materials3D.Look / MaterialPropertyBlock): an object with a look
+  // writes its values into the shared material's uniforms just before it draws (onBeforeRender, uniformsNeedUpdate) and
+  // puts the material's base values back right after (onAfterRender), so objects without a look need no hook at all.
+  const _lin3 = [0, 0, 0];
+  function linInto(c) { const l = P.lin(c); _lin3[0] = l[0]; _lin3[1] = l[1]; _lin3[2] = l[2]; return _lin3; }
+  function lookRGB(look, field) {
+    const src = look[field];
+    if (src == null) return null;
+    const cache = look.__c || (look.__c = {});
+    if (cache[field] !== src) { cache[field] = src; cache[field + '_v'] = toRGB(src); }
+    return cache[field + '_v'];
+  }
+  function applyLook(mat, look) {
+    const u = mat.uniforms, b = mat.userData.lpBase;
+    if (!b) return;
+    if (mat.userData.lpKind === 'outline') {
+      const ink = (look && lookRGB(look, 'ink')) || b.ink;
+      u.uInk.value.set(ink[0], ink[1], ink[2]);
+      u.uWidth.value = b.width * (look && look.inkWidth != null ? look.inkWidth : 1);
+      u.uWindScale.value = b.wind * (look && look.windScale != null ? look.windScale : 1);
+      u.uFogScale.value = b.fog * (look && look.fogScale != null ? look.fogScale : 1);
+      u.uFade.value = look && look.fade != null ? look.fade : 1;
+    } else {
+      const t = look && lookRGB(look, 'tint');
+      if (t) { const l = linInto(t); u.uTint.value.set(b.tint[0] * l[0], b.tint[1] * l[1], b.tint[2] * l[2]); } else u.uTint.value.set(b.tint[0], b.tint[1], b.tint[2]);
+      const fa = look && look.flash ? +look.flash : 0;
+      if (fa > 0) { const fc = lookRGB(look, 'flashColor') || [1, 1, 1]; u.uFlash.value.set(fc[0], fc[1], fc[2], fa); } else u.uFlash.value.set(b.flash[0], b.flash[1], b.flash[2], b.flash[3]);
+      u.uRimBoost.value = b.rim + (look && look.rim ? look.rim : 0);
+      u.uFogScale.value = b.fog * (look && look.fogScale != null ? look.fogScale : 1);
+      u.uWindScale.value = b.wind * (look && look.windScale != null ? look.windScale : 1);
+      u.uFade.value = look && look.fade != null ? look.fade : 1;
+      u.uLit.value = look && look.lit != null ? (look.lit === true ? 1 : look.lit === false ? 0 : +look.lit) : b.lit;
+      if (u.uOpacity) u.uOpacity.value = b.opacity * (look && look.opacity != null ? look.opacity : 1);
+    }
+    mat.uniformsNeedUpdate = true;
+  }
+  function lookBefore(r, s, c, g, mat) { if (mat && mat.userData.lpBase) applyLook(mat, this.userData.lpLook); }
+  function lookAfter(r, s, c, g, mat) { if (mat && mat.userData.lpBase) applyLook(mat, null); }
+  const NOOP_RENDER = THREE.Object3D.prototype.onBeforeRender;
+  /**
+   * Sets (or with null clears) a look on an object and every LP mesh under it, outlines included:
+   * { tint: [r,g,b] | '#hex' (multiplies), flash: 0..1, flashColor, fade: 0..1 (dither dissolve; 1 = solid), rim: boost,
+   *   fogScale, windScale, lit: true | false | 0..1 (night-only emitters), opacity, ink: colour, inkWidth: × }.
+   * The same look object is shared by the whole subtree; change its fields at any time (they are read when it draws).
+   */
+  /** The dither-dissolve twin of an LP material (same look, compiled with LP_FADE): only objects whose look fades use it. */
+  function fadeTwin(m) {
+    if (m.userData.lpFade) return m;
+    if (!m.userData.fadeTwin) {
+      const o = Object.assign({}, m.userData.lpOpts || {}, { fade: true });
+      m.userData.fadeTwin = m.userData.lpKind === 'outline' ? LP.outlineMaterial(o) : LP.material(o);
+    }
+    return m.userData.fadeTwin;
+  }
+  LP.setLook = function (obj, look) {
+    const fades = !!look && look.fade != null;
+    obj.traverse(o => {
+      if (!o.material || !o.material.userData || !o.material.userData.lpBase || o.userData.lpNoLook) return;
+      o.userData.lpLook = look || null;
+      o.onBeforeRender = look ? lookBefore : NOOP_RENDER;
+      o.onAfterRender = look ? lookAfter : NOOP_RENDER;
+      // a fading look draws with the LP_FADE twin (the dissolve's discard stays out of every other draw)
+      if (fades && !o.material.userData.lpFade && !o.material.userData.lpOpts.material) { o.userData.lpPlainMat = o.material; o.material = fadeTwin(o.material); }
+      else if (!fades && o.userData.lpPlainMat) { o.material = o.userData.lpPlainMat; o.userData.lpPlainMat = null; }
+    });
+    return look || null;
+  };
+  /** The look an object carries (or null). */
+  LP.getLook = obj => (obj && obj.userData.lpLook) || null;
+
+  // ------------------------------------------------------------ meshes --
+  /** Mesh with the LowPoly material and (opts.outline !== false) an ink-outline child sharing the geometry. opts.look: a look. */
   LP.mesh = function (geo, opts) {
     opts = opts || {};
     const mesh = new THREE.Mesh(geo, opts.material || LP.material(opts));
@@ -1290,6 +1484,7 @@ void main() {
       mesh.userData.outline = o;
     }
     mesh.userData.tris = geo.userData.tris || 0;
+    if (opts.look) LP.setLook(mesh, opts.look);
     return mesh;
   };
   /** SkinnedMesh bound to an existing skeleton (bind matrix identity: geometry authored in the skeleton's bind pose). */
@@ -1304,40 +1499,420 @@ void main() {
       const o = new THREE.SkinnedMesh(geo, LP.outlineMaterial(opts.outlineOpts || {}));
       o.bind(skeleton, new THREE.Matrix4());
       o.castShadow = false; o.receiveShadow = false; o.frustumCulled = false; o.name = 'outline';
+      o.raycast = () => {};
       mesh.add(o);
       mesh.userData.outline = o;
     }
     mesh.userData.tris = geo.userData.tris || 0;
+    if (opts.look) LP.setLook(mesh, opts.look);
     return mesh;
   };
+  /** Near / far levels (THREE.LOD; the renderer picks the level by camera distance). */
+  LP.lod = function (near, far, distance = 60) {
+    const l = new THREE.LOD();
+    l.addLevel(near, 0);
+    if (far) l.addLevel(far, distance);
+    l.name = 'LP lod';
+    return l;
+  };
+  /** Triangles of an object (LP meshes, outlines not counted). */
+  LP.trisOf = function (obj) {
+    let t = 0;
+    obj.traverse(m => {
+      if (!m.isMesh || m.name === 'outline' || !m.geometry) return;
+      const g = m.geometry, n = g.userData.tris || (g.index ? g.index.count / 3 : g.attributes.position.count / 3);
+      t += m.isInstancedMesh ? n * m.count : n;
+    });
+    return t;
+  };
+
+  // ======================================================== instancing ==
+  const _im = new THREE.Matrix4(), _iq = new THREE.Quaternion(), _ip = new THREE.Vector3(), _is = new THREE.Vector3(), _ie = new THREE.Euler(), _ic = new THREE.Color();
+  /**
+   * InstancedMesh with the LowPoly material and (opts.outline !== false) an instanced ink hull as its child, sharing the
+   * same instanceMatrix (one upload, two draws for any number of copies). opts: the LP.material options plus { outline,
+   * outlineOpts, castShadow, receiveShadow, tints: true (per-instance tint via instanceColor), dynamic: true }.
+   * Fill with LP.setInstance(...) and finish with LP.commitInstances(mesh, count).
+   */
+  LP.instances = function (geo, capacity, opts) {
+    opts = opts || {};
+    const im = new THREE.InstancedMesh(geo, opts.material || LP.material(opts), capacity);
+    im.count = 0;
+    im.castShadow = opts.castShadow !== false;
+    im.receiveShadow = opts.receiveShadow !== false;
+    if (opts.dynamic) im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    if (opts.tints) {
+      const a = new Float32Array(capacity * 3); a.fill(1);
+      im.instanceColor = new THREE.InstancedBufferAttribute(a, 3);
+      if (opts.dynamic) im.instanceColor.setUsage(THREE.DynamicDrawUsage);
+    }
+    if (opts.outline !== false) {
+      const o = new THREE.InstancedMesh(geo, LP.outlineMaterial(opts.outlineOpts || {}), capacity);
+      o.instanceMatrix = im.instanceMatrix;
+      o.count = 0;
+      o.castShadow = false; o.receiveShadow = false; o.name = 'outline';
+      o.raycast = () => {};
+      im.add(o);
+      im.userData.outline = o;
+    }
+    im.userData.tris = geo.userData.tris || 0;
+    im.name = opts.name || 'LP instances';
+    return im;
+  };
+  /** Places copy i: position, yaw (radians), uniform or [x, y, z] scale, optional tint ([r,g,b] sRGB multiplier / '#hex'). */
+  LP.setInstance = function (im, i, x, y, z, yaw, scale, tint) {
+    _ie.set(0, yaw || 0, 0); _iq.setFromEuler(_ie);
+    const s = scale == null ? 1 : scale;
+    if (Array.isArray(s)) _is.set(s[0], s[1], s[2]); else _is.set(s, s, s);
+    _im.compose(_ip.set(x, y, z), _iq, _is);
+    im.setMatrixAt(i, _im);
+    if (tint != null && im.instanceColor) { const t = toRGB(tint); im.instanceColor.setXYZ(i, t[0], t[1], t[2]); }
+  };
+  /** Copy i from a THREE.Matrix4 (and an optional tint). */
+  LP.setInstanceMatrix = function (im, i, m, tint) {
+    im.setMatrixAt(i, m);
+    if (tint != null && im.instanceColor) { const t = toRGB(tint); im.instanceColor.setXYZ(i, t[0], t[1], t[2]); }
+  };
+  /** After placing: uploads, sets the count (default: unchanged) on the mesh and its outline, refreshes the culling bounds. */
+  LP.commitInstances = function (im, count) {
+    if (count != null) im.count = count;
+    im.instanceMatrix.needsUpdate = true;
+    if (im.instanceColor) im.instanceColor.needsUpdate = true;
+    im.boundingSphere = null; im.boundingBox = null;
+    const o = im.userData.outline;
+    if (o) { o.count = im.count; o.boundingSphere = null; o.boundingBox = null; }
+    return im;
+  };
+
+  /**
+   * Scatter: many copies of a few geometries (trees, bushes, rocks, fences, crowds of props) as instanced meshes with
+   * instanced outlines — one draw (+ one ink draw) per geometry per chunk. opts: { chunk: metres (0 = one set per
+   * geometry; > 0 splits copies into square chunks so off-screen chunks are culled; 48–80 m suits a battle map), lodDist:
+   * metres (chunks farther than this from the camera use the far geometry), name }.
+   *   sc.add(geo | { near, far }, x, y, z, yaw, scale, tint, o)   o: { outline (true), farOutline (false), farShadow (false),
+   *                                                                 castShadow (true),
+   *                                                                 receiveShadow (true), tints (auto) }
+   *   sc.addMatrix(geo, matrix4, tint, o) · sc.build() → THREE.Group (sc.group) · sc.update(camera) (LOD; call per frame
+   *   when far geometries are used) · sc.dispose() · sc.stats → { copies, meshes, sets }
+   */
+  class Scatter {
+    constructor(opts) {
+      opts = opts || {};
+      this.group = new THREE.Group();
+      this.group.name = opts.name || 'LP scatter';
+      this.chunk = opts.chunk || 0;
+      this.lodDist = opts.lodDist || 70;
+      this.sets = new Map();
+      this.chunks = [];
+      this.meshes = [];
+      this.stats = { copies: 0, meshes: 0, sets: 0 };
+    }
+    add(geo, x, y, z, yaw, scale, tint, o) {
+      _ie.set(0, yaw || 0, 0); _iq.setFromEuler(_ie);
+      const s = scale == null ? 1 : scale;
+      if (Array.isArray(s)) _is.set(s[0], s[1], s[2]); else _is.set(s, s, s);
+      _im.compose(_ip.set(x, y, z), _iq, _is);
+      return this.addMatrix(geo, _im, tint, o);
+    }
+    addMatrix(geo, m, tint, o) {
+      o = o || {};
+      const near = geo.isBufferGeometry ? geo : geo.near, far = geo.isBufferGeometry ? null : geo.far || null;
+      if (!near) return this;
+      const outline = o.outline !== false, cast = o.castShadow !== false, recv = o.receiveShadow !== false;
+      const key = near.uuid + '|' + (far ? far.uuid : '') + '|' + (outline ? 1 : 0) + (cast ? 1 : 0) + (recv ? 1 : 0) + (o.farOutline ? 1 : 0) + '|' + (o.material ? o.material.uuid : '');
+      let set = this.sets.get(key);
+      if (!set) { set = { near, far, outline, cast, recv, farOutline: !!o.farOutline, farShadow: !!o.farShadow, material: o.material || null, items: [], tinted: false }; this.sets.set(key, set); }
+      const t = tint != null ? toRGB(tint) : null;
+      if (t) set.tinted = true;
+      set.items.push({ e: m.elements.slice(), t });
+      this.stats.copies++;
+      return this;
+    }
+    build() {
+      for (const set of this.sets.values()) {
+        const groups = new Map();
+        for (const it of set.items) {
+          const k = this.chunk > 0 ? Math.floor(it.e[12] / this.chunk) + ',' + Math.floor(it.e[14] / this.chunk) : '0';
+          let g = groups.get(k);
+          if (!g) { g = []; groups.set(k, g); }
+          g.push(it);
+        }
+        for (const list of groups.values()) {
+          const mk = (geo, outline) => {
+            const im = LP.instances(geo, list.length, { outline, tints: set.tinted, castShadow: set.cast, receiveShadow: set.recv, material: set.material });
+            list.forEach((it, i) => { _im.fromArray(it.e); im.setMatrixAt(i, _im); if (set.tinted) { const t = it.t || [1, 1, 1]; im.instanceColor.setXYZ(i, t[0], t[1], t[2]); } });
+            LP.commitInstances(im, list.length);
+            im.computeBoundingSphere();
+            if (im.userData.outline) im.userData.outline.boundingSphere = im.boundingSphere;
+            this.group.add(im);
+            this.meshes.push(im);
+            this.stats.meshes++;
+            return im;
+          };
+          const nearM = mk(set.near, set.outline);
+          if (set.far) {
+            const farM = mk(set.far, set.farOutline);
+            farM.castShadow = !!set.farShadow;
+            farM.visible = false;
+            this.chunks.push({ center: nearM.boundingSphere.center.clone(), radius: nearM.boundingSphere.radius, near: nearM, far: farM, isFar: false });
+          }
+        }
+      }
+      this.stats.sets = this.sets.size;
+      this.sets.clear();
+      return this.group;
+    }
+    /** LOD: chunks farther than lodDist (+ hysteresis) from the camera show their far geometry. */
+    update(camera) {
+      if (!this.chunks.length || !camera) return;
+      const cp = camera.getWorldPosition ? camera.getWorldPosition(_ip) : camera;
+      const d0 = this.lodDist;
+      for (const c of this.chunks) {
+        _is.copy(c.center).applyMatrix4(this.group.matrixWorld);
+        const d = Math.max(0, _is.distanceTo(cp) - c.radius * 0.5);
+        const far = c.isFar ? d > d0 * 0.9 : d > d0 * 1.1;
+        if (far !== c.isFar) { c.isFar = far; c.near.visible = !far; c.far.visible = far; }
+      }
+    }
+    dispose() {
+      for (const m of this.meshes) { m.dispose(); if (m.userData.outline) m.userData.outline.dispose(); }
+      if (this.group.parent) this.group.parent.remove(this.group);
+      this.meshes = []; this.chunks = [];
+    }
+  }
+  LP.Scatter = Scatter;
+
+  // ======================================================= static merge ==
+  const _nm3 = new THREE.Matrix3();
+  /**
+   * Merges LP geometries (each placed by a THREE.Matrix4, optionally tinted [r,g,b]) into one compact non-indexed
+   * geometry with the same attributes (position, normal, color, lpWind, lpSmooth). Mirrored placements keep their
+   * winding. Geometries with uv (decals) or skinning cannot be merged (skipped).
+   */
+  LP.mergeGeometries = function (entries) {
+    let n = 0;
+    const list = entries.filter(e => e.geo && e.geo.attributes.position && e.geo.attributes.lpSmooth && !e.geo.attributes.uv && !e.geo.attributes.skinIndex && !e.geo.index);
+    for (const e of list) n += e.geo.attributes.position.count;
+    const pos = new Float32Array(n * 3), nor = new Int8Array(n * 3), col = new Uint8Array(n * 4), wind = new Float32Array(n), sm = new Int8Array(n * 3);
+    const v = new THREE.Vector3();
+    let o = 0, tris = 0;
+    for (const e of list) {
+      const g = e.geo, A = g.attributes, cnt = A.position.count, m = e.matrix || _im.identity();
+      _nm3.getNormalMatrix(m);
+      const flip = m.determinant() < 0, t = e.tint ? toRGB(e.tint) : null;
+      const rd = (attr, i, k) => attr.normalized ? (attr.array instanceof Int8Array ? Math.max(attr.array[i * attr.itemSize + k] / 127, -1) : attr.array[i * attr.itemSize + k] / 255) : attr.array[i * attr.itemSize + k];
+      for (let i = 0; i < cnt; i++) {
+        // mirrored: swap the 2nd and 3rd vertex of each triangle
+        const src = flip ? (i % 3 === 1 ? i + 1 : i % 3 === 2 ? i - 1 : i) : i;
+        const d = o + i;
+        v.set(A.position.array[src * 3], A.position.array[src * 3 + 1], A.position.array[src * 3 + 2]).applyMatrix4(m);
+        pos[d * 3] = v.x; pos[d * 3 + 1] = v.y; pos[d * 3 + 2] = v.z;
+        v.set(rd(A.normal, src, 0), rd(A.normal, src, 1), rd(A.normal, src, 2)).applyMatrix3(_nm3).normalize();
+        nor[d * 3] = Math.round(v.x * 127); nor[d * 3 + 1] = Math.round(v.y * 127); nor[d * 3 + 2] = Math.round(v.z * 127);
+        v.set(rd(A.lpSmooth, src, 0), rd(A.lpSmooth, src, 1), rd(A.lpSmooth, src, 2));
+        const len = Math.min(1, v.length());
+        v.applyMatrix3(_nm3); if (v.lengthSq() > 1e-12) v.normalize().multiplyScalar(len);
+        sm[d * 3] = Math.round(v.x * 127); sm[d * 3 + 1] = Math.round(v.y * 127); sm[d * 3 + 2] = Math.round(v.z * 127);
+        for (let k = 0; k < 4; k++) {
+          let c = rd(A.color, src, k);
+          if (t && k < 3) c *= t[k];
+          col[d * 4 + k] = Math.round(clamp01(c) * 255);
+        }
+        wind[d] = A.lpWind ? A.lpWind.array[src] : 0;
+      }
+      o += cnt;
+      tris += cnt / 3;
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setAttribute('normal', new THREE.BufferAttribute(nor, 3, true));
+    g.setAttribute('color', new THREE.BufferAttribute(col, 4, true));
+    g.setAttribute('lpWind', new THREE.BufferAttribute(wind, 1));
+    g.setAttribute('lpSmooth', new THREE.BufferAttribute(sm, 3, true));
+    g.computeBoundingBox(); g.computeBoundingSphere();
+    g.userData.tris = tris;
+    g.userData.lp = true;
+    return g;
+  };
+
+  /**
+   * StaticBatch: unique static props (city buildings, walls, market clutter) merged per square chunk into one inked mesh
+   * and one plain mesh (per shadow setting): a handful of draws per chunk whatever the prop count, culled per chunk.
+   * Use LP.Scatter instead for many copies of the same geometry (trees): merging copies costs memory, instancing does not.
+   *   const sb = new LP.StaticBatch({ chunk: 32 }); sb.add(geo, matrix4, { outline, castShadow, receiveShadow, tint });
+   *   sb.addAt(geo, x, y, z, yaw, scale, o); sb.addObject(obj) (an LP mesh / group: its LP meshes, at their world matrices);
+   *   const group = sb.build();
+   */
+  class StaticBatch {
+    constructor(opts) {
+      opts = opts || {};
+      this.chunk = opts.chunk || 32;
+      this.group = new THREE.Group();
+      this.group.name = opts.name || 'LP static batch';
+      this.bins = new Map();
+      this.extra = [];
+      this.stats = { items: 0, meshes: 0, tris: 0 };
+    }
+    add(geo, matrix, o) {
+      o = o || {};
+      if (!geo) return this;
+      const m = matrix ? matrix.clone() : new THREE.Matrix4();
+      if (geo.attributes.uv || geo.attributes.skinIndex || geo.index || !geo.attributes.lpSmooth) {
+        const mesh = LP.mesh(geo, { outline: false, castShadow: false, map: o.map, material: o.material });
+        mesh.matrixAutoUpdate = false; mesh.matrix.copy(m);
+        this.extra.push(mesh);
+        return this;
+      }
+      const cx = Math.floor(m.elements[12] / this.chunk), cz = Math.floor(m.elements[14] / this.chunk);
+      const key = cx + ',' + cz + '|' + (o.outline === false ? 'p' : 'i') + (o.castShadow === false ? 0 : 1) + (o.receiveShadow === false ? 0 : 1);
+      let bin = this.bins.get(key);
+      if (!bin) { bin = { outline: o.outline !== false, cast: o.castShadow !== false, recv: o.receiveShadow !== false, list: [] }; this.bins.set(key, bin); }
+      bin.list.push({ geo, matrix: m, tint: o.tint || null });
+      this.stats.items++;
+      return this;
+    }
+    addAt(geo, x, y, z, yaw, scale, o) {
+      _ie.set(0, yaw || 0, 0); _iq.setFromEuler(_ie);
+      const s = scale == null ? 1 : scale;
+      if (Array.isArray(s)) _is.set(s[0], s[1], s[2]); else _is.set(s, s, s);
+      return this.add(geo, _im.compose(_ip.set(x, y, z), _iq, _is), o);
+    }
+    /** Adds the LP meshes of an object tree (outline children are implied by their parents). */
+    addObject(obj, o) {
+      obj.updateMatrixWorld(true);
+      obj.traverse(m => {
+        if (!m.isMesh || m.isInstancedMesh || m.isSkinnedMesh || m.name === 'outline' || !m.geometry || !m.material || !m.material.userData.lpBase) return;
+        if (m.material.transparent || m.geometry.attributes.uv) {
+          const c = m.clone(); c.matrixAutoUpdate = false; c.matrix.copy(m.matrixWorld); this.extra.push(c); return;
+        }
+        this.add(m.geometry, m.matrixWorld, Object.assign({ outline: !!m.userData.outline, castShadow: m.castShadow, receiveShadow: m.receiveShadow }, o || {}));
+      });
+      return this;
+    }
+    build() {
+      for (const bin of this.bins.values()) {
+        const geo = LP.mergeGeometries(bin.list);
+        const mesh = LP.mesh(geo, { outline: bin.outline, castShadow: bin.cast, receiveShadow: bin.recv });
+        mesh.matrixAutoUpdate = false;
+        mesh.name = 'LP batch chunk';
+        this.group.add(mesh);
+        this.stats.meshes++;
+        this.stats.tris += geo.userData.tris;
+      }
+      for (const m of this.extra) this.group.add(m);
+      this.bins.clear();
+      return this.group;
+    }
+    dispose() {
+      this.group.traverse(m => { if (m.isMesh && m.name === 'LP batch chunk') m.geometry.dispose(); });
+      if (this.group.parent) this.group.parent.remove(this.group);
+    }
+  }
+  LP.StaticBatch = StaticBatch;
 
   // ------------------------------------------------------ blob shadow --
+  const SHADOW_VERT = /* glsl */`
+#include <common>
+#include <fog_pars_vertex>
+varying vec2 vUv;
+varying float vK;
+#ifdef USE_INSTANCING
+  attribute float lpStrength;
+#endif
+void main() {
+  vUv = uv;
+  vK = 1.0;
+  vec4 p = vec4( position, 1.0 );
+  #ifdef USE_INSTANCING
+    p = instanceMatrix * p;
+    vK = lpStrength;
+  #endif
+  vec4 mvPosition = modelViewMatrix * p;
+  gl_Position = projectionMatrix * mvPosition;
+  #include <fog_vertex>
+}
+`;
   const SHADOW_FRAG = /* glsl */`
+#include <common>
+#include <fog_pars_fragment>
 uniform vec4 uColor;
 uniform float uSoftness;
 varying vec2 vUv;
+varying float vK;
 void main() {
   float d = length( vUv * 2.0 - 1.0 );
   float a = 1.0 - smoothstep( 1.0 - uSoftness, 1.0, d );
-  gl_FragColor = vec4( uColor.rgb, uColor.a * a );
+  a *= uColor.a * vK;
+  #ifdef USE_FOG
+    a *= 1.0 - smoothstep( fogNear, fogFar, vFogDepth );
+  #endif
+  gl_FragColor = vec4( uColor.rgb, a );
 }
 `;
   const SHADOW_GEO = (() => { const g = new THREE.PlaneGeometry(1, 1); g.rotateX(-Math.PI / 2); return g; })();
-  /** Soft contact (blob) shadow lying on y = 0.01: radii rx × rz metres. */
-  LP.blobShadow = function (rx, rz, strength = 0.42, softness = 0.65) {
-    const m = new THREE.ShaderMaterial({
-      uniforms: { uColor: { value: new THREE.Vector4(0.12, 0.09, 0.16, strength) }, uSoftness: { value: softness } },
-      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-      fragmentShader: SHADOW_FRAG, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+  const SHADOW_MATS = new Map();
+  function shadowMaterial(strength, softness) {
+    const key = strength.toFixed(3) + '|' + softness.toFixed(3);
+    let m = SHADOW_MATS.get(key);
+    if (m) return m;
+    m = new THREE.ShaderMaterial({
+      uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uColor: { value: new THREE.Vector4(0.12, 0.09, 0.16, strength) }, uSoftness: { value: softness } }]),
+      vertexShader: SHADOW_VERT, fragmentShader: SHADOW_FRAG, transparent: true, depthWrite: false, fog: true,
+      polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
     });
-    const s = new THREE.Mesh(SHADOW_GEO, m);
+    m.name = 'LP blob shadow';
+    SHADOW_MATS.set(key, m);
+    return m;
+  }
+  /** Soft contact (blob) shadow lying on y = 0.01: radii rx × rz metres (shared material per strength / softness). */
+  LP.blobShadow = function (rx, rz, strength = 0.42, softness = 0.65) {
+    const s = new THREE.Mesh(SHADOW_GEO, shadowMaterial(strength, softness));
     s.scale.set(rx * 2, 1, rz * 2);
     s.position.y = 0.01;
     s.renderOrder = 1;
     s.castShadow = false; s.receiveShadow = false;
     s.name = 'blobShadow';
+    s.userData.lpNoLook = true;
+    s.raycast = () => {};
     return s;
   };
+  /**
+   * Many blob shadows in one draw (crowds, armies, scattered props): bs = new LP.BlobShadows(capacity, { softness });
+   * bs.set(i, x, y, z, rx, rz, strength 0..1) · bs.commit(count) · bs.mesh (add it to the scene).
+   */
+  class BlobShadows {
+    constructor(capacity, opts) {
+      opts = opts || {};
+      this.capacity = capacity;
+      const m = shadowMaterial(1, opts.softness != null ? opts.softness : 0.6);
+      this.mesh = new THREE.InstancedMesh(SHADOW_GEO, m, capacity);
+      this.strength = new THREE.InstancedBufferAttribute(new Float32Array(capacity), 1);
+      if (opts.dynamic !== false) { this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); this.strength.setUsage(THREE.DynamicDrawUsage); }
+      // the strength rides on the shared plane geometry as a per-instance attribute: give each batch its own geometry
+      this.geo = SHADOW_GEO.clone();
+      this.geo.setAttribute('lpStrength', this.strength);
+      this.mesh.geometry = this.geo;
+      this.mesh.count = 0;
+      this.mesh.renderOrder = 1;
+      this.mesh.castShadow = false; this.mesh.receiveShadow = false;
+      this.mesh.frustumCulled = opts.frustumCulled === true;
+      this.mesh.name = 'LP blob shadows';
+      this.mesh.raycast = () => {};
+    }
+    set(i, x, y, z, rx, rz, strength = 0.42) {
+      _im.makeScale(rx * 2, 1, rz * 2); _im.setPosition(x, (y || 0) + 0.01, z);
+      this.mesh.setMatrixAt(i, _im);
+      this.strength.array[i] = strength;
+    }
+    commit(count) {
+      if (count != null) this.mesh.count = Math.min(count, this.capacity);
+      this.mesh.instanceMatrix.needsUpdate = true;
+      this.strength.needsUpdate = true;
+      this.mesh.boundingSphere = null;
+    }
+    dispose() { this.geo.dispose(); this.mesh.dispose(); if (this.mesh.parent) this.mesh.parent.remove(this.mesh); }
+  }
+  LP.BlobShadows = BlobShadows;
 
   // ------------------------------------------------- painted detail --
   let grassTex = null;
@@ -1391,15 +1966,101 @@ void main() {
     haloTex = new THREE.CanvasTexture(c);
     return haloTex;
   }
-  /** Additive glow sprite (lantern halos at night). */
+  /** Additive glow sprite (one lantern halo; LP.Mood draws all its lamps' halos as one point batch instead). */
   LP.halo = function (color, size) {
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTexture(), color: new THREE.Color(...(Array.isArray(color) ? color : P.hex(color))), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.7, fog: false }));
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTexture(), color: new THREE.Color(...toRGB(color)), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.7, fog: false }));
     s.scale.set(size, size, 1);
     s.renderOrder = 2;
     return s;
   };
+  const HALO_VERT = /* glsl */`
+#include <common>
+#include <fog_pars_vertex>
+attribute vec3 lpColor;
+attribute vec2 lpSize;      // x: size (m), y: on (0 / 1)
+uniform float uScale;
+varying vec3 vC;
+void main() {
+  vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+  gl_Position = projectionMatrix * mvPosition;
+  gl_PointSize = lpSize.y > 0.5 ? clamp( lpSize.x * uScale / max( - mvPosition.z, 0.1 ), 0.0, 512.0 ) : 0.0;
+  vC = lpColor;
+  #include <fog_vertex>
+}
+`;
+  const HALO_FRAG = /* glsl */`
+#include <common>
+#include <fog_pars_fragment>
+uniform sampler2D uMap;
+uniform float uOpacity;
+varying vec3 vC;
+void main() {
+  float a = texture2D( uMap, gl_PointCoord ).a * uOpacity;
+  #ifdef USE_FOG
+    a *= 1.0 - 0.85 * smoothstep( fogNear, fogFar, vFogDepth );
+  #endif
+  gl_FragColor = vec4( vC, a );
+}
+`;
+  const _dbs = new THREE.Vector2();
+  /** A batch of additive halo points (one draw for any number of lanterns): set(i, pos, rgb, size, on) · commit(count). */
+  class HaloBatch {
+    constructor(capacity) {
+      this.capacity = capacity;
+      this.geo = new THREE.BufferGeometry();
+      this.pos = new THREE.BufferAttribute(new Float32Array(capacity * 3), 3).setUsage(THREE.DynamicDrawUsage);
+      this.col = new THREE.BufferAttribute(new Float32Array(capacity * 3), 3).setUsage(THREE.DynamicDrawUsage);
+      this.size = new THREE.BufferAttribute(new Float32Array(capacity * 2), 2).setUsage(THREE.DynamicDrawUsage);
+      this.geo.setAttribute('position', this.pos); this.geo.setAttribute('lpColor', this.col); this.geo.setAttribute('lpSize', this.size);
+      // the texture goes in after the merge (UniformsUtils.merge clones textures, and a cloned CanvasTexture is never uploaded)
+      const hu = THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uScale: { value: 500 }, uOpacity: { value: 0.7 } }]);
+      hu.uMap = { value: haloTexture() };
+      this.mat = new THREE.ShaderMaterial({
+        uniforms: hu,
+        vertexShader: HALO_VERT, fragmentShader: HALO_FRAG, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, fog: true,
+      });
+      this.points = new THREE.Points(this.geo, this.mat);
+      this.points.frustumCulled = false;
+      this.points.renderOrder = 2;
+      this.points.name = 'LP halos';
+      this.points.raycast = () => {};
+      const self = this;
+      this.points.onBeforeRender = function (renderer, scene, camera) {
+        renderer.getDrawingBufferSize(_dbs);
+        self.mat.uniforms.uScale.value = _dbs.y * 0.5 * (camera.projectionMatrix.elements[5] || 1);
+      };
+      this.geo.setDrawRange(0, 0);
+    }
+    set(i, p, rgb, size, on) {
+      this.pos.setXYZ(i, p[0], p[1], p[2]); this.col.setXYZ(i, rgb[0], rgb[1], rgb[2]); this.size.setXY(i, size, on ? 1 : 0);
+    }
+    commit(count) {
+      if (count != null) this.geo.setDrawRange(0, Math.min(count, this.capacity));
+      this.pos.needsUpdate = true; this.col.needsUpdate = true; this.size.needsUpdate = true;
+    }
+    dispose() { this.geo.dispose(); this.mat.dispose(); if (this.points.parent) this.points.parent.remove(this.points); }
+  }
+  LP.HaloBatch = HaloBatch;
 
   // ------------------------------------------------------------ decal --
+  function quadGeometry(pos, nor, uv, emission, rgb) {
+    const nv = pos.length / 3;
+    const col = new Float32Array(nv * 4), sm = new Float32Array(nv * 3);
+    for (let i = 0; i < nv; i++) {
+      col[i * 4] = rgb ? rgb[0] : 1; col[i * 4 + 1] = rgb ? rgb[1] : 1; col[i * 4 + 2] = rgb ? rgb[2] : 1;
+      col[i * 4 + 3] = encodeEmission(emission || 0);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3));
+    g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(nor), 3));
+    g.setAttribute('color', new THREE.BufferAttribute(col, 4));
+    g.setAttribute('lpWind', new THREE.BufferAttribute(new Float32Array(nv), 1));
+    g.setAttribute('lpSmooth', new THREE.BufferAttribute(sm, 3));
+    g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uv), 2));
+    g.computeBoundingBox(); g.computeBoundingSphere();
+    g.userData.tris = nv / 3;
+    return g;
+  }
   /**
    * Painted decal (Lanternvale's signs): a w × h quad in the XY plane facing +Z, centred on the origin, carrying a texture
    * (sRGB, opaque) through the LowPoly lighting — no ink, no shadow. Place it a few millimetres in front of its board.
@@ -1407,23 +2068,87 @@ void main() {
   LP.decal = function (texture, w, h, opts) {
     opts = opts || {};
     const x = w / 2, y = h / 2;
-    const pos = new Float32Array([-x, -y, 0, x, -y, 0, x, y, 0, -x, -y, 0, x, y, 0, -x, y, 0]);
-    const nor = new Float32Array(18), sm = new Float32Array(18);
-    for (let i = 0; i < 6; i++) { nor[i * 3 + 2] = 1; sm[i * 3 + 2] = 1; }
-    const col = new Float32Array(24).fill(1);
-    for (let i = 0; i < 6; i++) col[i * 4 + 3] = opts.emission || 0;
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
-    g.setAttribute('color', new THREE.BufferAttribute(col, 4));
-    g.setAttribute('lpWind', new THREE.BufferAttribute(new Float32Array(6), 1));
-    g.setAttribute('lpSmooth', new THREE.BufferAttribute(sm, 3));
-    g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]), 2));
-    g.computeBoundingBox(); g.computeBoundingSphere();
-    g.userData.tris = 2;
+    const g = quadGeometry([-x, -y, 0, x, -y, 0, x, y, 0, -x, -y, 0, x, y, 0, -x, y, 0], [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1],
+      [0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1], opts.emission, null);
     const m = LP.mesh(g, { map: texture, outline: false, castShadow: false });
     m.name = 'LP decal';
     return m;
+  };
+  /**
+   * Ground decal (paths, scorch marks, puddles, flower beds, leaf litter): a w × d quad lying on the ground (XZ, facing
+   * up, 1.5 cm above it), its texture's alpha feathering it into the ground, lit like everything else (night grade, lamp
+   * pools, fog). opts: { color: tint, opacity, y, rotation (radians), emission }. Textures: LP.decalTexture(kind).
+   */
+  LP.groundDecal = function (texture, w, d, opts) {
+    opts = opts || {};
+    const x = w / 2, z = d / 2;
+    const g = quadGeometry([-x, 0, z, x, 0, z, x, 0, -z, -x, 0, z, x, 0, -z, -x, 0, -z], [0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0],
+      [0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1], opts.emission, opts.color ? toRGB(opts.color) : null);
+    const m = new THREE.Mesh(g, LP.material({ map: texture, alpha: true, opacity: opts.opacity != null ? opts.opacity : 1, polygonOffset: -2 }));
+    m.position.y = opts.y != null ? opts.y : 0.015;
+    if (opts.rotation) m.rotation.y = opts.rotation;
+    m.renderOrder = 1;
+    m.castShadow = false; m.receiveShadow = true;
+    m.name = 'LP ground decal';
+    m.raycast = () => {};
+    return m;
+  };
+  const DECAL_TEX = new Map();
+  /**
+   * Painted ground-decal textures (RGBA canvas, soft feathered edge), cached per kind and seed: 'dirt' (a worn patch),
+   * 'path' (a trodden strip, tile along its length), 'scorch' (burn mark), 'puddle', 'leaves' (litter), 'flowers' (a
+   * flower bed), 'moss', 'snow', 'sand', 'mud', 'shadow' (a soft dark blot: canopy shade on the ground).
+   */
+  LP.decalTexture = function (kind, seed = 1, size = 256) {
+    const key = kind + '|' + seed + '|' + size;
+    if (DECAL_TEX.has(key)) return DECAL_TEX.get(key);
+    const c = document.createElement('canvas'); c.width = c.height = size;
+    const x = c.getContext('2d');
+    let r = ((seed + 7) * 2654435761) >>> 0;
+    const rnd = () => { r ^= r << 13; r >>>= 0; r ^= r >>> 17; r ^= r << 5; r >>>= 0; return (r & 0xffffff) / 16777216; };
+    const S = size, H2 = S / 2;
+    const blot = (cx, cy, rad, rgba, soft = 1) => { const g = x.createRadialGradient(cx, cy, 0, cx, cy, rad); g.addColorStop(0, rgba); g.addColorStop(Math.max(0, 1 - soft), rgba); g.addColorStop(1, rgba.replace(/[\d.]+\)$/, '0)')); x.fillStyle = g; x.beginPath(); x.arc(cx, cy, rad, 0, Math.PI * 2); x.fill(); };
+    const pal = {
+      dirt: [[150, 116, 80], [128, 96, 64], [170, 138, 98]], path: [[168, 132, 92], [146, 112, 76], [186, 152, 108]], scorch: [[44, 36, 34], [70, 56, 48], [30, 26, 26]],
+      puddle: [[92, 118, 140], [110, 140, 160], [80, 100, 120]], leaves: [[160, 108, 58], [190, 140, 70], [130, 90, 54]], flowers: [[96, 140, 70], [80, 120, 60], [110, 150, 80]],
+      moss: [[96, 138, 70], [120, 160, 84], [78, 116, 62]], snow: [[236, 240, 246], [220, 228, 238], [248, 250, 252]], sand: [[222, 200, 150], [206, 182, 132], [236, 216, 170]],
+      mud: [[104, 82, 62], [86, 68, 54], [120, 96, 72]], shadow: [[40, 44, 60], [40, 44, 60], [40, 44, 60]],
+    }[kind] || [[140, 110, 80], [120, 90, 66], [160, 130, 96]];
+    const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+    if (kind === 'path') {
+      // a strip along V (tile along the length): soft edges left / right, worn tracks, stones
+      for (let i = 0; i < 40; i++) { const px = H2 + (rnd() - 0.5) * S * 0.35, py = rnd() * S; for (const oy of [-S, 0, S]) blot(px, py + oy, S * (0.18 + rnd() * 0.12), rgba(pal[i % 3], 0.5)); }
+      const g = x.createLinearGradient(0, 0, S, 0);
+      g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.18, 'rgba(0,0,0,0)'); g.addColorStop(0.82, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,1)');
+      x.globalCompositeOperation = 'destination-out'; x.fillStyle = g; x.fillRect(0, 0, S, S); x.globalCompositeOperation = 'source-over';
+      for (let i = 0; i < 26; i++) { const px = H2 + (rnd() - 0.5) * S * 0.5, py = rnd() * S; x.fillStyle = rgba([150 + rnd() * 30 | 0, 144 + rnd() * 26 | 0, 132 + rnd() * 20 | 0], 0.9); x.beginPath(); x.ellipse(px, py, 3 + rnd() * 4, 2 + rnd() * 3, rnd() * 3, 0, Math.PI * 2); x.fill(); }
+    } else if (kind === 'puddle') {
+      blot(H2, H2, S * 0.46, rgba(pal[0], 0.85), 0.25);
+      for (let i = 0; i < 6; i++) blot(H2 + (rnd() - 0.5) * S * 0.4, H2 + (rnd() - 0.5) * S * 0.3, S * (0.12 + rnd() * 0.12), rgba(pal[1], 0.5));
+      blot(H2 - S * 0.1, H2 - S * 0.12, S * 0.12, 'rgba(220,234,240,0.55)');
+    } else if (kind === 'shadow') {
+      blot(H2, H2, S * 0.48, rgba(pal[0], 0.55), 0.7);
+      for (let i = 0; i < 10; i++) blot(H2 + (rnd() - 0.5) * S * 0.6, H2 + (rnd() - 0.5) * S * 0.6, S * (0.05 + rnd() * 0.06), 'rgba(255,240,200,0.0)');
+    } else {
+      // a soft irregular blot made of overlapping blotches, plus specks
+      const n = kind === 'scorch' ? 18 : 26;
+      for (let i = 0; i < n; i++) {
+        const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * S * 0.24;
+        blot(H2 + Math.cos(a) * d, H2 + Math.sin(a) * d, S * (0.12 + rnd() * 0.14), rgba(pal[i % 3], kind === 'scorch' ? 0.55 : 0.42));
+      }
+      if (kind === 'scorch') for (let i = 0; i < 30; i++) { const a = rnd() * Math.PI * 2, d = S * (0.1 + rnd() * 0.32); x.strokeStyle = rgba(pal[2], 0.5); x.lineWidth = 1 + rnd() * 2; x.beginPath(); x.moveTo(H2, H2); x.lineTo(H2 + Math.cos(a) * d, H2 + Math.sin(a) * d); x.stroke(); }
+      const speck = { leaves: [[200, 120, 50], [220, 170, 70], [150, 80, 40], [180, 60, 40]], flowers: [[245, 240, 230], [242, 184, 198], [244, 211, 94], [201, 168, 255], [240, 140, 108]], moss: [[150, 190, 100]], dirt: [[110, 84, 60], [190, 160, 120]], snow: [[255, 255, 255]], sand: [[190, 160, 110]], mud: [[70, 54, 44]] }[kind];
+      if (speck) for (let i = 0; i < (kind === 'flowers' ? 140 : 90); i++) {
+        const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * S * 0.36, px = H2 + Math.cos(a) * d, py = H2 + Math.sin(a) * d, sz = kind === 'flowers' ? 3 + rnd() * 3 : 2 + rnd() * 4;
+        x.fillStyle = rgba(speck[(rnd() * speck.length) | 0], 0.95);
+        x.beginPath(); x.ellipse(px, py, sz, sz * (0.5 + rnd() * 0.5), rnd() * 3, 0, Math.PI * 2); x.fill();
+      }
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.anisotropy = 4;
+    if (kind === 'path') { t.wrapT = THREE.RepeatWrapping; }
+    DECAL_TEX.set(key, t);
+    return t;
   };
   const TEXT_TEX = new Map();
   /**
@@ -1459,8 +2184,7 @@ void main() {
   };
 
   // ============================================================ Mood ==
-  // DayNight keyframes (Lanternvale), evaluated at the moods the pilot shows. Colours are sRGB; the controller converts
-  // them to linear for three's lights (SceneLighting.Working).
+  // DayNight keyframes (Lanternvale). Colours are sRGB; the controller converts them to linear for the lights.
   const C = (r, g, b) => [r, g, b];
   const KEYS = [
     { h: 0, sun: C(0.55, 0.66, 1), sunI: 0.5, sky: C(0.22, 0.27, 0.55), ground: C(0.10, 0.10, 0.20), ambI: 0.6, glow: 1, night: 1 },
@@ -1475,6 +2199,9 @@ void main() {
     { h: 24, sun: C(0.55, 0.66, 1), sunI: 0.5, sky: C(0.22, 0.27, 0.55), ground: C(0.10, 0.10, 0.20), ambI: 0.6, glow: 1, night: 1 },
   ];
   const SUNRISE = 5.9, SUNSET = 19.5;
+  /** Named moods → hour. */
+  const MOOD_HOURS = { dawn: 7.0, morning: 9.5, day: 12.5, noon: 12.5, afternoon: 15.5, golden: 17.8, gold: 17.8, dusk: 19.4, evening: 19.4, night: 22.5, midnight: 0.5 };
+  LP.MOOD_HOURS = MOOD_HOURS;
   function goldenAt(hour) {
     hour = ((hour % 24) + 24) % 24;
     const dusk = sstep((hour - 15.6) / 1.6) * (1 - sstep((hour - 19.4) / 1.2));
@@ -1495,112 +2222,309 @@ void main() {
   }
   LP.lampColor = lampColor;
   LP.goldenAt = goldenAt;
+  /** The DayNight values at an hour (sun direction in this game's world: Y up, the default view looking into −Z). */
+  function moodAt(hour) {
+    hour = ((hour % 24) + 24) % 24;
+    let i = 0;
+    while (i < KEYS.length - 2 && KEYS[i + 1].h <= hour) i++;
+    const a = KEYS[i], b = KEYS[i + 1];
+    const t = sstep((hour - a.h) / Math.max(1e-4, b.h - a.h));
+    const night = lerp(a.night, b.night, t);
+    const golden = goldenAt(hour);
+    // the sun's path: rises on the left (−X), culminates in front of the scene (camera side), sets on the right (+X)
+    const dayT = (hour - SUNRISE) / (SUNSET - SUNRISE);
+    const az = lerp(-100, 100, clamp01(dayT)) * D2R;
+    const elev = (dayT > 0 && dayT < 1 ? Math.sin(dayT * Math.PI) * 62 : 0) - 4;
+    let sx = Math.sin(az), sy = -Math.max(0.3, Math.cos(az));
+    const hl = Math.hypot(sx, sy); sx /= hl; sy /= hl;
+    // elevation floor: low suns would throw shadows many times an object's height across the map (Lanternvale has no
+    // cast shadows at all); at golden hour the floor (26°) keeps a shadow within ~2× the height of what casts it
+    const le = Math.max(elev, lerp(14, 26, golden)) * D2R;
+    const sunLV = [sx * Math.cos(le), sy * Math.cos(le), -Math.sin(le)];
+    const moonLV = [0.47, -0.56, -0.68];
+    const moonW = sstep((night - 0.35) / 0.45);
+    const dLV = V.norm(V.lerp(sunLV, moonLV, moonW));
+    const dir = V.norm([dLV[0], -dLV[2], -dLV[1]]);
+    return {
+      hour, night, golden, moonW, dir,
+      sunCol: P.mix(a.sun, b.sun, t), sunI: lerp(a.sunI, b.sunI, t) * (1 + 0.36 * golden),
+      sky: P.mix(a.sky, b.sky, t), ground: P.mix(a.ground, b.ground, t), ambI: lerp(a.ambI, b.ambI, t) * (1 - 0.23 * golden),
+      glow: lerp(a.glow, b.glow, t),
+    };
+  }
+  LP.moodAt = moodAt;
+  const NOON = moodAt(12.5);
+  const FOG_DEFAULTS = { golden: [0.95, 0.80, 0.62], dusk: [0.58, 0.50, 0.62], night: [0.16, 0.19, 0.33] };
 
   /**
-   * Mood: DayNight → three lights + the LP globals. World convention of this game: Y up; the default view looks into
-   * −Z (the scene's depth), so Lanternvale's ground direction (x, y = into the scene) maps to (x, −z), up (−Z) to +Y.
+   * Mood: DayNight → three lights + the LP shader globals of ONE scene (pushed just before that scene renders, reset
+   * right after). World convention: Y up; the default view looks into −Z.
+   *   new LP.Mood(scene, opts)   opts: { center: [x,y,z], extent: 20, shadow: true, shadowSize: 2048, shadowStrength: 0.7,
+   *     sun / hemi: existing lights to drive instead of creating new ones; legacy: { sunColor, sunIntensity, skyColor,
+   *     groundColor, hemiIntensity, equator: THREE.Color, equatorBase, shadowUniform: { value }, shadowBase } — the noon
+   *     look of non-LP materials sharing these lights (the game's Lambert / terrain shaders): other hours scale it by
+   *     Lanternvale's ratios, while LP materials get Lanternvale's own values through override globals;
+   *     baseDir: [x,y,z] the sun direction at noon (the whole sun path is rotated to match); positionSun (true unless
+   *     sun is given); fog: { base: [r,g,b], golden?, dusk?, night?, background: true } — fog (and background) colour
+   *     per mood, in the scene's colour space; fogMax: 0.85; maxLamps: 8 (point lights in the pool); hook: true }
+   *   mood.set('dawn' | 'morning' | 'noon' | 'afternoon' | 'golden' | 'dusk' | 'night' | hour) → mood
+   *   mood.addLamp([x,y,z], { color: '#ffe2a6', intensity: 0.9, range: 5.85, nightOnly: true, halo: true, haloSize: 1.4,
+   *     flicker: 0 (fires: 0.15–0.3) }) → lamp   ·   mood.setLampLit(lamp, on) · mood.moveLamp(lamp, [x,y,z]) · mood.removeLamp(lamp)
+   *     Lamps share a pool of maxLamps point lights (the nearest lit lamps to the camera, or to mood.focus, win), so
+   *     adding lamps never recompiles shaders and any number of lanterns stays cheap; every lamp keeps its halo.
+   *   mood.state = { hour, night, golden, moonW, dir, sunCol, sunI, sky, ground, ambI, glow, grade, shadowK }
+   *   mood.apply() (push the globals now) · mood.update(camera) (lamp pool + flicker; the scene hook calls both) · mood.dispose()
    */
   class Mood {
     constructor(scene, opts) {
       opts = opts || {};
       this.scene = scene;
+      this.opts = opts;
       this.center = opts.center || [0, 0, 0];
       this.extent = opts.extent || 20;
-      this.sun = new THREE.DirectionalLight(0xffffff, 1);
-      this.sun.name = 'LP sun';
+      this.legacy = opts.legacy || null;
+      this.ownSun = !opts.sun; this.ownHemi = !opts.hemi;
+      this.positionSun = opts.positionSun != null ? opts.positionSun : !opts.sun;
       this.shadowOn = opts.shadow !== false;
       this.shadowDay = opts.shadowStrength != null ? opts.shadowStrength : 0.7;
-      this.sun.castShadow = this.shadowOn;
-      const sz = opts.shadowSize || 2048;
-      this.sun.shadow.mapSize.set(sz, sz);
-      const cam = this.sun.shadow.camera, e = this.extent;
-      cam.left = -e; cam.right = e; cam.top = e; cam.bottom = -e; cam.near = 0.5; cam.far = e * 6;
-      this.sun.shadow.bias = -0.0006;
-      this.sun.shadow.normalBias = 0.02;
-      this.sun.shadow.radius = 3;
-      this.sun.target.position.set(...this.center);
-      this.hemi = new THREE.HemisphereLight(0xffffff, 0x888888, 1);
-      this.hemi.name = 'LP sky';
-      scene.add(this.sun, this.sun.target, this.hemi);
+      this.baseDir = opts.baseDir ? V.norm(Array.isArray(opts.baseDir) ? opts.baseDir : [opts.baseDir.x, opts.baseDir.y, opts.baseDir.z]) : null;
+      this.fogMax = opts.fogMax != null ? opts.fogMax : 0.85;
+      this.fog = opts.fog || null;
+      this.maxLamps = opts.maxLamps || 8;
+      this.focus = null;
+      if (opts.sun) this.sun = opts.sun;
+      else {
+        this.sun = new THREE.DirectionalLight(0xffffff, 1);
+        this.sun.name = 'LP sun';
+        this.sun.castShadow = this.shadowOn;
+        const sz = opts.shadowSize || 2048;
+        this.sun.shadow.mapSize.set(sz, sz);
+        const cam = this.sun.shadow.camera, e = this.extent;
+        cam.left = -e; cam.right = e; cam.top = e; cam.bottom = -e; cam.near = 0.5; cam.far = e * 6;
+        this.sun.shadow.bias = -0.0006;
+        this.sun.shadow.normalBias = 0.02;
+        this.sun.shadow.radius = 3;
+        this.sun.target.position.set(...this.center);
+        scene.add(this.sun, this.sun.target);
+      }
+      if (opts.hemi) this.hemi = opts.hemi;
+      else {
+        this.hemi = new THREE.HemisphereLight(0xffffff, 0x888888, 1);
+        this.hemi.name = 'LP sky';
+        scene.add(this.hemi);
+      }
       this.lamps = [];
+      this.pool = null;
+      this.halos = null;
       this.state = null;
-      this.fogBase = opts.fogColor || null;
+      // the globals this scene pushes
+      this.u = {
+        glow: 0, rim: new THREE.Vector4(1, 0.92, 0.78, 3), grade: new THREE.Vector4(0, 0.8, 0.92, 1.22), warmth: new THREE.Vector4(), shadow: this.shadowDay,
+        night: 0, sun: new THREE.Vector4(1, 1, 1, 0), sky: new THREE.Vector4(1, 1, 1, 0), ground: new THREE.Vector4(0, 0, 0, 0),
+      };
+      this._hooked = false;
+      if (opts.hook !== false) this.hook();
     }
-    /** 'noon' (12.5) | 'golden' (17.8) | 'dusk' (19.4) | 'night' (22.5) | 'dawn' (7) | an hour. */
-    set(what) {
-      const hour = typeof what === 'number' ? what : { noon: 12.5, day: 12.5, golden: 17.8, gold: 17.8, dusk: 19.4, night: 22.5, dawn: 7.0 }[what] || 12.5;
-      let i = 0;
-      while (i < KEYS.length - 2 && KEYS[i + 1].h <= hour) i++;
-      const a = KEYS[i], b = KEYS[i + 1];
-      const t = sstep((hour - a.h) / Math.max(1e-4, b.h - a.h));
-      const night = lerp(a.night, b.night, t);
-      const golden = goldenAt(hour);
-      // the sun's path: rises on the left (−X), culminates in front of the scene (camera side), sets on the right (+X)
-      const dayT = (hour - SUNRISE) / (SUNSET - SUNRISE);
-      const az = lerp(-100, 100, clamp01(dayT)) * D2R;
-      const elev = (dayT > 0 && dayT < 1 ? Math.sin(dayT * Math.PI) * 62 : 0) - 4;
-      let sx = Math.sin(az), sy = -Math.max(0.3, Math.cos(az));
-      const hl = Math.hypot(sx, sy); sx /= hl; sy /= hl;
-      // elevation floor: low suns would throw shadows many times an object's height across the map (Lanternvale has no
-      // cast shadows at all); at golden hour the floor (26°) keeps a shadow within ~2× the height of what casts it
-      const le = Math.max(elev, lerp(14, 26, golden)) * D2R;
-      const sunLV = [sx * Math.cos(le), sy * Math.cos(le), -Math.sin(le)];
-      const moonLV = [0.47, -0.56, -0.68];
-      const moonW = sstep((night - 0.35) / 0.45);
-      let dLV = V.norm(V.lerp(sunLV, moonLV, moonW));
-      const dir = V.norm([dLV[0], -dLV[2], -dLV[1]]);
-      const sunCol = P.mix(a.sun, b.sun, t);
-      const sunI = lerp(a.sunI, b.sunI, t) * (1 + 0.36 * golden);
-      const sky = P.mix(a.sky, b.sky, t), ground = P.mix(a.ground, b.ground, t);
-      const ambI = lerp(a.ambI, b.ambI, t) * (1 - 0.23 * golden);
-      const glow = lerp(a.glow, b.glow, t);
-      const nightK = sstep((night - 0.3) / 0.5), deepK = sstep((night - 0.62) / 0.3);
-      const grade = 0.38 * sstep((night - 0.5) / 0.42);
-      // lights (linear colours × intensity, as SceneLighting.Working)
-      const c = this.center;
-      this.sun.position.set(c[0] + dir[0] * this.extent * 3, c[1] + dir[1] * this.extent * 3, c[2] + dir[2] * this.extent * 3);
-      this.sun.target.position.set(...c);
-      this.sun.color.setRGB(...P.lin(sunCol)); this.sun.intensity = sunI;
-      this.hemi.color.setRGB(...P.lin(sky)); this.hemi.groundColor.setRGB(...P.lin(ground)); this.hemi.intensity = ambI;
-      G.lpMisc.value.x = glow;
-      const rim = P.mix(P.mix(sunCol, [1, 1, 1], 0.45), [0.62, 0.72, 1], clamp01(night));
-      const rl = P.lin(rim).map(v => v * (1 + 0.6 * golden));
-      G.lpRim.value.set(rl[0], rl[1], rl[2], 3);
-      G.lpGrade.value.set(grade, 0.8, 0.92, 1.22);
-      G.lpWarmth.value.set(golden * 0.12, 0.45 * nightK, 0.8 * deepK, 0);
-      // cast shadows stay a soft hint of this game's shadow maps, never Lanternvale-foreign black shapes: 0.7 by day,
-      // 0.45 and blurrier in the long golden-hour light, fading to 0.15 under the moon (its light is fill, not a sun)
-      const shadowK = lerp(lerp(this.shadowDay, 0.45, golden), 0.15, nightK);
-      G.lpShadow.value.x = shadowK;
-      this.sun.shadow.radius = lerp(3, 6, Math.max(golden, moonW));
-      this.sun.castShadow = this.shadowOn && moonW < 0.98;
-      for (const L of this.lamps) this._lamp(L, night);
-      this.state = { hour, night, golden, dir, sunCol, sunI, sky, ground, ambI, glow, grade, shadowK, moonW };
+    /** Installs the scene hooks (push the globals before the scene renders, reset them after). */
+    hook() {
+      if (this._hooked) return this;
+      const sc = this.scene, self = this;
+      this._prevB = sc.onBeforeRender; this._prevA = sc.onAfterRender;
+      sc.onBeforeRender = function (r, s, cam, rt) { self._prevB.call(this, r, s, cam, rt); self.apply(); self.update(cam); };
+      sc.onAfterRender = function (r, s, cam) { self._prevA.call(this, r, s, cam); LP.resetGlobals(); };
+      this._hooked = true;
       return this;
     }
-    _lamp(L, night) {
-      const on = !L.nightOnly || night > 0.45;
-      const col = lampColor(L.color, night);
-      L.light.color.setRGB(...P.lin(col));
-      L.light.intensity = on ? L.intensity : 0;
-      L.light.distance = L.range * (1 + 0.22 * clamp01(night));
-      if (L.halo) { L.halo.visible = on && night > 0.45; L.halo.material.color.setRGB(...col); }
-      if (L.onLit) L.onLit(on);
+    /** Pushes this scene's globals (the scene hook does it before every render). */
+    apply() {
+      const u = this.u;
+      G.lpMisc.value.x = u.glow;
+      G.lpRim.value.copy(u.rim);
+      G.lpGrade.value.copy(u.grade);
+      G.lpWarmth.value.copy(u.warmth);
+      G.lpShadow.value.x = u.shadow;
+      G.lpNight.value.x = u.night;
+      G.lpSunC.value.copy(u.sun);
+      G.lpSkyC.value.copy(u.sky);
+      G.lpGroundC.value.copy(u.ground);
+      G.lpFog.value.x = this.fogMax;
+      G.lpFog.value.y = 1;
+      return this;
     }
-    /** A lantern / fire light (nightOnly: off by day). Returns the record { light, halo }. */
+    /** 'dawn' (7) | 'morning' (9.5) | 'noon' (12.5) | 'afternoon' (15.5) | 'golden' (17.8) | 'dusk' (19.4) | 'night' (22.5) | an hour. */
+    set(what) {
+      const hour = typeof what === 'number' ? what : MOOD_HOURS[what] != null ? MOOD_HOURS[what] : 12.5;
+      const m = moodAt(hour);
+      const { night, golden, moonW } = m;
+      let dir = m.dir;
+      if (this.baseDir) {
+        // rotate the whole sun / moon path so that noon falls on baseDir (the scene's authored light)
+        const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(...NOON.dir), new THREE.Vector3(...this.baseDir));
+        const v = new THREE.Vector3(...dir).applyQuaternion(q);
+        dir = [v.x, v.y, v.z];
+      }
+      const nightK = sstep((night - 0.3) / 0.5), deepK = sstep((night - 0.62) / 0.3);
+      const grade = 0.38 * sstep((night - 0.5) / 0.42);
+      const u = this.u;
+      // lights
+      const c = this.center;
+      if (this.positionSun) {
+        this.sun.position.set(c[0] + dir[0] * this.extent * 3, c[1] + dir[1] * this.extent * 3, c[2] + dir[2] * this.extent * 3);
+        this.sun.target.position.set(...c);
+        this.sun.updateMatrixWorld(); this.sun.target.updateMatrixWorld();
+      }
+      const sunL = P.lin(m.sunCol), skyL = P.lin(m.sky), gndL = P.lin(m.ground);
+      if (this.legacy) {
+        // the shared lights keep the scene's own (legacy) look at noon, scaled by Lanternvale's ratios at other hours;
+        // LP materials read Lanternvale's values through the override globals
+        const L = this.legacy;
+        const ratio = (a, b) => a.map((v, k) => (b[k] > 1e-4 ? v / b[k] : 0));
+        const rs = ratio(m.sunCol, NOON.sunCol), rk = ratio(m.sky, NOON.sky), rg = ratio(m.ground, NOON.ground);
+        const lc = toRGB(L.sunColor || [1, 1, 1]), ls = toRGB(L.skyColor || [1, 1, 1]), lg = toRGB(L.groundColor || [0.5, 0.5, 0.5]);
+        this.sun.color.setRGB(lc[0] * rs[0], lc[1] * rs[1], lc[2] * rs[2]);
+        this.sun.intensity = (L.sunIntensity != null ? L.sunIntensity : 1) * m.sunI / NOON.sunI;
+        this.hemi.color.setRGB(ls[0] * rk[0], ls[1] * rk[1], ls[2] * rk[2]);
+        this.hemi.groundColor.setRGB(lg[0] * rg[0], lg[1] * rg[1], lg[2] * rg[2]);
+        this.hemi.intensity = (L.hemiIntensity != null ? L.hemiIntensity : 1) * m.ambI / NOON.ambI;
+        if (L.equator && L.equatorBase) { const e = toRGB(L.equatorBase); L.equator.setRGB(e[0] * (rk[0] + rg[0]) / 2, e[1] * (rk[1] + rg[1]) / 2, e[2] * (rk[2] + rg[2]) / 2); }
+        u.sun.set(sunL[0] * m.sunI, sunL[1] * m.sunI, sunL[2] * m.sunI, 1);
+        u.sky.set(skyL[0] * m.ambI, skyL[1] * m.ambI, skyL[2] * m.ambI, 1);
+        u.ground.set(gndL[0] * m.ambI, gndL[1] * m.ambI, gndL[2] * m.ambI, 1);
+      } else {
+        // linear colours × intensity, as SceneLighting.Working
+        this.sun.color.setRGB(sunL[0], sunL[1], sunL[2]); this.sun.intensity = m.sunI;
+        this.hemi.color.setRGB(skyL[0], skyL[1], skyL[2]); this.hemi.groundColor.setRGB(gndL[0], gndL[1], gndL[2]); this.hemi.intensity = m.ambI;
+        u.sun.w = 0; u.sky.w = 0; u.ground.w = 0;
+      }
+      u.glow = m.glow;
+      const rim = P.mix(P.mix(m.sunCol, [1, 1, 1], 0.45), [0.62, 0.72, 1], clamp01(night));
+      const rl = P.lin(rim).map(v => v * (1 + 0.6 * golden));
+      u.rim.set(rl[0], rl[1], rl[2], 3);
+      u.grade.set(grade, 0.8, 0.92, 1.22);
+      u.warmth.set(golden * 0.12, 0.45 * nightK, 0.8 * deepK, 0);
+      u.night = sstep((night - 0.35) / 0.4);
+      // cast shadows stay a soft hint of this game's shadow maps, never Lanternvale-foreign black shapes: 0.7 by day,
+      // 0.45 and blurrier in the long golden-hour light, fading to 0.15 under the moon and off once the moon rules (the
+      // shadow map then stops updating; castShadow never toggles, so no shader recompiles)
+      let shadowK = lerp(lerp(this.shadowDay, 0.45, golden), 0.15, nightK);
+      if (moonW >= 0.98 || !this.shadowOn) shadowK = 0;
+      u.shadow = shadowK;
+      if (this.sun.shadow) {
+        this.sun.shadow.radius = lerp(3, 6, Math.max(golden, moonW));
+        this.sun.shadow.autoUpdate = shadowK > 0;
+        if (shadowK > 0) this.sun.shadow.needsUpdate = true;
+        // a mood that owns its sun drops the moon's shadow map altogether (cheaper shaders; one recompile at the day / night
+        // switch); a shared sun (SG.Gfx) never toggles castShadow, so the classic materials never recompile
+        if (this.ownSun && this.opts.toggleShadow !== false) this.sun.castShadow = this.shadowOn && shadowK > 0;
+      }
+      if (this.legacy && this.legacy.shadowUniform) this.legacy.shadowUniform.value = (this.legacy.shadowBase != null ? this.legacy.shadowBase : 0.55) * (shadowK / Math.max(0.01, this.shadowDay));
+      // fog / background
+      if (this.fog && this.scene.fog) {
+        const f = this.fog, base = toRGB(f.base || [this.scene.fog.color.r, this.scene.fog.color.g, this.scene.fog.color.b]);
+        if (!f.base) f.base = base;
+        let fc = P.mix(base, toRGB(f.golden || FOG_DEFAULTS.golden), 0.3 * golden);
+        fc = P.mix(fc, toRGB(f.dusk || FOG_DEFAULTS.dusk), 0.55 * sstep((night - 0.15) / 0.4) * (1 - deepK));
+        fc = P.mix(fc, toRGB(f.night || FOG_DEFAULTS.night), deepK);
+        this.scene.fog.color.setRGB(fc[0], fc[1], fc[2]);
+        if (f.background !== false && this.scene.background && this.scene.background.isColor) this.scene.background.setRGB(fc[0], fc[1], fc[2]);
+        m.fog = fc;
+      }
+      this.state = Object.assign(m, { dir, grade, shadowK, nightK, deepK });
+      this._lampsDirty = true;
+      for (const L of this.lamps) if (L.onLit) L.onLit(this._lampOn(L));
+      if (this._hooked === false) this.apply();
+      return this;
+    }
+    get hour() { return this.state ? this.state.hour : 12.5; }
+    _lampOn(L) { return L.lit && (!L.nightOnly || (this.state ? this.state.night : 0) > 0.45); }
+    _ensurePool(need) {
+      // the pool grows with the lamps up to maxLamps (each growth changes the light count once: add a scene's lamps when
+      // it is built, before its first render, and no shader recompiles later)
+      if (!this.pool) this.pool = [];
+      const want = Math.min(this.maxLamps, need);
+      for (let i = this.pool.length; i < want; i++) {
+        const light = new THREE.PointLight(0xffffff, 0, 5, 0);
+        light.castShadow = false;
+        light.name = 'LP lamp ' + i;
+        this.scene.add(light);
+        this.pool.push(light);
+      }
+    }
+    /** A lantern / fire light (nightOnly: off by day). Returns the lamp record. */
     addLamp(pos, opts) {
       opts = opts || {};
-      const light = new THREE.PointLight(0xffffff, 0, opts.range || 5.85, 0);
-      light.position.set(...pos);
-      light.castShadow = false;
-      this.scene.add(light);
-      const L = { light, color: Array.isArray(opts.color) ? opts.color : P.hex(opts.color || '#ffe2a6'), intensity: opts.intensity != null ? opts.intensity : 0.9, range: opts.range || 5.85, nightOnly: opts.nightOnly !== false, onLit: opts.onLit || null };
-      if (opts.halo !== false) { L.halo = LP.halo(L.color, opts.haloSize || 1.4); L.halo.position.set(...pos); this.scene.add(L.halo); }
+      this._ensurePool(this.lamps.length + 1);
+      const L = {
+        pos: [pos[0], pos[1], pos[2]], color: toRGB(opts.color || '#ffe2a6'), intensity: opts.intensity != null ? opts.intensity : 0.9,
+        range: opts.range || 5.85, nightOnly: opts.nightOnly !== false, lit: opts.lit !== false, flicker: opts.flicker || 0,
+        halo: opts.halo !== false, haloSize: opts.haloSize || 1.4, onLit: opts.onLit || null, light: null, phase: (this.lamps.length * 2.399) % 6.283,
+      };
       this.lamps.push(L);
-      if (this.state) this._lamp(L, this.state.night);
+      this._lampsDirty = true;
+      if (L.halo) this._growHalos();
+      if (L.onLit && this.state) L.onLit(this._lampOn(L));
       return L;
+    }
+    setLampLit(L, on) { L.lit = !!on; this._lampsDirty = true; if (L.onLit) L.onLit(this._lampOn(L)); }
+    moveLamp(L, pos) { L.pos[0] = pos[0]; L.pos[1] = pos[1]; L.pos[2] = pos[2]; this._lampsDirty = true; }
+    removeLamp(L) { const i = this.lamps.indexOf(L); if (i >= 0) { this.lamps.splice(i, 1); this._lampsDirty = true; } }
+    _growHalos() {
+      const need = this.lamps.length;
+      if (this.halos && this.halos.capacity >= need) return;
+      const cap = Math.max(16, need * 2);
+      if (this.halos) this.halos.dispose();
+      this.halos = new HaloBatch(cap);
+      this.scene.add(this.halos.points);
+    }
+    /** Lamp pool (the nearest lit lamps get the point lights), flicker, halos. The scene hook calls it every render. */
+    update(camera) {
+      if (!this.pool || !this.state) return;
+      const night = this.state.night, t = G.lpMisc.value.w;
+      const on = this.lamps.filter(L => this._lampOn(L));
+      let chosen = on;
+      if (on.length > this.pool.length) {
+        const f = this.focus || (camera ? camera.getWorldPosition(_ip) : null);
+        if (f) {
+          const fx = f.x != null ? f.x : f[0], fy = f.y != null ? f.y : f[1], fz = f.z != null ? f.z : f[2];
+          for (const L of on) L._d = (L.pos[0] - fx) ** 2 + (L.pos[1] - fy) ** 2 + (L.pos[2] - fz) ** 2;
+          chosen = on.slice().sort((a, b) => a._d - b._d);
+        }
+        chosen = chosen.slice(0, this.pool.length);
+      }
+      for (const L of this.lamps) L.light = null;
+      for (let i = 0; i < this.pool.length; i++) {
+        const light = this.pool[i], L = chosen[i];
+        if (!L) { light.intensity = 0; continue; }
+        L.light = light;
+        const col = lampColor(L.color, night);
+        light.color.setRGB(...P.lin(col));
+        const fl = L.flicker ? 1 + L.flicker * (0.6 * Math.sin(t * 11.3 + L.phase) + 0.4 * Math.sin(t * 6.7 + L.phase * 1.7)) : 1;
+        light.intensity = L.intensity * fl;
+        light.distance = L.range * (1 + 0.22 * clamp01(night));
+        if (light.position.x !== L.pos[0] || light.position.y !== L.pos[1] || light.position.z !== L.pos[2]) { light.position.set(L.pos[0], L.pos[1], L.pos[2]); light.updateMatrixWorld(); }
+      }
+      if (this.halos && (this._lampsDirty || this.lamps.some(L => L.flicker))) {
+        let k = 0;
+        const show = night > 0.45;
+        for (const L of this.lamps) {
+          if (!L.halo) continue;
+          const col = lampColor(L.color, night);
+          const fl = L.flicker ? 1 + 0.5 * L.flicker * Math.sin(t * 9.1 + L.phase) : 1;
+          this.halos.set(k++, L.pos, col, L.haloSize * fl, show && this._lampOn(L));
+        }
+        this.halos.commit(k);
+      }
+      this._lampsDirty = false;
+    }
+    dispose() {
+      if (this._hooked) { this.scene.onBeforeRender = this._prevB; this.scene.onAfterRender = this._prevA; this._hooked = false; }
+      if (this.pool) for (const l of this.pool) this.scene.remove(l);
+      if (this.halos) this.halos.dispose();
+      if (this.ownSun) { this.scene.remove(this.sun, this.sun.target); this.sun.dispose && this.sun.dispose(); }
+      if (this.ownHemi) this.scene.remove(this.hemi);
+      this.pool = null; this.halos = null; this.lamps = [];
     }
   }
   LP.Mood = Mood;
-  LP.version = 'pilot-2';
+  LP.version = '1.0';
 })();

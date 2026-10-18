@@ -2,15 +2,15 @@
 
 Player request 6 of v4: every domestic command (开发, 搜索, 征兵, 训练, 登用, 移动, 输送, 外交, 赏赐, 交易, 任命, 出征 …) gets a cool, helpful animation with unique fitting music and a unique, recognizable icon; cool button animations; good results get a more exciting animation and sound. This file also carries the presentation half of request 13 (the non-battle game should feel rewarding) for the strategy commands. The stage these vignettes play on, the zoomable city model of request 8, is specified in the sibling file `CITY-VIEW.md`.
 
-Read `DESIGN-V2.md` §1 (common rules), `DESIGN-V3.md`, `CONTRACT.md`, and the sibling v4 specs `CITY-VIEW.md` (stage, buildings, camera), `ITEMS.md` (市场, gifts, hidden items), `COMBAT-V4.md` (clash timing, sound names) and `titles.json` / `TITLES.md` (官爵) first. Where this file conflicts with them, this file wins for command presentation, command icons and buttons, and the command stings; the owners of the other systems win for their rules. Platform order: browser first, then the Unity port (§14). Every visual assumes the v4 art direction from the art pilot (`js/lowpoly.js`, `js/lp-pilot.js`): Lanternvale-style stylized low-poly, cozy Ghibli-warm palette, flat-shaded props and buildings, soft-lump foliage with the warm-top / cool-teal ramp, ink outlines, soft painted light with warm lantern pools at night. Effects are brush strokes, ink splashes, paper, lanterns, gold leaf and vermillion seals, never neon.
+Read `DESIGN-V2.md` §1 (common rules), `DESIGN-V3.md`, `CONTRACT.md`, and the sibling v4 specs `CITY-VIEW.md` (stage, buildings, camera), `ITEMS.md` (市场, gifts, hidden items), `COMBAT-V4.md` (clash timing, sound names) and `titles.json` / `TITLES.md` (官爵) first, and **`INTEGRATION.md`** (it wins for cross-system rules: the `SG.Econ` record behind `lastResult`, tiers on pre-multiplier values, the registries of stings, icons and voice cues). Where this file conflicts with the other specs, this file wins for command presentation, command icons and buttons, and the command stings; the owners of the other systems win for their rules. Platform order: browser first, then the Unity port (§14). Every visual assumes the v4 art direction from the art pilot (`js/lowpoly.js`, `js/lp-pilot.js`): Lanternvale-style stylized low-poly, cozy Ghibli-warm palette, flat-shaded props and buildings, soft-lump foliage with the warm-top / cool-teal ramp, ink outlines, soft painted light with warm lantern pools at night. Effects are brush strokes, ink splashes, paper, lanterns, gold leaf and vermillion seals, never neon.
 
 Status: design spec only. No game code was changed. The supporting prototypes are in `design-v4/domestic/`. They run under Node against the real game files and are the source of every number quoted here:
 
 | File | What it is |
 |---|---|
 | `domestic/tiers.js` | Reference implementation of the result tiers (§4) and a Monte-Carlo run: a scripted domestic player, 12 seeds × 18 rulers (8 classic, 10 world) × 60 months on the real rules. `node design-v4/domestic/tiers.js` prints the distribution table of §4.3 and checks the §13 targets. |
-| `domestic/stings.js` | All 21 command stings in the `js/music.js` notation, the per-family instrument roles and interval maps (§8). `node design-v4/domestic/stings.js` compiles all 780 keys (21 stings × tiers × 12 culture families) with the real `SG.Music.validate`, prints the durations and checks the §8 targets. |
-| `domestic/city-stages.js` | The building-stage thresholds and triangle budgets of `CITY-VIEW.md` (the vignettes read the same stages for the "stage-up" great tier). |
+| `domestic/stings.js` | All **34** command and moment stings (the 21 of §8.2 plus the 13 of the §5.18–§5.28 addendum) in the `js/music.js` notation, the per-family instrument roles and interval maps (§8). `node design-v4/domestic/stings.js` compiles all **1 284** keys (34 stings × tiers × 12 culture families) with the real `SG.Music.validate`, prints the durations and checks the §8 targets. |
+| `domestic/city-stages.js` | The building-stage thresholds and triangle budgets of `CITY-VIEW.md` (the vignettes read the same stages for the "stage-up" great tier); the reference of the rules table `SG.Balance.CityLevel` (INTEGRATION §12). |
 
 ---
 
@@ -18,16 +18,16 @@ Status: design spec only. No game code was changed. The supporting prototypes ar
 
 | Item | Value |
 |---|---|
-| Commands covered | 12 commands with 17 sub-actions from `js/strategy-screen.js` / `js/model.js` (开发 ×3, 征兵, 训练, 搜索, 登用, 移动, 输送, 外交 ×3, 出征, 赏赐, 交易 ×2, 任命), the v4 commands 市场 (ITEMS) and 授官 (TITLES), and 4 non-command moments (秋收, 城池升阶, 月初, 结束本月) |
+| Commands covered | 12 commands with 17 sub-actions from `js/strategy-screen.js` / `js/model.js` (开发 ×3, 征兵, 训练, 搜索, 登用, 移动, 输送, 外交 ×3, 出征, 赏赐, 交易 ×2, 任命), the v4 commands 市场 (ITEMS) and 授官 (TITLES; not a city-panel command, it plays from 官制), ENGAGEMENT's 营建, 通商, 探索 and the 外交 sub-actions 赠礼 · 联姻 · 纳贡 / 索贡 · 质子 · 停战 · 通商协定 (§5.18–§5.26), and 8 non-command moments (秋收, 城池升阶, 月初, 结束本月, 归附, 国策, 节庆, 文会) |
 | Vignette length (speed 1) | normal **≈ 2.0 s**, good **≈ 3.0 s**, great **≈ 4.0 s** (hard cap 4.5 s), miss ≈ 2.2 s; it always equals the length of its sting (§3.4) |
 | Speed setting 「内政演出」 | 智能 (default) · 完整 · 精彩 · 快速 · 关. 快速 = 1.0–1.8 s, reveal only. 智能 = 完整 until a command has played 10 times, then 精彩 for its normal results |
 | Skip | any tap / click / Space / Enter / Esc jumps to the final state in ≤ 100 ms; a second tap closes. Never blocks input for more than 0.25 s |
 | Result tiers | miss · normal · good · great. Pure functions of the command's result record; **no `SG.Random` draws** (tests/sim.js stays bit-identical) |
-| Measured tier rates (§4.3) | 开发 great 11–12 %, good 26–28 %; 训练 great 11.5 %; 征兵 great 13 %; 搜索 miss 53 %, great 3 %; 登用 success 54 %, great 23 % of attempts |
+| Measured tier rates (§4.3) | 开发 great 11–12 %, good 26–28 %; 训练 great 11.5 %; 征兵 great 13 %; 搜索 miss 53 %, great 3 %; 登用 success 54 %, great 23 % of attempts. **All v4 on** (tiers on the pre-multiplier gain and `rollRaw`, INTEGRATION §4.7): 开发 great 10.1–10.9 %, good 24.5–25.3 %; 秋收 lean 15–17 %, good 25–30 %, great 7–10 % |
 | Stage | in the city view when it is open (CITY-VIEW §7); otherwise a picture-in-picture diorama 「画卷」 of the same city (quality high / medium), or a 2D card (quality low, context loss) |
-| Icons | 22 command and sub-action icons + 4 moment icons (26); 64 × 64 SVG on a lacquer seal plate; each has a unique silhouette (legible at 24 px), accent colour, hover micro-loop and card animation |
+| Icons | 22 command and sub-action icons + 4 moment icons (26) + the addendum's 11 (§5.18–§5.28) = **37**, registered in `SG.UIIcons`; 64 × 64 SVG on a lacquer seal plate; each has a unique silhouette (legible at 24 px), accent colour, hover micro-loop and card animation |
 | Buttons | hover lift 2 px / 120 ms, press 0.94 / 60 ms + ink ripple + per-command press sound, release spring (k 420, c 26) with gold ring; token pip shows cost; 出征 ember pulse |
-| Stings | 21 stings, 4 tiers, 12 culture families = 780 validated keys; overlay on the map music (duck to 0.35), transposed to the map piece's tonic. Modes: 徵 (land, transport, harvest), 商 (industry, move, trade), 宫 (town, hire, ally, reward, appoint, market, title, stage-up), 羽 (recruit, search, persuade, attack), 角 (train), 清角 / 变宫 colour (discord) |
+| Stings | **34 stings** (21 + the addendum's 13: `build`, `caravan`, `explore`, `gift`, `marriage`, `tribute`, `hostage`, `truce`, `tradepact`, `submit`, `mission`, `festival`, `wenhui`), 4 tiers, 12 culture families = **1 284** validated keys; overlay on the map music (duck to 0.35), transposed to the map piece's tonic. Modes: 徵 (land, transport, harvest), 商 (industry, move, trade), 宫 (town, hire, ally, reward, appoint, market, title, stage-up), 羽 (recruit, search, persuade, attack), 角 (train), 清角 / 变宫 colour (discord) |
 | Leitmotif | the title's 「霸业」 cell 5,. 1_ 2 5 sounds in the great tiers of 搜索 (talent found), 登用 and 市场 (legendary); its minor form 6,. 2_ 3 6 opens 出征 |
 | Budgets | vignette ≤ 1.5 ms JS / frame, ≤ 400 particles, ≤ 12 extra draw calls, ≤ 40 DOM nodes; first vignette of a kind ≤ 50 ms set-up (pre-warmed in idle time) |
 
@@ -42,7 +42,7 @@ Status: design spec only. No game code was changed. The supporting prototypes ar
 | `js/cmd-icons.js` | new | `SG.CmdIcons`: the 26 SVG icons (§6.2), their states and CSS animations (§6), the command button component (§7) |
 | `js/music-stings.js` | new | the stings of `domestic/stings.js` registered with `SG.Music.add`, plus `SG.MusicStings.key(id, tier, family, answerFamily)` (§8) |
 | `js/audio.js` | modified | `SG.Sfx.cmdSting(id, tier, opts) → { key, duration }`, new SFX names (§8.6) |
-| `js/model.js` | modified | `Commands.lastResult` records (§3.2); no change to any formula or random draw |
+| `js/model.js` | modified | `Commands.lastResult` records (§3.2) carrying the `SG.Econ` record (`g0`, `pct`, `mods`, `rollRaw`; INTEGRATION §4.7); no change to any random draw |
 | `js/strategy-screen.js` | modified | command handlers call `SG.DomesticFx.play(res)` before `report()` (§11); command grid uses `SG.CmdIcons.button` |
 | `js/strategy-ai.js` | modified | `endMonth` returns the harvest records for the 秋收 moment (§9.1); no rule change |
 | `js/city-view.js` and family (CITY-VIEW.md) | new | the stage; exposes `SG.CityView.director` (anchors, shots, actors) used by `domestic-fx.js` |
@@ -121,6 +121,8 @@ button → command dialogs (unchanged) → useToken → model call (unchanged)
 | `appoint` | `gen`, `pol`, `prevPol` (previous governor, or 0) |
 | `market` | `item`, `rarity`, `price` (ITEMS) |
 | `title` | `titleId`, `titleTier` (1–5, TITLES) |
+
+**Econ fields** (INTEGRATION §4.7): `develop`, `recruit`, `train`, `search`, `hire`, `ally`, `discord` and `persuade` also carry the record their `SG.Econ` function returned — `g0` (the gain before multipliers), `pct`, `mods: { gear, title, project, order, pact, events }` (non-zero entries become ribbon chips 「装备 +12 %」「官职 +10 %」「营建 +10 %」) and, for chances, `p` after its one clamp; the harvest records carry `rollRaw`. The ENGAGEMENT commands' fields are in §5.18–§5.28.
 
 `stBefore` / `stAfter` (the building stage before and after, CITY-VIEW §4) are filled by `domestic-fx.js` from a snapshot it takes when the command dialog closes (`SG.CityLayout.stages(ctx)` is pure and cheap: 16 comparisons).
 
@@ -256,7 +258,7 @@ Constants are those of `domestic/tiers.js`; "crosses x" means `before < x ≤ af
 
 | Command | miss | good | great |
 |---|---|---|---|
-| 开发 (each kind) | — | `roll = 4` or the stat crosses a multiple of 100 | the linked building's stage rises (农田 / 工坊 / 民居 thresholds 300 / 450 / 600 / 800, CITY-VIEW §4) or the stat reaches 999 |
+| 开发 (each kind) | — | `roll = 4` or `before + g0` (the **pre-multiplier** gain) crosses a multiple of 100 | the linked building's *visible* stage rises (农田 / 工坊 / 民居 thresholds 300 / 450 / 600 / 800, CITY-VIEW §4) or the stat reaches 999 |
 | 征兵 | — | `n ≥ 2000` or the general is now full | city troops cross 10 000 / 20 000 / … / 100 000, or full with `n ≥ 3000` |
 | 训练 | — | `roll = 4`, reaching 100, or crossing 80 with `roll ≥ 3` | reaching 100 (百战) with troops ≥ 90 % of the general's maximum |
 | 搜索 | nothing found | gold ≥ 160 or food ≥ 1900 | a talent revealed (人中龙凤 variant when the best attribute ≥ 90), or a hidden item (ITEMS §8.5) |
@@ -272,9 +274,10 @@ Constants are those of `domestic/tiers.js`; "crosses x" means `before < x ≤ af
 | 任命 | — | governor 政治 ≥ 75, or + 15 over the previous governor | 政治 ≥ 90 |
 | 市场 | — | rare | epic or legendary |
 | 授官 | — | title tier 3 | title tier 4–5 |
-| 秋收 | roll < 0.90 (lean year) | roll ≥ 1.08 or land ≥ 700 | roll ≥ 1.10 with land ≥ 600 (丰年) |
+| 秋收 | `rollRaw` < 0.90 (lean year) | `rollRaw` ≥ 1.04 | `rollRaw` ≥ 1.10 with land ≥ 600 (丰年) |
+| ENGAGEMENT commands and moments | §5.18–§5.28 | §5.18–§5.28 | §5.18–§5.28 |
 
-The harvest roll is `harvest / (land × FoodPerLand)`, recovered from the record `endMonth` returns (§9.1); no new draw.
+The harvest roll is **`rollRaw`**, the v3 `rangeFloat(0.85, 1.15)` that `Econ.harvest` receives and returns in its record (§9.1); no new draw. It is never recovered as `harvest / (land × FoodPerLand)`: with v4 modifiers that ratio is ≥ 1.10 in 44–51 % of harvests. Likewise 开发's good tier reads `g0`, never the multiplied gain, so gear, titles and projects make numbers bigger without making every result "good" (INTEGRATION §4.7). The 「land ≥ 700」 good term was dropped: v4 lands pass 700 and it made 42–51 % of harvests good.
 
 ### 4.3 Measured distribution
 
@@ -299,6 +302,8 @@ The harvest roll is `harvest / (land × FoodPerLand)`, recovered from the record
 | 交易 | 939 | — | 41.4 | 41.5 | 17.0 |
 | 任命 | 34 | — | 32.4 | 47.1 | 20.6 |
 | 秋收 (per city) | 1333 | 10.7 | 44.5 | 36.2 | 8.6 |
+
+**All v4 on** (`integration/v4-all-proto.js player`, the scripted peaceful player with items, titles, ENGAGEMENT and the tournament; INTEGRATION §9.3): 开发 great 10.1 / 10.5 / 10.9 %, good 24.8 / 25.3 / 24.5 % (classic s0 / s500 / world); 秋收 on `rollRaw` lean 17.1 / 15.3 / 16.0 %, good 28.4 / 30.2 / 25.2 % (consolidated rule), great 8.8 / 7.3 / 10.1 %.
 
 Reading: the three 开发 kinds and 训练, the commands a player repeats most, sit in the target band (great 11–12 %, good 26–37 %). The chance commands have high success tiers because success itself is rare (同盟 succeeds 61 % of the time in this run but mostly against long odds; 拉拢 succeeds 15 %). 赏赐 is mostly normal by design (it is free and frequent; ITEMS gifts lift it). 移动 shows no great here because the scripted player moves at most 3 generals at a time; a real 5-general redeployment is great.
 
@@ -507,10 +512,46 @@ The subject is an enemy general in an enemy city, so both always use the **card 
 
 ### 5.17 授官 `title` (v4, TITLES)
 
-- TITLES owns the rules and the title list. Default ceremony (until TITLES specifies its own): **anchor** `palace` hall; the general kneels, the ruler places the rank cap (进贤冠 for civil families, a plumed helmet for 武官) and hands the ribbon of the title's colour (TITLES family colours: 武官 `#c8382c`, 谋臣 `#2f6db5`, 文官 `#2f9a55`); the title name appears in brush letters with its tier stars. Tier 3 good: officials bow; tier 4–5 great: the hall's banners unroll, choir, seal 册封.
+- TITLES owns the rules and the title list. 授官 is **not a city-panel command** (UI-V4 §5, TITLES §9.1): the vignette plays from the 官制 board, 任命 → 官爵 and the character menu. Default ceremony (until TITLES specifies its own): **anchor** `palace` hall; the general kneels, the ruler places the rank cap (进贤冠 for civil families, a plumed helmet for 武官) and hands the ribbon of the title's colour (TITLES family colours: 武官 `#c8382c`, 谋臣 `#2f6db5`, 文官 `#2f9a55`); the title name appears in brush letters with its tier stars. Tier 3 good: officials bow; tier 4–5 great: the hall's banners unroll, choir, seal 册封.
 - **Icon**: an official's cap (进贤冠, the slanted front beam) resting on a cushion with a ribbon tail and three small rank stars. Accent plum-gold `#a8742e`. Hover: the stars light one after another.
 - **Sting** `sting:title`: 宫调式, ♩ = 112, a rising 1 3 5 6 on bianzhong (promotion) over sheng and qin; great adds choir, tamtam and dagu. 2.14 / 3.21 / 3.21 s.
 - **Press sound** `cmd-press-title`: a soft sheng breath with a small bell.
+
+### 5.18 – 5.28 Addendum: ENGAGEMENT's commands and moments (consolidation)
+
+ENGAGEMENT (§8–§13) added commands and moments after this file was written. They follow every rule of §3–§8 (four beats, the sting is the clock, tiers are pure functions of `lastResult`, no `SG.Random` draws, skip ≤ 100 ms) and are validated with the rest: `node design-v4/domestic/stings.js` → **34 stings, 1 284 keys, ALL OK**. ENGAGEMENT's handlers (`js/engage.js`, `js/engage-screen.js`) set `Commands.lastResult` with the fields below; `SG.DomesticTiers.tier(res)` gets the tier rows of §4.2. Every new command also gets a voice pair (`voice.start` / `voice.great`) registered in `audio/voice-lines.js` (AUDIO-V4 §B2, INTEGRATION §10.2).
+
+| § | id | Button / moment | Anchor (CITY-VIEW §7.2) | `lastResult` fields | miss | good | great | Sting (normal / good / great / miss s) | Voice cues |
+|---|---|---|---|---|---|---|---|---|---|
+| 5.18 | `build` | 营建 (start; completion is a moment at the next month start) | the project's anchor building (ENGAGEMENT §8.2) with scaffold | `project`, `cost`, `work`, `months`, `supervisor`, `done` (bool), `wonder` | — | start: supervisor 政治 ≥ 80 or cost ≥ 500 | **completion** (落成: scaffold drops in ink dust, `d.upgrade`, seal 「落成」); a wonder's start | `build` 宫 · 1 ♩120: ruan 1-1-5,-1 「起屋」, bangzi hammer, muyu; great suona, horns, luo — 2.00 / 3.00 / 4.00 | `cmd.build.start`, `build.done` |
+| 5.19 | `caravan` | 通商 (depart; return is a moment) | market → gate road (camels / ox carts by family; ships from a harbour) | `to`, `gold`, `hops`, `leader`, `foreign`, on return `profit`, `items[]`, `lost` | the caravan was lost (return) | profit ≥ 150 or an item | profit ≥ 300 or a rare came home | `caravan` 商 · 2 ♩162 in 3: pipa 2-3-5-6 long-short steps, hoof and camel bell; great horns and dizi — 2.22 / 3.33 / 4.44 | `cmd.caravan.start`, `caravan.return` |
+| 5.20 | `explore` | 探索 (depart; return is a moment) | gate, the party leaves along the road into the mist | `site`, `hops`, `leader`, on return `outcome` ('item' / 'clue' / 'exp' / 'mishap'), `item`, `rarity` | mishap (gentle: the leader limps home) | an item or prestige ≥ 10 | a rare or a 藏宝图 clue (ENGAGEMENT §12.4) | `explore` 羽 · 6 ♩100: xiao 6,-3-2-1 like a mountain path, qin, bianzhong; great horn, tamtam — 2.40 / 3.60 / 3.60 / 2.40 | `cmd.explore.start`, `exped.find` |
+| 5.21 | `gift` | 外交 · 赠礼 | palace gate; an envoy cart with the gift leaves | `target`, `gold`, `item`, `dRel` | — | Δ relation ≥ 10 | Δ relation ≥ 20, or an item gift | `gift` 宫 · 1 ♩112: yangqin 5-6-1'-6 presenting the box, bianzhong; great erhu, strings — 2.14 / 3.21 / 4.29 | `cmd.gift.start` |
+| 5.22 | `marriage` | 外交 · 联姻 | palace; red lanterns, a bridal sedan crosses the city | `ok`, `p`, `target`, `cost` | refused | — | success (always great: a marriage is an event) | `marriage` 宫 ♩104: erhu 3-5-6; the answer voice in the partner's family; great choirOo, luo — 2.31 / 3.46 / 3.46 / 2.31 | `cmd.marriage.start`, `marriage.accept` |
+| 5.23 | `tribute` | 外交 · 纳贡 / 索贡 | treasury; carts of tribute leave (纳贡) or arrive (索贡) | `mode` ('offer' / 'demand'), `ok`, `p`, `target`, `pay` | refused | 纳贡 accepted by a faction ≥ 2 × our cities; 索贡 accepted | 索贡 accepted by a faction with ≥ 3 cities | `tribute` 商 · 2 ♩108: pipa 2-2-1-6, offering, timpani; great horns, bianzhong — 2.22 / 3.33 / 3.33 / 2.22 | `cmd.tribute.start`, `tribute.accept` |
+| 5.24 | `hostage` | 质子 (an option on 联姻 / 停战 / 纳贡 / 同盟; the return home is a moment) | gate; the hostage bows to the ruler and leaves (return: arrives, kneels) | `gen`, `target`, `back` (bool), `exp` | — | — | the return home in peace (+20 exp) | `hostage` 羽 · 6 ♩108: xiao 6,-1-2-1 farewell over low strings; the return: erhu rising — 2.22 / 3.33 / 4.44 | `hostage.depart`, `hostage.return` |
+| 5.25 | `truce` | 外交 · 停战 | walls; the war banners are lowered, a white flag at the gate | `ok`, `p`, `target`, `gold` | refused (the gold was a gift: ribbon says so) | chance < 45 % | ends a war with a faction of ≥ our troops | `truce` 宫 ♩104: qin 5,-1-2-1, xiao answers; great a single horn and bianzhong — 2.31 / 3.46 / 3.46 / 2.31 | `cmd.truce.start`, `truce.accept` |
+| 5.26 | `tradepact` | 外交 · 通商协定 | market; two merchants exchange tallies | `ok`, `p`, `target` | refused | partner relation ≥ 40 | partner with ≥ 2 × our cities | `tradepact` 商 ♩120: yangqin 2-5-6-5, bangzi and 拍板 like counting rods; great horns, erhu — 2.00 / 3.00 / 3.00 / 2.00 | `cmd.tradepact.start` |
+| 5.27 | `submit` | 归附 (moment: the accepted card) | palace gate; the other ruler's envoy offers the seal and the city registers | `from`, `cities`, `gens` | — | — | always great | `submit` 宫 ♩112: suona 1-5-1'-6, horns, choir, tamtam — great 4.29 | `submit.offer` |
+| 5.28 | `mission` · `festival` · `wenhui` | moments: 国策 completed · the culture festival · 文会 placing | palace (mission seal) · the capital's festival dressing (CITY-VIEW §6.6) · the academy | `mission`: `id`, `tier`, `reward`; `festival`: `grade` ('grand' / 'modest'), `family`; `wenhui`: `place` 1–3 | — | mission tier 2 · festival — · 文会 2nd | mission tier 3 · 盛大 festival · 文会 1st | `mission` 宫 ♩116 bianzhong 1'-5-3-5 「功成」 — 2.07 / 3.10 / 4.14; `festival` 徵 · 5 ♩162 in 3, dizi 3-5-6 dance, played as **`festival@family`** through the §8.3 family transforms (从简 = normal, 盛大 = great) — 2.22 / 3.33 / 4.44; `wenhui` 宫 ♩108 qin 2-1-6,-1, xiao answers (3rd / 2nd / 1st = normal / good / great) — 2.22 / 3.33 / 4.44 | `mission.done`, `fest.open`, `wenhui.win` |
+
+**Icons** (§6.1 rules: silhouette ≥ 18 % different from every other icon at 24 px; 11 new, 37 in all, registered in `SG.UIIcons`, UI-V4 §3.6):
+
+| id | Motif (silhouette) | Accent | Secondary | Hover micro-loop |
+|---|---|---|---|---|
+| `build` | bamboo scaffold around a half roof + mallet | ochre | bronze | mallet taps, a roof tile drops in |
+| `caravan` | a camel in profile with two saddle bags (a junk sail for sea hubs) | amber | indigo | the camel steps, bell swings |
+| `explore` | a walking staff and a straw sandal before two mountain peaks | indigo | jade | a cloud drifts across the peaks |
+| `gift` | a lidded lacquer box tied with a red cord | cinnabar | gold | the lid lifts 2 px, sparkle |
+| `marriage` | two linked 合卺 gourd cups on a red cord | cinnabar | gold | the cups tilt towards each other |
+| `tribute` | a 鼎 tripod with a coin string and a bolt of silk | bronze | gold | a coin drops into the 鼎 |
+| `hostage` | a figure seen from behind at a gate, a small bundle on the shoulder | plum | paper | the figure turns its head |
+| `truce` | a lowered 戟 crossed with an olive-less branch of willow, white pennant | jade | paper | the pennant flutters |
+| `tradepact` | two halves of a bamboo tally (符) meeting | teal | bronze | halves slide together, click |
+| `submit` | a seal offered on two raised palms | gold | cinnabar | the seal rises 2 px |
+| `mission` | a vertical edict scroll with a red seal and a check stroke | cinnabar | paper | the scroll unrolls 3 px |
+
+Press sounds (§8.6 naming): `cmd-press-build` (a mallet on wood), `cmd-press-caravan` (a camel bell), `cmd-press-explore` (a staff on stone), `cmd-press-diplomacy` (shared by the 外交 sub-actions: a jade disc's ring).
 
 ---
 
@@ -575,7 +616,7 @@ For the top bar (requests 1 and 11), in the same language: 势力 (a map scroll 
 - **Label**: below the icon, Kai / Song serif (`"STKaiti","Kaiti SC","KaiTi",…`), 15 px desktop / 12 px phone, `--paper`.
 - **Token pip**: top-right, a 9 px gold dot for commands that use a token; commands without a token (赏赐, 交易, 任命, 市场) show none. When the month has no tokens left the pips of token commands turn hollow (the existing grey-out still explains why).
 - **Size**: 76 × 76 px desktop, 56 × 60 px phone landscape (≥ 44 px touch target), 6 px gaps.
-- **Order and groups** in the city panel grid (the shell task owns the exact layout): 内政 开发 征兵 训练 搜索 登用 赏赐 任命 · 调度 移动 输送 交易 市场 · 外交与军事 外交 授官 出征 (出征 last, primary). Desktop hotkeys `1`–`9`, `0`, `-`, `=` for the first 12 in this order, shown as a small keycap in the plate's lower-left corner on hover only (WASD / QE stay with the camera).
+- **Order and groups**: the city-panel dock is UI-V4 §5's **4 × 4 grid** (the shell owns the layout; this list is that table): **治** 开发 营建 征兵 训练 · **人** 搜索 登用 赏赐 任命 · **运** 移动 输送 交易 市场 · **策** 通商 探索 外交 出征 (出征 last, primary). Desktop hotkeys by dock row `1 2 3 4` / `5 6 7 8` / `9 0 - =` / `Z X C V`, shown as a small keycap in the plate's lower-left corner on hover only (WASD, Q / E, R / F stay with the camera). **No 授官 tile** (TITLES §9.1).
 
 ### 7.2 States and animations
 
@@ -637,6 +678,19 @@ Sections (bars of 2/4 except 输送 and 秋收 in 3): **A** the action (2 bars f
 | `appoint` 授印 | 宫 · 1 | 108 | 2 | solo horn, bianzhong, timpani, dagu "seal" | 2.22 / 3.33 / 3.33 |
 | `market` 购宝 | 宫 · 1 | 112 | 2 | pipa, yangqin; bianzhong; tamtam, choir, 「霸业」 | 2.14 / 3.21 / 4.29 |
 | `title` 册封 | 宫 · 1 | 112 | 2 | sheng, bianzhong rising 1 3 5 6, choir | 2.14 / 3.21 / 3.21 |
+| `build` 营建 | 宫 · 1 | 120 | 2 | ruan 「起屋」, bangzi, muyu; suona, horns, luo | 2.00 / 3.00 / 4.00 |
+| `caravan` 通商 | 商 · 2 | 162 | 3 | pipa, hoof, muyu; dizi, horns, bo | 2.22 / 3.33 / 4.44 |
+| `explore` 探索 | 羽 · 6 | 100 | 2 | xiao, qin, bianzhong; horn, tamtam | 2.40 / 3.60 / 3.60 / 2.40 |
+| `gift` 赠礼 | 宫 · 1 | 112 | 2 | yangqin, bianzhong; erhu, strings | 2.14 / 3.21 / 4.29 |
+| `marriage` 联姻 | 宫 · 1 | 104 | 2 | erhu, sheng; answer in the partner's family; choirOo, luo | 2.31 / 3.46 / 3.46 / 2.31 |
+| `tribute` 贡赋 | 商 · 2 | 108 | 2 | pipa, timpani; horns, bianzhong | 2.22 / 3.33 / 3.33 / 2.22 |
+| `hostage` 质子 | 羽 · 6 | 108 | 2 | xiao, low strings; erhu, bianzhong | 2.22 / 3.33 / 4.44 |
+| `truce` 停战 | 宫 · 1 | 104 | 2 | qin, xiao; horn, bianzhong | 2.31 / 3.46 / 3.46 / 2.31 |
+| `tradepact` 互市 | 商 · 2 | 120 | 2 | yangqin, bangzi, ban; erhu, horns | 2.00 / 3.00 / 3.00 / 2.00 |
+| `submit` 归附 (moment) | 宫 · 1 | 112 | 2 | suona, horns, choir, tamtam | great 4.29 |
+| `mission` 功成 (moment) | 宫 · 1 | 116 | 2 | bianzhong, dizi, choirOo | 2.07 / 3.10 / 4.14 |
+| `festival` 节庆 (moment, `festival@family`) | 徵 · 5 | 162 | 3 | dizi, yangqin, sheng; suona | 2.22 / 3.33 / 4.44 |
+| `wenhui` 文会 (moment) | 宫 · 1 | 108 | 2 | qin, xiao; bianzhong, choirOo | 2.22 / 3.33 / 4.44 |
 | `harvest` 秋成 (moment) | 徵 · 5 | 168 | 3 | dizi, yangqin, sheng, dagu dance; suona | 3.21 / 4.29 / 4.29 / 3.21 |
 | `stageUp` 升格 (moment) | 宫 · 1 | 132 | 2 | suona, horns, bianzhong, luo | great 2.73 |
 | `month` 朔日 (moment) | 宫 · 1 | 96 | 2 | one bianzhong figure, sheng | 1.25 |
@@ -671,7 +725,7 @@ The 同盟 answer voice uses the **partner's** family. If the ruler-suite task (
 ### 8.4 API summary
 
 ```
-SG.MusicStings.ids                         → the 21 ids
+SG.MusicStings.ids                         → the 34 ids (INTEGRATION §10.3)
 SG.MusicStings.key(id, tier, family?, answerFamily?) → registered key (built and registered on first request, cached)
 SG.MusicStings.sections(key)               → { A: seconds, tag: seconds, total }
 SG.Sfx.cmdSting(id, tier, { family, answerFamily, fast }) → { key, duration, sections } | null
@@ -761,7 +815,7 @@ SG.CmdIcons.svg(id, { size, state }) → string      SG.CmdIcons.button(parent, 
 
 ### 10.3 Save data
 
-None in the game save. `G.fxStages` (per city, the last stage vector shown, a 16-digit string) is kept **in the save** only so that §9.2 does not celebrate the same stage-up twice across a reload: about 196 × 17 bytes ≈ 3.3 KB, in the shared v4 save version bump (integration owns the number). Old saves: missing field → initialised from the current stages without celebrations.
+None in the game save. `G.fxStages` (per city, the last stage vector shown, a 16-digit string) is kept **in the save** only so that §9.2 does not celebrate the same stage-up twice across a reload: about 196 × 17 bytes ≈ 3.3 KB, in save version 4 (INTEGRATION §6.1; migrated last, with COMBAT). Old saves: missing field → initialised from the current stages without celebrations.
 
 ---
 
@@ -779,7 +833,8 @@ None in the game save. `G.fxStages` (per city, the last stage vector shown, a 16
 | `js/strategy-ai.js` · `endMonth` | also return `harvests` (attach as a property of the returned array so existing callers keep working: `news.harvests = [...]`) |
 | `js/audio.js` | `cmdSting`, new SFX recipes (§8.6), load `music-stings.js` with the other music files |
 | `index.html` | load `domestic-tiers.js` after `model.js`; `music-stings.js` after `music-world.js`; `cmd-icons.js`, `domestic-fx.js` after `ui.js` and the city-view files |
-| settings screen (menu task) | 「内政演出」 options and 「画质」 (shared with CITY-VIEW) |
+| `js/engage.js` / `js/engage-screen.js` (ENGAGEMENT) | set `Commands.lastResult` for 营建 / 通商 / 探索 / 外交 sub-actions and play the moments of §5.18–§5.28 through `SG.DomesticFx.play` |
+| settings screen (menu task) | 「内政演出」 options and 「画质」 (shared with CITY-VIEW); ENGAGEMENT's 内政委任 row (INTEGRATION §10.1) |
 
 ---
 
@@ -802,14 +857,15 @@ None in the game save. `G.fxStages` (per city, the last stage vector shown, a 16
 
 ### 13.1 Node: `tests/domestic-tiers.js` (new)
 
-1. **Rules**: one hand-built record per row of §4.2 → the expected tier and stamp (≈ 70 cases), including edges (`before = 99, after = 100`, `roll = 4` at the 999 cap, `p = 0.2`).
+1. **Rules**: one hand-built record per row of §4.2 and of the §5.18–§5.28 addendum → the expected tier and stamp (≈ 70 + 40 cases), including edges (`before = 99, after = 100` with `g0` below the crossing, `roll = 4` at the 999 cap, `p = 0.2`, `rollRaw = 1.04 / 1.10`).
 2. **No RNG**: run `tests/sim.js`'s classic campaign (seed 7, 5 years) with `lastResult` recording and `DomesticTiers.tier` called on every record; the state JSON hash must equal the run without them (same technique as `tests/world.js` `--classic-hash`).
 3. **Distribution**: the Monte-Carlo of `domestic/tiers.js` (12 seeds × 18 rulers × 60 months): for 开发 ×3 and 训练 great 5–16 % and good 18–40 %; no command's great above 30 % (n ≥ 200). Current result: ALL OK (§4.3).
-4. **lastResult schema**: every command sets `lastResult.cmd` and the fields of §3.2 (type checks).
+4. **lastResult schema**: every command sets `lastResult.cmd` and the fields of §3.2 and §5.18–§5.28 (type checks), including the Econ fields `g0`, `pct`, `mods`, `rollRaw`.
+5. **Tiers in the all-on game**: `integration/v4-all-proto.js player` prints the 开发 and 秋收 tier rates with every v4 system on; targets as item 3 (measured: great 10.1–10.9 %, good 24.5–25.3 %; harvest good 25–30 %).
 
 ### 13.2 Node: `design-v4/domestic/stings.js` → `tests/music-stings.js`
 
-1. All 780 keys validate with `SG.Music.validate` (bar lengths, voices, instruments). Current: ALL OK.
+1. All **1 284** keys (34 stings) validate with `SG.Music.validate` (bar lengths, voices, instruments). Current: ALL OK.
 2. Notated lengths: normal 1.7–2.7 s, good 2.6–3.6 s, great 3.0–4.5 s, miss 1.6–2.6 s; normal ≤ good ≤ great for each sting; moments ≤ 4.5 s.
 3. Distinct A motifs (first four pitches of the lead voice).
 4. Every substituted instrument exists in `SG.Music.INST`.
@@ -823,7 +879,7 @@ Offline-render each sting key (hua and two other families) with the map music un
 - Grid of every command × tier × stage (city, diorama, card) × speed; `?auto=1` plays all in sequence and reports per vignette: total time (within ±0.1 s of the sting length, or the default when music is off), max frame time (≤ 16 ms desktop, ≤ 33 ms phone emulation), draw calls added (≤ 12), DOM nodes left after close (0), no `console.error`, no `pageerror`.
 - **Skip latency**: synthetic pointerdown at random times in each vignette: the stage reaches its final state within 100 ms and closes within 0.5 s.
 - **Determinism**: the same record and month render the same decoration (sprouting tiles, crowd paths): compare screenshots of two runs at `Reveal + 0.2 s`.
-- **Icons**: renders all 26 icons as silhouettes at 24 px; the pairwise pixel difference ≥ 18 % (§6.1); colour-blind simulation (deuteranopia, protanopia) screenshots for review.
+- **Icons**: renders all 37 icons as silhouettes at 24 px; the pairwise pixel difference ≥ 18 % (§6.1); colour-blind simulation (deuteranopia, protanopia) screenshots for review.
 - **Buttons**: hover / press / disabled / denied / hint / primary states at 1280 × 720 and 844 × 390; touch targets ≥ 44 px; keyboard focus order and hotkeys.
 
 ### 13.5 Playtest targets (manual, 30-minute sessions, classic and world)
@@ -845,11 +901,11 @@ Offline-render each sting key (hua and two other families) with the map music un
 
 ## 15. Open questions
 
-1. **Command names in v4.** 授官 is a placeholder until `TITLES.md` fixes the command's name and where it lives (a city-panel command or the Generals screen). The icon and sting are ready either way.
+1. ~~Command names in v4~~ — resolved: 授官 is not a city-panel command; it lives in 官制, 任命 → 官爵 and the character menu (TITLES §9.1, UI-V4 §5).
 2. **Smart mode threshold.** 10 full plays per command before normal results go fast is a guess; playtests may prefer 6 or 15.
 3. **Diorama on phones.** The PiP needs the medium LOD to hold 30 fps on iPhone-class devices; if the city-view pilot misses that, phones default to the card stage and the diorama becomes desktop / iPad only.
 4. **Family-name formation (训练 great).** Forming the general's family-name glyph from soldiers needs a glyph-to-slots table for ~500 surnames (or the 60 most common plus the faction emblem fallback); the emblem-only fallback is cheap and may be enough.
-5. **Voices.** The cue ids (`cmd.*`) are proposed here; the voices task (request 12) owns the lines and languages and may merge cues.
+5. ~~Voices~~ — resolved: every `cmd.*` cue and the addendum's cues are merged into `audio/voice-lines.js` with fallbacks (AUDIO-V4 §B2, INTEGRATION §10.2).
 6. **Leitmotif density.** 「霸业」 appears in four great tiers; if the music task gives rulers their own suites (request 7), the quote could become each suite's own head motif instead.
 7. **Harvest montage length.** Four cities × 1.1 s plus the summary is fine for small realms; for a 30-city empire the summary card alone may be better from 12 cities up.
 

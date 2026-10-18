@@ -6,7 +6,7 @@ Regenerate the catalogue and the tables of ITEMS.md:
 node design-v4/items/dump.js /tmp/scen.json                      # scenario cities / factions / generals from js/world-data.js
 node design-v4/items/build.js /tmp/scen.json design-v4/items.json # build + validate (prints VALIDATION OK)
 node design-v4/items/gen-md.js design-v4/items.json /tmp/scen.json /tmp/tables.md
-# then splice the GENERATED blocks of /tmp/tables.md into ITEMS.src.md's INSERT tags → design-v4/ITEMS.md
+node design-v4/items/splice-md.js /tmp/tables.md                 # INSERT tags of ITEMS.src.md → design-v4/ITEMS.md
 ```
 
 Tables: `core.js` (rarities, slots, types, stat profiles, palettes), `commons.js` + `commons2.js` (common / uncommon rows),

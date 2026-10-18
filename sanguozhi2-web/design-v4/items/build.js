@@ -68,7 +68,10 @@ function cityK(c) { return Math.round(Math.max(0.85, Math.min(1.15, 1.2 - (c.ind
 const CLASSIC_TRADE = {
   steppe: ['beiping', 'jinyang', 'wuwei'], tarim: ['wuwei', 'tianshui', 'changan'], kushan: ['wuwei', 'changan', 'luoyang'], persia: ['changan', 'luoyang'],
   korea: ['beiping', 'beihai'], wa: ['beihai', 'kuaiji'], seasia: ['kuaiji', 'jianye', 'yunnan'], india: ['yunnan', 'jianning', 'kuaiji'], arab: ['luoyang'],
-  roman: ['luoyang'], sarmatian: ['wuwei'], yi: ['kuaiji'], nanman: ['jianning', 'yunnan', 'yongan'], africa: [], celt: [], german: [], moor: [],
+  roman: ['luoyang'], sarmatian: ['wuwei'], yi: ['kuaiji'], nanman: ['jianning', 'yunnan', 'yongan'],
+  // INTEGRATION §7.5: the far west reaches the classic map only as curios — Aksumite ivory by the sea road (后汉书·西域传: 166 年大秦使者自日南献象牙),
+  // Celtic, Germanic and Mauretanian goods through 大秦 merchants on the Silk Road (game liberty, tagged 舶来)
+  africa: ['kuaiji', 'jianye'], celt: ['luoyang'], german: ['luoyang'], moor: ['luoyang'],
 };
 
 function prep(sid) {
@@ -257,7 +260,10 @@ for (const it of items) {
         let cities = (acq.cities || []).filter(k => S.keys.has(k));
         if (sid === 'classic' && it.acq.classic && it.acq.classic.k === 'shop' && acq === it.acq) cities = it.acq.classic.cities.filter(k => S.keys.has(k));
         if (sid === 'classic' && acq !== it.acq && acq.k === 'shop') cities = acq.cities.filter(k => S.keys.has(k));
-        av[sid] = cities.length ? { kind: 'shop', cities, stock: acq.stock || 1, restockMonths: acq.restockMonths || (it.rarity === 'epic' ? 60 : 24), price: acq.price || it.price } : null;
+        // INTEGRATION §7.5: a world-only shop rare is sold in the classic scenario by the first classic trade city of its culture (舶来, ×1.2)
+        let foreign = false;
+        if (sid === 'classic' && !cities.length && it.rarity === 'rare' && (CLASSIC_TRADE[it.culture] || []).length) { cities = [CLASSIC_TRADE[it.culture][0]].filter(k => S.keys.has(k)); foreign = cities.length > 0; }
+        av[sid] = cities.length ? Object.assign({ kind: 'shop', cities, stock: acq.stock || 1, restockMonths: acq.restockMonths || (it.rarity === 'epic' ? 60 : 24), price: acq.price || it.price }, foreign ? { foreign: true } : {}) : null;
         break;
       }
       case 'ruler': {
@@ -273,10 +279,12 @@ for (const it of items) {
       default: throw new Error('acq ' + acq.k);
     }
   }
-  // world-only foreign rares with no classic route join the classic 'foreign' tournament pool (异域奇珍)
-  if (!av.classic && it.rarity === 'rare' && it.acq && ['ruler', 'hidden', 'city', 'sig'].includes(it.acq.k) && !['han', 'nanman'].includes(it.culture)) {
+  // world-only foreign rares with no classic route join the classic 'foreign' tournament pool (异域奇珍) — never a ruler-unique:
+  // request 3 makes the rulers' unique weapons obtainable only by slaying their holder (INTEGRATION §7.3)
+  if (!av.classic && it.rarity === 'rare' && it.acq && ['hidden', 'city', 'sig'].includes(it.acq.k) && !['han', 'nanman'].includes(it.culture)) {
     av.classic = { kind: 'tournament', pool: 'foreign' };
   }
+  if (it.bound) for (const sid of ['classic', 'world']) if (av[sid] && av[sid].kind !== 'ruler') av[sid] = null;
   it.availability = av;
   it.scenarios = ['classic', 'world'].filter(s => av[s]);
   delete it.acq;
@@ -321,6 +329,76 @@ function tables(sid) {
   return { rulers, signature, hidden, cityTreasure, armoury, tournament: tour };
 }
 
+// ------------------------------------------------------------------ rare art (INTEGRATION §7.6): a signature part, a proc effect and a sound for every rare
+// The parts library grows from the 28 shared parts above to 80: these 52 signature parts are small (≤ 200 triangles at high LOD) and placed
+// by socket; every rare gets one tuple (part, socket, count, colour) of its own, picked from its name / motif / look, so no two rares share it.
+const SIG_PARTS = [
+  [/七星|北斗|星/, 'starInlay', 'blade'], [/波|浪|水纹/, 'waveBack', 'spine'], [/枝|七支/, 'branchTines', 'blade'], [/印|玺|钮/, 'sealKnob', 'pommel'],
+  [/镡|格/, 'guardWings', 'guard'], [/缠|绳|绦/, 'hiltWrap', 'grip'], [/鞘/, 'scabbardBands', 'scabbard'], [/槽|血槽|脊/, 'bladeGroove', 'blade'],
+  [/孔|穿/, 'bladeHoles', 'blade'], [/镜/, 'mirrorBoss', 'chest'], [/面甲|面具|假面/, 'faceMask', 'face'], [/角/, 'hornPair', 'crest'],
+  [/翎|雉尾|长羽/, 'plumeTall', 'crest'], [/冠|鸡冠|梳/, 'crestComb', 'crest'], [/光芒|放射/, 'sunburst', 'boss'], [/莲/, 'lotus', 'pommel'],
+  [/螺|海螺/, 'conchShell', 'belt'], [/孔雀/, 'peacockEye', 'tail'], [/雷纹|回纹/, 'thunderGlyph', 'band'], [/卢恩|铭文带|符文/, 'runeBand', 'band'],
+  [/项圈|托尔克|torc/, 'torcRing', 'neck'], [/月桂|橄榄|桂/, 'laurel', 'crest'], [/双翼|翼/, 'eagleWings', 'shoulder'], [/鳞/, 'scaleRidge', 'spine'],
+  [/象牙/, 'ivoryInlay', 'grip'], [/珠/, 'pearlString', 'band'], [/璧|玉环/, 'jadeDisc', 'pommel'], [/钟|铎/, 'bronzeBell', 'hang'],
+  [/旗|幡|幢/, 'bannerTail', 'pole'], [/结|绶/, 'cordKnot', 'hang'], [/鹿/, 'antlerTips', 'crest'], [/马首|马头/, 'horseHead', 'pommel'],
+  [/熊/, 'bearClaw', 'hang'], [/狼/, 'wolfTail', 'hang'], [/鱼/, 'fishScale', 'blade'], [/龟/, 'turtleShell', 'boss'],
+  [/象/, 'elephantTusk', 'front'], [/驼/, 'camelBell', 'neck'], [/金叶|叶/, 'leafEtch', 'blade'], [/花/, 'flowerRosette', 'boss'],
+  [/漆|朱漆/, 'lacquerBand', 'shaft'], [/铜钉|钉/, 'studRow', 'rim'], [/锯|齿/, 'sawEdge', 'blade'], [/钩/, 'hookSpur', 'blade'],
+  [/刺|尖/, 'spikeCap', 'tip'], [/环/, 'ringSet', 'shaft'], [/卷轴|竹简|简/, 'slipBundle', 'case'], [/书|经/, 'bookCase', 'case'],
+  [/盒|匣|函/, 'reliquary', 'case'], [/香|乳香/, 'incenseCup', 'hang'], [/鼓/, 'drumHead', 'face'], [/弦|琴/, 'stringSet', 'face'],
+];
+const SOCKET_BY_SLOT = { weapon: ['blade', 'guard', 'grip', 'pommel', 'spine', 'tip', 'shaft'], offhand: ['boss', 'rim', 'face', 'grip'], armour: ['chest', 'shoulder', 'belt', 'band'], helmet: ['crest', 'band', 'face'], mount: ['neck', 'front', 'tail', 'band'], treasure: ['case', 'hang', 'face', 'band'] };
+const FX_BY_EFFECT = {
+  proc: 'inkBurst', dProc: 'inkBurst', crit: 'goldFlare', dCrit: 'goldFlare', aura: 'brushRing', opening: 'brushRing', cmd: 'sealStamp', free: 'sealStamp',
+  income: 'coinArc', harvest: 'grainSwirl', pop: 'lanternRise', loyalAura: 'lanternRise', charge: 'dustStreak', first: 'dustStreak', mobility: 'dustStreak',
+  dParry: 'parryFlash', dGuard: 'paperShield', ward: 'paperShield', dmgTaken: 'paperShield', castle: 'paperShield', fame: 'lanternGlow', virtue: 'lanternGlow',
+  expBoost: 'scrollUnfurl', expMonthly: 'scrollUnfurl', dipPlus: 'cordKnot', giftK: 'cordKnot', active: 'brushRing', activeChoice: 'brushRing',
+  onRout: 'inkBurst', splash: 'inkBurst', sunder: 'crackInk', sunderAll: 'crackInk', counterUp: 'parryFlash', counterGuard: 'paperShield', dRegen: 'leafDrift', regen: 'leafDrift',
+  tacAmp: 'scrollUnfurl', escapeK: 'smokePuff', decoy: 'smokePuff', rescue: 'smokePuff', medic: 'leafDrift', talent: 'lanternGlow', treasureHunt: 'lanternGlow',
+};
+const SFX_BY_CAT = { blade: 'ring-blade', pole: 'whoosh-pole', bow: 'twang', shield: 'thud-wood', armour: 'clank-plate', helmet: 'clink-helm', mount: 'hoof-neigh', book: 'page-flip', seal: 'stamp', instrument: 'pluck', jewel: 'chime', other: 'bell' };
+function sfxFamily(it) {
+  const T = TYPES[it.type];
+  if (it.slot === 'weapon') return T && T.style === 'pole' ? 'pole' : 'blade';
+  if (it.slot === 'offhand') return ['bow', 'longbow', 'crossbow', 'throw'].includes(it.type) ? 'bow' : 'shield';
+  if (it.slot === 'armour') return 'armour';
+  if (it.slot === 'helmet') return 'helmet';
+  if (it.slot === 'mount') return 'mount';
+  if (['milbook', 'civbook'].includes(it.type)) return 'book';
+  if (it.type === 'seal') return 'seal';
+  if (['music', 'drum'].includes(it.type)) return 'instrument';
+  if (it.type === 'jewel') return 'jewel';
+  return 'other';
+}
+{
+  const used = new Set();
+  for (const it of items) {
+    if (!['rare', 'epic', 'legendary'].includes(it.rarity)) continue;
+    const text = it.name + '|' + (it.visual.model.motif || '') + '|' + (it.visual.look || '');
+    const colors = it.visual.model.colors || ['#cccccc'];
+    if (it.rarity === 'rare') {
+      const cands = SIG_PARTS.filter(([re]) => re.test(text)).map(([, p, at]) => [p, at]);
+      const sockets = SOCKET_BY_SLOT[it.slot] || ['band'];
+      for (const [, p] of SIG_PARTS) if (!cands.some(c => c[0] === p)) cands.push([p, null]);   // fallback: any part, deterministic order below
+      const h = hash(it.id) >>> 0;
+      let sig = null;
+      for (let k = 0; k < cands.length * 6 && !sig; k++) {
+        const [p, at0] = cands[k < cands.length ? k : (h + k) % cands.length];
+        const at = sockets.includes(at0) ? at0 : sockets[(h + k) % sockets.length];
+        const count = /七/.test(it.name) && p === 'starInlay' ? 7 : 1 + ((h >>> 3) + k) % 3;
+        const color = colors[((h >>> 5) + k) % colors.length];
+        const key = [p, at, count, color].join('|');
+        if (!used.has(key)) { used.add(key); sig = { part: p, at, count, color, tris: 120 + (h % 5) * 16 }; }
+      }
+      it.visual.model.signature = sig;
+    }
+    const first = (it.ability && it.ability.effects[0]) || { t: 'aura' };
+    const pick = it.ability.effects.map(e => FX_BY_EFFECT[e.t]).find(Boolean) || 'brushRing';
+    it.ability.procFx = { preset: pick, color: (it.visual.icon && it.visual.icon.glow) || colors[0], dur: Math.min(0.6, 0.35 + ((hash(it.id + 'fx') >>> 0) % 6) * 0.05), drawCalls: 1, pooled: true };
+    it.ability.sfx = { id: 'item.' + it.id, family: SFX_BY_CAT[sfxFamily(it)], pitch: 0.9 + ((hash(it.id + 'sfx') >>> 0) % 21) / 100 };
+  }
+}
+
 // ------------------------------------------------------------------ validation
 const problems = [];
 function check(cond, msg) { if (!cond) problems.push(msg); }
@@ -361,8 +439,33 @@ for (const sid of ['classic', 'world']) {
 }
 // every rare+ has an acquisition route in at least one scenario; L/E routes
 for (const it of items) check(it.scenarios.length > 0, 'no route: ' + it.id);
+// INTEGRATION §7.2: no ruler-unique (bound) item on any non-slaying route, in either scenario
+for (const it of items) if (it.bound) for (const sid of ['classic', 'world']) check(!it.availability[sid] || it.availability[sid].kind === 'ruler', 'ruler-unique on a non-slaying route: ' + it.id + ' ' + sid);
+for (const sid of ['classic', 'world']) for (const pool of Object.values(tables(sid).tournament)) for (const id of pool) check(!byId.get(id).bound, 'ruler-unique in a tournament pool: ' + id + ' ' + sid);
+// INTEGRATION §7.3: ≥ 255 weapons and ≥ 255 armour / equipment in EACH scenario, counting only items reachable outside the 15 % 异域奇珍 roll
+for (const sid of ['classic', 'world']) {
+  const reach = items.filter(x => x.availability[sid] && !(x.availability[sid].kind === 'tournament' && x.availability[sid].pool === 'foreign'));
+  check(reach.filter(x => x.cat === 'weapon').length >= 255, sid + ': weapons reachable outside the roll < 255: ' + reach.filter(x => x.cat === 'weapon').length);
+  check(reach.filter(x => x.cat === 'gear').length >= 255, sid + ': gear reachable outside the roll < 255: ' + reach.filter(x => x.cat === 'gear').length);
+}
+// INTEGRATION §7.4: every rare has a signature part of its own, every rare+ ability a proc effect and a sound
+for (const it of items) if (it.rarity === 'rare') check(it.visual.model.signature && it.visual.model.signature.tris <= 200, 'rare without signature part: ' + it.id);
+for (const it of items) if (['rare', 'epic', 'legendary'].includes(it.rarity)) check(it.ability.procFx && it.ability.procFx.dur <= 0.6 && it.ability.sfx, 'rare+ without procFx / sfx: ' + it.id);
+// INTEGRATION §8.2 DUEL_ITEM_EFFECTS whitelist: no unblockable / unparryable flags, projectiles ≤ 4 HP, combo bonus ≤ 3 HP, no super armour
+for (const it of items) if (it.ability) for (const e of it.ability.effects) {
+  check(!e.unblockable && !e.unparryable && !e.dashUnblockable, 'duel flag not allowed: ' + it.id + ' ' + e.t);
+  if (e.t === 'dProjectile') check((e.dmg || 0) * (e.count || 1) <= 4, 'projectile over 4 HP: ' + it.id);
+  if (e.t === 'dCombo') check((e.bonusDmg || 0) <= 3 && (e.lightBonus || 0) <= 0.04, 'combo bonus over budget: ' + it.id);
+  if (e.t === 'dArmor') check(e.dmgK >= 0.5 && ['heavyStart', 'lightTaken'].includes(e.on), 'dArmor must be a damage reduction: ' + it.id);
+  if (e.t === 'dPerfectGuard') check(false, 'dPerfectGuard is replaced by dParry.guardWindow: ' + it.id);
+  if (e.t === 'dParry') check((e.window || 0) <= 0.01 && (e.guardWindow || 0) <= 0.02 && (e.counterK || 1.5) <= 1.7, 'dParry over the whitelist: ' + it.id);
+  if (e.t === 'dDmgK') check(e.k <= 0.03, 'dDmgK over the gear damage cap: ' + it.id);
+  if (e.t === 'dProc' && e.eff === 'knockdown') check(e.on === 'heavyFull' || (e.p || 1) < 1, 'guaranteed knockdown only on full-charge heavies: ' + it.id);
+  if (e.t === 'dipPlus') check(!e.noBreak, 'noBreak is forbidden (INTEGRATION §7.6): ' + it.id);
+}
 for (const it of items) if (it.culture !== 'han') check(!!it.orig, 'foreign item without orig: ' + it.id);
-// stats sanity
+// stats sanity; every single item within the per-general cap of each stat key (statKeys[k].cap, duel crit capDuel)
+for (const it of items) for (const [k, v] of Object.entries(it.stats)) { const sk = require('./statkeys.js')[k]; if (sk && typeof v === 'number' && typeof sk.cap === 'number') check(Math.abs(v) <= sk.cap + 1e-9, 'stat over its cap: ' + it.id + ' ' + k + ' ' + v + ' > ' + sk.cap); }
 for (const it of items) for (const [k, v] of Object.entries(it.stats)) { if (typeof v === 'number') check(isFinite(v), 'nan stat ' + it.id + k); }
 
 // uncommon minority / rare few

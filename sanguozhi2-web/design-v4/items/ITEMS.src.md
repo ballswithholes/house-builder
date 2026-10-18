@@ -2,9 +2,9 @@
 
 Player request 3 of v4: shops in every city that sell weapons, armour and other equipment for generals; more than 250 weapons and 250 pieces of armour / equipment; standard items in many cities, good ones in a minority, very rare ones in a few cities of the world; unique weapons that can only be taken by slaying the ruler of each power; historical and mythological research; unique, non-learnable abilities with epic looks and effects; rarities common / uncommon / rare / epic / legendary with exactly 4 legendary and 20 epic. This spec also covers the item side of request 9 (character menu: gear), request 13 (non-battle rewards) and request 14 (武林大会 prizes).
 
-Read `DESIGN-V2.md` §1 (common rules), `DESIGN-V3.md`, `CONTRACT.md`, and the sibling v4 specs `COMBAT-V4.md` (crits, duel caps) and `TITLES.md` / `titles.json` (官爵) first. Where this file conflicts with them, this file wins for the systems it owns (items, shops, gear stats, acquisition). Platform order: browser first, then the Unity port (§18). All visuals assume the v4 art direction from the art pilot (Lanternvale: stylized low-poly, cozy Ghibli-warm, flat-shaded props, soft-lump foliage with a warm-top / cool-teal ramp, ink outlines, soft painted light with warm lantern pools at night). Effects are brush strokes, ink splashes, warm gold and vermillion seal stamps, never neon.
+Read `DESIGN-V2.md` §1 (common rules), `DESIGN-V3.md`, `CONTRACT.md`, and the sibling v4 specs `COMBAT-V4.md` (crits, duel caps) and `TITLES.md` / `titles.json` (官爵) first, and **`INTEGRATION.md`**, which wins over this file for everything that crosses a system boundary (caps and the order of combination, the economy formulas, the AI's spending, save and migration, the month pipeline). Where this file conflicts with the other specs, this file wins for the systems it owns (items, shops, gear stats, acquisition). Platform order: browser first, then the Unity port (§18). All visuals assume the v4 art direction from the art pilot (Lanternvale: stylized low-poly, cozy Ghibli-warm, flat-shaded props, soft-lump foliage with a warm-top / cool-teal ramp, ink outlines, soft painted light with warm lantern pools at night). Effects are brush strokes, ink splashes, warm gold and vermillion seal stamps, never neon.
 
-**The catalogue is data, not prose.** `design-v4/items.json` holds every item (567 entries) with id, name, original-language name, slot, type, culture, rarity, stats, price, availability for both scenarios, source note and references, model / icon / look description, and for rare+ items the unique ability with mechanics, parameters and effect description. It also holds the shop table for all 38 classic and 196 world cities, the ruler-unique table for all 18 / 70 factions, the signature, hidden, city-treasure, armoury and tournament tables, the stat dictionary, the duel weapon table and the starting kits. The tables in §9–§12 below are generated from it (`design-v4/items/gen-md.js`), so the two cannot disagree. The generator and its validation are in `design-v4/items/` (`build.js`, tables in `core.js`, `commons*.js`, `specials-*.js`, `statkeys.js`, `orig.js`; see its README); the implementation ports them to `tools/gen-items.js` (§1).
+**The catalogue is data, not prose.** `design-v4/items.json` holds every item (602 entries) with id, name, original-language name, slot, type, culture, rarity, stats, price, availability for both scenarios, source note and references, model / icon / look description, and for rare+ items the unique ability with mechanics, parameters and effect description. It also holds the shop table for all 38 classic and 196 world cities, the ruler-unique table for all 18 / 70 factions, the signature, hidden, city-treasure, armoury and tournament tables, the stat dictionary, the duel weapon table and the starting kits. The tables in §9–§12 below are generated from it (`design-v4/items/gen-md.js`), so the two cannot disagree. The generator and its validation are in `design-v4/items/` (`build.js`, tables in `core.js`, `commons*.js`, `specials-*.js`, `statkeys.js`, `orig.js`; see its README); the implementation ports them to `tools/gen-items.js` (§1).
 
 ---
 
@@ -12,8 +12,9 @@ Read `DESIGN-V2.md` §1 (common rules), `DESIGN-V3.md`, `CONTRACT.md`, and the s
 
 | Item | Value |
 |---|---|
-| Catalogue | **567 items: 275 weapons** (211 main-hand + 64 off-hand bows / crossbows / throwing weapons) and **292 armour / equipment** (51 armour, 40 helmets and caps, 19 shields, 44 mounts, 138 treasures) |
-| Rarity | 普通 common 250 · 精良 uncommon 121 · 稀有 rare 172 · 史诗 epic **20** · 传说 legendary **4** |
+| Catalogue | **602 items: 310 weapons** (239 main-hand + 71 off-hand bows / crossbows / throwing weapons) and **292 armour / equipment** (51 armour, 40 helmets and caps, 19 shields, 44 mounts, 138 treasures) |
+| Per scenario | classic: **256 weapons and 273 gear pieces** reachable outside the 15 % random roll (shops, kits, routes; gate ≥ 255 / ≥ 255, INTEGRATION §7.3); classic has **3 legendaries** (赤兔, 传国玉玺, 金刚杵) — 赫拉克勒斯之棍 is world-only |
+| Rarity | 普通 common 273 · 精良 uncommon 133 · 稀有 rare 172 · 史诗 epic **20** · 传说 legendary **4** |
 | Cultures | all 18 culture codes have commons and uncommons; all 18 are represented among the 24 epic + legendary items |
 | Abilities | 196 unique, non-learnable abilities (every rare, epic and legendary item); 90 effect ids (§7); 29 items carry a once-per-battle 宝具 active (天符印 offers three) |
 | Slots | 兵器 weapon · 副手 off-hand (shield, or bow / crossbow / throwing weapon) · 铠甲 armour · 头盔 helmet / cap · 坐骑 mount · 宝物 treasure |
@@ -24,11 +25,11 @@ Read `DESIGN-V2.md` §1 (common rules), `DESIGN-V3.md`, `CONTRACT.md`, and the s
 | Restock | monthly, seeded (no `SG.Random` draw); a given rare reappears in its city about every 6–10 months; sold rares cool down 24 months |
 | Ruler-uniques | 70 bound weapons (classic 18): 60 rare, 9 epic, 1 legendary (赫拉克勒斯之棍, 康茂德). Taken only by slaying the holder (§8.2) |
 | Signature gear | 39 items held at the start by famous generals (青龙偃月刀 关羽, 方天画戟 and 赤兔 吕布, 丈八蛇矛 张飞, 乌戈藤甲 兀突骨 …) |
-| Other routes | 17 hidden items found by 搜索 (传国玉玺 in 洛阳 from 191-01), 4 city treasures, 2 starting-armoury items, 12 tournament-only prizes + 金刚杵 (3 titles) |
-| Army effect of a full set (weapon + armour + helmet + shield + horse) | exchange ratio common ×1.15, uncommon ×1.28, rare ×1.43, epic ×1.60, legendary ×1.83 (= veteran levels 3 / 4 / 6 / 8 / 10). Caps: 攻击 +40%, 防御 +45% |
-| Duel effect | gear 武力 counts half in duels (cap +6); gear crit ≤ +5%, damage ≤ +4%, reach ≤ +5%, parry ≤ +0.02 s, HP ≤ +15 (COMBAT-V4 Q3). Estimated equal-war win rate: rare weapon 55–60%, epic 60–64%, legendary 67–72%; gear never turns a 15-war gap into better than ~27% |
+| Other routes | 17 hidden items found by 搜索 (传国玉玺 in 洛阳 from 191-01), 4 city treasures, 2 starting-armoury items, 12 tournament-only prizes + the shop rares no faction owns + 金刚杵 (3 titles) |
+| Army effect of a full set (weapon + armour + helmet + shield + horse) | exchange ratio common ×1.15, uncommon ×1.28, rare ×1.43, epic ×1.60, legendary ×1.83 (= veteran levels 3 / 4 / 6 / 8 / 10). Caps: 攻击 +40%, 防御 +45% from items; every battle multiplier together (gear × title × bond × aura) ≤ ×1.60 (INTEGRATION §3.2) |
+| Duel effect | gear 武力 counts a third in duels (cap +3); **one all-in duel budget per fighter**: dmg % + 0.4 × (gear HP + ability HP + guard HP) ≤ 6, gear HP ≤ 10, dmg ≤ 3 %, ability HP ≤ 4, parry ≤ +0.01 s (INTEGRATION §8.3). Measured (v3 Sim): legendary best-in-slot vs ungeared at equal 武力 69–73 %; 武力 65 + legendary set vs 80: 23 % |
 | Gear crit (COMBAT-V4 hooks) | `SG.Gear.stat(gen, 'critArmy')` ≤ 0.04, `'critDuel'` ≤ 0.05, `'critMulArmy'` / `'critMulDuel'` ≤ 0.30 (titles add the rest of COMBAT's 0.06 / 0.08) |
-| Save | one save-version bump shared with the other v4 specs (integration owns the number); ~1 500 item instances, +60–90 KB |
+| Save | save version 4, migrated first (INTEGRATION §6); ~1 500 item instances, +60–90 KB |
 
 ---
 
@@ -46,7 +47,8 @@ Read `DESIGN-V2.md` §1 (common rules), `DESIGN-V3.md`, `CONTRACT.md`, and the s
 | `tests/items.html` | new | gallery of all 567 icons and models, fx demo for the 29 宝具, phone layout check |
 | `tests/shop.html` | new | shop / armoury / compare UI against a scripted state |
 | `tools/export-unity-items.js` | new | Unity export (§18) |
-| `js/model.js` | modified | save fields (§15), `Commands` hooks (§3.4), `Progress.gain` exp hook |
+| `js/econ.js` (integration) | new | `SG.Mods` / `SG.Econ` / `SG.AIBudget` (INTEGRATION §3–§5): this module registers its gear numbers there as providers and never multiplies a battle or domestic number itself |
+| `js/model.js` | modified | save fields (§15), `Commands` call `SG.Econ` (§3.4), `Mods.exp` exp hook |
 | `js/battle-model.js` | modified | stat hooks (§3.2), ability hooks (§7), 阵斩 roll (§8.2) |
 | `js/specials.js` | modified | `known(gen)` appends item actives with `item: id` (§7.3) |
 | `js/duel-game.js` | modified | `Fighter` reads `SG.Gear.duelMods` and the equipped weapon (§3.3), duel ability hooks, new duel keys `fan* staff* club* vajra*` |
@@ -54,7 +56,7 @@ Read `DESIGN-V2.md` §1 (common rules), `DESIGN-V3.md`, `CONTRACT.md`, and the s
 | `js/strategy-screen.js` | modified | 「市场」 command, 缴械释放 captive option, 缴获 prompt, gift through 赏赐 |
 | `js/figure.js` | modified | new weapon ids (`ge club hammer bian ankusha vajra falx sword7 crossbow javelins`), new shields, `look` overrides from items (§5.2), camel / elephant / chariot mounts (art pilot coordination) |
 | `js/battle-view.js` (add-only), `js/clash.js` | modified | item fx styles (§5.4), mounted / armoured look in the clash |
-| `index.html` | modified | load `items-data.js`, `items.js` after `model.js`; `item-art.js`, `shop-screen.js` after `figure.js` |
+| `index.html` | modified | the order of INTEGRATION §11 (`items-data.js` with the generated data, `items.js` after `model.js`; `item-art.js` after `culture-art.js`, `shop-screen.js` with the screens) |
 
 Parallel work rule (DESIGN-V2 §3) still holds: each task edits only its own files and lists the rest under INTEGRATION.
 
@@ -93,9 +95,9 @@ Every item instance has exactly one location:
 | a city shop's stock | owned by the market, priced per city |
 | hidden in a city | waits for 搜索 (§8.5) |
 | a city's vault (city treasure) | belongs to whoever owns the city (§8.6) |
-| a tournament pool | not instantiated until awarded (§8.9) |
+| a prize pool | not instantiated until awarded (§8.9); the rare pool is the scenario's shop rares **not owned by any faction** plus the 12 tournament-only rares (INTEGRATION §7.2) |
 
-Commons and uncommons have unlimited instances (a shop may restock them). Rare shop items have at most one instance per listed city at a time. Every rare from another route, every epic and every legendary is a singleton: one instance in the world, ever. If a singleton is destroyed (it never is in v4), it does not respawn.
+Commons and uncommons have unlimited instances (a shop may restock them). Rare shop items have at most one instance per listed city at a time; a prize copy of a shop rare is its own instance and never empties a shop. Every rare from another route, every epic and every legendary is a singleton: one instance in the world, ever. If a singleton is destroyed (it never is in v4), it does not respawn.
 
 ### 2.4 Base and effective attributes
 
@@ -104,14 +106,14 @@ gearSum(gen, k)   = Σ stats[k] over equipped items whose req is met
 eff(gen, 'war')   = min(110, gen.war   + min(15, gearSum(gen, 'war')))
 eff(gen, 'intel') = min(110, gen.intel + min(15, gearSum(gen, 'intel')))
 eff(gen, 'pol')   = min(110, gen.pol   + min(15, gearSum(gen, 'pol')))
-duelWar(gen)      = min(110, gen.war   + min(6, floor(gearSum(gen, 'war') / 2)))
+duelWar(gen)      = min(110, gen.war   + min(3, floor(gearSum(gen, 'war') / 3))) − injury(gen)     // INTEGRATION §8.3
 ```
 
 | Uses **effective** attributes | Uses **base** attributes |
 |---|---|
-| battle `atkPower`, special and tactic scaling (`statOf`), tactic success, duel acceptance (`duelAccepts`), formation requirements, AI battle choices; domestic commands (开发 政治, 搜索 / 登用 / 离间 / 劝诱 智力, 训练 武力) | titles (TITLES.md requirements > 80 / > 90), `SG.maxTroops`, `Progress` slots and tiers, item requirements, AI personality, the duel formula (`duelWar` instead) |
+| battle `atkPower`, special and tactic scaling (`statOf`), tactic success, duel acceptance (`duelAccepts`), AI battle choices; domestic commands (开发 政治, 搜索 / 登用 / 离间 / 劝诱 智力, 训练 武力) | titles (TITLES.md requirements > 80 / > 90), **formation requirements** (gear never unlocks a formation, INTEGRATION §3.2), `SG.maxTroops`, `Progress` slots and tiers, item requirements, AI personality, the duel formula (`duelWar` instead) |
 
-The duel uses `duelWar` because gear 武力 at full weight dominates the fight: a throw-away estimate (`est/duel-estimate.js`, 200–300 AI-vs-AI duels per cell, gear modelled as extra 武力) gave +5 → 59–70% wins and +12 → 80–88%. At half weight, +2 / +4 / +6 give 53–60% / 60–62% / 67–72%, and a 65-war general with +6 still wins only 27% against an 80. The general stays the fighter; the weapon is the edge.
+The duel uses `duelWar` because gear 武力 at full weight dominates the fight: a throw-away estimate (`est/duel-estimate.js`, 200–300 AI-vs-AI duels per cell, gear modelled as extra 武力) gave +5 → 59–70% wins and +12 → 80–88%. The consolidation measured the whole gear set (武力, HP, damage, parry, guard and abilities together, `integration/duel-gear-estimate.js`): at half weight with the per-stat caps the legendary set won 99–100 %, so gear 武力 now counts a third (cap +3) and all duel numbers share one budget (§2.5, INTEGRATION §8.3): legendary set 69–73 %, a 65-war general with it 23 % against an 80. The general stays the fighter; the weapon is the edge.
 
 ### 2.5 Stacking and caps
 
@@ -120,23 +122,23 @@ Per general, over all six slots (items.json `statKeys[k].cap`):
 | Key | Cap | Key | Cap | Key | Cap |
 |---|---|---|---|---|---|
 | 武力 / 智力 / 政治 | +15 each | 攻击 atk | +40% | 防御 def | +45% |
-| 会心率 crit | army +4 pp, duel +5 pp | 会心伤害 critDmg | +30% | 抗会心 critRes | 5 pp |
+| 会心率 crit | army +4 pp, duel +3 pp | 会心伤害 critDmg | +30% | 抗会心 critRes | 5 pp |
 | 反击 counter | +40% | 压制 counterGuard | 35% | 先手 first | +40% |
 | 冲锋 charge | +40% | 破甲 armorBreak | 25% | 士气 morale | +25 |
 | 威慑 awe | 15 (side max) | 机动 mob | −1 … +2 | 脱身 escape | max of items, 100 |
-| 计策 tac | +40% | 计策命中 tacHit | +12 pp | 体力 dHp | +15 |
-| 单挑伤害 dDmg | +4% | 出招速度 dSpd | −6 … +4% | 格挡 dGuard | +8 pp (88%) |
-| 格开窗口 dParry | +0.02 s | 破防 dGuardBreak | 12 pp | 判定距离 dReach | +0.10 m |
-| 人望 fame | +20 | 德 virtue | +12 | 外交 / 登用 / 离间 / 劝诱 | +25 / +20 / +20 / +20 pp |
-| 开发 land / ind / town | +60% | 征兵 recruit | +40% | 训练 train | +10 |
+| 计策 tac | +40% | 计策命中 tacHit | +12 pp | 体力 dHp | +10 (duel budget) |
+| 单挑伤害 dDmg | +3% (duel budget) | 出招速度 dSpd | −6 … +4% | 格挡 dGuard | +6 pp (86%; duel budget) |
+| 格开窗口 dParry | +0.01 s | 破防 dGuardBreak | 12 pp | 判定距离 dReach | +0.10 m |
+| 人望 fame | +20 (faction fame bonus ≤ +10 with prestige and events) | 德 virtue | +12 (−10 … +15 with events) | 外交 / 登用 / 离间 / 劝诱 | +25 / +20 / +20 / +20 pp |
+| 开发 land / ind / town | +60% (≤ +80 % with titles and projects) | 征兵 recruit | +40% (all sources) | 训练 train | +10 (≤ +12 all sources) |
 
-Abilities stack across different effect ids. Two items with the same effect id on one general: take the larger value, except `cmd` (different commands stack) and `aura` (auras from different units stack only if their keys differ; same key from several sources on one target: largest only).
+These are the per-general item caps. The caps over all v4 sources (items + titles + bonds + projects + events) are INTEGRATION §3.1's; the duel keys 体力 / 单挑伤害 / 格挡 / 格开 and the HP of duel abilities additionally share the all-in duel budget `dmg % + 0.4 × (HP + ability HP + 0.5 × guard pp) ≤ 6` (INTEGRATION §8.3; the duel trims HP first). Abilities stack across different effect ids. Two items with the same effect id on one general: take the larger value, except `cmd` (different commands stack) and `aura` (auras from different units stack only if their keys differ; same key from several sources on one target: largest only).
 
 ### 2.6 Reassigning gear
 
 - Free inside a faction (character menu, armoury).
 - Taking an item away from a general who is not the ruler costs loyalty: common 0, uncommon −1, rare −3, epic −6, legendary −10. Taking a **signature** item from its original holder (关羽 and 青龙偃月刀) costs −15 and he refuses if his loyalty would drop below 50 (「此刀随我征战多年，恕难从命」).
-- Giving an item is a gift (§6.6) and raises loyalty once per item per general.
+- Giving an item is a gift (§6.6). Its loyalty bonus applies **once per item instance** (INTEGRATION §7.1): the instance records `gifted` and `giftLoy`; giving the same instance again, to anyone, gives no loyalty, and taking a gifted item back from its receiver costs exactly `giftLoy` (instead of the table above).
 - Bound ruler-uniques cannot be moved at all (§8.3).
 
 ---
@@ -153,7 +155,7 @@ items.json `statKeys` is the dictionary (Chinese name, unit, scope, cap, note). 
 | `critDuel` | Σ `crit` + `dCrit` abilities | `min(0.05, Σ / 100)` |
 | `critMulArmy`, `critMulDuel` | Σ `critDmg` (+ `dCrit.critDmg` for duel, + `outnumbered.critDmg` when active) | `min(0.30, Σ / 100)` |
 
-The TITLES spec adds its own `critArmy` / `critDuel` / `dmgDuel`; COMBAT clamps the sums (0.06 / 0.08 / 0.06). This spec takes 0.04 / 0.05 / 0.04 of those budgets; titles keep at least 0.02 / 0.03 / 0.02 (open question Q2).
+The TITLES spec adds its own `critArmy` / `critDuel` / `dmgDuel`. `SG.Mods` clamps the army sum at 0.06 (INTEGRATION §3.1); in the duel, crit and damage are inside the duel budget (INTEGRATION §8.3). This spec takes 0.04 of the army crit; titles keep at least 0.02 (Q2, resolved).
 
 ### 3.2 Army battle (`battle-model.js`)
 
@@ -161,8 +163,8 @@ All hooks are `SG.Gear?.…` so the module runs without items. `Items.enabled = 
 
 ```
 atkPower(u)  = v3 formula with u.gen.war → eff(u.gen,'war')
-             × (1 + min(40, gearSum(u.gen,'atk')) / 100)
-defFactor(u) = v3 formula × (1 + min(45, gearSum(u.gen,'def')) / 100)
+             × SG.Mods.atkMul(u)          // gear atk % (≤ 40) is ONE factor of the capped product (INTEGRATION §3.2)
+defFactor(u) = v3 formula × SG.Mods.defMul(u)   // gear def % (≤ 45) likewise; the product of gear × title × bond × aura ≤ ×1.60
 
 attack(a, t):                                    // v3 + COMBAT crit, then:
   k  = 1
@@ -186,7 +188,7 @@ attack(a, t):                                    // v3 + COMBAT crit, then:
 |---|---|
 | `crit`, `critDmg`, `critRes` | COMBAT-V4 §2: `p(a) += SG.Gear.stat(a.gen,'critArmy')`; `critK += critMulArmy`; new term `p(a) −= critRes(t)/100` (ask COMBAT to add it; clamp ≥ 0) |
 | `mob`, `ease`, `hard` | `BUnit.mobility += clamp(Σ mob, −1, 2)`; `distances()` uses cost 1 for terrains in the unit's `ease` set and cost +1 for `hard` |
-| `morale` | `BattleModel` constructor: start morale `70 + min(25, Σ morale)` (cap 100) |
+| `morale` | `BattleModel` constructor: `SG.Mods.startMorale(u, 70)` = `70 + min(25, gear + title morale)` (cap 100) |
 | `awe` | at battle start, every enemy unit loses `max(awe of my side)` morale (side max, not sum) |
 | `escape` | capture rolls (`Conquest.apply`, battle-controller captive step): `p × (1 − max(escape)/100)` |
 | `tac`, `tacHit` | tactic / intel-special damage `× (1 + tac/100)`; success chance `+ tacHit/100` (cap 0.95) |
@@ -204,27 +206,28 @@ Fighter(idx, gen, look):
   war      = duelWar(gen)                                  // §2.4
   weapon   = equipped weapon's items.json duel record { key, style, reach, pow }  (else v3 lookOf)
   reach    = WEAPONS[key].reach × (1 + min(0.05, reachK))  // dReach m → reachK = dReach / base reach
-  pow      = WEAPONS[key].pow   × (1 + min(0.04, dDmg/100))
-  hp       = 100 + min(15, Σ dHp)
+  budget   = trim(dmg = min(3, Σ dDmg), hp = min(10, Σ dHp) + min(4, ability HP) + 0.5 × min(6, Σ dGuard))   // dmg + 0.4 × hp ≤ 6, HP first
+  pow      = WEAPONS[key].pow   × (1 + budget.dmg / 100)
+  hp       = 100 + budget.hp
   spd      = actSpeed(war) × STYLE_SPD[style] × (1 + clamp(Σ dSpd, −6, 4)/100)
   walk     = walkSpeed(war) × (1 + min(10, Σ dMove)/100)
-  guardRed = min(0.88, 0.80 + Σ dGuard/100)                 // 天降神盾 0.90
-  parryWin = parryWindow(war) + min(0.02, Σ dParry)
+  guardRed = min(0.86, 0.80 + min(6, Σ dGuard)/100)        // 天降神盾 0.88
+  parryWin = parryWindow(war) + min(0.01, Σ dParry)
   vs guard: the defender's guardRed − min(0.12, attacker Σ dGuardBreak/100), floor 0.5
 ```
 
 The duel weapon record comes from the equipped weapon (`items.json items[].duel`), so a general who picks up 方天画戟 fights with a ji. New duel keys (add to `WEAPONS` in duel-game.js): `fan*` (one, reach 1.55, pow 0.85), `staff*` (pole, 1.95, 0.88), `club*` (one, 1.78, 1.08), `vajra*` (one, 1.60, 1.05). Combo strings stay per general (COMBAT-V4 §10); the weapon only changes reach, timing style and finisher VFX (COMBAT Q4: the new owner of a slain ruler's weapon keeps his own string).
 
-Duel ability hooks are listed in §7.4. Their budgets: a rare duel ability is worth ≤ 4 HP per duel on average, epic ≤ 8, legendary ≤ 12 (measured in §17.3).
+Duel ability hooks are listed in §7.4; the duel reads only COMBAT-V4's `DUEL_ITEM_EFFECTS` whitelist (COMBAT-V4 §3, INTEGRATION §8.2). Budget: all of a fighter's duel abilities together are worth ≤ 4 HP per duel and count inside the all-in budget (measured in §17.3).
 
 ### 3.4 Domestic commands (`model.js` `Commands`)
 
-Gear of the **general who executes** the command counts (the general picked in the command dialog); city-wide effects (`income`, `harvest`, `pop`, `loyalAura`, `defendCity`) use the city's 太守 (governor), or the ruler when he sits in the city.
+Every formula below is computed by **`SG.Econ`** (INTEGRATION §4), which reads this module's numbers as providers; the column v4 lists the item terms only. Gear of the **general who executes** the command counts (the general picked in the command dialog); city-wide effects (`income`, `harvest`, `pop`, `loyalAura`, `defendCity`) use the city's **administrator** (INTEGRATION §4.6: the governor; when the governor is the ruler, the best 文官 office-holder in the city; else the ruler). `Commands.lastResult.mods.gear` records the item share for DOMESTIC-FX's chips.
 
 | Command | v3 | v4 |
 |---|---|---|
-| 开发 develop | `gain = DevelopBase + pol/6 + R(0,4)` | `round(gain(eff pol) × (1 + min(60, kindPct)/100))`, kindPct = `land` / `ind` / `town` stat + `cmd develop kind` abilities |
-| 征兵 recruit | `TroopsPerGold` 5 | `5 × (1 + min(40, recruit)/100)` troops per gold (also in `recruitMax`) |
+| 开发 develop | `gain = DevelopBase + pol/6 + R(0,4)` | `Econ.develop`: `round(g0(eff pol) × (1 + min(0.80, gear kind % + title + project)))`, gear kind % = `land` / `ind` / `town` stat + `cmd develop kind` abilities (≤ 60) |
+| 征兵 recruit | `TroopsPerGold` 5 | `Econ.troopsPerGold`: `5 × (1 + min(0.40, max(recruiter's, administrator's gear) + title + project))` (also in `recruitMax`) |
 | 训练 train | `TrainBase + war/10 + R(0,4)` | uses eff war, `+ min(10, train)` |
 | 搜索 search | `p = 0.22 + intel/260 + virtue/420` | eff intel, `+ search/100`; then the hidden-item roll (§8.5) |
 | 登用 hire | `hireChance(target, recruiter, f)` | eff intel, `+ hire/100` of the recruiter, `+ hire` abilities; cap 0.95 |
@@ -234,12 +237,12 @@ Gear of the **general who executes** the command counts (the general picked in t
 | 离间 / 劝诱 | `discord`, `persuadeChance` | eff intel and `+ discord / persuade` pp |
 | 移动 / 输送 / 任命 / 出征 | — | no stat hooks (gear moves with the general; 出征 shows the army's gear summary) |
 
-`Progress.gain(gen, amount)`: `amount × (1 + min(40, exp)/100)`, plus `expBoost` abilities.
+`SG.Mods.exp(gen, amount)`: `round(amount × (1 + min(0.40, exp stat + expBoost abilities)))`, applied **before** ENGAGEMENT's routine cap (INTEGRATION §3.4).
 
 ### 3.5 Faction-level effects
 
-- **人望 fame / 德 virtue**: `effFame(f) = fame + min(20, Σ fame of the ruler's gear)`; same for virtue (+12). Every v3 use of `faction.fame` / `virtue` (action points `2 + fame/20`, 搜索, 登用, 外交, 出奔) reads the effective value through `SG.Items.fame(f)` / `virtue(f)`. The stored fields never change.
-- **Monthly** (`StrategyAI.endMonth`, after income): `income` and `harvest` multiply the governed city's gold / harvest; `loyalAura` raises loyalty of generals in the holder's city (or faction-wide) up to its cap; `expMonthly`; `talent` (chance to reveal one hidden general in the faction's cities); `omen` (的卢 rumours); restock (§6.4); AI shopping (§13).
+- **人望 fame / 德 virtue**: the ruler's gear fame (≤ 20) is one of the three terms of the faction fame bonus, which is capped at **+10 together with prestige and event fame** (`SG.Mods.fame(f)`, INTEGRATION §3.4); gear virtue joins event virtue inside −10 … +15. Every v3 use of `faction.fame` / `virtue` (action points `2 + fame/20`, 搜索, 登用, 外交, 出奔) reads `SG.Mods.fame(f)` / `virtue(f)`. The stored fields never change.
+- **Monthly** (`StrategyAI.endMonth`, INTEGRATION §6.3): `income` and `harvest` are terms of `Econ.cityGold` / `Econ.harvest` (inside the +35 % caps); `loyalAura` counts through `SG.Mods.loyAura` (the larger of the title and item aura, ≤ 95); `expMonthly`; `talent` (chance to reveal one hidden general in the faction's cities); `omen` (的卢 rumours); restock (§6.4); AI shopping (§13).
 - **AI attitudes**: `aggro` multiplies other AIs' target score against the holder's faction (传国玉玺 ×1.25, 金错刀 ×1.15); `deterrence` (埃塞俄比亚王之弓) multiplies it by 0.85 for AIs without a 武力 ≥ 90 general.
 
 ### 3.6 Worked examples
@@ -294,7 +297,7 @@ The full-set exchange ratios in §0 come from the spear + 札甲 + 盔 + 盾 + �
 ```
 shopPrice(item, city, buyer) = round10( item.price × cityK(city) × originK × relK × (1 − disc) )
   cityK   = clamp(1.2 − (industry + town)/2500, 0.85, 1.15)   // big markets are cheaper
-  originK = 1.0 native item · 1.2 foreign (neighbour / classic trade city) · 1.5 caravan (§6.5)
+  originK = 1.0 native item · 1.2 foreign (neighbour / classic trade city) · 1.5 胡商 merchant (§6.5)
   relK    = 1.0 own city · 1.15 allied city (§6.1)
   disc    = min(0.125, trade stat of the best general in the city / 200)
 sellPrice(item, city) = round10( (item.price ?? item.value) × sellK × cityK(city) )   // sellK 0.4 / 0.5
@@ -321,7 +324,7 @@ City gold income is `产业 × 0.12 + 町 × 0.05` per month, minus 2 per genera
 | rare weapon 1400 | 25 | 21 (5 months for a 5-city realm) |
 | 大宛天马 8000 | — | ~3 years for a 5-city realm |
 
-Targets: gear is a steady secondary sink next to 开发 (50) and 征兵 (≤ 500); AI factions spend 8–15% of their income on it (§13.3); the first rare is a mid-game goal for small players and an early buy for 洛阳 / 长安 / 罗马.
+Targets: gear is a steady secondary sink next to 开发 (50) and 征兵 (≤ 500); AI factions spend 8–15% of their gross income on it (§13.3; measured all-on 11.2–11.4 % classic, 8.5 % world with the 22 % purse, INTEGRATION §5.2); the first rare is a mid-game goal for small players and an early buy for 洛阳 / 长安 / 罗马.
 
 ---
 
@@ -364,6 +367,7 @@ Targets: gear is a steady secondary sink next to 开发 (50) and 征兵 (≤ 500
 
 - Every item has `visual.model = { fig, torso, colors[3], ink, motif, parts[], glow, scaleVar }` and a Chinese `visual.look` sentence for artists. 567 hand-made meshes are not feasible, so models are **procedural variants**: the base builder (`fig`) + palette (`colors`, `ink` outline colour) + up to six attached **parts** + a ±6% size variation (`scaleVar`). Low-poly, flat-shaded, ink-outlined (the art pilot's outline pass), lit by the warm painted light; metal is a flat colour with one warm highlight band, never PBR chrome.
 - **Parts vocabulary** (each ≤ 200 triangles at high LOD, generated in `item-art.js` and attached to the weapon / armour sockets): `dragonHead tigerHead lionHead phoenixCrest serpentCoil eagle sunDisk crescent stupa bells tassel ribbons gem chain rings inscription goldInlay flameFx lightningFx steamFx cloudPattern waterFx feathers furWrap boneParts rattanWeave ringPommel spiralEtch`. The parts list in items.json was derived from the motif and look text; artists may refine it per item.
+- **Signature part of every rare** (INTEGRATION §7.4): `visual.model.signature = { part, at, count, color, tris ≤ 200 }`, chosen by the build from the item's look text (`SIG_PARTS` in `build.js`: 52 signature parts such as `starInlay`, `waveBack`, `branchTines`, `sealKnob`, `guardWings`, `faceMask`, socketed by slot: blade, spine, guard, grip, tip, pommel, shaft, boss, rim, face, crest, band, case, hang, belt, neck, shoulder, tail, front). With the 27 base parts above the **parts library has 79 parts** (all ≤ 200 triangles, one shared atlas). 172 / 172 rares carry one (36 different parts in use). Silhouette test (`tests/items.html`): each rare's silhouette at 96 px differs from its type's base model by ≥ 10 % of pixels.
 - **Bespoke builders** for the 24 epic + legendary items and for the 15 most famous rares (双股剑, 古锭刀, 倚天剑, 七星宝刀, 涯角枪, 虎头湛金枪, 凤嘴刀, 双铁戟, 七支刀, 斩白蛇剑, 湛卢剑, 赤兔's horse look, 照夜玉狮子, 的卢, 绝影): a dedicated function per id in `item-art.js` with its own silhouette (e.g. 七支刀's six branches, 天降神盾's figure-8, 金刚杵's five-pronged ends, 卡维旗's jewelled square banner). Budget: weapon high LOD ≤ 1 200 triangles including parts, mid ≤ 400; everything shares the figure atlas (no new textures; colours via vertex colour, glow via the rim / emissive term).
 - **Armour, helmets, mounts**: items map to figure looks — `torso` from the type, helm id from the item's type and motif (e.g. 鹖冠 → `han` + two feather parts, 角盔 → `celtic` + horns, 骑兵面甲盔 → `galea` + face plate), mount coat / armour from the item (赤兔 red, 照夜玉狮子 white, 绝影 black, 具装 → `armor: 'scale'`). The figure shows the equipped gear everywhere: duel, clash commanders, battle board commander figures, character menu, tournament stadium.
 - **Treasures** are shown as small props: books / seals at the sash, banners on the back (背旗), drums carried by a guard figure in the clash, instruments in the character menu only.
@@ -382,6 +386,8 @@ Ability fx keys (battle `V.specialFx` styles, duel fx, world fx). Existing style
 `redhare` (red comet streak, burning hoof prints), `jadeseal` (jade dragon, seal stamped on clouds, light pillars), `vajra` (white-elephant silhouette, branching bolt, lotus shockwave, rain), `quake` (radial cracks, laurel swirl, lion roar), `serpent` (wavy blue-ink spear trail), `grassblade` (grass flattening in a fan, fire turning back), `sunarrow` (second sun shattered), `wind` / `rain` / `cloud` (天符印), `oath` (blood-wine arc, gold oath runes), `boatarrow` (peacock-feather arrow, wave ring), `stupa` (golden stupa with bells), `oxmace` (ox roar, gold chains, mountain silhouette), `kaviani` (jewelled banner unfurling), `jinn` (golden sandstorm, smoke giant), `lughspear` (steaming spear flies and returns), `thunderhammer` (bolt onto hammer, thrown arc), `aressword` (sword planted, red pillar, sacrificial fires), `giantbow` (spear-sized arrow, fan of dust), `salii` (twelve shields dancing), `hail`, `yellowturban` (yellow talismans, 「黄天当立」), `taia` (purple sword-qi waterfall), `turtlebow` (gold turtle claw, splitting arrow), `harp` (notes and season petals).
 
 Passive effects show small cues: burning procs, stun stars, guard shields, aura rings at day start, a 「宝」 badge on units with an unused 宝具.
+
+**Every rare ability** has `ability.procFx = { preset, color, dur ≤ 0.6 s, drawCalls: 1, pooled: true }` (16 presets by effect id, `FX_BY_EFFECT` in `build.js`: `brushRing`, `sealStamp`, `paperShield`, `dustStreak`, `lanternGlow`, `inkBurst`, `cordKnot`, `goldFlare`, `scrollUnfurl` …) and `ability.sfx = { id, family, pitch }` (`SFX_BY_CAT`: `item.<id>` in 12 families `ring-blade`, `whoosh-pole`, `bell`, `twang`, `hoof-neigh`, `clank-plate`, `page-flip`, `stamp`, `clink-helm`, `pluck`, `chime`, `thud-wood`, registered with the `item-*` prefix, INTEGRATION §10.6). Every rare+ has a 「演示」 in the character menu (§14.1).
 
 ### 5.5 Presentation of rarity in the UI
 
@@ -439,15 +445,15 @@ restock(city):
 
 Expected: a rare listed in a city shows up every 6–10 months and stays up to a year; a tier-2 market shows 1–2 uncommons most months.
 
-### 6.5 Caravans (胡商 / 海商) — a non-battle event
+### 6.5 The 胡商 / 海商 merchant — a non-battle event
 
-- Each month, each player-owned tier ≥ 2 city that is a Silk Road or sea hub (`HUBS` or `classicTrade`) has an 8% chance to receive a caravan for 2 months. It offers 3 items from the pools of up to 3 cultures within 25° (any owner), one of them rare with 20% chance (a shop rare of another city, or in the classic scenario a world-only common / uncommon), at ×1.5.
-- News line with the merchant's portrait (a generic 胡商 / 海商 portrait by culture) and a short animation of camels or a ship arriving at the city model. AI factions use caravans too (same budget rules).
+- **One trigger** (INTEGRATION §7.5): ENGAGEMENT's event card 「行商过境」 (ENGAGEMENT §6.3, §9.3; 海商 variant in sea hubs; its own seeded stream) in a tier ≥ 2 Silk Road or sea hub (`HUBS` or `classicTrade`). ITEMS no longer rolls its own event; it supplies the stock: 3 items from the pools of up to 3 cultures within 25° (any owner), one of them rare with 20% chance (a shop rare not owned by any faction, or in the classic scenario a world-only common / uncommon), at ×1.5, for 2 months, stored as `city.shop.merchant = { until, stock }` (renamed from `caravan`, which is ENGAGEMENT's trade caravan).
+- The card shows the merchant's portrait (a generic 胡商 / 海商 portrait by culture, voice `SG.Voice.profile('merchant')`) and a short animation of camels or a ship arriving at the city model. AI factions get the stock only when their card's ★ option is 「看看货物」, and buy through `SG.AIBudget` (kind `gear`).
 
 ### 6.6 Selling, gifts and the armoury
 
 - 府库 screen (from the 市场 or the Generals menu): all faction items, filter by slot / rarity, sell (in the current city's market), give (§2.6), equip.
-- **Gift through 赏赐**: 赏赐 gains an option 「赐宝物」. Loyalty gain = `8 + R(0,4) + clamp(round(value × giftK / 60), 0, 30)`, × 1.5 if the item fits the general (weapon to a 武 general, book / fan to a 智 general, seal / tool to a 政 general), once per (item instance, general). 赤兔 given to 关羽 gives +30 and a scripted line (演义第二十五回).
+- **Gift through 赏赐**: 赏赐 gains an option 「赐宝物」. Loyalty gain = `8 + R(0,4) + clamp(round(value × giftK / 60), 0, 30)`, × 1.5 if the item fits the general (weapon to a 武 general, book / fan to a 智 general, seal / tool to a 政 general), **once per item instance** (§2.6, INTEGRATION §7.1: the gain is stored as `giftLoy`; a take-back costs it). 赤兔 given to 关羽 gives +30 and a scripted line (演义第二十五回).
 - **Gift through 外交**: the gift field accepts an item; its contribution is `value × giftK` gold-equivalent (`allyChance` uses `gift / 1200`).
 
 ### 6.7 UI flow
@@ -520,19 +526,19 @@ Expected: a rare listed in a city shows up every 6–10 months and stays up to a
 
 | id | params | meaning |
 |---|---|---|
-| `dProc` | `on` first/dash/thrust/heavy/counter/comboEnd, `p`, `eff` knockdown/knockback/stun/burn, `dmgK`, `dps`, `dur`, `unblockable`, `k` | on-hit effects |
-| `dProjectile` | `on` heavyFull/special/start, `dmg`, `reach`, `count`, `guardable`, `unparryable`, `shape` | projectile spawned by the move (crescent, lightning, sun arrow, wind blade, knives) |
+| `dProc` | `on` first/dash/thrust/heavy/heavyFull/counter/comboEnd, `p`, `eff` knockdown/knockback/stun/burn, `dmgK`, `dps`, `dur`, `k` | on-hit effects (no `unblockable`) |
+| `dProjectile` | `on` heavyFull/special/start, `dmg` (≤ 4 HP each), `reach`, `count`, `guardable`, `shape` | projectile spawned by the move (crescent, lightning, sun arrow, wind blade, knives); always parryable |
 | `dCombo` | `hit` (n or list), `bonusDmg`, `eff` lightning/hookPull, `pairFinisher`, `lightBonus` | COMBAT-V4 string hooks (`onStringHit(n)`, finisher) |
 | `dCrit` | `crit`, `critDmg` | adds to `critDuel` / `critMulDuel` |
-| `dGuard` / `dGuardBreak` / `dGuardBreakFull` / `dPerfectGuard` | `k, cap` / `k` / `minCharge` / `window` | guard numbers; perfect guard = guard pressed ≤ window before a hit counts as a parry |
-| `dParry` | `window`, `counterK`, `cdMinus` | parry numbers (window within the 0.02 cap) |
+| `dGuard` / `dGuardBreak` / `dGuardBreakFull` | `k` / `k` / `minCharge` (≥ 0.75) | guard numbers (`dPerfectGuard` is gone: a guard-timed parry is `dParry.guardWindow`) |
+| `dParry` | `window`, `guardWindow`, `counterK`, `cdMinus` | parry numbers (window within the 0.01 cap; `guardWindow` ≤ 0.02 s: a guard pressed that early before a hit parries) |
 | `dRegen` | `hpPerSec`, `cond` guarding/grounded/always | |
 | `dRage` | `start`, `gainK` | |
 | `dEndure` | `hp`, `rage` | first lethal hit leaves `hp` (once per duel) |
 | `dLowHp` | `below`, `dmgK` | |
-| `dArmor` | `on` heavy/heavyStart/light | super armour (no hitstun) |
+| `dArmor` | `on` heavyStart/lightTaken, `dmgK` (0.5–0.7) | super armour (no hitstun) but the hit still deals `dmgK` of its damage |
 | `dWeak` | `fire`, `onAirborne` | weaknesses |
-| `dSpecial` | `dashDist`, `dashUnblockable` | dash and special tweaks |
+| `dSpecial` | `dashDist` | dash and special tweaks (no unblockable dash) |
 | `dReach` | `m`, `on` | reach for one move class (within the cap) |
 | `dLifesteal` / `dFear` / `dSpd` / `dDmgK` / `dHpAdd` / `dSuperKnock` | `k` / `foeRageK, foeSpdK` / `k` / `k` / `n` / `on, k` | |
 
@@ -547,13 +553,16 @@ Expected: a rare listed in a city shows up every 6–10 months and stays up to a
 | `expMonthly` | `n`, `sameCity` | monthly exp |
 | `talent` | `p` | monthly chance to reveal a hidden general in own cities |
 | `fame` / `virtue` | `n` | ruler only (§3.5) |
-| `dipPlus` | `k`, `months`, `noBreak`, `with` (culture), `persuade` | diplomacy |
+| `dipPlus` | `k`, `months`, `relFloor`, `with` (culture), `persuade` | diplomacy (`noBreak` is forbidden by the build: 径路刀 is now alliance +12 months and relation floor +40, INTEGRATION §7.6) |
 | `giftK` | `k` | value multiplier when given |
 | `treasureHunt` / `scout` | `k` | hidden-item chance × k / see enemy cities' generals and gear within k links |
 | `shopDiscount` | `cat`, `k` | holder's city shop |
 | `defendCity` | `k` | city defence in battle and auto-resolve |
 | `aggro` / `deterrence` | `k` / `minWar, aggroK` | AI target scores (§3.5) |
 | `omen` | `p`, `loyalty` | 的卢 |
+| `duelLure` | `accept` (1 = always) | the holder's duel challenges are always accepted (小霸王兜鍪, 神亭: `duelAccepts` returns true; the duel itself is unchanged, so it is outside `DUEL_ITEM_EFFECTS`) |
+
+Duel keys outside COMBAT-V4's `DUEL_ITEM_EFFECTS` whitelist are rejected by `build.js check` (INTEGRATION §8.2).
 
 ### 7.3 宝具 implementation
 
@@ -574,13 +583,13 @@ Expected: a rare listed in a city shows up every 6–10 months and stays up to a
 | Route | Items | Rule |
 |---|---|---|
 | Shop | commons, uncommons, 50 rares, 1 epic | §6 |
-| Caravan | shop items of other regions | §6.5 |
+| 胡商 merchant (ENGAGEMENT card) | shop items of other regions | §6.5 |
 | Ruler-unique (slay the ruler) | 70 (60 rare, 9 epic, 1 legendary) | §8.2–8.3 |
 | Signature (held at start) | 39 | §8.4 |
 | Hidden (搜索) | 17 (1 legendary, 5 epic, 11 rare) | §8.5 |
 | City treasure | 4 (天降神盾 罗马; 斩白蛇剑, 孔子屐 洛阳; 埃拉伽巴路斯圣石 埃梅萨) | §8.6 |
 | Starting armoury | 2 (青釭剑 曹操; 濊王之印 夫余) | §8.7 |
-| Tournament | 12 rares, 金刚杵 (3 titles), classic 赫拉克勒斯之棍 (5 titles) and 异域奇珍 | §8.9 |
+| Tournament | 12 tournament-only rares, the shop rares no faction owns, 金刚杵 (3 titles), classic 异域奇珍 | §8.9 |
 | Spoils | anything a slain or confiscated general carried | §8.8 |
 | Gifts | AI factions may send items as alliance gifts (rare 5% of their gifts) | §13 |
 
@@ -604,6 +613,7 @@ Not slain: routed and escaped, captured and released, a faction destroyed with i
 - Each faction's ruler at scenario start holds his faction's unique weapon (main hand or off-hand bow / crossbow), **bound**: it cannot be sold, gifted, confiscated, reassigned or dropped, even if he loses his realm and wanders as 在野, and even if another faction later hires him (rulers never surrender to 登用 in v3; a wandering ex-ruler may be hired by a third party and keeps it bound).
 - It moves only by slaying its holder (§8.2). After that it is a normal (unbound) singleton: the slayer's faction can give it to anyone, and it can be taken again by capture, confiscation or slaying.
 - Successors do not get a new unique; a faction has one unique ever.
+- A ruler-unique is **never** in a prize, grant or merchant pool, in either scenario (filter `availability.kind === 'ruler'`, not the data's `unique` flag, which marks singletons; INTEGRATION §7.2).
 - Classic: 18 (all rare). World: 70 — 60 rare, 9 epic (草薙剑 卑弥弓呼, 径路刀 於夫罗, 混填神弓 混盘况, 毗沙门天王戟 安国, 牛首重锤 沃洛吉斯, 卢赫之矛 阿尔特, 多纳尔之锤 巴洛马尔, 战神之剑 赞提库斯, 埃塞俄比亚王之弓 耶斯博赫) and 1 legendary (赫拉克勒斯之棍 康茂德). Full list §10.
 
 ### 8.4 Signature gear
@@ -649,10 +659,11 @@ AI captors: hire as v3; if they release, they confiscate rare+ unbound items 50%
 
 The tournament spec owns the event; the item side is:
 
-- 1st prize: 75% an item, 25% a skill (TOURNAMENT spec). The item is drawn from the `champion` pool (12 tournament-only rares, each awarded once) plus every shop rare that currently has no instance in the world; when all are gone, an uncommon of the champion's culture + 300 gold.
-- 2nd: a random uncommon (60% the placer's culture, 40% any); 3rd: a random common of the placer's culture.
-- Gold (proposal, TOURNAMENT owns it): 1st 400, 2nd 200, 3rd 100 to the placer's city.
-- **Titles**: the first general to win three tournaments receives 金刚杵 (legendary) — the stadium's grand relic. In the classic scenario the first general to win five receives 赫拉克勒斯之棍 (「大秦使节所献」). In the classic scenario, from the 4th tournament (193) on, the 1st-prize item is replaced with 15% chance by one item of the `foreign` pool (world-only rares and epics of absent cultures, 67 items; at most one epic per tournament): the 异域奇珍 of the Silk Road.
+- The same rare pool feeds the 文会 1st prize, tier-3 missions (15 %) and expedition rares (ENGAGEMENT §7.3, §12.3, §13.1).
+- 1st prize: 75% an item, 25% a skill (TOURNAMENT §7.1–§7.3). The item is drawn from the `champion` pool (12 tournament-only rares, each awarded once) plus **every shop rare of the scenario not owned by any faction** (INTEGRATION §7.2: a prize copy is its own instance; ruler-unique, signature, hidden and city-treasure items are never in the pool); when all are gone, an uncommon of the champion's culture + 300 gold.
+- 2nd: three distinct uncommon **offers** (each 60 % the placer's culture, 40 % any), the placer chooses one — or, with 15 %, a tier-2 秘传 skill instead; 3rd: three commons of the placer's culture, he chooses one (TOURNAMENT §7.1–§7.2; `SG.Items.offers(gen, rarity, 3, rng)`).
+- Gold, prestige, exp and loyalty: TOURNAMENT §7.1 (1st 400, 2nd 200, 3rd 100 gold to the placer's city).
+- **Titles** are counted in `G.tourney.wins[name]` (INTEGRATION §6.4; ITEMS keeps no count of its own). The first general to win three tournaments receives 金刚杵 (legendary) — the stadium's grand relic — in both scenarios. 赫拉克勒斯之棍 is **world-only** (slay 康茂德); the classic scenario has no five-title relic. In the classic scenario, from the 第三届 (193) on, the 1st-prize item is replaced with 15% chance by one item of the `foreign` pool (world-only rares and epics of absent cultures, ruler-uniques excluded: 19 items; at most one epic per tournament): the 异域奇珍 of the Silk Road.
 
 <!-- INSERT:TOURNEY -->
 
@@ -679,7 +690,7 @@ A kit piece that would come from outside the culture's trade sphere is skipped (
 
 Chosen so that (a) every one of the 18 culture codes has at least one, (b) history and myth are both present and labelled, (c) they are spread over all six slots and over every acquisition route, and (d) a player in any region has one within reach and the four legendaries need four different kinds of effort.
 
-- **Legendary**: 赤兔 (history: 「人中有吕布，马中有赤兔」; take it from 吕布), 传国玉玺 (history: found by 孙坚 in a Luoyang well in 191; search 洛阳), 金刚杵 (myth: Indra's thunderbolt; win three 武林大会), 赫拉克勒斯之棍 (history and myth: Commodus as 「罗马的赫拉克勒斯」; slay 康茂德 in the world scenario, five titles in the classic one).
+- **Legendary**: 赤兔 (history: 「人中有吕布，马中有赤兔」; take it from 吕布), 传国玉玺 (history: found by 孙坚 in a Luoyang well in 191; search 洛阳), 金刚杵 (myth: Indra's thunderbolt; win three 武林大会), 赫拉克勒斯之棍 (history and myth: Commodus as 「罗马的赫拉克勒斯」; slay 康茂德 — world scenario only; the classic scenario has three legendaries).
 - **Epic, by culture**: 汉 青龙偃月刀 · 方天画戟 · 丈八蛇矛; 南中 乌戈藤甲; 倭 草薙剑; 夷洲 射日神弓; 东夷 天符印; 草原 径路刀; 南海 混填神弓; 西域 毗沙门天王戟; 贵霜·大宛 大宛天马; 安息·波斯 牛首重锤 · 卡维旗; 阿拉伯 所罗门之戒; 罗马 天降神盾 (+ the club); 凯尔特 卢赫之矛; 日耳曼 多纳尔之锤; 萨尔马提亚 战神之剑; 天竺 (金刚杵); 阿克苏姆·库施 埃塞俄比亚王之弓; 毛里 安泰俄斯之带.
 - **By slot**: weapons 12, off-hand bows 3, shield 1, armour 2, mounts 2, treasures 4.
 - **By route**: ruler-unique 10, signature 5, hidden 6, city treasure 1, shop 1, tournament 1.
@@ -692,13 +703,13 @@ Design notes per item (full mechanics and fx text in items.json):
 - **赤兔**: speed made rules — terrain-blind movement, no-counter charges, a 4-tile 宝具 charge, never captured. Requires 武力 85 to ride well, so it is a prize for the strongest, as in the novel when it goes to 关羽.
 - **传国玉玺**: the realm item — fame, virtue, diplomacy, a free 外交 every month, loyalty for everyone, a war-wide 宝具, and the AI envy that historically doomed 袁术.
 - **金刚杵**: the tournament's crown — the only legendary that any general of any faction can earn by skill in duels.
-- **赫拉克勒斯之棍**: stacking power from routs (the twelve labours), a piercing smite, super-armour heavies that always knock down.
+- **赫拉克勒斯之棍**: stacking power from routs (the twelve labours), a piercing smite, super-armour at the start of heavies (half the damage still lands) and a knockdown on full heavies.
 - **青龙偃月刀 / 方天画戟 / 丈八蛇矛**: three different fighting identities — fear on commander kills and a crescent wave; splash and hook-pull strings; a bridge-holding zone of control and the strongest parry counter.
 - **乌戈藤甲**: the classic trade-off — −30% attack damage taken, ×2.5 fire; Zhuge Liang's answer is in the rules.
 - **草薙剑**: fire immunity and turning fire back on the enemy (the grass-cutting legend).
 - **射日神弓 / 混填神弓 / 埃塞俄比亚王之弓**: three bows with three stories — a sniper shot at a second sun, an arrow through a ship that makes the enemy surrender, a bow so strong that weak rulers dare not attack its owner.
 - **天符印**: three seals, three once-per-battle choices (wind, rain, cloud) plus harvest and population.
-- **径路刀**: the blood oath — unbreakable, longer alliances and a rally.
+- **径路刀**: the blood oath — alliances 12 months longer, the relation never below +40 with the sworn partner, and a rally (no unbreakable alliances, INTEGRATION §7.6).
 - **毗沙门天王戟**: defence — the rats that gnawed the Xiongnu bowstrings disable enemy bows when Khotan defends.
 - **大宛天马**: the one epic you can buy, at a price that takes a realm years.
 - **牛首重锤 / 卡维旗**: the Iranian pair — the mace that binds a tyrant to a mountain, the blacksmith's banner that makes routs rally the army and brings recruits.
@@ -707,7 +718,7 @@ Design notes per item (full mechanics and fx text in items.json):
 - **多纳尔之锤**: thunder and a thrown hammer that returns.
 - **战神之剑**: plant the sword, become an immovable war-god pillar for the army.
 - **安泰俄斯之带**: regeneration while touching the earth, lost when lifted (Heracles' trick works in the duel).
-- **天降神盾**: Rome's palladium-shield — tactic resistance, crit resistance, a dancing-shield 宝具 and the perfect guard.
+- **天降神盾**: Rome's palladium-shield — tactic resistance, crit resistance, a dancing-shield 宝具 and a wider guard-timed parry.
 
 ---
 
@@ -782,13 +793,13 @@ On any change of the faction's items (purchase, spoils, start, hire) and once a 
 ### 13.3 Buying
 
 ```
-budget(f)  = max(0, Σ city gold − (300 + 150 × cities(f))) × 0.15          per month
-purchases  ≤ 2 per month (a rare counts 2); payment from the shop city's gold, which must stay ≥ 200
-candidate  = stock entries in own cities (and caravans);  Δ = max over own generals of score(new) − score(current)
-buy the best Δ / price if Δ > 2 and price ≤ budget; equip at once
+budget     = the faction's discretionary purse (SG.AIBudget, INTEGRATION §5): kind 'gear', after title gifts, before projects
+purchases  ≤ 2 per month (a rare counts 2); AIBudget.canSpend(shop city, price, 'gear'): the city keeps its reserve R(c) = 150 + 8 × officers
+candidate  = stock entries in own cities (and the 胡商 merchant's);  Δ = max over own generals of score(new) − score(current)
+buy the best Δ / price if Δ > 2 and canSpend; equip at once
 ```
 
-Rares only if the faction has ≥ 3 cities or ≥ 1500 gold in that city; the epic only for factions with ≥ 8 cities. Targets (§17.4): AI spends 8–15% of income on gear; by 193 a median AI general with war ≥ 60 has ≥ 2 items.
+Rares only if the faction has ≥ 3 cities or ≥ 1500 gold in that city; the epic only for factions with ≥ 8 cities. Targets (§17.4): AI spends 8–15% of gross income on gear (measured 11.2–11.4 % classic, 8.5 % world); by 193 a median AI general with war ≥ 60 has ≥ 2 items. The purchase runs in the discretionary phase of `endMonth` (INTEGRATION §6.3).
 
 ### 13.4 Selling and armoury
 
@@ -812,13 +823,13 @@ AI shopping and equipping for 70 factions ≤ 3 ms per month (scores cached per 
 
 ### 14.1 Character menu (request 9) — equipment tab 「装备」
 
-- Opened from the Generals button / list and from any portrait. Layout: the general's 3D figure in the centre (Lanternvale lighting, slow turntable, wearing his gear), the six slot tiles around it (weapon and off-hand left, armour / helmet right, mount and treasure below), a stats column (effective vs base attributes, army and duel numbers: attack, defence, crit, mobility, HP, reach), the abilities of equipped items with 「演示」 buttons (plays the fx on a mini board / dummy).
+- Opened from the Generals button / list and from any portrait. Layout: the general's 3D figure in the centre (Lanternvale lighting, slow turntable, wearing his gear), the six slot tiles around it (weapon and off-hand left, armour / helmet right, mount and treasure below), a stats column (effective vs base attributes, army and duel numbers: attack, defence, crit, mobility, HP, reach), the abilities of equipped items with 「演示」 buttons (plays the fx on a mini board / dummy; every rare, epic and legendary has one).
 - Tap a slot → candidates from the armoury (and from the current city's shop with prices) with compare deltas; requirement failures greyed with the reason.
 - API for the character-menu task: `SG.Gear.slots(gen) → { weapon: inst|null, … }`, `SG.Gear.candidates(gen, slot) → [{ inst, delta, ok, why }]`, `SG.Gear.equip(gen, inst) → { ok, why, loyaltyDelta }`, `SG.Gear.unequip(gen, slot)`, `SG.Gear.summary(gen) → { eff, army, duel, abilities }`, `SG.ItemArt.icon(id, size)`, `SG.ItemArt.preview(gen, opts)`.
 
 ### 14.2 Rewards outside battle (request 13)
 
-- **Shopping** as a monthly ritual: every city's market changes; foreign goods arrive with caravans (§6.5); a rare's appearance is announced in the news (「襄阳市中有人牵来一匹额有白点的骏马……」).
+- **Shopping** as a monthly ritual: every city's market changes; foreign goods arrive with the 胡商 merchant (§6.5); a rare's appearance is announced in the news (「襄阳市中有人牵来一匹额有白点的骏马……」).
 - **Treasure hunting**: 17 hidden items with clues tied to history; 搜索 gets a big, exciting result screen when it finds one (request 6: good results get a better animation).
 - **Gifting**: items are the strongest loyalty tool (§6.6) and an alliance currency; jewels (玉璧, 蜀锦, 乳香, 胡椒, 珍珠, 象牙, 琥珀, 柑橘木桌 …) exist mainly for this.
 - **Domestic gear**: books, seals and tools make 开发, 征兵, 登用, 外交 visibly better; a governor's kit becomes something to build up (水排 + 九章算术 on a 政 general in 宛 = +37% 产业 per 开发).
@@ -827,7 +838,7 @@ AI shopping and equipping for 70 factions ≤ 3 ms per month (scores cached per 
 
 ### 14.3 武林大会 (request 14)
 
-§8.9 gives the prize pools. The stadium shows the champion's prize item on a pedestal during the final, and the 金刚杵 in the main gate (the three-title relic). Equipment counts in tournament duels (they are duels).
+§8.9 gives the prize pools. The stadium shows the champion's prize item on a pedestal during the final, and the 金刚杵 in the main gate (the three-title relic). Equipment counts in tournament duels (they are duels; the duel budget applies). Titles are `G.tourney.wins`.
 
 ---
 
@@ -836,19 +847,18 @@ AI shopping and equipping for 70 factions ≤ 3 ms per month (scores cached per 
 ```js
 G.items = {
   next: 1,                                   // next instance uid
-  inst: { [uid]: { id, loc: 'gen'|'arm'|'shop'|'city', owner: genId|factionId|cityId, gifted: [genId…], bound: bool, since: monthIndex } },
+  inst: { [uid]: { id, loc: 'gen'|'arm'|'shop'|'city', owner: genId|factionId|cityId, gifted: genId|null, giftLoy: n, bound: bool, since: monthIndex } },   // gift once per instance
   hiddenFound: [itemId…], singletonsGiven: [itemId…], tourneyAwarded: [itemId…],
   cooldown: { [cityId]: { [itemId]: monthIndex } },
   seen: { [itemId]: 1 },                     // 图鉴
-  titles: { [genName]: n }                   // 武林大会 wins (TOURNAMENT may own this; shared)
-}
+}                                            // 武林大会 titles live in G.tourney.wins (INTEGRATION §6.4)
 gen.gear   = { weapon: uid|null, offhand, armour, helmet, mount, treasure }
 faction.armoury = [uid…]
-city.shop  = { stock: [{ id, qty, price, age }], caravan: { until, stock: [...] } | null }
+city.shop  = { stock: [{ id, qty, price, age }], merchant: { until, stock: [...] } | null }   // the 胡商 card's stock (§6.5)
 ```
 
 - Instances keep only the catalogue id; stats are read from `SG.ItemsData`, so balance patches apply to old saves.
-- Migration from v3 saves: run §8.10 kits, signature, ruler-unique, armoury and city-treasure placement on load; hidden items unfound; shops restocked for the current month. `GameState.migratedFrom` notes it.
+- Save version 4; migration from v3 saves runs **first** in `SG.MigrateV4.run` (INTEGRATION §6.2): §8.10 kits, signature, ruler-unique, armoury and city-treasure placement; hidden items unfound; shops restocked for the current month. `GameState.migratedFrom` notes it.
 - Size: ~1 500 instances × ~45 bytes ≈ 70 KB in the world scenario.
 
 ---
@@ -860,8 +870,8 @@ city.shop  = { stock: [{ id, qty, price, age }], caravan: { until, stock: [...] 
 | `model.js` | `newGeneral` / `newFaction` / `newCity` | `gear`, `armoury`, `shop` defaults |
 | | `GameState.newGame` | after `init()`: `SG.Items.setup(g)` (kits, signature, uniques, armouries, city treasures, hidden, first restock) |
 | | `toJSON` / `fromJSON` | §15 fields, migration |
-| | `Commands.develop/recruit/recruitMax/train/search/hireChance/hire/reward/foodPrice/buyFood/sellFood/allyChance/ally/discord/persuadeChance` | §3.4 hooks via `SG.Gear` (identity when `Items.enabled = false`) |
-| | `Progress.gain` | exp multiplier |
+| | `Commands.develop/recruit/recruitMax/train/search/hireChance/hire/reward/foodPrice/buyFood/sellFood/allyChance/ally/discord/persuadeChance` | §3.4: the formulas are `SG.Econ`'s; this module registers its providers (`SG.Mods.provide`, INTEGRATION §3.3; zero when `Items.enabled = false`) |
+| | `Progress.gain` | `SG.Mods.exp` (exp multiplier before the routine cap) |
 | `battle-model.js` | `BattleModel` constructor | start morale, awe, openings, defenderOpening, oath |
 | | `atkPower`, `defFactor`, `attack`, `distances`, `BUnit.mobility`, `move` | §3.2 (`movedThisAct`, `attacksThisBattle`) |
 | | `endSide` / day start | `applyAuras`, `regen` |
@@ -871,7 +881,7 @@ city.shop  = { stock: [{ id, qty, price, age }], caravan: { until, stock: [...] 
 | | `planAction` | `throwAttack`, `hitRun` options |
 | `specials.js` | `known`, `validate` | item actives, kinds `plant`, `cloud` |
 | `duel-game.js` | `WEAPONS`, `lookOf`, `Fighter` constructor, hit / guard / parry paths, `simulate` | §3.3, §7.4 |
-| `strategy-ai.js` | `Conquest.autoResolve` power, `apply` (city treasure transfer, capture escape), `execute` (spoils), `aiDecideCaptives` (confiscation), `endMonth` (income / harvest / auras / restock / caravans / AI shopping / omens), target scoring (aggro, deterrence, treasure hunting), `actCity` (AI search priority) | §3.5, §6, §8, §13 |
+| `strategy-ai.js` | `Conquest.autoResolve` power, `apply` (city treasure transfer, capture escape), `execute` (spoils), `aiDecideCaptives` (confiscation), `endMonth` (ITEMS month end in phase 3, AI shopping in the discretionary phase 7 of INTEGRATION §6.3; income / harvest / auras through `SG.Econ` / `SG.Mods`; the merchant stock on ENGAGEMENT's card; omens), target scoring (aggro, deterrence, treasure hunting), `actCity` (AI search priority) | §3.5, §6, §8, §13 |
 | `strategy-screen.js` | `addCmd('市场')`, captive menu, 赏赐 「赐宝物」, 外交 gift picker, search result screen, top-bar or city-panel 府库 entry | §6.7, §8.8 |
 | `battle-controller.js` | 宝具 menu line, throw action, spoils prompt after battle | §7.3, §8.2 |
 | `figure.js`, `clash.js`, `battle-view.js` | §5 | |
@@ -882,11 +892,11 @@ city.shop  = { stock: [{ id, qty, price, age }], caravan: { until, stock: [...] 
 
 ### 17.1 Catalogue checks (`tests/items.js` §1, also `tools/gen-items.js check`)
 
-All pass today in the design build: ≥ 250 weapons (275) and ≥ 250 gear (292); exactly 4 legendary and 20 epic; every culture has items and an epic / legendary; unique ids, names, ability names and ability effect lists; every rare+ has an ability; every faction of both scenarios has a ruler-unique; every city's pool has ≥ 4 commons including a weapon and an armour piece; every item has a route in at least one scenario; all stats finite. Added for the implementation: every `active` passes `SG.Specials.validate`; every effect id is in the §7.2 vocabulary with known params; icon tuples unique for rare+; prices within the §4.1 bands; caps respected by every single item; `fig` and duel keys exist (or are listed as new).
+All pass today in the design build: ≥ 250 weapons (310) and ≥ 250 gear (292); **per scenario** ≥ 255 weapons and ≥ 255 gear reachable outside the 15 % roll (classic 256 / 273); no ruler-unique in any prize, grant or merchant pool; 赫拉克勒斯之棍 world-only; every rare has a signature part ≤ 200 triangles, a `procFx` (≤ 0.6 s, 1 draw call, pooled) and an `sfx`; duel keys within `DUEL_ITEM_EFFECTS`, no `noBreak`, no `unblockable` / `unparryable`; exactly 4 legendary and 20 epic; every culture has items and an epic / legendary; unique ids, names, ability names and ability effect lists; every rare+ has an ability; every faction of both scenarios has a ruler-unique; every city's pool has ≥ 4 commons including a weapon and an armour piece; every item has a route in at least one scenario; all stats finite. Added for the implementation: every `active` passes `SG.Specials.validate`; every effect id is in the §7.2 vocabulary with known params; icon tuples unique for rare+; prices within the §4.1 bands; caps respected by every single item; `fig` and duel keys exist (or are listed as new).
 
 ### 17.2 Rules (`tests/items.js` §2)
 
-Equip constraints and requirements; base / effective attributes and caps; `duelWar`; COMBAT hook values (`critArmy` ≤ 0.04 etc.); buy / sell / price formula; restock determinism (same seed → same stock; zero `SG.Random` draws); rare cooldown; caravan; hidden search probability (10 000 trials ±1 pp); city-treasure transfer; spoils on 处斩, 阵斩 and 缴械释放; bound items cannot move; gifts (once per instance and general); save / load round trip and v3 migration; `Items.enabled = false` leaves every v3 output identical.
+Equip constraints and requirements; base / effective attributes and caps; **formation requirements read base attributes** (a 70-war general with +15 gear 武力 cannot pick 锋矢, requirement 85); `duelWar`; COMBAT hook values (`critArmy` ≤ 0.04 etc.); buy / sell / price formula; restock determinism (same seed → same stock; zero `SG.Random` draws); rare cooldown; 胡商 merchant stock (`city.shop.merchant`); hidden search probability (10 000 trials ±1 pp); city-treasure transfer; spoils on 处斩, 阵斩 and 缴械释放; bound items cannot move; gifts once per instance (10 give / take-back cycles of one instance change loyalty by the first gift − the take-back, i.e. 0, never more; INTEGRATION §7.1); save / load round trip and v3 migration; `Items.enabled = false` leaves every v3 output identical.
 
 ### 17.3 Battle and duel (`tests/sim.js` new section, `tests/duel-bots.js` new section)
 
@@ -896,27 +906,26 @@ Equip constraints and requirements; base / effective attributes and caps; `duelW
 | full set by rarity vs none, equal generals | exchange ratio common 1.10–1.20, uncommon 1.22–1.34, rare 1.35–1.50, epic 1.50–1.70 |
 | 宝具 average value (refAction like specials) | rare 1.3–1.8, epic 2.0–2.5, legendary ≤ 2.8 normal attacks |
 | 阵斩 | rulers slain in 2–6% of tactical battles they fight; ≤ 25% of world rulers slain by 200 in 100 all-AI runs |
-| duel, rare weapon vs none, equal war (60 / 80 / 95) | 55–62% |
-| duel, epic weapon | 60–66% |
-| duel, legendary weapon | 66–74% |
-| duel, best-in-slot gear vs none, 15-war gap | the weaker side ≤ 32% |
-| duel abilities | rare ≤ 4 HP per duel average, epic ≤ 8, legendary ≤ 12 (measured as damage / heal delta) |
+| duel, best-in-slot set of each rarity vs none, equal war (60 / 80 / 95) | ≤ 75 % for every rarity (measured with the budget: common 55–58, uncommon 66–70, rare 60–63, epic 67–76, legendary 69–73 %; noise ±2.9 pp; INTEGRATION §8.3) |
+| duel, legendary set vs none, 15-war gap (65 vs 80) | the weaker side ≤ 30 % (measured 23 %) |
+| duel abilities | all of one fighter's abilities ≤ 4 HP per duel average (measured as damage / heal delta, `duel-bots.js` section 15) |
+| weapon types (no gear) vs the sword, equal war 80 | 45–55 % each, before `WIN_SCALE` is frozen (COMBAT-V4 §15; v3 today: 39–65 %) |
 
 ### 17.4 Economy and AI (`tests/items.js` §3, all-AI runs: 100 world × 20 years, 200 classic × 20 years)
 
 | Check | Target |
 |---|---|
-| AI gear spending | 8–15% of AI income |
+| AI gear spending | 8–15% of AI gross income (all-on: classic 11.2–11.4 %, world 8.5 %) |
 | items per AI general with war ≥ 60 in 193 | median ≥ 2 |
 | shops | every city ≥ 4 stock entries after month 1; a given rare appears in its city every 6–10 months on average |
 | 传国玉玺 | found by 195 in ≥ 70% of runs (history: 191) |
 | faction survival and conquest pace vs items off | within ±10% |
-| gold reserves | no AI faction drops below its reserve because of shopping |
+| gold reserves | no AI city below R(c) after a gear purchase (`AIBudget.stats.below0 = 0`, INTEGRATION §5.2) |
 | performance | `endMonth` + AI shopping ≤ 8 ms per month (desktop), restock ≤ 1 ms |
 
 ### 17.5 Browser
 
-`tests/items.html`: all 567 icons and models render (no `console.error`), triangle budgets, 60 fps turntable on desktop / 30 on phone; the 29 宝具 fx play within 1.5 s and ≤ 2 extra draw calls. `tests/shop.html`: buy / sell / compare / gift flows, 844×390 and 1280×720 layouts, touch targets ≥ 44 px, reduced-motion mode.
+`tests/items.html`: all 602 icons and models render; every rare's silhouette differs from its base type by ≥ 10 % of pixels and its 演示 plays (no `console.error`), triangle budgets, 60 fps turntable on desktop / 30 on phone; the 29 宝具 fx play within 1.5 s and ≤ 2 extra draw calls. `tests/shop.html`: buy / sell / compare / gift flows, 844×390 and 1280×720 layouts, touch targets ≥ 44 px, reduced-motion mode.
 
 ---
 
@@ -936,14 +945,14 @@ Equip constraints and requirements; base / effective attributes and caps; `duelW
 ## 19. Open questions
 
 - **Q1.** 阵斩 for all generals? Proposed: rulers only in v4 (so the famous cast survives and uniques stay special). Alternative: all generals at one third of the ruler probabilities, with a setting.
-- **Q2.** Crit and duel-damage budget split with TITLES: items 0.04 / 0.05 / 0.04 of COMBAT's 0.06 / 0.08 / 0.06 (army crit / duel crit / duel damage). Agree with the titles task.
+- **Q2.** ~~Crit and duel-damage budget split with TITLES~~ — resolved by INTEGRATION §3.1 / §8.3: army crit gear + title ≤ 0.06 (items ≤ 0.04); duel crit and damage are inside the all-in duel budget.
 - **Q3.** Titles requirements use base attributes (proposed), so gear cannot buy titles. Confirm with TITLES.md.
 - **Q4.** Allied markets: only allied cities adjacent to an own city at ×1.15 (proposed), or every allied city?
-- **Q5.** Classic scenario 异域奇珍: 15% per tournament from 193, max one epic each — enough exotic flavour without breaking the 190 China setting?
+- **Q5.** Classic scenario 异域奇珍: 15% per tournament from the 第三届 (193), max one epic each, ruler-uniques excluded (19 items) — enough exotic flavour without breaking the 190 China setting?
 - **Q6.** Should reassigning a signature item away from its holder be allowed at all (proposed: yes, −15 loyalty, refused below 50)?
-- **Q7.** Religious and sacred objects (金刚杵, 毗沙门天王戟, 所罗门之戒, 天符印, 卡维旗) are presented as legend with sources and respectful effects. Does the publisher want a cultural review pass before release?
+- **Q7.** Religious and sacred objects (金刚杵, 毗沙门天王戟, 所罗门之戒, 天符印, 卡维旗) are presented as legend with sources and respectful effects. Does the publisher want a cultural review pass before release? The 帕拉塔 ruler-unique is named **吉祥纹铜剑** in data (it was 卍纹铜剑; the coin motif is the auspicious svastika, but the glyph is easily misread by players): keep the safe name, or restore the original with an explanatory note?
 - **Q8.** Should the market building in the city zoom view (request 8) show stock items on its stalls (nice, costs draw calls)?
-- **Q9.** Tournament gold amounts and the skill-prize share are proposals; the TOURNAMENT spec decides.
+- **Q9.** ~~Tournament gold amounts~~ — resolved: TOURNAMENT §7.1 decides (400 / 200 / 100, skill 25 %).
 - **Q10.** Mounts in duels change only walk / dash speed (duels stay on foot). Should 赤兔 / 大宛天马 holders duel mounted? Proposed: no (COMBAT's frame data assumes foot).
 
 ---
@@ -991,3 +1000,4 @@ Classical texts are cited in each item's `source.refs` (items.json). Web lookups
 - Sangam emblems / Karikala: [Drishti IAS · Sangam Age](https://www.drishtiias.com/to-the-points/paper1/sangam-age-1)
 - Apedemak, Ezana: [Wikipedia Apedemak](https://en.wikipedia.org/wiki/Apedemak), [Wikipedia Ezana Stone](https://en.wikipedia.org/wiki/Ezana_Stone)
 - 冒顿鸣镝: [chinesenotes 鸣镝](https://chinesenotes.com/words/33936.html)
+- The 35 weapons added in the consolidation (铜铍, 长铩, 酋矛, 夷矛, 棘矜, 铜殳, 白梃, 锄耰, 钩戟, 车戟, 汉铁戈, 错金铜戈, 斩马刀, 大环斩马刀, 汉铁斧, 铁匕首, 长铗, 櫑具剑, 铁鞭, 竹节铁鞭, 三股叉, 九节杖, 麈尾, 柘木弓, 繁弱弓, 乌号弓, 强弩, 挟弹弓, 投石, 环首短刀; 滇式铜啄, 一字格铜剑, 南中劲弩; 濊长矛; 乌桓长矛) cite in `source.refs`: 周礼·考工记 (庐人: 酋矛, 夷矛, 殳, 车戟), 贾谊《过秦论》 (锄耰棘矜 / 非铦于钩戟长铩), 说文解字 (铍, 铩), 诗经·卫风·伯兮 (殳), 孟子·梁惠王上 (梃), 汉书·朱云传 (尚方斩马剑) and 隽不疑传 (櫑具剑), 史记·刺客列传 (匕首), 卫将军骠骑列传, 王翦列传 (投石超距), 战国策 (长铗), 后汉书·皇甫嵩传, 世说新语 (麈尾), 荀子·性恶 (繁弱), 淮南子 (乌号), 西京杂记 (挟弹), 三国志·魏书·东夷传 (濊: 作矛长三丈), 后汉书·乌桓鲜卑列传, the 秦始皇陵兵马俑坑 excavation reports (铍) and the 晋宁石寨山 / 江川李家山 reports (滇 bronze 啄 and swords).
