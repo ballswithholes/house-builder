@@ -1,0 +1,43 @@
+[
+ {
+  "name": "jiangling",
+  "city": "江陵",
+  "from": "襄阳"
+ },
+ {
+  "name": "hanzhong",
+  "city": "汉中",
+  "from": "长安"
+ },
+ {
+  "name": "roma",
+  "city": "罗马",
+  "from": "迦太基"
+ },
+ {
+  "name": "ctesiphon",
+  "city": "泰西封",
+  "from": "苏萨"
+ },
+ {
+  "name": "pataliputra",
+  "city": "华氏城",
+  "from": "憍赏弥"
+ },
+ {
+  "name": "loulan",
+  "city": "楼兰",
+  "from": "敦煌"
+ },
+ {
+  "name": "landing",
+  "city": "乐浪",
+  "from": "北海"
+ },
+ {
+  "name": "synth",
+  "city": "泰西封",
+  "from": "苏萨",
+  "terrain": false
+ }
+]

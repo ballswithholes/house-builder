@@ -1,4 +1,4 @@
-// 三国志II 霸王的大陆 · 必杀技特效（网页版 js/battle-view.js「必杀技特效」一节的移植，第二版 DESIGN-V2 §4D）
+// 三国志-霸王的世界 · 必杀技特效与基础特效（网页版 js/battle-view.js「必杀技特效」一节与粒子、火计 / 落石 / 法术特效的移植，第二版 DESIGN-V2 §4D、第三版）
 //
 // 公开接口（UNITY-V2 §5）
 //   IEnumerator BattleView.SpecialFx(BUnit caster, List<BUnit> targets, string fx, Color color[, SpecialFxInfo info])   约 1–1.5 秒
@@ -9,6 +9,9 @@
 //         fire 火海 · wind 风助火势 · lightning 雷击 · water 水淹 · shock 怒吼冲击波 · aura 金光 · blossom 桃花 · spirit 符咒 ·
 //         shield 护盾 · heal 治愈之光 · poison 毒雾 · shadow 暗影刺杀 · drain 吸魂 · haste 疾风 · claw 猛虎爪痕 · rock 落石
 //   UnitVisual 另显示限时加成（BattleView.cs）；燃烧中的格子显示持续的小火苗与烟。
+// 第三版：施展者先做必杀动作（UnitVisual.Act("special")），突进时做攻击动作；残影为主将与战马当前姿势的烘焙网格（UnitVisual.GhostMesh）；
+//   地面范围格贴合地形（BattleView.HlGeoAt）；部队位移写逻辑位置 UnitVisual.pos（每帧贴地）。
+//   基础特效（Burst / Smoke / DustPuff / FireFx / RockFx / MagicFx）改为网页版的粒子池写法（原先是 Unity ParticleSystem）。
 //
 // 实现：网页版的自定义着色器（弧光、闪电、光柱、水墙、护盾）移植为 Resources/Shaders/SpecialFx.shader（_Mode 0–4）；
 // 粒子为自带的轻量粒子池（面向镜头的方片，逐帧重建网格），参数与网页版逐一对应（寿命、初速、尺寸、重力、阻力、渐入、透明度曲线）。
@@ -89,6 +92,7 @@ namespace Sanguo
             };
             if (res != null && res.kind == "rally" && style == "aura") c.glyph = "励";
             if (res != null && res.kind == "command" && style == "aura") c.glyph = "令";
+            if (c.v != null) c.v.Act("special");   // 第三版：施展者的必杀动作
             yield return Co.Guard(SpStyle(c), e => Debug.LogException(e));
             // 位移收尾：突击者与被击退者落到模型所在的格子
             if (res != null && this != null)
@@ -97,7 +101,7 @@ namespace Sanguo
                 foreach (var p in res.pushed) SpFixPos(p.unit);
             }
         }
-        void SpFixPos(BUnit x) { var v = VisOf(x); if (v != null) v.transform.position = Tile(x.x, x.y); }
+        void SpFixPos(BUnit x) { var v = VisOf(x); if (v != null) v.pos = Tile(x.x, x.y); }
 
         IEnumerator SpStyle(SpCtx c)
         {
@@ -165,7 +169,7 @@ namespace Sanguo
         Vector3 SpPos(BUnit u, float y = 0)
         {
             var v = VisOf(u);
-            var p = v != null ? v.transform.position : Tile(u.x, u.y);
+            var p = v != null ? v.pos : Tile(u.x, u.y);
             p.y += y;
             return p;
         }
@@ -408,10 +412,13 @@ namespace Sanguo
             return e;
         }
 
-        // ---- 光源（借用两盏空闲的点光源；没有空闲的就不闪）
-        sealed class SpLightSlot { public Light l; public bool busy; public float baseI, cur, seed; public int token; }
+        // ---- 光源（借用两盏空闲的点光源；没有空闲的就不闪）。火计另借一盏（没有空闲的就借第一盏），带地面火光
+        const float FIRE_LIGHT = 4;                  // 火计点光源的强度（网页版 three，decay 1）
+        const float FIRE_FLARE = 1.8f;               // 起火的第一秒：光源与地面火光加强的倍数
+        const float FxLightK = 2 / Mathf.PI;         // 网页版强度 → Unity（见 SpUpdate）
+        sealed class SpLightSlot { public Light l; public bool busy; public float baseI, cur, seed; public int token; public GameObject glow; public Material glowMat; }
         readonly List<SpLightSlot> spLights = new List<SpLightSlot>();
-        void SpLight(Vector3 pos, Color col, float peak, float dur = 0.3f)
+        void EnsureLights()
         {
             if (spLights.Count == 0)
                 for (int i = 0; i < 2; i++)
@@ -419,17 +426,24 @@ namespace Sanguo
                     var l = new GameObject("FxLight").AddComponent<Light>();
                     l.transform.SetParent(root, false);
                     l.type = LightType.Point; l.range = 6; l.intensity = 0; l.shadows = LightShadows.None; l.enabled = false;
-                    l.renderMode = LightRenderMode.ForcePixel;   // 低画质（像素光 1 盏）下也逐像素，不退化为顶点光；只有两盏且短暂点亮
+                    l.color = new Color(1, 0.5f, 0.2f);
+                    l.renderMode = LightRenderMode.ForcePixel;
                     spLights.Add(new SpLightSlot { l = l, seed = i * 17.3f });
                 }
+        }
+        void SpLight(Vector3 pos, Color col, float peak, float dur = 0.3f)
+        {
+            EnsureLights();
             var s = spLights.FirstOrDefault(x => !x.busy);
             if (s == null) return;
             s.busy = true;
             int token = ++s.token;
+            var old = s.l.color;
             s.l.color = col;
             s.l.transform.position = pos;
             s.baseI = peak; s.cur = peak;
-            SpLater(dur, () => { if (s.token == token) s.busy = false; });
+            // 到时立即还原颜色：随后若被火计借用，火光仍是橙色
+            SpLater(dur, () => { if (s.token != token) return; s.busy = false; s.l.color = old; });
         }
 
         // ---- 镜头震动（叠加到相机位置上；CameraRig 每帧重新摆位时自然复原）
@@ -715,14 +729,18 @@ namespace Sanguo
             }, () => SpFree(ob)));
         }
 
-        // ---- 残影：在部队位置（偏移 off）放一具半透明的同形网格，life 秒内淡出（共享部队网格）
+        // ---- 残影：在部队位置（偏移 off）放一具半透明的同形网格，life 秒内淡出
+        //      （第三版：主将与战马当前姿势的烘焙网格，随残影释放；低多边形回退时共享部队网格）
         void SpGhost(UnitVisual v, Color col, float life = 0.4f, float alpha = 0.5f) { SpGhostAt(v, col, life, alpha, Vector3.zero); }
         void SpGhostAt(UnitVisual v, Color col, float life, float alpha, Vector3 off)
         {
-            if (v == null || v.SharedMesh == null) return;
+            if (v == null) return;
+            bool own;
+            var gm = v.GhostMesh(out own);
+            if (gm == null) return;
             var mat = FxMat(5, col, true);
             mat.SetFloat("_Opacity", alpha);
-            var ob = SpMake("FxGhost", v.SharedMesh, false, mat, true, 3009);
+            var ob = SpMake("FxGhost", gm, own, mat, true, 3009);
             ob.go.transform.position = v.transform.position + off;
             ob.go.transform.rotation = v.transform.rotation;
             SpRun(SpAnim(life, t => mat.SetFloat("_Opacity", alpha * (1 - t)), () => SpFree(ob)));
@@ -753,8 +771,9 @@ namespace Sanguo
             foreach (var t in tiles)
             {
                 if (!M.InBounds(t.x, t.y)) continue;
-                var ob = SpMake("FxTile", UnitDisc, false, mat, false);
-                ob.go.transform.position = Tile(t.x, t.y) + Up * 0.09f;
+                // 贴合地形的格子网格（与 Highlight 相同，缓存共用）：山坡、山丘上的光不再一半埋进地里
+                var ob = SpMake("FxTile", HlGeoAt(t.x, t.y), false, mat, false);
+                ob.go.transform.position = Tile(t.x, t.y) + Up * 0.03f;
                 ms.Add(ob);
             }
             SpRun(SpAnim(dur, t => SetAlpha(mat, col, alpha * (t < 0.15f ? t / 0.15f : t > 0.7f ? (1 - t) / 0.3f : 1)),
@@ -821,10 +840,11 @@ namespace Sanguo
         {
             var v = c.v;
             if (v == null || c.target == null || c.target == c.u) yield break;
-            var from = v.transform.position; var to = SpPos(c.target);
+            var from = v.pos; var to = SpPos(c.target);
             v.Face(to - from);
-            yield return SpAnim(dur, t => v.transform.position = Vector3.Lerp(from, to, Ease(t) * k));
-            SpRun(SpAnim(0.22f, t => v.transform.position = Vector3.Lerp(from, to, (1 - t) * k), () => { if (v != null) v.transform.position = from; }));
+            v.Act("attack");
+            yield return SpAnim(dur, t => v.pos = Vector3.Lerp(from, to, Ease(t) * k));
+            SpRun(SpAnim(0.22f, t => v.pos = Vector3.Lerp(from, to, (1 - t) * k), () => { if (v != null) v.pos = from; }));
         }
 
         // ======================================================== 每帧 --
@@ -852,9 +872,18 @@ namespace Sanguo
                 float target = s.busy ? s.baseI : 0;
                 s.cur += (target - s.cur) * Mathf.Min(1, dt * (s.busy ? 12 : 3));
                 float flicker = 1 + Mathf.Sin(time * 23 + s.seed) * 0.12f + Mathf.Sin(time * 37.7f + s.seed * 2) * 0.08f;
-                // 网页版 three 的强度（decay 1）→ Unity：约 ×0.75（火光 4 ≈ C# 3）
-                s.l.intensity = Mathf.Max(0, s.cur * flicker) * 0.75f;
+                // 网页版 three 的强度 → Unity：÷ π（UNITY-V3 / fix-figure 的约定），再 × 2 补偿 Unity 内置点光的衰减
+                // （1/(1 + 25 d²/r²)，在 1–3 单位处约为 three decay 1 的 1/d 衰减的一半）
+                s.l.intensity = Mathf.Max(0, s.cur * flicker) * FxLightK;
                 s.l.enabled = s.l.intensity > 0.01f;
+                if (s.glow != null)
+                {
+                    // 地面火光：常态 0.32，起火第一秒（光源加强时）约 0.58
+                    var gc = s.glowMat.color; gc.a = Mathf.Clamp(s.cur / FIRE_LIGHT, 0, FIRE_FLARE) * 0.32f * flicker; s.glowMat.color = gc;
+                    float gs = 1.7f * (1 + Mathf.Sin(time * 9 + s.seed) * 0.05f);
+                    s.glow.transform.localScale = new Vector3(gs, 1, gs);
+                    if (!s.busy && s.cur < 0.02f) { Destroy(s.glow); Destroy(s.glowMat); s.glow = null; s.glowMat = null; }
+                }
             }
         }
         // 燃烧中的格子：持续的小火苗与烟（model.burning > 0）
@@ -1081,7 +1110,7 @@ namespace Sanguo
         {
             var v = c.v; var t = c.target; var res = c.res;
             yield return SpCharge(c, 0.22f);
-            var from = v != null ? v.transform.position : SpPos(c.u);
+            var from = v != null ? v.pos : SpPos(c.u);
             var to = res != null && res.moved != null ? Tile(res.moved.to.x, res.moved.to.y) : from;
             var tp = SpPos(t);
             if (v != null) v.Face(tp - from);
@@ -1091,8 +1120,8 @@ namespace Sanguo
             yield return SpAnim(0.3f, k =>
             {
                 float e = k * k;
-                if (v != null) v.transform.position = Vector3.Lerp(from, to, e);
-                var cur = v != null ? v.transform.position : Vector3.Lerp(from, to, e);
+                if (v != null) v.pos = Vector3.Lerp(from, to, e);
+                var cur = v != null ? v.pos : Vector3.Lerp(from, to, e);
                 trail.Add(cur + Up * 0.5f);
                 if (k - lastGhost > 0.12f && v != null) { lastGhost = k; SpGhost(v, c.color, 0.45f, 0.55f); }
                 SpDust(cur + Up * 0.15f, 2, 1.2f);
@@ -1110,9 +1139,9 @@ namespace Sanguo
             var hitP = Vector3.Lerp(Vector3.Lerp(from, tp, 0.5f), tp, 0.5f);
             if (v != null)
             {
-                var back = v.transform.position;
-                yield return SpAnim(0.08f, k => v.transform.position = Vector3.Lerp(back, tp, k * 0.35f));
-                SpRun(SpAnim(0.18f, k => v.transform.position = Vector3.Lerp(tp, back, 0.65f + 0.35f * k), () => { if (v != null) v.transform.position = back; }));
+                var back = v.pos;
+                yield return SpAnim(0.08f, k => v.pos = Vector3.Lerp(back, tp, k * 0.35f));
+                SpRun(SpAnim(0.18f, k => v.pos = Vector3.Lerp(tp, back, 0.65f + 0.35f * k), () => { if (v != null) v.pos = back; }));
             }
             Sfx.Play("hit", 1); Sfx.Play("rock", 0.4f);
             SpImpact(t, c.color, true);
@@ -1127,14 +1156,14 @@ namespace Sanguo
             var push = res != null ? res.pushed.FirstOrDefault(p => p.unit == t) : null;
             if (push != null && tv != null)
             {
-                var pa = tv.transform.position; var pb = Tile(push.to.x, push.to.y);
+                var pa = tv.pos; var pb = Tile(push.to.x, push.to.y);
                 yield return SpAnim(0.25f, k =>
                 {
                     var p = Vector3.Lerp(pa, pb, Ease(k)); p.y += Mathf.Sin(k * Mathf.PI) * 0.35f;
-                    tv.transform.position = p;
+                    tv.pos = p;
                     SpDust(p + Up * 0.1f, 1, 1);
                 });
-                tv.transform.position = pb;
+                tv.pos = pb;
             }
             else if (res != null && res.blocked != null && tv != null) SpSparks(SpPos(t, 0.5f), Art.Hex("#ffb04a"), 26, 4.5f);
             yield return W(0.45f);
@@ -1144,7 +1173,7 @@ namespace Sanguo
         IEnumerator Sp_whirl(SpCtx c)
         {
             var v = c.v;
-            var home = v != null ? v.transform.position : SpPos(c.u);
+            var home = v != null ? v.pos : SpPos(c.u);
             yield return SpCharge(c, 0.2f);
             int n = c.hits.Count > 0 ? c.hits.Count : 1;
             float step = Mathf.Clamp(0.95f / n, 0.1f, 0.22f);
@@ -1162,7 +1191,7 @@ namespace Sanguo
                 yield return SpAnim(step * 0.45f, k =>
                 {
                     var p = Vector3.Lerp(a, dest, Ease(k));
-                    if (v != null) v.transform.position = p;
+                    if (v != null) v.pos = p;
                     Emit(glow, p + Up * 0.6f, 2, new EO { color = c.color, alpha = 0.9f, life = 0.3f, speed = 0.3f, size = 0.3f, sizeEnd = 0.1f, gravity = 0, radius = 0.2f });
                 });
                 cur = dest;
@@ -1178,9 +1207,9 @@ namespace Sanguo
             if (v != null)
             {
                 SpGhost(v, c.color, 0.35f, 0.5f);
-                var a2 = v.transform.position;
-                yield return SpAnim(0.18f, k => v.transform.position = Vector3.Lerp(a2, home, Ease(k)));
-                v.transform.position = home;
+                var a2 = v.pos;
+                yield return SpAnim(0.18f, k => v.pos = Vector3.Lerp(a2, home, Ease(k)));
+                v.pos = home;
                 v.Face(SpPos(c.target) - home);
             }
             SpRing(SpPos(c.u), c.color, 0.5f, 2.6f, 0.45f);
@@ -2419,6 +2448,141 @@ namespace Sanguo
                 dimSprite = Sprite.Create(t, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f));
                 return dimSprite;
             }
+        }
+
+        // ======================================================== 基础特效 --
+        // 网页版 burst / smoke / _dustPuff / fireFx / rockFx / magicFx（粒子池写法，参数逐一对应）
+        public void Burst(Vector3 p, Color c, int n = 14, float speed = 2.5f)
+        {
+            EnsurePools();
+            float a = c.a > 0 ? c.a : 1;
+            Emit(glow, p, n, new EO { color = c, alpha = a, life = 0.5f, speed = speed, size = 0.25f, gravity = 0.6f, radius = 0.3f, lifeVar = 0.3f, speedVar = 0.35f });
+            // 中心一闪
+            Emit(glow, p, 2, new EO { color = c, alpha = a * 0.8f, life = 0.22f, speed = 0, size = 1.3f, sizeEnd = 0.4f, gravity = 0, radius = 0.05f });
+        }
+        public void Smoke(Vector3 p)
+        {
+            EnsurePools();
+            Emit(dust, p, 30, new EO { color = C(0.5f, 0.45f, 0.4f), alpha = 0.6f, life = 1.4f, speed = 0.8f, size = 0.9f, sizeEnd = 1.7f, gravity = -0.05f, radius = 0.6f, lifeVar = 0.25f, sizeVar = 0.3f, drag = 0.8f, fadeIn = 0.08f });
+        }
+        void DustPuff(Vector3 p, float k) { SpDustPuff(p, k); }
+
+        public IEnumerator FireFx(BUnit target)
+        {
+            Sfx.Play("fire");
+            EnsurePools(); EnsureLights();
+            var p = Tile(target.x, target.y);
+            var bs = p + Up * 0.2f;
+            // 起火的一瞬：橙色闪光 + 火星四溅
+            Emit(glow, p + Up * 0.6f, 2, new EO { color = C(1, 0.55f, 0.18f), alpha = 0.75f, life = 0.32f, speed = 0, size = 2.6f, sizeEnd = 0.6f, gravity = 0, radius = 0.1f });
+            Emit(glow, p + Up * 0.4f, 26, new EO { color = C(1, 0.85f, 0.45f), colorEnd = C(1, 0.35f, 0.08f), alpha = 1, life = 0.7f, speed = 3.6f, size = 0.16f, sizeEnd = 0.5f, gravity = 0.5f, radius = 0.5f, lifeVar = 0.4f, speedVar = 0.5f });
+            // 火底热光（叠加，垫在火舌之下）
+            var heatE = Emitter(heat, bs, 30, new EO { color = C(1, 0.56f, 0.16f), colorEnd = C(0.95f, 0.24f, 0.04f), alpha = 0.9f, life = 0.6f, speed = 0.9f, size = 1.3f, sizeEnd = 0.7f, gravity = -0.1f,
+                box = new Vector3(1.3f, 0.15f, 1.3f), jitter = 0.15f, lifeVar = 0.3f, alphaCurve = 2 }, 3.5f);
+            // 火舌（普通混合、水滴形），前半生保持不透明 a·(1−t²)，颜色由黄经橙到暗红
+            var flames = Emitter(flame, bs, 90, new EO { color = C(1, 0.66f, 0.16f), color2 = C(1, 0.84f, 0.36f), mix = 0.3f, colorEnd = C(0.72f, 0.12f, 0.03f), alpha = 1,
+                life = 0.9f, speed = 1.6f, size = 1.15f, sizeEnd = 0.3f, gravity = -0.25f, box = new Vector3(1.6f, 0.2f, 1.6f), jitter = 0.3f, lifeVar = 0.35f, sizeVar = 0.3f, alphaCurve = 2 }, 3.5f);
+            // 炽热火芯（叠加，压在火舌之上，贴近地面）
+            var core = Emitter(glow, p + Up * 0.35f, 36, new EO { color = C(1, 0.9f, 0.55f), colorEnd = C(1, 0.45f, 0.08f), alpha = 0.85f, life = 0.45f, speed = 1.0f, size = 0.8f, sizeEnd = 0.35f, gravity = -0.2f,
+                box = new Vector3(1.2f, 0.15f, 1.2f), jitter = 0.2f, lifeVar = 0.3f, alphaCurve = 2 }, 3.5f);
+            var embers = Emitter(glow, bs, 16, new EO { color = C(1, 0.8f, 0.4f), colorEnd = C(1, 0.35f, 0.1f), alpha = 1, life = 1.2f, speed = 2.6f, size = 0.14f, sizeEnd = 0.4f, gravity = -0.1f,
+                box = new Vector3(1.4f, 0.2f, 1.4f), jitter = 0.6f, lifeVar = 0.4f }, 3.5f);
+            // 浓烟柱：从火头上方升起，由黑褐渐淡、越升越大
+            var smk = Emitter(dust, p + Up * 1.3f, 16, new EO { color = C(0.15f, 0.13f, 0.12f), colorEnd = C(0.4f, 0.38f, 0.36f), alpha = 0.6f, life = 2.4f, speed = 1.3f, size = 1.0f, sizeEnd = 3.0f, gravity = -0.03f,
+                box = new Vector3(1.0f, 0.3f, 1.0f), jitter = 0.25f, lifeVar = 0.3f, drag = 0.3f, fadeIn = 0.12f }, 3.5f);
+            var tv = VisOf(target);
+            if (tv != null) tv.Burn();
+            // 借一盏点光源（没有空闲的就借第一盏）+ 地面火光
+            var s = spLights.FirstOrDefault(x => !x.busy) ?? spLights[0];
+            s.busy = true;
+            int own = ++s.token;
+            s.l.color = new Color(1, 0.5f, 0.2f);
+            s.l.transform.position = p + Up;
+            s.baseI = FIRE_LIGHT * FIRE_FLARE;
+            if (s.glow == null)
+            {
+                s.glowMat = Art.NewAdditive(new Color(1, 0.44f, 0.14f, 0));
+                s.glowMat.renderQueue = 3003;
+                s.glow = Art.MakeObject("FireGlow", UnitDisc, s.glowMat, root, false);
+            }
+            s.glow.transform.position = p + Up * 0.1f;
+            yield return W(1.0f);
+            // 1 秒后火势减弱
+            flames.rate = 25; heatE.rate = 9; core.rate = 10; embers.rate = 5; smk.rate = 6;
+            if (s.token != own) yield break;
+            s.baseI = FIRE_LIGHT;
+            // 2.5 秒后熄灭
+            int token = ++s.token;
+            SpLater(2.5f, () => { if (s.token == token) s.busy = false; });
+        }
+
+        public IEnumerator RockFx(BUnit target)
+        {
+            var p = Tile(target.x, target.y);
+            var rocks = new List<SpObj>();
+            var landed = new List<bool>();
+            for (int i = 0; i < 6; i++)
+            {
+                var mb = new MeshBuilder();
+                float r = 0.25f + Rnd() * 0.2f;
+                mb.Blob(Vector3.zero, new Vector3(r, r, r), C(0.55f, 0.52f, 0.48f), i);
+                var ob = SpMake("Rock", mb.ToMesh("rock"), true, Art.LowPoly, false, -1, true);
+                ob.mr.receiveShadows = true;
+                ob.go.transform.position = new Vector3(p.x + (Rnd() - 0.5f) * 1.4f, p.y + 7 + i * 0.8f, p.z + (Rnd() - 0.5f) * 1.4f);
+                rocks.Add(ob); landed.Add(false);
+            }
+            for (float t0 = 0; t0 < 0.9f;)
+            {
+                if (this == null) yield break;
+                float dt = Mathf.Min(0.1f, Time.deltaTime);
+                for (int i = 0; i < rocks.Count; i++)
+                {
+                    var tr = rocks[i].go.transform;
+                    if (tr.position.y > p.y + 0.2f)
+                    {
+                        tr.position -= Up * dt * 14;
+                        if (tr.position.y <= p.y + 0.2f)
+                        {
+                            tr.position = new Vector3(tr.position.x, p.y + 0.2f, tr.position.z);
+                            if (!landed[i]) { landed[i] = true; SpRockImpact(tr.position); }
+                        }
+                    }
+                    tr.Rotate(200 * dt, 90 * dt, 0);   // 网页版 rotation.x += 200°·dt、rotation.y −= 90°·dt（three）
+                }
+                yield return null;
+                t0 += dt;
+            }
+            Sfx.Play("rock");
+            Smoke(p);
+            yield return W(0.3f);
+            foreach (var r in rocks) SpFree(r);
+        }
+
+        public IEnumerator MagicFx(BUnit target, Color c)
+        {
+            Sfx.Play("magic", 0.6f);
+            EnsurePools();
+            var p = Tile(target.x, target.y);
+            float a = c.a > 0 ? c.a : 1;
+            var ringMat = Art.NewUnlit(new Color(c.r, c.g, c.b, a), Art.Ring);
+            var ring = SpMake("Spell", UnitDisc, false, ringMat, true, 3004);
+            ring.go.transform.position = p + Up * 0.15f;
+            var haloMat = Art.NewAdditive(new Color(c.r, c.g, c.b, 0.5f));
+            var halo = SpMake("SpellHalo", UnitDisc, false, haloMat, true, 3003);
+            halo.go.transform.position = ring.go.transform.position;
+            // 寿命 0.9、40 粒、初速 1.4、大小 0.3、重力 -0.4、半径 0.6
+            Emit(glow, p + Up * 0.5f, 40, new EO { color = new Color(c.r, c.g, c.b), color2 = Art.Shade(new Color(c.r, c.g, c.b), 0.5f), mix = 0.3f, alpha = 1, life = 0.9f, speed = 1.4f, size = 0.3f, gravity = -0.4f, radius = 0.6f, lifeVar = 0.3f });
+            for (float k = 0; k < 1; k += Mathf.Min(0.1f, Time.deltaTime) / 0.9f)
+            {
+                if (this == null || ring.go == null) yield break;
+                float sc = (0.5f + k * 1.4f) * 1.2f;
+                ring.go.transform.localScale = new Vector3(sc, 1, sc);
+                ring.go.transform.rotation = Quaternion.Euler(0, 300 * k * 0.9f, 0);   // 网页版 rotation.y = −300°·k·0.9（three）
+                halo.go.transform.localScale = new Vector3(sc * 0.9f, 1, sc * 0.9f);
+                var hc = haloMat.color; hc.a = 0.5f * (1 - k); haloMat.color = hc;
+                yield return null;
+            }
+            SpFree(ring); SpFree(halo);
         }
     }
 }

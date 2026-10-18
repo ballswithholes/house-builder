@@ -1,0 +1,12 @@
+[
+  { "name": "han-plain", "title": "汉 平原（关羽→曹仁）", "case": "plain-even" },
+  { "name": "roman-gate", "title": "罗马石城 城门（塞维鲁→阿根托克）", "case": "gate-even", "cult": "roman-celt", "scene": "roman" },
+  { "name": "africa-castle", "title": "非洲泥砖 本城（曹操→吕布）", "case": "castle-even", "scene": "africa" },
+  { "name": "celt-coast", "title": "凯尔特海岸 登陆（塞维鲁→阿根托克）", "case": "plain-even", "cult": "roman-celt", "scene": "celt", "coast": true },
+  { "name": "river-storm", "title": "河川 借东风（诸葛亮→曹操）", "case": "river-big", "special": "storm" },
+  { "name": "forest-blaze", "title": "森林 火烧连营（陆逊→黄祖）", "case": "forest-even", "special": "blaze" },
+  { "name": "hill-big", "title": "山丘 以众击寡（张飞→吕布）", "case": "hill-big" },
+  { "name": "mountain-small", "title": "山岳 以寡击众（赵云→颜良）", "case": "mountain-small" },
+  { "name": "wall-rout", "title": "南蛮木寨 城墙 击溃（孟获→诸葛亮）", "case": "wall-rout" },
+  { "name": "plain-smite", "title": "平原 青龙偃月斩（关羽→曹仁）", "case": "plain-even", "special": "smite" }
+]

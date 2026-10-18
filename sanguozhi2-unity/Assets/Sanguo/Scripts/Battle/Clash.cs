@@ -3,32 +3,55 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Rendering;
+#if !CLASH_HEADLESS
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+#endif
 
 namespace Sanguo
 {
     /* ==========================================================================
-       攻击画面（网页版 js/clash.js 的移植）
+       三国志-霸王的世界 · 攻击画面（网页版 js/clash.js 的移植）
        原作中部队「攻击」时切换到横向交战画面：两军士兵对冲、兵力数字递减。
-       这里用独立的低多边形三维场景现代化重制：自己的根 GameObject（放在远离战场的 Clash.Origin）
-       + 自己的相机（depth 高于其它相机，只拍 Clash.Layer 层），结束时全部销毁并释放网格 / 材质 / 纹理。
+       这里用独立的三维场景现代化重制：自己的根 GameObject（放在远离战场的 Clash.Origin）
+       + 自己的相机（depth 高于其它相机，只拍 Clash.Layer 层）+ 自己的太阳，结束时全部销毁并释放网格 / 材质 / 纹理。
+       第三版（DESIGN-V3 §1、§2）：人物改用 View/Figure*.cs 的平滑蒙皮模型——步兵 / 弓手为按兵种 × 文化成组的实例化士兵群
+       （FigureCrowd：前排刀盾、其后长枪、弓手，势力色为实例属性），旗手双手竖持旗枪（Figure.Soldier），武将为中精度名将
+       （专属兵器、与头像一致的面部）骑中精度战马（马衣 / 具装）并插帅旗；动作片段由时间轴直接求出（行进、开弓放箭、冲锋 / 疾驰、
+       混战劈砍、受击、倒地 / 溃逃、收队 / 欢呼）。地形为平滑网格 + 程序化细节着色（Sanguo/ClashGround：草地、踩踏泥土、农田、
+       河岸沙、岩石、雪），圆润的树与石块、按防守城池文化的城墙与村舍（中式砖城 / 罗马石城 / 土坯城 / 红砖城 / 木栅寨；
+       灰瓦 / 赤陶瓦 / 平顶土坯 / 毡帐 / 长屋 / 圆屋 / 干栏 / 茅屋），树种与地面色按群落，登陆战攻方身后为沙滩、海与搁浅的小船，
+       远处为连绵山脊；镜头在接敌到混战时更低、更近，近景散落折枪、圆盾、倒旗与碎石；必杀斩光为正对镜头的月牙弧并沿弧撒火花。
 
-       公开接口（UNITY-V2 §5）
-         IEnumerator Clash.Play(attacker, defender, terrain, special, playerSide, speed, done)
+       公开接口（UNITY-V2 §5，参数可增不可改）
+         IEnumerator Clash.Play(attacker, defender, terrain, special, playerSide, speed, done, scene = null)
            · 攻方永远在左；兵力数字从 troopsBefore 滚动到 troopsAfter；troopsAfter 为 0 视为溃散。
            · special 不为 null 时冲锋前先播 CutIn 特写，接敌时附带特效与额外伤亡
              （kind：blaze 火海 / storm 雷击 / volley 箭雨，其余一律为斩击弧光 + 冲击波）。
            · playerSide：0 / 1，-1 = 无（电脑对电脑）。speed：本次额外的时间倍率（与 Clash.Speed 相乘）。
+           · scene（第三版）：布景——防守城池的文化（城墙、村舍）、群落（temperate / steppe / desert / tropical / savanna / med /
+             boreal / alpine：地面色、树种）、coast（登陆：攻方身后为沙滩与海）。为 null 时：两方都由 FromUnit 从同一战场取得则按战场
+             （= 网页版 fromBattle 的 scene），否则按防守方文化推测。
            · done(skipped)：画面结束后回调（Mode 为 Off 时立即以 false 回调）。多次调用会排队依次播放。
-         ClashSide Clash.FromUnit(model, unit, troopsBefore, troopsAfter)    由战场部队组装一方的参数
-         IEnumerator Clash.CutIn(gen, moveName, color, side, cry, speed)     必杀技 / 单挑用的全屏特写
+         IEnumerator Clash.Play(ClashArgs args, float speed, Action<bool> done)   FromBattle 组装的参数
+         ClashSide Clash.FromUnit(model, unit, troopsBefore, troopsAfter)       由战场部队组装一方的参数
+         ClashArgs Clash.FromBattle(model, a, t, beforeA, beforeT)               = 网页版 SG.Clash.fromBattle（含 scene）
+         ClashSceneInfo Clash.SceneOf(model, a, t)                                由战场（BattleTerrainMap）取布景
+         ClashPrepJob Clash.Prepare(cultures, budget = 8)                        可选的预热（战斗开始时调用）：后台分片生成这些文化的
+                                                                                  士兵群烘焙；多次调用依次排队，Play 播放前先等它做完
+         IEnumerator Clash.CutIn(gen, moveName, color, side, cry, speed)         必杀技 / 单挑用的全屏特写
            （1.1 秒 ÷（Clash.Speed × speed），最短 0.7 秒；轻点 / 空格 / 回车 / Esc 可跳过）
-         Clash.Mode（On / Fast / Off，读写，存 PlayerPrefs「sanguozhi2_clash」，值同网页版 on / fast / off）
+         Clash.Mode（On / Fast / Off，读写，存 PlayerPrefs「sanguozhi2_clash_v3」，值同网页版 on / fast / off；缺省 On——第三版换了
+           新键，旧键「sanguozhi2_clash」里存下的「关」不再生效，旧的「快」沿用）
          Clash.Enabled / Clash.Speed / Clash.CycleMode() / Clash.ModeLabel()
-       坐标：场景逻辑全部沿用网页版的 three 坐标（x, y, z），绘制时换成 Unity 坐标 (x, y, -z)；
-       矩阵 M_unity = S · M_three · S（S = diag(1, 1, -1)）。模型网格本来就按 Unity 坐标建（同 JS 的 V()）。
+       坐标：场景逻辑全部沿用网页版的 three 坐标（x, y, z），建网格与摆放时换成 Unity 坐标 (x, y, -z)（P()）；
+       人物 / 士兵群用 Figure.PosFromJs / YawFromJs；人物挂件（旗面、帅旗杆）用人物局部的换算（JS 局部 (x, y, z) → Unity (−x, y, z)）；
+       逐帧绘制的箭 / 特效 / 粒子的矩阵 M_unity = S · M_three · S（S = diag(1, 1, -1)）。
+       光照（Figure.shader 的约定）：Unity 灯光强度 = JS 强度 / π；环境光 Trilight = JS 半球光 × 强度 / π。
+       本画面的地面 / 道具 / 草 / 旗 / 水着色器（Sanguo/Clash*）照网页版的 LowPoly 补丁自己加三色环境光（含地平线色）。
        装饰性随机一律使用 SeededRandom（按双方姓名与兵力取种子），不影响规则随机数。
+       无头测试（Tests~/clash）以 CLASH_HEADLESS 编译：界面（HUD、特写）换成同名的空实现，其余代码与游戏内相同。
        ========================================================================== */
 
     public enum ClashMode { On, Fast, Off }
@@ -43,6 +66,9 @@ namespace Sanguo
         public int troopsAfter = -1;           // < 0 视为与 troopsBefore 相同（无伤亡）
         public int formation = -1;             // Defs.Formations 下标；< 0 取 gen.formation
         public string culture;                 // 缺省取 gen.culture，再缺省按南蛮名单 / han
+        // FromUnit 记下的战场与部队（Play 没给 scene 时由此取布景，= 网页版 fromBattle 的 scene）
+        internal BattleModel model;
+        internal BUnit unit;
     }
 
     // 必杀技（画面用）
@@ -58,9 +84,36 @@ namespace Sanguo
         }
     }
 
+    // 布景（= 网页版 play 的 scene：{ culture, biome, coast }）
+    public class ClashSceneInfo
+    {
+        public string culture;                 // 防守城池的文化（城墙、村舍）
+        public string biome;                   // 群落名（BattleTerrain.BIOMES 之一）；null = 按文化推测
+        public bool coast;                     // 登陆：攻方身后为沙滩与海
+    }
+
+    // FromBattle 组装的 Play 参数（= 网页版 fromBattle 的返回值）
+    public class ClashArgs
+    {
+        public ClashSide attacker, defender;
+        public Terrain terrain;
+        public ClashSpecial special;
+        public int playerSide = -1;
+        public ClashSceneInfo scene;
+    }
+
+    // 预热任务（Clash.Prepare 的返回值）：Done = 做完（含失败）
+    public sealed class ClashPrepJob
+    {
+        public bool Done, Ok;
+        internal string[] cultures;
+        internal double budget;
+    }
+
     public static class Clash
     {
-        public const string ModeKey = "sanguozhi2_clash";
+        public const string ModeKey = "sanguozhi2_clash_v3";                // 第三版的设定键（缺省「开」）
+        public const string OldModeKey = "sanguozhi2_clash";                // 第二版的旧键：只沿用「快」
         public const int Layer = 30;                                    // 攻击画面与特写所用的渲染层
         public static readonly Vector3 Origin = new Vector3(0, -2000, 0);   // 场景根的世界位置（远离战场与地图）
         // 调试：FreezeAt ≥ 0 时动画停在该秒；HoldCut 为 true 时特写不自动结束（截图用）
@@ -72,12 +125,24 @@ namespace Sanguo
         internal static ClashScene active;
         internal static CutInView cut;
 
+        // 第三版：玩家要求「战斗时默认开启动画」——换用新键，旧键里存下的「关」作废一次（DESIGN-V3 §2）
+        static string LoadMode()
+        {
+            try
+            {
+                string v = PlayerPrefs.GetString(ModeKey, "");
+                if (v == "on" || v == "fast" || v == "off") return v;
+                // 旧键只沿用「快」（仍是开启动画）；旧的「关」不再生效
+                if (PlayerPrefs.GetString(OldModeKey, "") == "fast") return "fast";
+            }
+            catch (Exception) { /* 忽略 */ }
+            return "on";
+        }
         static void Load()
         {
             if (loaded) return;
             loaded = true;
-            string v = "on";
-            try { v = PlayerPrefs.GetString(ModeKey, "on"); } catch (Exception) { /* 忽略 */ }
+            string v = LoadMode();
             enabled = v != "off";
             speed = v == "fast" ? 2f : 1f;
         }
@@ -107,7 +172,7 @@ namespace Sanguo
         public static bool CutActive { get { return cut != null; } }        // 特写正在播放
 
         // ---------------------------------------------------------- 播放 --
-        public static IEnumerator Play(ClashSide attacker, ClashSide defender, Terrain terrain, ClashSpecial special, int playerSide, float speed, Action<bool> done)
+        public static IEnumerator Play(ClashSide attacker, ClashSide defender, Terrain terrain, ClashSpecial special, int playerSide, float speed, Action<bool> done, ClashSceneInfo scene = null)
         {
             if (!Enabled) { if (done != null) done(false); yield break; }
             // 排队：前一场播完再开始
@@ -116,7 +181,10 @@ namespace Sanguo
             ClashScene sc = null;
             try
             {
-                sc = new ClashScene(attacker, defender, terrain, special, playerSide, speed);
+                // 布景：未给出时，两方都从同一战场组装（FromUnit）就按战场取（= 网页版 fromBattle 的 scene）
+                if (scene == null && attacker != null && defender != null && attacker.model != null && attacker.model == defender.model && attacker.unit != null && defender.unit != null)
+                    scene = SceneOf(attacker.model, attacker.unit, defender.unit);
+                sc = new ClashScene(attacker, defender, terrain, special, playerSide, speed, scene);
                 active = sc;
                 sc.Start();
             }
@@ -132,11 +200,17 @@ namespace Sanguo
             while (!sc.Finished) yield return null;
             if (done != null) done(sc.Skipped);
         }
+        public static IEnumerator Play(ClashArgs o, float speed, Action<bool> done)
+        {
+            if (o == null) { if (done != null) done(false); return Empty(); }
+            return Play(o.attacker, o.defender, o.terrain, o.special, o.playerSide, speed, done, o.scene);
+        }
+        static IEnumerator Empty() { yield break; }
 
         // 由战场部队组装一方的参数（JS fromBattle 的一半）
         public static ClashSide FromUnit(BattleModel m, BUnit u, int troopsBefore, int troopsAfter)
         {
-            var o = new ClashSide { troopsBefore = troopsBefore, troopsAfter = troopsAfter };
+            var o = new ClashSide { troopsBefore = troopsBefore, troopsAfter = troopsAfter, model = m, unit = u };
             if (u == null) return o;
             o.gen = u.gen;
             o.side = u.side;
@@ -146,6 +220,61 @@ namespace Sanguo
             int idx = m != null && m.setup != null ? (u.side == 0 ? m.setup.attacker : m.setup.defender) : -1;
             if (g != null && idx >= 0 && idx < g.factions.Count) o.color = g.factions[idx].Col;
             else o.color = new Color(0.5f, 0.5f, 0.5f);
+            return o;
+        }
+        // 由战场数据组装 Play 参数（= 网页版 SG.Clash.fromBattle：a 攻击 t，before* 为 Attack 之前的兵力）
+        public static ClashArgs FromBattle(BattleModel m, BUnit a, BUnit t, int beforeA, int beforeT)
+        {
+            return new ClashArgs
+            {
+                attacker = FromUnit(m, a, beforeA, a != null ? a.Troops : 0),
+                defender = FromUnit(m, t, beforeT, t != null ? t.Troops : 0),
+                terrain = m != null && m.map != null && t != null ? m.map[t.x, t.y] : Terrain.Plain,
+                special = null,
+                playerSide = -1,
+                scene = SceneOf(m, a, t),
+            };
+        }
+
+        // 由战场（Battle/BattleTerrain.cs 的 BattleTerrainMap，= 网页版 model.terrain）取布景：防守城池的文化、交战处的群落、是否在海岸登陆
+        public static ClashSceneInfo SceneOf(BattleModel model, BUnit a, BUnit t)
+        {
+            var T = model != null ? model.terrain as BattleTerrainMap : null;
+            var o = new ClashSceneInfo
+            {
+                culture = T != null && !string.IsNullOrEmpty(T.culture) ? T.culture : (t != null && t.gen != null && !string.IsNullOrEmpty(t.gen.culture) ? t.gen.culture : "han"),
+                biome = T != null ? T.biome : null,
+                coast = false,
+            };
+            try
+            {
+                var G = T != null ? T.grid : null;
+                if (G != null && G.biome != null && G.water != null && a != null && t != null)
+                {
+                    Func<int, int, int> idx = (x, y) =>
+                    {
+                        int i = (int)Math.Floor((x - G.u0) / G.step + 0.5), j = (int)Math.Floor((y - G.v0) / G.step + 0.5);
+                        return i >= 0 && j >= 0 && i < G.nu && j < G.nv ? j * G.nu + i : -1;
+                    };
+                    int k0 = idx(t.x, t.y);
+                    if (k0 >= 0 && G.biome[k0] < BattleTerrain.BIOMES.Length) o.biome = BattleTerrain.BIOMES[G.biome[k0]];
+                    // 攻方身后 3 格内有海（或者是登陆战且攻方站在浅滩 / 水边）→ 海岸布景
+                    int n = 0;
+                    for (int dx = -3; dx <= 3; dx++)
+                        for (int dy = -3; dy <= 3; dy++)
+                        {
+                            if (dx * dx + dy * dy > 9) continue;
+                            int k = idx(a.x + dx, a.y + dy);
+                            if (k >= 0 && G.water[k] == 3) n++;
+                        }
+                    bool wet = model.map != null && model.InBounds(a.x, a.y) && (model.map[a.x, a.y] == Terrain.Water || model.map[a.x, a.y] == Terrain.River);
+                    o.coast = n >= 3 || (T.HasNote("landing") && wet);
+                }
+                // 干旱文化的城池落在世界地图的「温带」（河谷绿洲）时，攻击画面取半干旱的稀树草原（枯草、金合欢、椰枣），不是中原的青草地
+                string dflt = ClashLook.CultPick(ClashLook.BIOME_OF, o.culture, "temperate");
+                if (o.biome == "temperate" && (dflt == "desert" || dflt == "savanna")) o.biome = "savanna";
+            }
+            catch (Exception) { /* 旧战场：只按文化 */ }
             return o;
         }
 
@@ -172,6 +301,108 @@ namespace Sanguo
                 default: return "plain";
             }
         }
+
+        // ---------------------------------------------------------- 预热 --
+        // 兵种：前排刀盾、其后长枪（罗马全为短剑 + 大盾），弓手单列；士兵群烘焙的 seed（= JS TYPE_SEED）
+        internal static int TypeSeed(string type) { return type == "sword" ? 1 : 0; }
+        internal static FigCrowdSpec[] CrowdSpecs(IEnumerable<string> cultures)
+        {
+            var o = new List<FigCrowdSpec>();
+            foreach (var c in cultures) foreach (var ty in new[] { "spear", "sword", "archer" }) o.Add(new FigCrowdSpec { type = ty, culture = c, seed = TypeSeed(ty) });
+            return o.ToArray();
+        }
+        static readonly List<ClashPrepJob> prepQueue = new List<ClashPrepJob>();
+        static bool prepRunning;
+        // 有排队中的预热（播放前先等它做完，免得同一模板并行生成两遍；= JS prepChain）
+        internal static bool PrepBusy { get { return prepRunning || prepQueue.Count > 0; } }
+        // 可选的预热（战斗开始时传入双方文化）：后台分片生成士兵群烘焙与图集；依次排队，多次调用不会并行生成同一模板
+        public static ClashPrepJob Prepare(IEnumerable<string> cultures, double budget = 8)
+        {
+            var cs = new List<string>();
+            if (cultures != null) foreach (var c in cultures) if (!string.IsNullOrEmpty(c) && !cs.Contains(c)) cs.Add(c);
+            if (cs.Count == 0) cs.Add("han");
+            var job = new ClashPrepJob { cultures = cs.ToArray(), budget = budget };
+            prepQueue.Add(job);
+            var host = ClashHost.Get();
+            if (host == null) { prepQueue.Remove(job); job.Done = true; return job; }
+            if (!prepRunning) host.StartCoroutine(RunPrep());
+            return job;
+        }
+        static IEnumerator RunPrep()
+        {
+            if (prepRunning) yield break;
+            prepRunning = true;
+            while (prepQueue.Count > 0)
+            {
+                var job = prepQueue[0];
+                IEnumerator it = null;
+                try { it = Figure.Preload(new FigPreload { cultures = job.cultures, types = new string[0], crowd = CrowdSpecs(job.cultures), budget = job.budget }); }
+                catch (Exception e) { Debug.LogException(e); }
+                bool ok = it != null;
+                while (it != null)
+                {
+                    bool more;
+                    try { more = it.MoveNext(); } catch (Exception e) { Debug.LogException(e); ok = false; break; }
+                    if (!more) break;
+                    yield return null;
+                }
+                prepQueue.RemoveAt(0);
+                job.Ok = ok; job.Done = true;
+            }
+            prepRunning = false;
+        }
+        // 游戏内兜底预热：游戏启动完成（战略画面就绪）后在后台分片生成最常见的汉军士兵群，首次「攻击」不必在黑幕下等待；
+        // 动画设为「关」时不做（= 网页版 clash.js 末尾的 warm）
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        static void WarmUp()
+        {
+            var host = ClashHost.Get();
+            if (host != null) host.StartCoroutine(WarmCo());
+        }
+        static bool warmed;
+        // 游戏启动完成：战略画面与地图就绪、窗口在前台（无头测试没有 Game）
+        static bool GameReady()
+        {
+#if !CLASH_HEADLESS
+            return Game.I != null && Game.I.Strategy != null && Game.I.Map != null && Application.isFocused;
+#else
+            return false;
+#endif
+        }
+        static IEnumerator WarmCo()
+        {
+            float t0 = Time.realtimeSinceStartup;
+            while (Time.realtimeSinceStartup - t0 < 2.5f) yield return null;
+            for (int tries = 0; !warmed && tries < 40; tries++)
+            {
+                if (GameReady())
+                {
+                    warmed = true;
+                    if (Enabled) Prepare(new[] { "han" }, 6);
+                    yield break;
+                }
+                float t1 = Time.realtimeSinceStartup;
+                while (Time.realtimeSinceStartup - t1 < 1.5f) yield return null;
+            }
+        }
+    }
+
+    // 常驻的协程宿主（预热用；跨场景保留）
+    internal class ClashHost : MonoBehaviour
+    {
+        static ClashHost inst;
+        public static ClashHost Get()
+        {
+            if (inst != null) return inst;
+            try
+            {
+                var go = new GameObject("SG.ClashHost");
+                UnityEngine.Object.DontDestroyOnLoad(go);
+                inst = go.AddComponent<ClashHost>();
+            }
+            catch (Exception) { inst = null; }
+            return inst;
+        }
     }
 
     // 场景根物体上的驱动器：每帧推进场景；物体被意外销毁时也释放资源
@@ -183,6 +414,7 @@ namespace Sanguo
         void OnDestroy() { if (sc != null) { var s = sc; sc = null; s.Dispose(); } }
     }
 
+#if !CLASH_HEADLESS
     // 轻点 / 点击：转发给回调（pointerdown 即触发，同网页版）
     internal class ClashTap : MonoBehaviour, IPointerDownHandler, IPointerClickHandler
     {
@@ -190,25 +422,32 @@ namespace Sanguo
         public void OnPointerDown(PointerEventData e) { if (onDown != null) onDown(); }
         public void OnPointerClick(PointerEventData e) { }
     }
+#endif
 
     // ======================================================= 小工具 --
     internal static class ClashUtil
     {
         public static Vector3 V(float x, float y, float z) { return new Vector3(x, y, z); }
+        public static Vector3 V(double x, double y, double z) { return new Vector3((float)x, (float)y, (float)z); }
         // three 世界坐标 → Unity 坐标（z 取反）
         public static Vector3 P(float x, float y, float z) { return new Vector3(x, y, -z); }
+        public static Vector3 P(double x, double y, double z) { return new Vector3((float)x, (float)y, (float)-z); }
         public static Color C(float r, float g, float b) { return new Color(r, g, b); }
         public static Color Shade(Color c, float k) { return Art.Shade(c, k); }
         public static float Clamp(float v, float a, float b) { return v < a ? a : v > b ? b : v; }
         public static float Clamp01(float v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+        public static double Clamp01(double v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
         public static float Seg(float t, float a, float b) { return b <= a ? (t >= a ? 1 : 0) : Clamp01((t - a) / (b - a)); }
         public static float Sm(float t) { return t * t * (3 - 2 * t); }
+        public static double Sm(double t) { return t * t * (3 - 2 * t); }
         public static float Eo(float t) { float u = 1 - t; return 1 - u * u * u; }
         public static float Eio(float t) { return t < 0.5f ? 4 * t * t * t : 1 - Mathf.Pow(-2 * t + 2, 3) / 2; }
         public static float Sstep(float e0, float e1, float x) { return Sm(Clamp01((x - e0) / (e1 - e0))); }
+        public static double Sstep(double e0, double e1, double x) { return Sm(Clamp01((x - e0) / (e1 - e0))); }
         // [a, b] 内为 1、两端各有 r 秒渐变的梯形窗
         public static float Trap(float t, float a, float b, float r) { return Mathf.Max(0, Mathf.Min(Seg(t, a - r * 0.5f, a + r * 0.5f), 1 - Seg(t, b - r * 0.5f, b + r * 0.5f))); }
         public static float Lerp(float a, float b, float t) { return a + (b - a) * t; }
+        public static double Lerp(double a, double b, double t) { return a + (b - a) * t; }
         public static float R(SeededRandom r) { return (float)r.NextDouble(); }
         public static int HashStr(string s)
         {
@@ -220,12 +459,36 @@ namespace Sanguo
                 return (int)h;
             }
         }
+        // JS Math.abs(hashStr(s)) % n（hashStr 可能是 −2^31，不能用 Math.Abs(int)）
+        public static int AbsMod(int h, int n) { return (int)(Math.Abs((long)h) % n); }
         public static float Luma(Color c) { return 0.3f * c.r + 0.59f * c.g + 0.11f * c.b; }
         public static string Hex(Color c) { return "#" + ColorUtility.ToHtmlStringRGB(c).ToLowerInvariant(); }
+        // three Color.getHexString（Math.round，夹紧 0–255）
+        public static string HexJs(Color c)
+        {
+            Func<float, int> b = v => Math.Max(0, Math.Min(255, (int)Math.Floor(Math.Max(0, Math.Min(255, v * 255.0)) + 0.5)));
+            return "#" + b(c.r).ToString("x2") + b(c.g).ToString("x2") + b(c.b).ToString("x2");
+        }
+        // JS mixHex(a, b, k)：两色线性混合后的 '#rrggbb'
+        // 按 double 计算（同网页版 three Color.lerp + getHexString 的 Math.round）：float 会在 .5 处取错（如 #2f9a55 混白 0.55 的 b = 178.5）
+        public static string MixHex(Color a, Color b, double k)
+        {
+            Color32 x = a, y = b;
+            Func<byte, byte, string> ch = (p, q) => { double v = p / 255.0 + (q / 255.0 - p / 255.0) * k; return Math.Max(0, Math.Min(255, (int)Math.Floor(Math.Max(0, Math.Min(255, v * 255)) + 0.5))).ToString("x2"); };
+            return "#" + ch(x.r, y.r) + ch(x.g, y.g) + ch(x.b, y.b);
+        }
         public static Color Lerp(Color a, Color b, float t) { return Color.Lerp(a, b, t); }
+        // three Color.lerp（不夹紧 t）
+        public static Color LerpU(Color a, Color b, float t) { return new Color(a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t, a.b + (b.b - a.b) * t, 1); }
+#if !CLASH_HEADLESS
         public static void Sfx(string name, float vol = 0.8f) { try { Sanguo.Sfx.Play(name, vol); } catch (Exception) { /* 无音频 */ } }
         // 交锋乐句（= clash.js 的 SG.Sfx.stinger('clash', { speed })）。直接调用：签名变了编译就报错，不会静默失效
         public static void Stinger(string kind, float speed) { try { Sanguo.Sfx.Stinger(kind, speed); } catch (Exception) { /* 无音频 */ } }
+#else
+        public static readonly List<string> SfxLog = new List<string>();
+        public static void Sfx(string name, float vol = 0.8f) { SfxLog.Add(name); }
+        public static void Stinger(string kind, float speed) { SfxLog.Add("stinger:" + kind); }
+#endif
         // three 空间的矩阵 → Unity 空间（S · M · S）
         public static Matrix4x4 ToU(Matrix4x4 m)
         {
@@ -234,7 +497,7 @@ namespace Sanguo
         }
         public static Matrix4x4 TRS(float x, float y, float z, Quaternion q, float s = 1f) { return Matrix4x4.TRS(new Vector3(x, y, z), q, new Vector3(s, s, s)); }
         public static Quaternion AxisX(float rad) { return Quaternion.AngleAxis(rad * Mathf.Rad2Deg, Vector3.right); }
-        // three 的 Euler(pitch, yaw, spin, 'YXZ')
+        // three 的 Euler(pitch, yaw, spin, 'YXZ')（矩阵 = Ry · Rx · Rz，数值与 three 相同）
         public static Quaternion YXZ(float pitch, float yaw, float spin)
         {
             return Quaternion.AngleAxis(yaw * Mathf.Rad2Deg, Vector3.up) * Quaternion.AngleAxis(pitch * Mathf.Rad2Deg, Vector3.right) * Quaternion.AngleAxis(spin * Mathf.Rad2Deg, Vector3.forward);
@@ -242,61 +505,30 @@ namespace Sanguo
         public static void SetLayer(GameObject go, int layer)
         {
             go.layer = layer;
-            foreach (Transform c in go.transform) SetLayer(c.gameObject, layer);
+            var t = go.transform;
+            for (int i = 0; i < t.childCount; i++) SetLayer(t.GetChild(i).gameObject, layer);
         }
+#if !CLASH_HEADLESS
         public static Font Body { get { return UIKit.Body != null ? UIKit.Body : Fallback; } }
         public static Font Kai { get { return UIKit.Title != null ? UIKit.Title : Body; } }
         static Font fallback;
         static Font Fallback { get { if (fallback == null) fallback = Font.CreateDynamicFontFromOSFont(new[] { "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Arial" }, 32); return fallback; } }
+#endif
         public static bool IsTouch { get { return Application.isMobilePlatform || (Input.touchSupported && !Input.mousePresent); } }
+        // JS 坐标的 three 点 → 本画面根下的 Unity 世界坐标
+        public static Vector3 World(Vector3 three) { return Clash.Origin + new Vector3(three.x, three.y, -three.z); }
+        // Unity 世界坐标 → 本画面的 three 坐标
+        public static Vector3 Three(Vector3 world) { var d = world - Clash.Origin; return new Vector3(d.x, d.y, -d.z); }
     }
 
-    // ======================================================= 士兵与武将模型 --
-    // 全部以 Unity 坐标建模、面朝 +z。部件分开以便逐个摆动：
-    // 腿（髋部为原点）、身体（含头盔、盾）、兵器（右手握点为原点）。
-    // 文化装束（DESIGN-V2 §6）：全部是参数化的方块 / 圆柱拼件，每方只建一次网格。
-    //   hat 士兵头饰 / ghat 武将头盔 / shield 盾形 / armor 甲衣样式 / legs 腿（裤、裸腿、长靴、绑腿）
-    //   pants 裤色、hair 发色、beard 胡须、trim 默认镶边色、cloak 武将披风色（缺省为势力色暗部）
-    internal sealed class ClashCult
+    // ======================================================= 网格辅助 --
+    internal static class ClashGeo
     {
-        public Color skin;
-        public string hat, ghat, shield, armor, legs;
-        public Color? trim, pants, hair, cloak;
-        public bool beard, tattoo;
-    }
-
-    internal static class ClashArt
-    {
-        static Color C(float r, float g, float b) { return new Color(r, g, b); }
         static Vector3 V(float x, float y, float z) { return new Vector3(x, y, z); }
+        static Color C(float r, float g, float b) { return new Color(r, g, b); }
         static Color Shade(Color c, float k) { return Art.Shade(c, k); }
+        public static readonly Color WOOD = C(0.43f, 0.3f, 0.17f), GOLD = C(0.88f, 0.7f, 0.28f);
 
-        static readonly Color HAIR_D = C(0.12f, 0.1f, 0.09f);
-        public static readonly Dictionary<string, ClashCult> CULT = new Dictionary<string, ClashCult>
-        {
-            { "han", new ClashCult { skin = C(0.95f, 0.79f, 0.62f), hat = "cone", ghat = "g_han", shield = "rect", armor = "lamellar", legs = "trousers" } },
-            { "nanman", new ClashCult { skin = C(0.7f, 0.5f, 0.34f), hat = "bun", ghat = "g_feather", shield = "rattan", armor = "rattan", legs = "bare", trim = C(0.92f, 0.88f, 0.76f) } },
-            { "wa", new ClashCult { skin = C(0.93f, 0.77f, 0.6f), hat = "mizura", ghat = "g_wa", shield = "wood", armor = "tanko", legs = "wraps", pants = C(0.86f, 0.82f, 0.72f) } },
-            { "yi", new ClashCult { skin = C(0.68f, 0.48f, 0.32f), hat = "feather", ghat = "g_feather", shield = "round", armor = "bare", legs = "bare", trim = C(0.95f, 0.93f, 0.86f), tattoo = true } },
-            { "korea", new ClashCult { skin = C(0.95f, 0.8f, 0.64f), hat = "plume", ghat = "g_plume", shield = "rect", armor = "lamellar", legs = "trousers", pants = C(0.84f, 0.8f, 0.7f) } },
-            { "steppe", new ClashCult { skin = C(0.86f, 0.68f, 0.5f), hat = "fur", ghat = "g_fur", shield = "small", armor = "furcoat", legs = "boots", pants = C(0.42f, 0.32f, 0.22f) } },
-            { "seasia", new ClashCult { skin = C(0.62f, 0.43f, 0.28f), hat = "seband", ghat = "g_crown", shield = "oval", armor = "bare", legs = "bare" } },
-            { "tarim", new ClashCult { skin = C(0.92f, 0.76f, 0.6f), hat = "tall", ghat = "tall", shield = "round", armor = "robe", legs = "boots", pants = C(0.5f, 0.36f, 0.26f), trim = C(0.85f, 0.78f, 0.6f) } },
-            { "kushan", new ClashCult { skin = C(0.84f, 0.64f, 0.48f), hat = "kushan", ghat = "g_kushan", shield = "round", armor = "robe", legs = "boots", pants = C(0.3f, 0.24f, 0.2f) } },
-            { "persia", new ClashCult { skin = C(0.84f, 0.64f, 0.48f), hat = "phrygian", ghat = "g_tiara", shield = "spara", armor = "scale", legs = "boots", pants = C(0.46f, 0.2f, 0.18f), beard = true } },
-            { "arab", new ClashCult { skin = C(0.78f, 0.58f, 0.42f), hat = "kufiya", ghat = "kufiya", shield = "round", armor = "robe", legs = "bare", beard = true, trim = C(0.93f, 0.9f, 0.82f) } },
-            { "roman", new ClashCult { skin = C(0.95f, 0.8f, 0.66f), hat = "crest", ghat = "g_roman", shield = "scutum", armor = "segmentata", legs = "bare", cloak = C(0.72f, 0.12f, 0.1f) } },
-            { "celt", new ClashCult { skin = C(0.97f, 0.84f, 0.72f), hat = "limed", ghat = "limed", shield = "oval", armor = "plaid", legs = "trousers", pants = C(0.4f, 0.42f, 0.3f), hair = C(0.62f, 0.3f, 0.12f), beard = true } },
-            { "german", new ClashCult { skin = C(0.97f, 0.84f, 0.72f), hat = "knot", ghat = "knot", shield = "hex", armor = "furcloak", legs = "wraps", pants = C(0.36f, 0.3f, 0.22f), hair = C(0.8f, 0.64f, 0.34f), beard = true } },
-            { "sarmatian", new ClashCult { skin = C(0.9f, 0.74f, 0.58f), hat = "spike", ghat = "g_spike", shield = "small", armor = "scale", legs = "boots", pants = C(0.3f, 0.26f, 0.22f) } },
-        };
-        public static ClashCult CultOf(string c) { ClashCult r; return c != null && CULT.TryGetValue(c, out r) ? r : CULT["han"]; }
-        static readonly Color IRON = C(0.42f, 0.43f, 0.47f), IRON_D = C(0.3f, 0.31f, 0.35f), WOOD = C(0.43f, 0.3f, 0.17f), RED = C(0.8f, 0.16f, 0.12f), GOLD = C(0.88f, 0.7f, 0.28f);
-        static readonly Color BRONZE = C(0.7f, 0.5f, 0.26f), FUR = C(0.46f, 0.33f, 0.2f), TAN = C(0.74f, 0.62f, 0.4f), WHITE = C(0.95f, 0.94f, 0.89f);
-        public static Color Wood { get { return WOOD; } }
-        public static Color Gold { get { return GOLD; } }
-
-        // ---------------------------------------------------------- 网格辅助 --
         static void QuadOut(MeshBuilder mb, Vector3 a, Vector3 b, Vector3 c, Vector3 d, Color col, Vector3 rf)
         {
             var u = b - a; var v = c - a;
@@ -307,7 +539,7 @@ namespace Sanguo
         static Vector3 Cross(Vector3 a, Vector3 b) { return new Vector3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x); }
         static Vector3 Norm(Vector3 a) { float l = Mathf.Sqrt(a.x * a.x + a.y * a.y + a.z * a.z); if (l == 0) l = 1; return a / l; }
         static readonly int[,] CS = { { -1, -1 }, { 1, -1 }, { 1, 1 }, { -1, 1 } };
-        // 任意方向的方柱（Unity 坐标）：a → b，截面宽 w0 → w1
+        // 任意方向的方柱（Unity 坐标）：a → b，截面宽 w0 → w1（= JS beam）
         public static void Beam(MeshBuilder mb, Vector3 a, Vector3 b, float w0, float w1, Color col)
         {
             var d = Norm(b - a);
@@ -337,1006 +569,1317 @@ namespace Sanguo
             QuadOut(mb, A[0], A[1], A[2], A[3], Shade(col, -0.1f), mid);
             if (w1 > 1e-5f) QuadOut(mb, B[0], B[1], B[2], B[3], Shade(col, 0.06f), mid);
         }
-        // 沿 x 轴的扁圆盘（圆盾）：中心 c，半径 r（ry 为竖向半径，缺省同 r），厚 t
-        static void DiscX(MeshBuilder mb, Vector3 c, float r, float t, Color col, int seg = 8, float ry = 0)
-        {
-            if (ry <= 0) ry = r;
-            var rf = c;
-            for (int i = 0; i < seg; i++)
-            {
-                float a0 = (float)i / seg * Mathf.PI * 2, a1 = (float)(i + 1) / seg * Mathf.PI * 2;
-                float p0x = Mathf.Cos(a0) * r, p0y = Mathf.Sin(a0) * ry, p1x = Mathf.Cos(a1) * r, p1y = Mathf.Sin(a1) * ry;
-                Vector3 o0 = V(c.x - t / 2, c.y + p0y, c.z + p0x), o1 = V(c.x - t / 2, c.y + p1y, c.z + p1x);
-                Vector3 i0 = V(c.x + t / 2, c.y + p0y, c.z + p0x), i1 = V(c.x + t / 2, c.y + p1y, c.z + p1x);
-                QuadOut(mb, o0, o1, i1, i0, Shade(col, -0.2f), rf);
-                Vector3 ca = V(c.x - t / 2, c.y, c.z), cb = V(c.x + t / 2, c.y, c.z);
-                DiscTri(mb, ca, o0, o1, Shade(col, (i % 2) * 0.05f), rf);
-                DiscTri(mb, cb, i0, i1, Shade(col, -0.1f), rf);
-            }
-        }
-        static void DiscTri(MeshBuilder mb, Vector3 p, Vector3 q, Vector3 s, Color k, Vector3 rf)
-        {
-            var n = Cross(q - p, s - p);
-            float mx = p.x - rf.x;
-            if (n.x * mx >= 0) mb.Tri(p, q, s, k); else mb.Tri(p, s, q, k);
-        }
 
-        // ---------------------------------------------------------- 头饰 --
-        // y0 = 头顶，z0 = 头部中心 z，s = 尺寸倍数；acc = 识别色（近色对阵时的缨 / 羽 / 带，可为 null）
-        static void Headgear(MeshBuilder mb, string hat, Color team, float y0, float s, float z0, Color? acc, ClashCult cu)
-        {
-            Func<float, float, float, Vector3> at = (x, y, z) => V(x * s, y0 + y * s, z0 + z * s);
-            Func<float, float, float, Vector3> sz = (x, y, z) => V(x * s, y * s, z * s);
-            Color hair = cu != null && cu.hair.HasValue ? cu.hair.Value : HAIR_D;
-            Color tassel = acc ?? RED;
-            Action cap = () => mb.Box(at(0, 0.0f, -0.005f), sz(0.17f, 0.035f, 0.165f), hair);
-            switch (hat)
-            {
-                case "bun":      // 南中：椎髻 + 骨簪 + 红头带
-                    mb.Box(at(0, -0.03f, 0), sz(0.17f, 0.03f, 0.16f), acc ?? RED);
-                    mb.Box(at(0, 0.03f, -0.02f), sz(0.08f, 0.07f, 0.08f), hair);
-                    mb.Box(at(0, 0.05f, -0.02f), sz(0.17f, 0.018f, 0.018f), C(0.94f, 0.9f, 0.78f));
-                    break;
-                case "mizura":   // 倭：美豆良（左右耳侧的发环）
-                    mb.Box(at(0, 0.005f, 0), sz(0.17f, 0.035f, 0.16f), hair);
-                    mb.Box(at(-0.1f, -0.08f, 0), sz(0.04f, 0.09f, 0.05f), hair);
-                    mb.Box(at(0.1f, -0.08f, 0), sz(0.04f, 0.09f, 0.05f), hair);
-                    mb.Box(at(0, -0.025f, 0), sz(0.175f, 0.02f, 0.165f), acc ?? WHITE);
-                    break;
-                case "band":
-                    mb.Box(at(0, -0.03f, 0), sz(0.17f, 0.035f, 0.16f), acc ?? Shade(team, 0.2f));
-                    mb.Box(at(0, 0.005f, 0), sz(0.155f, 0.03f, 0.15f), hair);
-                    break;
-                case "feather":  // 夷洲：头带 + 竖羽
-                    cap();
-                    mb.Box(at(0, -0.03f, 0), sz(0.175f, 0.035f, 0.165f), acc ?? Shade(team, 0.15f));
-                    Beam(mb, at(-0.04f, -0.01f, -0.06f), at(-0.07f, 0.17f, -0.09f), 0.035f * s, 0.012f * s, WHITE);
-                    Beam(mb, at(0.0f, -0.01f, -0.07f), at(0.0f, 0.2f, -0.1f), 0.035f * s, 0.012f * s, tassel);
-                    Beam(mb, at(0.04f, -0.01f, -0.06f), at(0.07f, 0.17f, -0.09f), 0.035f * s, 0.012f * s, WHITE);
-                    break;
-                case "seband":   // 林邑 / 扶南：金箍 + 顶髻
-                    cap();
-                    mb.Box(at(0, -0.03f, 0), sz(0.178f, 0.03f, 0.168f), GOLD);
-                    mb.Cone(at(0, 0.0f, -0.01f), 0.05f * s, 0.09f * s, 5, hair);
-                    mb.Box(at(0, 0.05f, -0.01f), sz(0.03f, 0.03f, 0.03f), GOLD);
-                    break;
-                case "plume":    // 高句丽 / 三韩：铁盔 + 白羽
-                    mb.Cone(at(0, -0.035f, 0), 0.115f * s, 0.12f * s, 6, IRON);
-                    mb.Box(at(0, 0.13f, -0.01f), sz(0.025f, 0.14f, 0.05f), acc ?? C(0.95f, 0.95f, 0.9f));
-                    mb.Box(at(-0.09f, -0.1f, 0.02f), sz(0.02f, 0.08f, 0.06f), IRON_D);
-                    mb.Box(at(0.09f, -0.1f, 0.02f), sz(0.02f, 0.08f, 0.06f), IRON_D);
-                    break;
-                case "fur":      // 草原：毡帽 + 毛皮檐
-                    mb.Cylinder(at(0, -0.05f, 0), 0.115f * s, 0.1f * s, 0.09f * s, 6, FUR);
-                    mb.Cone(at(0, 0.035f, 0), 0.08f * s, 0.07f * s, 6, Shade(team, -0.1f));
-                    if (acc.HasValue) mb.Box(at(0, 0.1f, 0), sz(0.03f, 0.04f, 0.03f), acc.Value);
-                    mb.Box(at(0, -0.12f, -0.08f), sz(0.06f, 0.12f, 0.03f), hair);    // 辫
-                    break;
-                case "tall":     // 西域：白毡尖帽 + 帽檐
-                    mb.Cylinder(at(0, -0.04f, 0), 0.105f * s, 0.1f * s, 0.03f * s, 6, C(0.82f, 0.76f, 0.62f));
-                    mb.Cone(at(0, -0.01f, 0), 0.095f * s, 0.24f * s, 6, C(0.86f, 0.8f, 0.66f));
-                    mb.Box(at(0, -0.035f, 0), sz(0.2f, 0.012f, 0.19f), acc ?? Shade(team, 0.1f));
-                    break;
-                case "kushan":   // 贵霜：深色高尖帽 + 金箍
-                    mb.Cylinder(at(0, -0.045f, 0), 0.11f * s, 0.11f * s, 0.035f * s, 6, acc ?? GOLD);
-                    mb.Cone(at(0, -0.01f, -0.01f), 0.1f * s, 0.27f * s, 6, Shade(team, -0.42f));
-                    break;
-                case "phrygian": // 安息：弗里吉亚软帽（帽尖前倾）+ 护耳垂片
-                    mb.Cylinder(at(0, -0.05f, 0), 0.112f * s, 0.105f * s, 0.07f * s, 6, Shade(team, -0.3f));
-                    Beam(mb, at(0, 0.015f, -0.01f), at(0, 0.12f, 0.07f), 0.16f * s, 0.03f * s, Shade(team, -0.22f));
-                    mb.Box(at(-0.088f, -0.12f, 0.01f), sz(0.02f, 0.1f, 0.07f), Shade(team, -0.3f));
-                    mb.Box(at(0.088f, -0.12f, 0.01f), sz(0.02f, 0.1f, 0.07f), Shade(team, -0.3f));
-                    if (acc.HasValue) mb.Box(at(0, -0.03f, 0.002f), sz(0.228f, 0.02f, 0.215f), acc.Value);
-                    break;
-                case "kufiya":   // 阿拉伯：头巾垂肩 + 深色头箍
-                    mb.Box(at(0, -0.01f, 0), sz(0.185f, 0.05f, 0.175f), WHITE);
-                    mb.Box(at(0, -0.12f, -0.085f), sz(0.19f, 0.2f, 0.025f), C(0.9f, 0.88f, 0.82f));
-                    mb.Box(at(-0.092f, -0.1f, -0.02f), sz(0.02f, 0.16f, 0.12f), C(0.9f, 0.88f, 0.82f));
-                    mb.Box(at(0.092f, -0.1f, -0.02f), sz(0.02f, 0.16f, 0.12f), C(0.9f, 0.88f, 0.82f));
-                    mb.Cylinder(at(0, 0.01f, 0), 0.1f * s, 0.1f * s, 0.022f * s, 6, acc ?? C(0.15f, 0.12f, 0.1f));
-                    break;
-                case "spike":    // 萨尔马提亚：尖顶铁盔 + 锁子护颈
-                    mb.Cone(at(0, -0.04f, 0), 0.112f * s, 0.2f * s, 6, IRON);
-                    mb.Box(at(0, -0.1f, -0.075f), sz(0.16f, 0.09f, 0.025f), IRON_D);
-                    if (acc.HasValue) mb.Box(at(0, 0.165f, 0), sz(0.03f, 0.05f, 0.03f), acc.Value);
-                    break;
-                case "crest":    // 罗马：高卢式铁盔 + 纵冠 + 护颊 + 宽护颈
-                    mb.Cone(at(0, -0.035f, 0), 0.115f * s, 0.11f * s, 6, IRON);
-                    mb.Box(at(0, 0.09f, 0), sz(0.03f, 0.06f, 0.2f), tassel);
-                    mb.Box(at(-0.085f, -0.09f, 0.03f), sz(0.02f, 0.08f, 0.06f), IRON_D);
-                    mb.Box(at(0.085f, -0.09f, 0.03f), sz(0.02f, 0.08f, 0.06f), IRON_D);
-                    mb.Box(at(0, -0.075f, -0.085f), sz(0.2f, 0.025f, 0.06f), IRON_D);
-                    break;
-                case "limed":    // 喀里多尼亚：石灰竖发 + 长发
-                    cap();
-                    for (int i = -1; i <= 1; i++) mb.Cone(at(i * 0.05f, 0.0f, -0.01f - Mathf.Abs(i) * 0.02f), 0.035f * s, 0.09f * s, 4, Shade(hair, 0.25f));
-                    mb.Box(at(0, -0.1f, -0.075f), sz(0.17f, 0.17f, 0.035f), hair);
-                    break;
-                case "knot":     // 日耳曼：苏维汇发髻（右侧）+ 长发
-                    cap();
-                    mb.Box(at(0, -0.1f, -0.075f), sz(0.17f, 0.18f, 0.04f), hair);
-                    mb.Box(at(0.075f, 0.0f, -0.01f), sz(0.06f, 0.06f, 0.07f), Shade(hair, -0.1f));
-                    if (acc.HasValue) mb.Box(at(0, -0.035f, 0), sz(0.178f, 0.018f, 0.168f), acc.Value);
-                    break;
-                case "hair":
-                    mb.Box(at(0, 0.0f, -0.01f), sz(0.17f, 0.04f, 0.17f), hair);
-                    mb.Box(at(0, -0.1f, -0.075f), sz(0.17f, 0.18f, 0.04f), hair);
-                    break;
-                case "turban":
-                    mb.Cylinder(at(0, -0.05f, 0), 0.105f * s, 0.11f * s, 0.08f * s, 6, C(0.92f, 0.9f, 0.84f));
-                    mb.Cone(at(0, 0.03f, 0), 0.07f * s, 0.05f * s, 6, C(0.9f, 0.88f, 0.8f));
-                    break;
-                // ---- 武将专用（尺寸不乘 s）----
-                case "g_han":    // 汉：金盔 + 雉尾
-                    mb.Cylinder(at(0, -0.04f, 0), 0.125f, 0.125f, 0.035f, 6, Shade(GOLD, -0.2f));
-                    mb.Cone(at(0, -0.01f, 0), 0.12f, 0.14f, 6, GOLD);
-                    Beam(mb, at(0, 0.12f, -0.015f), at(0, 0.36f, -0.215f), 0.035f, 0.012f, tassel);
-                    Beam(mb, at(0.03f, 0.12f, -0.015f), at(0.06f, 0.32f, -0.235f), 0.03f, 0.01f, Shade(tassel, 0.2f));
-                    break;
-                case "g_roman":  // 罗马：铁盔 + 横向红冠（百夫长式）+ 护颊
-                    mb.Cone(at(0, -0.035f, 0), 0.122f, 0.12f, 6, IRON);
-                    mb.Box(at(0, 0.095f, 0), V(0.3f, 0.075f, 0.035f), tassel);
-                    mb.Box(at(0, 0.055f, 0), V(0.04f, 0.03f, 0.04f), GOLD);
-                    mb.Box(at(-0.09f, -0.11f, 0.045f), V(0.02f, 0.09f, 0.07f), IRON_D);
-                    mb.Box(at(0.09f, -0.11f, 0.045f), V(0.02f, 0.09f, 0.07f), IRON_D);
-                    mb.Box(at(0, -0.1f, -0.075f), V(0.17f, 0.06f, 0.03f), IRON_D);
-                    break;
-                case "g_spike":  // 萨尔马提亚：鎏金尖顶分片盔 + 锁子护颈 + 两条飘带
-                    mb.Cylinder(at(0, -0.04f, 0), 0.125f, 0.125f, 0.03f, 6, Shade(GOLD, -0.25f));
-                    mb.Cone(at(0, -0.02f, 0), 0.118f, 0.24f, 6, GOLD);
-                    for (int i = -1; i <= 1; i += 2) mb.Box(at(i * 0.055f, 0.04f, 0), V(0.012f, 0.11f, 0.012f), Shade(GOLD, -0.35f));
-                    mb.Box(at(0, -0.13f, -0.085f), V(0.19f, 0.12f, 0.03f), IRON_D);
-                    Beam(mb, at(-0.04f, -0.04f, -0.105f), at(-0.07f, -0.24f, -0.315f), 0.03f, 0.015f, WHITE);
-                    Beam(mb, at(0.04f, -0.04f, -0.105f), at(0.07f, -0.21f, -0.295f), 0.03f, 0.015f, tassel);
-                    break;
-                case "g_plume":  // 高句丽 / 三韩：鎏金盔 + 高耸白羽
-                    mb.Cylinder(at(0, -0.04f, 0), 0.125f, 0.125f, 0.035f, 6, Shade(GOLD, -0.2f));
-                    mb.Cone(at(0, -0.01f, 0), 0.115f, 0.13f, 6, GOLD);
-                    Beam(mb, at(0, 0.1f, 0), at(0, 0.4f, -0.03f), 0.05f, 0.02f, acc ?? C(0.96f, 0.95f, 0.9f));
-                    Beam(mb, at(0.035f, 0.1f, 0), at(0.07f, 0.34f, -0.05f), 0.035f, 0.012f, C(0.92f, 0.9f, 0.84f));
-                    Beam(mb, at(-0.035f, 0.1f, 0), at(-0.07f, 0.34f, -0.05f), 0.035f, 0.012f, C(0.92f, 0.9f, 0.84f));
-                    break;
-                case "g_tiara":  // 安息：高圆提亚拉冠（势力色暗部）+ 珠串金箍 + 背后飘带 + 披发
-                    mb.Cylinder(at(0, -0.045f, 0), 0.118f, 0.112f, 0.17f, 6, Shade(team, -0.38f));
-                    mb.Cylinder(at(0, 0.125f, 0), 0.112f, 0.06f, 0.06f, 6, Shade(team, -0.3f));
-                    mb.Cylinder(at(0, -0.045f, 0), 0.124f, 0.124f, 0.035f, 6, GOLD);
-                    mb.Cylinder(at(0, 0.09f, 0), 0.116f, 0.116f, 0.022f, 6, GOLD);
-                    for (int i = -2; i <= 2; i++) mb.Box(at(i * 0.035f, 0.035f, 0.11f), V(0.018f, 0.018f, 0.014f), WHITE);
-                    mb.Box(at(0, -0.14f, -0.08f), V(0.18f, 0.2f, 0.05f), hair);
-                    Beam(mb, at(-0.04f, -0.03f, -0.11f), at(-0.08f, -0.25f, -0.3f), 0.03f, 0.015f, tassel);
-                    Beam(mb, at(0.04f, -0.03f, -0.11f), at(0.08f, -0.22f, -0.3f), 0.03f, 0.015f, GOLD);
-                    break;
-                case "g_wa":     // 倭：冲角付胄（前凸的铁盔）+ 宽护颈 + 立饰
-                    mb.Cylinder(at(0, -0.045f, 0), 0.128f, 0.122f, 0.05f, 6, IRON_D);
-                    mb.Cone(at(0, 0.0f, 0), 0.12f, 0.12f, 6, IRON);
-                    Beam(mb, at(0, 0.02f, 0.02f), at(0, -0.02f, 0.15f), 0.08f, 0.02f, IRON);
-                    mb.Box(at(0, -0.1f, -0.1f), V(0.27f, 0.035f, 0.11f), IRON_D);
-                    mb.Box(at(0, -0.14f, -0.12f), V(0.3f, 0.035f, 0.11f), Shade(IRON_D, -0.1f));
-                    mb.Box(at(0, 0.13f, 0), V(0.02f, 0.07f, 0.06f), acc ?? GOLD);
-                    break;
-                case "g_fur":    // 草原：狐皮帽 + 护耳 + 势力色毡顶 + 双辫
-                    mb.Cylinder(at(0, -0.06f, 0), 0.13f, 0.12f, 0.1f, 6, FUR);
-                    mb.Cone(at(0, 0.04f, 0), 0.1f, 0.15f, 6, Shade(team, -0.05f));
-                    mb.Box(at(-0.105f, -0.13f, 0.0f), V(0.03f, 0.12f, 0.08f), Shade(FUR, 0.1f));
-                    mb.Box(at(0.105f, -0.13f, 0.0f), V(0.03f, 0.12f, 0.08f), Shade(FUR, 0.1f));
-                    mb.Box(at(0, 0.2f, 0), V(0.03f, 0.05f, 0.03f), acc ?? GOLD);
-                    mb.Box(at(-0.05f, -0.18f, -0.09f), V(0.04f, 0.16f, 0.03f), hair);
-                    mb.Box(at(0.05f, -0.18f, -0.09f), V(0.04f, 0.16f, 0.03f), hair);
-                    break;
-                case "g_feather":// 南中 / 夷洲首领：金箍 + 扇形羽冠
-                    mb.Box(at(0, -0.03f, 0), V(0.18f, 0.04f, 0.17f), GOLD);
-                    mb.Box(at(0, 0.0f, -0.005f), V(0.17f, 0.035f, 0.165f), hair);
-                    for (int i = -2; i <= 2; i++) Beam(mb, at(i * 0.03f, 0.0f, -0.06f), at(i * 0.09f, 0.26f - Mathf.Abs(i) * 0.04f, -0.1f), 0.045f, 0.015f, i % 2 != 0 ? WHITE : (i != 0 ? tassel : Shade(team, 0.25f)));
-                    break;
-                case "g_crown":  // 林邑 / 扶南：多层金尖冠
-                    mb.Cylinder(at(0, -0.04f, 0), 0.115f, 0.11f, 0.06f, 6, GOLD);
-                    mb.Cylinder(at(0, 0.02f, 0), 0.095f, 0.075f, 0.08f, 6, Shade(GOLD, 0.08f));
-                    mb.Cylinder(at(0, 0.1f, 0), 0.065f, 0.045f, 0.07f, 6, GOLD);
-                    mb.Cone(at(0, 0.17f, 0), 0.04f, 0.14f, 5, Shade(GOLD, 0.12f));
-                    if (acc.HasValue) mb.Box(at(0, -0.01f, 0.105f), V(0.04f, 0.04f, 0.02f), acc.Value);
-                    break;
-                case "g_kushan": // 贵霜王冠：高尖帽 + 金冠带 + 飘带
-                    mb.Cylinder(at(0, -0.045f, 0), 0.12f, 0.12f, 0.045f, 6, GOLD);
-                    mb.Cone(at(0, 0.0f, -0.01f), 0.108f, 0.3f, 6, Shade(team, -0.42f));
-                    Beam(mb, at(-0.04f, -0.03f, -0.11f), at(-0.08f, -0.23f, -0.3f), 0.03f, 0.015f, acc ?? GOLD);
-                    Beam(mb, at(0.04f, -0.03f, -0.11f), at(0.08f, -0.2f, -0.3f), 0.03f, 0.015f, acc ?? GOLD);
-                    break;
-                default:         // 'cone' 汉军铁胄：盔体、帽檐、红缨、顿项
-                    mb.Cylinder(at(0, -0.045f, 0), 0.118f * s, 0.118f * s, 0.03f * s, 6, IRON_D);
-                    mb.Cone(at(0, -0.02f, 0), 0.112f * s, 0.13f * s, 6, IRON);
-                    mb.Box(at(0, 0.12f, 0), sz(0.035f, 0.05f, 0.035f), tassel);
-                    mb.Box(at(0, -0.1f, -0.07f), sz(0.17f, 0.1f, 0.03f), IRON_D);
-                    break;
-            }
-        }
-
-        // 胡须（面朝 +z）：hc = 头部中心，hs = 头部尺寸
-        static void BeardOf(MeshBuilder mb, ClashCult cu, Vector3 hc, float hs)
-        {
-            if (!cu.beard) return;
-            Color hair = cu.hair ?? HAIR_D;
-            mb.Box(V(hc.x, hc.y - hs * 0.36f, hc.z + hs * 0.46f), V(hs * 0.82f, hs * 0.36f, hs * 0.16f), hair);
-            mb.Box(V(hc.x, hc.y - hs * 0.16f, hc.z + hs * 0.52f), V(hs * 0.5f, hs * 0.08f, hs * 0.06f), hair);
-        }
-
-        // 甲衣样式：躯干 (y, z, w, h, d)（面朝 +z）；trim = 镶边 / 识别色
-        static void TorsoDeco(MeshBuilder mb, ClashCult cu, float y, float z, float w, float h, float d, Color t, Color trim)
-        {
-            float fz = z + d / 2 + 0.006f, bz = z - d / 2 - 0.006f;
-            var light = Shade(t, 0.16f);
-            Action<float, float, float, float, Color, float> both = (cx, cy, sw, sh, col, dz) =>
-            {
-                mb.Box(V(cx, cy, fz + dz), V(sw, sh, 0.02f), col);
-                mb.Box(V(cx, cy, bz - dz), V(sw, sh, 0.02f), Shade(col, -0.08f));
-            };
-            float OV = fz + 0.014f;     // 贴在胸甲外的细节
-            switch (cu.armor)
-            {
-                case "scale":        // 鱼鳞甲：前后三排错色甲片
-                    for (int r = 0; r < 3; r++)
-                    {
-                        float yy = y + h * (0.26f - r * 0.21f), ww = w * (0.8f - r * 0.04f);
-                        both(0, yy, ww, h * 0.2f, r % 2 == 1 ? IRON : BRONZE, 0);
-                        for (int i = -1; i <= 1; i += 2) mb.Box(V(i * ww * 0.25f, yy - h * 0.09f, OV), V(0.02f, 0.02f, 0.012f), Shade(r % 2 == 1 ? IRON : BRONZE, -0.3f));
-                    }
-                    break;
-                case "segmentata":   // 环片甲：铁条绕身（缝隙露出势力色）
-                    for (int r = 0; r < 3; r++) mb.Box(V(0, y + h * (0.32f - r * 0.25f), z), V(w + 0.016f, h * 0.15f, d + 0.016f), r % 2 == 1 ? IRON_D : IRON);
-                    mb.Box(V(0, y + h * 0.45f, z), V(w * 0.55f, h * 0.1f, d + 0.02f), IRON_D);
-                    break;
-                case "tanko":        // 短甲：铁胸板 + 势力色横带 + 勾玉项链
-                    both(0, y + h * 0.08f, w * 0.8f, h * 0.62f, IRON, 0);
-                    both(0, y + h * 0.08f, w * 0.82f, h * 0.1f, light, 0.008f);
-                    for (int i = -2; i <= 2; i++) mb.Box(V(i * 0.026f, y + h * 0.4f - Mathf.Abs(i) * 0.01f, OV), V(0.018f, 0.026f, 0.014f), C(0.2f, 0.62f, 0.45f));
-                    break;
-                case "robe":         // 长袍：前襟镶边
-                    both(0, y, w * 0.12f, h * 0.95f, trim, 0);
-                    break;
-                case "furcoat":      // 皮袍：毛皮领与前襟
-                    mb.Box(V(0, y + h * 0.43f, z), V(w * 0.78f, h * 0.16f, d + 0.02f), FUR);
-                    both(0, y - h * 0.05f, w * 0.14f, h * 0.8f, FUR, 0);
-                    break;
-                case "rattan":       // 藤甲：棕黄编织胸甲（纵横两色）
-                    both(0, y + h * 0.05f, w * 0.82f, h * 0.7f, TAN, 0);
-                    for (int i = -1; i <= 1; i++) mb.Box(V(i * w * 0.24f, y + h * 0.05f, OV), V(0.014f, h * 0.66f, 0.012f), Shade(TAN, -0.25f));
-                    mb.Box(V(0, y + h * 0.05f, OV), V(w * 0.8f, 0.014f, 0.012f), Shade(TAN, -0.25f));
-                    break;
-                case "bare":         // 短衣：金饰 / 贝珠项链
-                    mb.Box(V(0, y + h * 0.42f, z + d * 0.2f), V(w * 0.6f, 0.03f, d * 0.75f), cu.tattoo ? WHITE : GOLD);
-                    if (!cu.tattoo) mb.Box(V(0, y + h * 0.3f, fz), V(0.05f, 0.05f, 0.015f), GOLD);
-                    break;
-                case "plaid":        // 方格衣 + 金项圈（torc）
-                    for (int r = 0; r < 2; r++) for (int i = -1; i <= 1; i++) if ((r + i) % 2 == 0) both(i * w * 0.28f, y + h * (0.2f - r * 0.36f), w * 0.24f, h * 0.3f, Shade(t, -0.32f), 0);
-                    mb.Box(V(0, y + h * 0.52f, z + d * 0.15f), V(w * 0.5f, 0.03f, d * 0.7f), GOLD);
-                    break;
-                case "furcloak":     // 毛皮披肩（肩与背）
-                    mb.Box(V(0, y + h * 0.4f, z - d * 0.1f), V(w + 0.05f, h * 0.22f, d + 0.02f), FUR);
-                    mb.Box(V(0, y + h * 0.05f, bz - 0.01f), V(w * 0.9f, h * 0.7f, 0.03f), Shade(FUR, -0.08f));
-                    break;
-                default:             // 'lamellar' 札甲：胸甲 + 两道甲片横缝
-                    both(0, y + h * 0.08f, w * 0.76f, h * 0.62f, light, 0);
-                    for (int r = 0; r < 2; r++) mb.Box(V(0, y + h * (0.16f - r * 0.2f), OV), V(w * 0.74f, 0.012f, 0.012f), Shade(t, -0.12f));
-                    break;
-            }
-        }
-
-        // 盾（左臂外侧，盾面法线沿 x）：c = 盾心，trim = 镶边 / 识别色（null 时用文化默认）
-        static void ShieldOf(MeshBuilder mb, string kind, Vector3 c, Color t, Color? trim)
-        {
-            Color face = Shade(t, 0.06f), dark = Shade(t, -0.4f);
-            Color rim = trim ?? dark, boss = trim ?? GOLD;
-            Func<float, Vector3> o = dx => V(c.x - dx, c.y, c.z);       // 向外（-x）偏移
-            switch (kind)
-            {
-                case "round":
-                    DiscX(mb, V(c.x + 0.006f, c.y, c.z), 0.185f, 0.03f, rim);
-                    DiscX(mb, c, 0.17f, 0.035f, face);
-                    mb.Box(o(0.025f), V(0.02f, 0.06f, 0.06f), boss);
-                    break;
-                case "small":        // 小圆皮盾：皮色盾面 + 势力色盾心
-                    DiscX(mb, c, 0.135f, 0.03f, C(0.4f, 0.28f, 0.16f));
-                    DiscX(mb, o(0.012f), 0.09f, 0.012f, face);
-                    mb.Box(o(0.026f), V(0.02f, 0.045f, 0.045f), boss);
-                    break;
-                case "rattan":       // 藤牌：棕黄编织 + 势力色内圈
-                    DiscX(mb, c, 0.18f, 0.035f, TAN);
-                    DiscX(mb, o(0.012f), 0.1f, 0.012f, face);
-                    mb.Box(o(0.028f), V(0.02f, 0.05f, 0.05f), trim ?? C(0.92f, 0.88f, 0.76f));
-                    break;
-                case "oval":         // 长椭圆盾（凯尔特 / 南海）：竖脊 + 盾心
-                    DiscX(mb, V(c.x + 0.006f, c.y, c.z), 0.14f, 0.03f, rim, 10, 0.25f);
-                    DiscX(mb, c, 0.125f, 0.035f, face, 10, 0.235f);
-                    mb.Box(o(0.022f), V(0.015f, 0.4f, 0.03f), boss);
-                    mb.Box(o(0.028f), V(0.02f, 0.07f, 0.07f), boss);
-                    break;
-                case "hex":          // 日耳曼六角盾
-                    DiscX(mb, V(c.x + 0.006f, c.y, c.z), 0.2f, 0.03f, rim, 6);
-                    DiscX(mb, c, 0.18f, 0.035f, face, 6);
-                    mb.Box(o(0.026f), V(0.02f, 0.065f, 0.065f), boss);
-                    break;
-                case "scutum":       // 罗马长方大盾：势力色盾面 + 金色边框、竖脊、盾心
-                    mb.Box(c, V(0.04f, 0.46f, 0.3f), face);
-                    mb.Box(o(0.022f), V(0.008f, 0.46f, 0.022f), boss);
-                    mb.Box(V(c.x - 0.022f, c.y + 0.22f, c.z), V(0.008f, 0.022f, 0.3f), trim ?? GOLD);
-                    mb.Box(V(c.x - 0.022f, c.y - 0.22f, c.z), V(0.008f, 0.022f, 0.3f), trim ?? GOLD);
-                    mb.Box(V(c.x - 0.022f, c.y, c.z + 0.14f), V(0.008f, 0.46f, 0.02f), trim ?? GOLD);
-                    mb.Box(V(c.x - 0.022f, c.y, c.z - 0.14f), V(0.008f, 0.46f, 0.02f), trim ?? GOLD);
-                    mb.Box(o(0.03f), V(0.02f, 0.08f, 0.08f), boss);
-                    break;
-                case "spara":        // 安息藤编立盾：浅黄编条 + 势力色横纹
-                    mb.Box(c, V(0.03f, 0.46f, 0.24f), C(0.78f, 0.68f, 0.46f));
-                    for (int i = -1; i <= 1; i++) mb.Box(V(c.x - 0.018f, c.y + i * 0.13f, c.z), V(0.008f, 0.06f, 0.24f), face);
-                    mb.Box(V(c.x - 0.018f, c.y, c.z + 0.115f), V(0.01f, 0.46f, 0.02f), rim);
-                    mb.Box(V(c.x - 0.018f, c.y, c.z - 0.115f), V(0.01f, 0.46f, 0.02f), rim);
-                    break;
-                case "wood":         // 倭：木质立盾 + 势力色锯齿纹
-                    mb.Box(c, V(0.035f, 0.44f, 0.2f), Shade(WOOD, 0.12f));
-                    for (int i = -1; i <= 1; i++) mb.Box(V(c.x - 0.02f, c.y + i * 0.13f, c.z + (i % 2 != 0 ? 0.04f : -0.04f)), V(0.008f, 0.07f, 0.11f), face);
-                    mb.Box(V(c.x - 0.02f, c.y + 0.205f, c.z), V(0.01f, 0.03f, 0.2f), rim);
-                    break;
-                default:             // 'rect' 汉：长方盾
-                    mb.Box(c, V(0.04f, 0.4f, 0.25f), face);
-                    mb.Box(o(0.025f), V(0.02f, 0.3f, 0.08f), dark);
-                    mb.Box(o(0.03f), V(0.02f, 0.07f, 0.07f), boss);
-                    mb.Box(V(c.x, c.y + 0.205f, c.z), V(0.045f, 0.02f, 0.25f), rim);
-                    mb.Box(V(c.x, c.y - 0.205f, c.z), V(0.045f, 0.02f, 0.25f), rim);
-                    break;
-            }
-        }
-
-        // 士兵身体：acc = 识别色（两军势力色相近时给出，用在肩、腰带、盾缘、盔缨上；否则 null）
-        public static Mesh Body(Color team, string culture, bool archer, Color? acc)
-        {
-            var mb = new MeshBuilder();
-            var cu = CultOf(culture);
-            Color t = team, mid = Shade(t, -0.18f), dark = Shade(t, -0.4f);
-            Color skin = cu.skin;
-            var leather = C(0.32f, 0.22f, 0.13f);
-            Color? trim = acc ?? cu.trim;
-            bool armBare = cu.armor == "bare" || cu.armor == "plaid" || cu.armor == "rattan";
-            Color arm = armBare ? skin : mid;
-            bool robe = cu.armor == "robe" || cu.armor == "furcoat";
-            if (robe)
-            {
-                float hem = cu.armor == "robe" ? 0.2f : 0.27f;
-                mb.Box(V(0, (hem + 0.45f) / 2, 0), V(0.31f, 0.45f - hem, 0.205f), mid);                         // 袍摆
-                mb.Box(V(0, hem + 0.015f, 0), V(0.33f, 0.03f, 0.215f), cu.armor == "furcoat" ? FUR : (trim ?? dark));
-            }
-            else
-            {
-                mb.Box(V(0, 0.385f, 0), V(0.31f, 0.13f, 0.2f), mid);               // 甲裙
-                mb.Box(V(0, 0.335f, 0.0f), V(0.33f, 0.04f, 0.215f), trim ?? dark); // 甲裙下缘
-            }
-            mb.Box(V(0, 0.565f, 0), V(0.29f, 0.26f, 0.18f), t);                     // 躯干
-            TorsoDeco(mb, cu, 0.565f, 0, 0.29f, 0.26f, 0.18f, t, trim ?? GOLD);
-            mb.Box(V(0, 0.455f, 0), V(0.3f, 0.045f, 0.19f), acc ?? leather);        // 腰带
-            mb.Box(V(0, 0.455f, 0.1f), V(0.06f, 0.05f, 0.02f), GOLD);               // 带扣
-            if (!armBare && cu.armor != "furcloak")
-            {
-                Color sh = acc ?? (cu.armor == "segmentata" ? IRON : dark);
-                mb.Box(V(-0.185f, 0.655f, 0), V(0.1f, 0.075f, 0.18f), sh);            // 肩甲
-                mb.Box(V(0.185f, 0.655f, 0), V(0.1f, 0.075f, 0.18f), sh);
-            }
-            else if (acc.HasValue)
-            {
-                mb.Box(V(-0.185f, 0.665f, 0), V(0.09f, 0.04f, 0.17f), acc.Value);
-                mb.Box(V(0.185f, 0.665f, 0), V(0.09f, 0.04f, 0.17f), acc.Value);
-            }
-            mb.Box(V(-0.2f, 0.53f, 0.03f), V(0.07f, 0.19f, 0.08f), arm);            // 左臂
-            mb.Box(V(0.2f, 0.575f, 0.04f), V(0.07f, 0.13f, 0.08f), arm);            // 右上臂
-            mb.Box(V(0.2f, 0.505f, 0.12f), V(0.065f, 0.065f, 0.16f), arm);          // 右前臂（前伸到握点）
-            if (cu.tattoo) foreach (var sx in new[] { -0.2f, 0.2f }) mb.Box(V(sx, 0.56f, 0.072f), V(0.074f, 0.018f, 0.012f), C(0.18f, 0.22f, 0.3f));   // 文身
-            mb.Box(V(0, 0.71f, 0), V(0.08f, 0.04f, 0.08f), skin);                   // 颈
-            mb.Box(V(0, 0.795f, 0.005f), V(0.155f, 0.145f, 0.15f), skin);           // 头
-            mb.Box(V(0, 0.79f, 0.081f), V(0.11f, 0.025f, 0.01f), Shade(skin, -0.45f));   // 眉眼的阴影
-            BeardOf(mb, cu, V(0, 0.795f, 0.005f), 0.15f);
-            Headgear(mb, cu.hat, t, 0.87f, 1, 0, acc, cu);
-            if (archer)
-            {
-                // 箭囊（背后）与箭羽
-                mb.Box(V(0.06f, 0.6f, -0.13f), V(0.09f, 0.3f, 0.08f), leather);
-                for (int i = 0; i < 3; i++) mb.Box(V(0.04f + i * 0.022f, 0.78f, -0.13f), V(0.016f, 0.07f, 0.016f), C(0.92f, 0.9f, 0.85f));
-            }
-            else ShieldOf(mb, cu.shield, V(-0.265f, 0.51f, 0.07f), t, acc);
-            return mb.ToMesh("clash body");
-        }
-        // 腿（髋部为原点）：trousers 裤 + 绑腿 + 靴 / bare 裸腿 + 凉鞋 / boots 裤 + 高靴 / wraps 浅色裤 + 交叉绑带
-        public static Mesh Leg(string culture)
-        {
-            var mb = new MeshBuilder();
-            var cu = CultOf(culture);
-            Color skin = cu.skin;
-            Color pants = cu.pants ?? C(0.27f, 0.22f, 0.19f);
-            switch (cu.legs)
-            {
-                case "bare":
-                    mb.Box(V(0, -0.12f, 0), V(0.095f, 0.24f, 0.1f), skin);
-                    mb.Box(V(0, -0.25f, 0), V(0.1f, 0.03f, 0.105f), C(0.4f, 0.27f, 0.15f));
-                    mb.Box(V(0, -0.33f, 0.02f), V(0.11f, 0.06f, 0.15f), C(0.36f, 0.24f, 0.13f));
-                    break;
-                case "boots":
-                    mb.Box(V(0, -0.1f, 0), V(0.11f, 0.2f, 0.12f), pants);
-                    mb.Box(V(0, -0.27f, 0.01f), V(0.12f, 0.18f, 0.135f), C(0.2f, 0.14f, 0.1f));
-                    mb.Box(V(0, -0.345f, 0.035f), V(0.12f, 0.04f, 0.17f), C(0.15f, 0.11f, 0.09f));
-                    break;
-                case "wraps":
-                    mb.Box(V(0, -0.12f, 0), V(0.11f, 0.24f, 0.12f), pants);
-                    mb.Box(V(0, -0.17f, 0.0f), V(0.115f, 0.022f, 0.125f), C(0.3f, 0.22f, 0.14f));
-                    mb.Box(V(0, -0.24f, 0.0f), V(0.115f, 0.022f, 0.125f), C(0.3f, 0.22f, 0.14f));
-                    mb.Box(V(0, -0.31f, 0.02f), V(0.115f, 0.1f, 0.16f), C(0.24f, 0.17f, 0.11f));
-                    break;
-                default:
-                    mb.Box(V(0, -0.12f, 0), V(0.105f, 0.24f, 0.115f), pants);
-                    mb.Box(V(0, -0.235f, 0), V(0.11f, 0.05f, 0.12f), C(0.72f, 0.66f, 0.55f));   // 绑腿
-                    mb.Box(V(0, -0.31f, 0.02f), V(0.115f, 0.1f, 0.16f), C(0.15f, 0.11f, 0.09f));  // 靴
-                    break;
-            }
-            return mb.ToMesh("clash leg");
-        }
-        public static Mesh Spear()
-        {
-            var mb = new MeshBuilder();
-            mb.Box(V(0, 0.27f, 0), V(0.024f, 1.38f, 0.024f), WOOD);                  // 杆：y −0.42 → 0.96
-            mb.Cone(V(0, 0.95f, 0), 0.034f, 0.15f, 4, C(0.88f, 0.9f, 0.94f));          // 矛头
-            mb.Box(V(0, 0.935f, 0), V(0.05f, 0.035f, 0.05f), RED);                    // 红缨
-            mb.Box(V(0, 0, 0), V(0.055f, 0.065f, 0.06f), C(0.92f, 0.76f, 0.6f));      // 拳
-            return mb.ToMesh("clash spear");
-        }
-        public static Mesh Bow()
-        {
-            var mb = new MeshBuilder();
-            const int N = 6; const float R = 0.4f;
-            for (int i = 0; i < N; i++)
-            {
-                float y0 = -R + ((float)i / N) * 2 * R, y1 = -R + ((float)(i + 1) / N) * 2 * R;
-                float z0 = 0.14f * (1 - (y0 / R) * (y0 / R)), z1 = 0.14f * (1 - (y1 / R) * (y1 / R));
-                Beam(mb, V(0, y0, z0), V(0, y1, z1), 0.028f, 0.028f, C(0.36f, 0.22f, 0.12f));
-            }
-            Beam(mb, V(0, -R, 0), V(0, R, 0), 0.007f, 0.007f, C(0.9f, 0.88f, 0.8f));   // 弦
-            mb.Box(V(0, 0, 0.03f), V(0.055f, 0.065f, 0.06f), C(0.92f, 0.76f, 0.6f));
-            return mb.ToMesh("clash bow");
-        }
+        // 箭（平滑箭杆、箭镞、三片箭羽），沿 three 的 −z 飞行（= JS arrowGeo）。
+        // 网页版建模沿 y 轴（MeshBuilder 的 Unity 坐标），three 里 scale(0.8, 0.6, 0.8)、rotateX(−π/2)；
+        // 这里输出给 DrawU（M_unity = S·M_three·S）用的 Unity 局部坐标 = 上述 three 坐标的 z 取反：
+        //   位置 (x, y, z_u) → (0.8x, −0.8z_u, 0.6y)；法线按逆转置（three 的 normalMatrix）后归一化
         public static Mesh Arrow()
         {
             var mb = new MeshBuilder();
-            Beam(mb, V(0, 0, -0.3f), V(0, 0, 0.28f), 0.018f, 0.018f, C(0.5f, 0.38f, 0.22f));
-            Beam(mb, V(0, 0, 0.28f), V(0, 0, 0.4f), 0.05f, 0, C(0.75f, 0.76f, 0.8f));
-            var fl = C(0.94f, 0.93f, 0.88f);
-            mb.Quad(V(0, 0, -0.3f), V(0, 0.045f, -0.26f), V(0, 0.045f, -0.16f), V(0, 0, -0.18f), fl);
-            mb.Quad(V(0, 0, -0.3f), V(0, 0, -0.18f), V(0, 0.045f, -0.16f), V(0, 0.045f, -0.26f), fl);
-            mb.Quad(V(0, 0, -0.3f), V(0.045f, 0, -0.26f), V(0.045f, 0, -0.16f), V(0, 0, -0.18f), fl);
-            mb.Quad(V(0, 0, -0.3f), V(0, 0, -0.18f), V(0.045f, 0, -0.16f), V(0.045f, 0, -0.26f), fl);
-            return mb.ToMesh("clash arrow");
+            mb.Lathe(V(0, 0, 0), new[] { new LP(0.011f, -0.3f), new LP(0.011f, 0.28f) }, 5, C(0.52f, 0.4f, 0.24f));
+            mb.Lathe(V(0, 0, 0), new[] { new LP(0.024f, 0.27f), new LP(0.004f, 0.42f) }, 5, C(0.78f, 0.79f, 0.83f));
+            var fl = C(0.95f, 0.94f, 0.9f);
+            for (int k = 0; k < 3; k++)
+            {
+                float a = k * Mathf.PI * 2 / 3, ca = Mathf.Cos(a), sa = Mathf.Sin(a);
+                foreach (int sd in new[] { 1, -1 })
+                {
+                    var nrm = V(-sa * sd, 0, ca * sd);
+                    mb.TriN(V(0, -0.3f, 0), V(ca * 0.045f, -0.26f, sa * 0.045f), V(ca * 0.04f, -0.15f, sa * 0.04f), nrm, nrm, nrm, fl);
+                    mb.TriN(V(0, -0.3f, 0), V(ca * 0.04f, -0.15f, sa * 0.04f), V(0, -0.17f, 0), nrm, nrm, nrm, fl);
+                }
+            }
+            for (int i = 0; i < mb.v.Count; i++)
+            {
+                var p = mb.v[i]; mb.v[i] = V(0.8f * p.x, -0.8f * p.z, 0.6f * p.y);
+                var n = mb.n[i];
+                // three：n3 = normalize(nx / 0.8, ny / 0.6, −nz / 0.8)，旋转后 (n3.x, n3.z, −n3.y)，再 z 取反
+                var n3 = Norm(V(n.x / 0.8f, n.y / 0.6f, -n.z / 0.8f));
+                mb.n[i] = V(n3.x, n3.z, n3.y);
+            }
+            var m = mb.ToMesh("clash arrow");
+            m.SetUVs(1, new List<Vector2>(new Vector2[mb.v.Count]));      // aKind = 0（原色）
+            return m;
         }
-        public static Mesh HorseLeg()
+
+        // 斩光贴图：u = 径向（0 内缘 → 1 外缘），v = 沿弧（0 → 1）。外缘内侧一道亮芯，内缘柔和渐隐，两端渐隐（= JS slashTexture）
+        static Texture2D slashTex;
+        public static Texture2D SlashTexture()
         {
-            var mb = new MeshBuilder();
-            Beam(mb, V(0, 0.02f, 0), V(0, -0.3f, 0.02f), 0.1f, 0.07f, C(1, 1, 1));
-            Beam(mb, V(0, -0.3f, 0.02f), V(0, -0.5f, 0.0f), 0.065f, 0.055f, C(0.92f, 0.92f, 0.92f));
-            mb.Box(V(0, -0.525f, 0.015f), V(0.075f, 0.05f, 0.09f), C(0.28f, 0.28f, 0.28f));
-            return mb.ToMesh("clash horse leg");
+            if (slashTex != null) return slashTex;
+            const int W = 64, Hh = 64;
+            var px = new Color32[W * Hh];
+            Func<double, double, double, double> ss = (a, b, x) => { double t = Math.Max(0, Math.Min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+            for (int y = 0; y < Hh; y++)
+                for (int x = 0; x < W; x++)
+                {
+                    double u = (x + 0.5) / W, v = (y + 0.5) / Hh;
+                    double body = ss(0.0, 0.7, u) * (1 - ss(0.9, 1.0, u));
+                    double core = Math.Exp(-Math.Pow((u - 0.8) / 0.07, 2));
+                    double ends = Math.Pow(Math.Sin(Math.PI * v), 0.6);
+                    double al = Math.Max(0, Math.Min(1, (body * 0.55 + core) * ends));
+                    double w = Math.Max(0, Math.Min(1, 0.55 + core * 0.6));
+                    byte c = (byte)Math.Floor(255 * w * al + 0.5), aa = (byte)Math.Floor(255 * al + 0.5);
+                    // canvas 第 y 行在上；three 的 CanvasTexture 上下翻转——图案沿 v 对称，行序无关
+                    px[y * W + x] = new Color32(c, c, c, aa);
+                }
+            slashTex = new Texture2D(W, Hh, TextureFormat.RGBA32, true) { name = "clash slash", wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Trilinear };
+            slashTex.SetPixels32(px);
+            slashTex.Apply(true);
+            return slashTex;
         }
-        // 武将骑马像：马身、马鞍披挂（势力色）、骑者（按文化的头盔 / 甲衣 / 披风）、长柄刀、帅旗杆
-        public static Mesh General(Color team, string culture, Color horse, string weapon, Color? acc)
+        // 月牙几何（three 局部 xy 平面；z = 0 的点 z 取反不变）：外缘半径 r1，内缘自中部 r0 向两端收拢到 r1；wid：弧长占比（全长 ±1.05 弧度）
+        public static Mesh SlashGeo(float r0, float r1, float wid)
         {
-            var mb = new MeshBuilder();
-            var cu = CultOf(culture);
-            Color t = team, dark = Shade(t, -0.4f), mid = Shade(t, -0.18f);
-            Color skin = cu.skin;
-            Color hd = Shade(horse, -0.25f), mane = ClashUtil.Luma(horse) > 0.6f ? C(0.85f, 0.83f, 0.8f) : C(0.12f, 0.1f, 0.09f);
-            Color trim = acc ?? GOLD;
-            // 马
-            mb.Box(V(0, 0.69f, -0.02f), V(0.3f, 0.28f, 0.86f), horse);
-            mb.Box(V(0, 0.71f, 0.36f), V(0.32f, 0.3f, 0.2f), Shade(horse, 0.04f));      // 胸
-            mb.Box(V(0, 0.7f, -0.38f), V(0.31f, 0.27f, 0.18f), Shade(horse, -0.05f));   // 臀
-            Beam(mb, V(0, 0.76f, 0.42f), V(0, 1.06f, 0.62f), 0.2f, 0.15f, horse);          // 颈
-            Beam(mb, V(0, 1.1f, 0.6f), V(0, 0.97f, 0.88f), 0.15f, 0.1f, Shade(horse, 0.04f));   // 头
-            mb.Box(V(0, 0.96f, 0.88f), V(0.09f, 0.07f, 0.06f), hd);                       // 口鼻
-            mb.Cone(V(-0.045f, 1.14f, 0.6f), 0.025f, 0.07f, 4, hd);
-            mb.Cone(V(0.045f, 1.14f, 0.6f), 0.025f, 0.07f, 4, hd);
-            Beam(mb, V(0, 0.87f, 0.4f), V(0, 1.15f, 0.58f), 0.06f, 0.05f, mane);           // 鬃
-            Beam(mb, V(0, 0.76f, -0.47f), V(0, 0.4f, -0.66f), 0.09f, 0.04f, mane);         // 尾
-            // 鞍与披挂（草原 / 萨尔马提亚为毛皮鞍褥）
-            mb.Box(V(0, 0.85f, -0.04f), V(0.34f, 0.06f, 0.4f), dark);
-            mb.Box(V(0, 0.7f, -0.04f), V(0.335f, 0.26f, 0.44f), t);
-            mb.Box(V(0, 0.575f, -0.04f), V(0.34f, 0.03f, 0.45f), trim);
-            mb.Box(V(0, 0.9f, -0.12f), V(0.2f, 0.06f, 0.16f), cu.armor == "furcoat" ? FUR : C(0.36f, 0.22f, 0.12f));
-            // 骑者
-            bool robe = cu.armor == "robe" || cu.armor == "furcoat";
-            Color legC = cu.legs == "bare" ? skin : (robe ? mid : dark);
-            mb.Box(V(-0.16f, 0.8f, 0.06f), V(0.09f, 0.22f, 0.12f), legC);                  // 腿
-            mb.Box(V(0.16f, 0.8f, 0.06f), V(0.09f, 0.22f, 0.12f), legC);
-            Color boot = cu.legs == "boots" ? C(0.2f, 0.14f, 0.1f) : C(0.15f, 0.11f, 0.09f);
-            float bootH = 0.07f + (cu.legs == "boots" ? 0.05f : 0);
-            mb.Box(V(-0.16f, 0.68f, 0.1f), V(0.1f, bootH, 0.15f), boot);
-            mb.Box(V(0.16f, 0.68f, 0.1f), V(0.1f, bootH, 0.15f), boot);
-            mb.Box(V(0, 1.1f, -0.06f), V(0.3f, 0.32f, 0.2f), t);                          // 躯干
-            TorsoDeco(mb, cu, 1.1f, -0.06f, 0.3f, 0.32f, 0.2f, t, trim);
-            mb.Box(V(0, 0.95f, -0.06f), V(0.32f, 0.06f, 0.21f), trim);                    // 腰带
-            if (cu.armor != "furcloak" && cu.armor != "bare")
+            const int N = 24;
+            float A = 1.05f * (wid > 0 ? wid : 1);
+            var pos = new List<Vector3>(); var uv = new List<Vector2>(); var idx = new List<int>(); var nrm = new List<Vector3>(); var col = new List<Color>();
+            for (int i = 0; i <= N; i++)
             {
-                mb.Box(V(-0.19f, 1.22f, -0.06f), V(0.11f, 0.08f, 0.2f), cu.armor == "segmentata" ? IRON : trim);   // 肩甲
-                mb.Box(V(0.19f, 1.22f, -0.06f), V(0.11f, 0.08f, 0.2f), cu.armor == "segmentata" ? IRON : trim);
+                float v = (float)i / N, a = -A + 2 * A * v, ri = r1 - (r1 - r0) * Mathf.Pow(Mathf.Sin(Mathf.PI * v), 0.7f);
+                pos.Add(V(Mathf.Cos(a) * ri, Mathf.Sin(a) * ri, 0)); pos.Add(V(Mathf.Cos(a) * r1, Mathf.Sin(a) * r1, 0));
+                uv.Add(new Vector2(0, v)); uv.Add(new Vector2(1, v));
+                nrm.Add(V(0, 0, 1)); nrm.Add(V(0, 0, 1)); col.Add(Color.white); col.Add(Color.white);
+                if (i < N) { int k = i * 2; idx.Add(k); idx.Add(k + 1); idx.Add(k + 3); idx.Add(k); idx.Add(k + 3); idx.Add(k + 2); }
             }
-            Color cloak = cu.cloak ?? (cu.armor == "furcloak" ? FUR : (cu.armor == "plaid" ? Shade(t, -0.3f) : mid));
-            Beam(mb, V(0, 1.24f, -0.17f), V(0, 0.84f, -0.38f), 0.3f, 0.38f, cloak);         // 披风（罗马将领为红色 paludamentum）
-            Color arm = (cu.armor == "bare" || cu.armor == "plaid") ? skin : mid;
-            mb.Box(V(-0.2f, 1.08f, 0.0f), V(0.075f, 0.2f, 0.08f), arm);                    // 左臂（持缰）
-            mb.Box(V(0.21f, 1.1f, 0.02f), V(0.075f, 0.18f, 0.08f), arm);                   // 右臂
-            mb.Box(V(0.22f, 1.0f, 0.12f), V(0.07f, 0.07f, 0.14f), arm);
-            mb.Box(V(0, 1.29f, -0.05f), V(0.09f, 0.04f, 0.09f), skin);
-            mb.Box(V(0, 1.38f, -0.045f), V(0.165f, 0.155f, 0.16f), skin);                 // 头
-            mb.Box(V(0, 1.375f, 0.04f), V(0.11f, 0.025f, 0.01f), Shade(skin, -0.45f));
-            BeardOf(mb, cu, V(0, 1.38f, -0.045f), 0.16f);
-            // 将盔：按文化区分（DESIGN-V2 §6）；ghat 以 g_ 开头者为武将专用盔
-            string gh = cu.ghat ?? cu.hat;
-            Headgear(mb, gh, t, 1.46f, gh.StartsWith("g_", StringComparison.Ordinal) ? 1 : 1.06f, -0.045f, acc, cu);
-            // 兵器：长柄大刀（右手）
-            const float wx = 0.24f, wz = 0.14f;
-            Beam(mb, V(wx, 0.5f, wz), V(wx, 1.95f, wz), 0.035f, 0.03f, C(0.35f, 0.22f, 0.13f));
-            if (weapon == "halberd")
-            {
-                Beam(mb, V(wx, 1.95f, wz), V(wx, 2.2f, wz), 0.05f, 0, C(0.88f, 0.9f, 0.94f));
-                Beam(mb, V(wx, 1.86f, wz), V(wx, 1.86f, wz + 0.2f), 0.03f, 0.05f, C(0.85f, 0.87f, 0.9f));
-                Beam(mb, V(wx, 1.86f, wz), V(wx, 1.86f, wz - 0.2f), 0.03f, 0.05f, C(0.85f, 0.87f, 0.9f));
-            }
-            else if (weapon == "spear")
-            {
-                Beam(mb, V(wx, 1.95f, wz), V(wx, 2.25f, wz + 0.03f), 0.045f, 0, C(0.88f, 0.9f, 0.94f));
-                Beam(mb, V(wx, 2.0f, wz), V(wx + 0.02f, 2.25f, wz + 0.16f), 0.03f, 0, C(0.85f, 0.87f, 0.9f));
-            }
-            else
-            {
-                // 偃月刀：弯刃（几段方柱拼成）
-                var blade = C(0.86f, 0.88f, 0.92f);
-                Beam(mb, V(wx, 1.9f, wz + 0.02f), V(wx, 2.12f, wz + 0.1f), 0.03f, 0.06f, blade);
-                Beam(mb, V(wx, 2.12f, wz + 0.1f), V(wx, 2.3f, wz + 0.06f), 0.06f, 0.04f, blade);
-                Beam(mb, V(wx, 2.3f, wz + 0.06f), V(wx, 2.38f, wz - 0.04f), 0.04f, 0.0f, blade);
-            }
-            mb.Box(V(wx, 1.9f, wz), V(0.06f, 0.05f, 0.06f), acc ?? RED);
-            mb.Box(V(wx, 1.0f, wz + 0.02f), V(0.06f, 0.07f, 0.07f), skin);
-            // 帅旗杆（背后左侧）
-            Beam(mb, V(-0.18f, 0.78f, -0.3f), V(-0.18f, 3.0f, -0.3f), 0.035f, 0.03f, C(0.3f, 0.2f, 0.12f));
-            mb.Cone(V(-0.18f, 3.0f, -0.3f), 0.04f, 0.14f, 4, GOLD);
-            Beam(mb, V(-0.18f, 2.86f, -0.3f), V(-0.18f, 2.86f, -1.06f), 0.025f, 0.025f, C(0.3f, 0.2f, 0.12f));
-            return mb.ToMesh("clash general");
+            var m = new Mesh { name = "clash slash" };
+            m.SetVertices(pos); m.SetNormals(nrm); m.SetColors(col); m.SetUVs(0, uv); m.SetTriangles(idx, 0);
+            m.RecalculateBounds();
+            return m;
         }
-        static readonly Dictionary<string, Color> HORSES = new Dictionary<string, Color>
+    }
+
+    // ======================================================= 布景 --
+    // 第三版修订：攻击画面按「防守城池的文化 + 当地群落 + 是否登陆」布景（不再一律是中原的砖城、灰瓦村舍与温带树）
+    // 城墙：han 中式砖城门楼 / roman 石城方塔赤陶瓦 / mud 土坯城圆塔阶梯垛（安息、阿拉伯、非洲、毛里、西域）/
+    //       brick 红砖城与圆顶亭、窣堵波（天竺、贵霜）/ palisade 土垒木栅与木望楼（日耳曼、凯尔特、草原、南方诸族）
+    // 村舍：han 灰瓦 / tile 白墙赤陶瓦 / flat 平顶土坯 / yurt 毡帐 / long 长屋茅顶 / round 圆屋锥顶 / stilt 干栏 / thatch 茅屋
+    internal sealed class ClashLook
+    {
+        public string culture, biome, wall, house;
+        public bool coast;
+        public Color? grass, tuft;
+        public Color leaf, fleaf;
+        public string[] treeKinds; public float[] treeW;
+        public float treeK, farm, snow, sandy, flowers;
+
+        static Color C(float r, float g, float b) { return new Color(r, g, b); }
+        public static readonly Dictionary<string, string> WALL_STYLE = new Dictionary<string, string>
         {
-            { "吕布", C(0.66f, 0.2f, 0.1f) }, { "关羽", C(0.6f, 0.22f, 0.12f) }, { "赵云", C(0.88f, 0.87f, 0.84f) }, { "公孙瓒", C(0.86f, 0.85f, 0.82f) },
-            { "曹操", C(0.17f, 0.15f, 0.14f) }, { "张飞", C(0.16f, 0.14f, 0.13f) }, { "马超", C(0.85f, 0.84f, 0.8f) }, { "刘备", C(0.78f, 0.74f, 0.68f) },
+            { "han", "han" }, { "korea", "han" }, { "wa", "han" }, { "roman", "roman" }, { "persia", "mud" }, { "arab", "mud" }, { "africa", "mud" }, { "moor", "mud" }, { "tarim", "mud" },
+            { "kushan", "brick" }, { "india", "brick" },
+            { "seasia", "palisade" }, { "nanman", "palisade" }, { "yi", "palisade" }, { "celt", "palisade" }, { "german", "palisade" }, { "steppe", "palisade" }, { "sarmatian", "palisade" },
         };
-        static readonly Color[] HORSE_PAL = { C(0.5f, 0.3f, 0.18f), C(0.38f, 0.23f, 0.14f), C(0.62f, 0.48f, 0.3f), C(0.22f, 0.17f, 0.14f), C(0.72f, 0.68f, 0.62f), C(0.55f, 0.36f, 0.22f) };
-        public static Color HorseColor(string name)
+        public static readonly Dictionary<string, string> HOUSE_STYLE = new Dictionary<string, string>
         {
-            Color c;
-            if (name != null && HORSES.TryGetValue(name, out c)) return c;
-            return HORSE_PAL[(int)(Math.Abs((long)ClashUtil.HashStr(name)) % HORSE_PAL.Length)];
+            { "han", "han" }, { "korea", "han" }, { "wa", "han" }, { "roman", "tile" }, { "persia", "flat" }, { "arab", "flat" }, { "africa", "flat" }, { "moor", "flat" }, { "tarim", "flat" },
+            { "kushan", "flat" }, { "india", "thatch" },
+            { "seasia", "stilt" }, { "nanman", "stilt" }, { "yi", "stilt" }, { "celt", "round" }, { "german", "long" }, { "steppe", "yurt" }, { "sarmatian", "yurt" },
+        };
+        public static readonly Dictionary<string, string> BIOME_OF = new Dictionary<string, string>
+        {
+            { "roman", "med" }, { "moor", "med" }, { "persia", "desert" }, { "arab", "desert" }, { "tarim", "desert" }, { "africa", "savanna" }, { "kushan", "steppe" }, { "steppe", "steppe" },
+            { "sarmatian", "steppe" }, { "india", "tropical" }, { "seasia", "tropical" }, { "nanman", "tropical" }, { "yi", "tropical" },
+        };
+        // = SG.BattleTerrain.BIOMES
+        public static readonly string[] BIOME_NAMES = { "temperate", "steppe", "desert", "tropical", "savanna", "med", "boreal", "alpine" };
+        // grass：地面底色（null = 原温带色）；trees：[树种, 权重]；treeK：树的多寡；farm：农田；snow：雪线系数（0 无雪）；sandy：沙地斑块
+        static ClashLook L(Color? grass, Color leaf, Color fleaf, Color? tuft, string[] tk, float[] tw, float treeK, float farm, float snow, float sandy, float flowers)
+        {
+            return new ClashLook { grass = grass, leaf = leaf, fleaf = fleaf, tuft = tuft, treeKinds = tk, treeW = tw, treeK = treeK, farm = farm, snow = snow, sandy = sandy, flowers = flowers };
         }
-        public static string WeaponOf(General gen)
+        public static readonly Dictionary<string, ClashLook> BIOME_LOOK = new Dictionary<string, ClashLook>
         {
-            string n = gen != null ? gen.name : null;
-            if (n == "吕布") return "halberd";
-            if (n == "张飞" || n == "赵云" || n == "马超" || n == "公孙瓒") return "spear";
-            return (gen != null && gen.war >= 85 && Math.Abs((long)ClashUtil.HashStr(n)) % 3 == 0) ? "spear" : "glaive";
+            { "temperate", L(null, C(0.28f, 0.5f, 0.26f), C(0.25f, 0.44f, 0.23f), null, new[] { "pine", "broad", "broad2", "poplar" }, new float[] { 34, 28, 22, 16 }, 1, 1, 1, 0, 1) },
+            { "boreal", L(C(0.4f, 0.54f, 0.32f), C(0.22f, 0.42f, 0.24f), C(0.2f, 0.38f, 0.22f), C(0.38f, 0.54f, 0.28f), new[] { "pine", "poplar", "broad" }, new float[] { 70, 15, 15 }, 1.1f, 0.5f, 1, 0, 0.6f) },
+            { "alpine", L(C(0.46f, 0.56f, 0.34f), C(0.22f, 0.42f, 0.24f), C(0.2f, 0.38f, 0.22f), C(0.44f, 0.56f, 0.3f), new[] { "pine", "broad" }, new float[] { 80, 20 }, 0.8f, 0.3f, 1.4f, 0, 0.8f) },
+            { "steppe", L(C(0.64f, 0.65f, 0.4f), C(0.34f, 0.5f, 0.28f), C(0.3f, 0.46f, 0.26f), C(0.6f, 0.6f, 0.34f), new[] { "poplar", "broad", "scrub" }, new float[] { 50, 35, 15 }, 0.35f, 0.2f, 1, 0.15f, 0.5f) },
+            { "desert", L(C(0.78f, 0.68f, 0.48f), C(0.34f, 0.5f, 0.24f), C(0.3f, 0.48f, 0.22f), C(0.66f, 0.6f, 0.36f), new[] { "palm", "olive", "scrub" }, new float[] { 65, 15, 20 }, 0.45f, 0.35f, 0, 0.5f, 0.1f) },
+            { "savanna", L(C(0.7f, 0.64f, 0.38f), C(0.36f, 0.5f, 0.24f), C(0.32f, 0.46f, 0.22f), C(0.7f, 0.64f, 0.36f), new[] { "acacia", "palm", "scrub" }, new float[] { 60, 20, 20 }, 0.5f, 0.3f, 0, 0.25f, 0.3f) },
+            { "med", L(C(0.56f, 0.6f, 0.34f), C(0.32f, 0.46f, 0.25f), C(0.28f, 0.42f, 0.22f), C(0.56f, 0.58f, 0.32f), new[] { "cypress", "olive", "broad2", "umbrella" }, new float[] { 30, 40, 15, 15 }, 0.8f, 1, 0.6f, 0.08f, 0.8f) },
+            { "tropical", L(C(0.34f, 0.58f, 0.26f), C(0.2f, 0.47f, 0.2f), C(0.16f, 0.4f, 0.18f), C(0.3f, 0.56f, 0.22f), new[] { "palm", "broad", "broad2" }, new float[] { 40, 35, 25 }, 1.1f, 0.8f, 0, 0, 1.4f) },
+        };
+        // 文化查表：本文化 → Defs.CultureBase 的回退文化 → 缺省（= JS cultPick）
+        public static string CultPick(Dictionary<string, string> table, string c, string dflt)
+        {
+            string v;
+            if (c != null && table.TryGetValue(c, out v) && !string.IsNullOrEmpty(v)) return v;
+            string b = Defs.CultureBase(c);
+            if (b != null && table.TryGetValue(b, out v) && !string.IsNullOrEmpty(v)) return v;
+            return dflt;
+        }
+        // scn = { culture, biome, coast }；缺省时取防守方的文化、按文化推测群落（= JS sceneLook）
+        public static ClashLook Of(ClashSceneInfo scn, string defCult)
+        {
+            string culture = scn != null && !string.IsNullOrEmpty(scn.culture) ? scn.culture : !string.IsNullOrEmpty(defCult) ? defCult : "han";
+            string biome = scn != null ? scn.biome : null;
+            if (biome == null || !BIOME_LOOK.ContainsKey(biome)) biome = CultPick(BIOME_OF, culture, "temperate");
+            var b = BIOME_LOOK[biome];
+            return new ClashLook
+            {
+                culture = culture, biome = biome, wall = CultPick(WALL_STYLE, culture, "han"), house = CultPick(HOUSE_STYLE, culture, "han"), coast = scn != null && scn.coast,
+                grass = b.grass, leaf = b.leaf, fleaf = b.fleaf, tuft = b.tuft, treeKinds = b.treeKinds, treeW = b.treeW,
+                treeK = b.treeK, farm = b.farm, snow = b.snow, sandy = b.sandy, flowers = b.flowers,
+            };
+        }
+        public string FirstTree { get { return treeKinds[0]; } }
+        public string PickTree(SeededRandom rnd)
+        {
+            double tot = 0;
+            foreach (var w in treeW) tot += w;
+            double u = rnd.NextDouble() * tot;
+            for (int i = 0; i < treeKinds.Length; i++) { u -= treeW[i]; if (u <= 0) return treeKinds[i]; }
+            return treeKinds[0];
         }
     }
 
     // ======================================================= 地形 --
+    // 第三版：平滑地形（索引网格 + 平滑法线 + Sanguo/ClashGround 的程序化细节），圆润的树、平滑石块，按文化的城墙、拱形城门与曲面屋顶；
+    // 远处为连绵的山脊（同一张网格向后延伸）；草丛 / 芦苇 / 野花为实例化网格（随风轻摆）。
+    // 坐标：计算全部用 three 坐标（双精度，与网页版逐点相同的判定），建网格时经 P() 换成 Unity 坐标。
+    internal sealed class ClashTerrainOut
+    {
+        public Mesh ground, propsNear, propsFar, river, sea, tuftMesh, flowerMesh;
+        public readonly List<Matrix4x4> tufts = new List<Matrix4x4>(), flowers = new List<Matrix4x4>();   // 实例矩阵（本画面根的局部 Unity 坐标）
+        public readonly List<Vector4> tuftCols = new List<Vector4>(), flowerCols = new List<Vector4>();
+        public int groundTris;
+        public float snowH = 99;
+    }
+
     internal static class ClashTerrain
     {
         public const float ZC = -0.55f;                           // 两军纵深中心（three z）
-        public const float RIVER_X = 1.05f, RIVER_W = 1.7f, RIVER_BANK = 1.5f, RIVER_BED = -0.42f, RIVER_SURF = -0.1f;
-        public const float WALL_Z = -7.4f, GATE_X = 4.6f;        // 城墙正面（three z）与城门中心 x
+        public const double RIVER_X = 1.05, RIVER_W = 1.7, RIVER_BANK = 1.5, RIVER_BED = -0.42, RIVER_SURF = -0.1;
+        public const double WALL_Z = -7.4, GATE_X = 4.6;          // 城墙正面（three z）与城门中心 x
+        public const double SEA_Y = -0.14;
+        const double ZCd = -0.55;
         static Color C(float r, float g, float b) { return new Color(r, g, b); }
-        static Vector3 V(float x, float y, float z) { return new Vector3(x, y, z); }
-        static Vector3 P(float x, float y, float z) { return new Vector3(x, y, -z); }
-        static Color Shade(Color c, float k) { return Art.Shade(c, k); }
-        static float Sstep(float a, float b, float x) { return ClashUtil.Sstep(a, b, x); }
-        static float R(SeededRandom r) { return (float)r.NextDouble(); }
+        static Vector3 V(double x, double y, double z) { return new Vector3((float)x, (float)y, (float)z); }
+        static Vector3 P(double x, double y, double z) { return new Vector3((float)x, (float)y, (float)-z); }
+        static Color Shade(Color c, double k) { return Art.Shade(c, (float)k); }
+        static double Sstep(double a, double b, double x) { return ClashUtil.Sstep(a, b, x); }
+        static double Lerp(double a, double b, double t) { return a + (b - a) * t; }
+        static double Clamp01(double v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+        static double Perlin(double x, double y) { return WorldGeo.Perlin(x, y); }
+        static int JsRound(double v) { return (int)Math.Floor(v + 0.5); }
         public static bool Walled(string kind) { return kind == "gate" || kind == "castle" || kind == "wall"; }
+        // 海岸线（登陆战）：攻方（左）身后为沙滩与海，海岸线向远处斜向右后方伸去
+        public static double ShoreX(double z) { return -10.6 + Math.Min(60, Math.Max(0, ZCd - z)) * 0.42 - Math.Min(20, Math.Max(0, z - ZCd)) * 0.2 + Math.Sin(z * 0.23) * 0.7; }
+        static readonly Color WOOD = ClashGeo.WOOD, GOLD = ClashGeo.GOLD;
 
-        // 高度场（three 坐标 x、z）
+        // 高度场（three 坐标 x、z）（= JS makeHeight）
         public sealed class Height
         {
-            readonly string kind; readonly float ox, oz; readonly bool hilly, walled;
-            public Height(string kind, int seed)
+            readonly string kind; readonly double ox, oz; readonly bool hilly, walled, coast;
+            public Height(string kind, int seed, ClashLook look)
             {
                 this.kind = kind;
                 var r = new SeededRandom(seed);
-                ox = (float)(r.NextDouble() * 200); oz = (float)(r.NextDouble() * 200);
+                coast = look != null && look.coast;
+                ox = r.NextDouble() * 200; oz = r.NextDouble() * 200;
                 hilly = kind == "hill" || kind == "mountain";
                 walled = Walled(kind);
             }
-            float Pn(float x, float z, float f) { return Mathf.PerlinNoise(ox + x * f, oz + z * f) - 0.465f; }
-            public float H(float x, float z)
+            double Pn(double x, double z, double f) { return Perlin(ox + x * f, oz + z * f) - 0.465; }
+            public double H(double x, double z)
             {
-                float far = Sstep(9, 42, -z);
-                float calm = 1 - 0.55f * (1 - Sstep(5, 10, Mathf.Abs(z - ZC))) * (1 - Sstep(7, 13, Mathf.Abs(x)));
-                float y;
-                if (hilly) y = (Pn(x, z, 0.1f) * 1.4f + Pn(x, z, 0.32f) * 0.22f) * calm + 0.7f * Sstep(-3, 7.5f, x) - 0.18f;
-                else if (walled) y = Pn(x, z, 0.22f) * 0.07f;
-                else y = (Pn(x, z, 0.15f) * 0.34f + Pn(x, z, 0.5f) * 0.05f) * calm;
-                y += far * ((Pn(x, z, 0.03f) + 0.25f) * (hilly ? 14 : 7) + (hilly ? 2.5f : 0.6f));
-                y += Sstep(16, 34, Mathf.Abs(x)) * (hilly ? 3 : 1.4f) * (0.6f + Pn(x, z, 0.06f));
+                double far = Sstep(9, 42, -z);
+                double calm = 1 - 0.55 * (1 - Sstep(5, 10, Math.Abs(z - ZCd))) * (1 - Sstep(7, 13, Math.Abs(x)));
+                double y;
+                if (hilly) y = (Pn(x, z, 0.1) * 1.4 + Pn(x, z, 0.32) * 0.22) * calm + 0.7 * Sstep(-3, 7.5, x) - 0.18;
+                else if (walled) y = Pn(x, z, 0.22) * 0.07;
+                else y = (Pn(x, z, 0.15) * 0.34 + Pn(x, z, 0.5) * 0.05) * calm;
+                y += far * ((Pn(x, z, 0.03) + 0.25) * (hilly ? 14 : 7) + (hilly ? 2.5 : 0.6));
+                y += Sstep(16, 34, Math.Abs(x)) * (hilly ? 3 : 1.4) * (0.6 + Pn(x, z, 0.06));
+                // 远山：平滑的脊状噪声
+                double rk = Sstep(44, 74, -z);
+                if (rk > 0)
+                {
+                    double rn = 1 - Math.Min(1, Math.Abs(Pn(x, z, 0.021) * 2.3));
+                    y += rk * (rn * rn * (hilly ? 30 : 15) + (Pn(x, z, 0.07) + 0.3) * (hilly ? 7 : 3.5));
+                }
                 if (kind == "river")
                 {
-                    float d = Mathf.Abs(x - RIVER_X);
-                    float bank = Sstep(RIVER_W, RIVER_W + RIVER_BANK, d);
-                    y = ClashUtil.Lerp(RIVER_BED + Pn(x, z, 0.8f) * 0.04f, Mathf.Max(y * 0.6f, -0.02f) + 0.06f, bank);
+                    // 近处：河床与缓坡河岸；远处：河谷两侧以有限的坡度升起（不在山脊上切出直壁峡谷）
+                    double d = Math.Abs(x - RIVER_X);
+                    double bank = Sstep(RIVER_W, RIVER_W + RIVER_BANK, d);
+                    double near = Lerp(RIVER_BED + Pn(x, z, 0.8) * 0.04, Math.Max(y * 0.6, -0.02) + 0.06, bank);
+                    double vf = Sstep(-6, -26, z);
+                    if (vf > 0)
+                    {
+                        double valley = Lerp(RIVER_BED, 0.06, bank) + Math.Max(0, d - RIVER_W - RIVER_BANK) * (0.18 + 0.22 * Sstep(-20, -70, z)) + Math.Max(0, d - 7) * 0.12;
+                        y = Lerp(near, Math.Min(y, valley), vf);
+                    }
+                    else y = near;
+                }
+                if (coast)
+                {
+                    // 登陆：海岸线以外降为缓坡沙滩与海床（远山也不在海上隆起）
+                    double d = x - ShoreX(z);
+                    if (d < 5)
+                    {
+                        double beach = Math.Max(-1.5, SEA_Y + 0.04 + d * 0.065);
+                        y = Lerp(y, beach, Sstep(5, 0.6, d));
+                    }
                 }
                 return y;
             }
         }
 
-        static Color GroundColor(string kind, float x, float z, float y, float n)
+        // 顶点底色与地表权重 aGnd = (泥土 / 踩踏 / 道路, 沙, 岩石倾向, 农田)（= JS groundAttr）
+        static Color LerpU(Color a, Color b, double t) { return ClashUtil.LerpU(a, b, (float)t); }
+        static void GroundAttr(string kind, double x, double z, double y, double n, double nf, ClashLook look, out Color c, out double g0, out double g1, out double g2, out double g3)
         {
-            Color c;
-            float trample = Mathf.Exp(-(x * x) / 10 - ((z - ZC) * (z - ZC)) / 7);
+            double dirt = 0, sand = 0, rock = 0, farm = 0;
+            bool walled = Walled(kind);
+            double trample = Math.Exp(-(x * x) / 12 - ((z - ZCd) * (z - ZCd)) / 8);
             switch (kind)
             {
-                case "forest": c = C(0.3f, 0.47f, 0.25f); break;
-                case "hill": c = C(0.53f, 0.6f, 0.34f); break;
-                case "mountain": c = C(0.5f, 0.54f, 0.38f); break;
-                case "gate": case "castle": case "wall": c = C(0.6f, 0.55f, 0.43f); break;
-                default: c = C(0.44f, 0.64f, 0.32f); break;
+                case "forest": c = C(0.33f, 0.5f, 0.26f); break;
+                case "hill": c = C(0.52f, 0.62f, 0.33f); break;
+                case "mountain": c = C(0.5f, 0.56f, 0.36f); break;
+                case "gate": case "castle": case "wall": c = C(0.5f, 0.6f, 0.35f); break;
+                default: c = C(0.46f, 0.64f, 0.31f); break;
             }
-            if (Walled(kind))
+            c = LerpU(c, C(0.58f, 0.68f, 0.33f), Clamp01(n * 1.6) * 0.45);
+            // 群落底色（草原枯黄、沙漠沙土、热带深绿、地中海橄榄绿……）
+            if (look != null && look.grass.HasValue) c = LerpU(c, Shade(look.grass.Value, (n - 0.1) * 0.25), kind == "forest" ? 0.6 : 0.8);
+            if (look != null && look.sandy > 0) sand = Math.Max(sand, look.sandy * Sstep(-0.05, 0.25, nf + n * 0.5));
+            if (walled)
             {
-                var grass = C(0.47f, 0.6f, 0.35f);
-                c = Color.Lerp(c, grass, Sstep(3, 12, Mathf.Abs(z - 2.5f)) * 0.6f + n * 0.1f);
+                // 墙前夯土与车辙大道、门前石板、墙根阴湿
+                double earth = (1 - Sstep(2, 7, z - WALL_Z)) * Sstep(WALL_Z - 2, WALL_Z - 0.5, z);
+                dirt = Math.Max(dirt, earth * 0.6 + trample * 0.35);
                 if (kind != "wall")
                 {
-                    // 通往城门的夯土大道（两道车辙）与门前石板
-                    float d = Mathf.Abs(x - GATE_X), w = 1.45f + Mathf.Max(0, z - WALL_Z) * 0.07f;
-                    float road = 1 - Sstep(w - 0.35f, w + 0.25f, d);
-                    if (road > 0)
-                    {
-                        c = Color.Lerp(c, C(0.55f, 0.47f, 0.35f), road * 0.85f);
-                        float rut = Mathf.Abs(d - w * 0.42f);
-                        if (rut < 0.22f) c = Color.Lerp(c, C(0.45f, 0.38f, 0.28f), road * 0.55f);
-                    }
-                    if (z < WALL_Z + 2.4f && d < 2.3f) c = Color.Lerp(c, C(0.66f, 0.64f, 0.6f), 0.75f * (1 - Sstep(1.7f, 2.3f, d)));
+                    double d = Math.Abs(x - GATE_X), w = 1.45 + Math.Max(0, z - WALL_Z) * 0.07;
+                    double road = 1 - Sstep(w - 0.35, w + 0.35, d);
+                    dirt = Math.Max(dirt, road);
+                    if (z < WALL_Z + 2.4 && d < 2.3 && !(look != null && look.wall == "palisade")) { double pv = 1 - Sstep(1.7, 2.3, d); c = LerpU(c, C(0.64f, 0.62f, 0.58f), pv); dirt *= 1 - pv; rock = -pv; }
                 }
-                // 墙根阴湿
-                c = Color.Lerp(c, C(0.42f, 0.42f, 0.36f), (1 - Sstep(WALL_Z, WALL_Z + 1.2f, z)) * 0.35f);
+                c = LerpU(c, C(0.42f, 0.42f, 0.36f), (1 - Sstep(WALL_Z, WALL_Z + 1.2, z)) * 0.35);
             }
             else
             {
-                c = Color.Lerp(c, C(0.58f, 0.52f, 0.37f), trample * 0.42f);
-                if (n > 0.12f) c = Color.Lerp(c, Shade(c, kind == "forest" ? -0.12f : 0.08f), 0.6f);
-                if (n < -0.14f) c = Color.Lerp(c, C(0.62f, 0.62f, 0.36f), 0.35f);
+                dirt = trample * (kind == "forest" ? 0.55 : 0.7);
+                if (kind == "forest") dirt = Math.Max(dirt, Sstep(-4, -9, z) * 0.35 * (0.5 + nf));
+                if ((kind == "plain" || kind == "river") && z < -12 && z > -40 && Math.Abs(x) < 46)
+                {
+                    farm = Sstep(-12, -15, z) * (1 - Sstep(-34, -40, z)) * (1 - Sstep(38, 46, Math.Abs(x))) * Sstep(-0.05, 0.12, nf - (1 - (look != null ? look.farm : 1)) * 0.5);
+                    if (kind == "river" && Math.Abs(x - RIVER_X) < RIVER_W + RIVER_BANK + 2.5) farm = 0;
+                }
             }
             if (kind == "river")
             {
-                float d = Mathf.Abs(x - RIVER_X);
-                if (d < RIVER_W + RIVER_BANK + 0.5f) c = Color.Lerp(C(0.62f, 0.57f, 0.42f), C(0.5f, 0.46f, 0.34f), Sstep(RIVER_W + RIVER_BANK, RIVER_W * 0.4f, d));
+                double d = Math.Abs(x - RIVER_X);
+                sand = 1 - Sstep(RIVER_W + RIVER_BANK - 0.3, RIVER_W + RIVER_BANK + 0.7, d);
+                if (d < RIVER_W) c = LerpU(c, C(0.5f, 0.46f, 0.36f), 0.6);
             }
-            if (kind == "mountain" && y > 3) c = Color.Lerp(c, C(0.58f, 0.57f, 0.54f), Sstep(3, 8, y));
-            // 远处偏冷偏灰（雾会进一步融合）
-            c = Color.Lerp(c, C(0.5f, 0.58f, 0.46f), Sstep(14, 45, -z) * 0.5f);
-            return c;
+            if (look != null && look.coast)
+            {
+                // 海滩：海岸线内外约 3 单位为沙，水下也是沙（透出浅海的青绿）
+                double d = x - ShoreX(z);
+                double b = 1 - Sstep(1.4, 3.6, d + (nf - 0.1) * 1.5);
+                sand = Math.Max(sand, b); farm *= Sstep(4, 8, d); dirt *= Sstep(0.5, 2.5, d);
+                if (d < 0.2) c = LerpU(c, C(0.62f, 0.58f, 0.46f), 0.6);
+            }
+            if (kind == "mountain") rock = Math.Max(rock, Sstep(2.5, 7, y) * 0.8);
+            if (kind == "hill") rock = Math.Max(rock, Sstep(5, 10, y) * 0.5);
+            // 远山：高处草色转黄绿、再到岩石
+            double hi = Sstep(6, 22, y) * Sstep(30, 50, -z);
+            if (hi > 0) { c = LerpU(c, C(0.55f, 0.58f, 0.4f), hi * 0.7); rock = Math.Max(rock, hi * 0.6); }
+            // 远处偏冷（雾会进一步融合）
+            c = LerpU(c, C(0.48f, 0.58f, 0.46f), Sstep(16, 60, -z) * 0.35);
+            g0 = Clamp01(dirt); g1 = Clamp01(sand); g2 = rock; g3 = Clamp01(farm);
         }
-        // 中心 ±fine 内用 step，之外按 grow 递增
-        static List<float> Axis(float a, float b, float step, float fine, float grow)
+        // 中心 ±fine 内用 step，之外按 grow 递增（不超过 cap）
+        static List<double> Axis(double a, double b, double step, double fine, double grow, double cap)
         {
-            var outp = new List<float>();
-            for (float x = 0; x <= b;) { outp.Add(x); x += Mathf.Abs(x) < fine ? step : step + (Mathf.Abs(x) - fine) * grow; }
-            var neg = new List<float>();
-            for (float x = -step; x >= a;) { neg.Add(x); x -= Mathf.Abs(x) < fine ? step : step + (Mathf.Abs(x) - fine) * grow; }
+            Func<double, double> st = x => Math.Min(cap, Math.Abs(x) < fine ? step : step + (Math.Abs(x) - fine) * grow);
+            var outp = new List<double>();
+            for (double x = 0; x <= b;) { outp.Add(x); x += st(x); }
+            var neg = new List<double>();
+            for (double x = -step; x >= a;) { neg.Add(x); x -= st(x); }
             neg.Reverse();
             neg.AddRange(outp);
             return neg;
         }
 
-        static void Blade(MeshBuilder deco, float bx, float by, float bz, float h, float lean, float ang, Color col)
+        // 道具网格：按 aKind 分成几个 MeshBuilder，最后合并为一个网格（一次绘制 + 一次投影）；uv2.x = aKind
+        public const int K_PLAIN = 0, K_LEAF = 1, K_ROCK = 2, K_BRICK = 3, K_ROOF = 4;
+        static MeshBuilder[] PropBuilders() { var b = new MeshBuilder[5]; for (int i = 0; i < 5; i++) b[i] = new MeshBuilder(); return b; }
+        public static Mesh MergeProps(MeshBuilder[] mbs, string name)
         {
-            float ca = Mathf.Cos(ang), sa = Mathf.Sin(ang), w = 0.045f;
-            Vector3 a = P(bx - ca * w, by, bz - sa * w), b = P(bx + ca * w, by, bz + sa * w);
-            Vector3 tip = P(bx + lean * -sa, by + h, bz + lean * ca);
-            deco.Tri(a, tip, b, col); deco.Tri(a, b, tip, col);
+            var v = new List<Vector3>(); var n = new List<Vector3>(); var c = new List<Color>(); var k2 = new List<Vector2>(); var t = new List<int>();
+            for (int k = 0; k < mbs.Length; k++)
+            {
+                var mb = mbs[k];
+                int o = v.Count;
+                v.AddRange(mb.v); n.AddRange(mb.n); c.AddRange(mb.c);
+                for (int i = 0; i < mb.v.Count; i++) k2.Add(new Vector2(k, 0));
+                foreach (var i in mb.t) t.Add(o + i);
+            }
+            var m = new Mesh { name = name };
+            if (v.Count > 65000) m.indexFormat = IndexFormat.UInt32;
+            m.SetVertices(v); m.SetNormals(n); m.SetColors(c); m.SetUVs(1, k2); m.SetTriangles(t, 0);
+            m.RecalculateBounds();
+            return m;
         }
-        static void Tree(MeshBuilder deco, Height H, SeededRandom rnd, float x, float z, float s, bool pine)
+        static SphereOpt SO(float seed = 0, float rough = 0, float bottomShade = 0, float top = 0.06f, float smoothN = 0, float flat = -2)
         {
-            var col = Shade(C(0.24f, 0.46f, 0.25f), (R(rnd) - 0.5f) * 0.18f);
-            Models.Tree(deco, P(x, H.H(x, z) - 0.05f, z), s, col, pine, (int)Mathf.Abs(Mathf.Floor(x * 13 + z * 7 + 0.5f)));
+            return new SphereOpt { seed = seed, rough = rough, bottomShade = bottomShade, top = top, smoothN = smoothN, flat = flat };
+        }
+        static LP L(double r, double y, bool sharp = false) { return new LP((float)r, (float)y, sharp); }
+        static LP L(double r, double y, Color c, bool sharp = false) { return new LP((float)r, (float)y, c, sharp); }
+
+        // 树：平滑树干、圆润树冠（近景另加三团叶簇，轮廓起伏）；pine 为层叠的松冠，poplar 为高耸的杨（x, y, z 为 three 坐标，s ≈ 树高）
+        static void TreeInto(MeshBuilder[] B, double x, double y, double z, double s, string type, Color leaf, int seed, bool near)
+        {
+            MeshBuilder tk = B[K_PLAIN], lf = B[K_LEAF];
+            var p = P(x, y, z);
+            var TR = C(0.38f, 0.27f, 0.16f);
+            // 第三版修订：树冠一律 detail 2（中远景也不再露出多边形轮廓），法线向椭球法线混合（明暗圆润）
+            int ts = near ? 9 : 6, cs = near ? 16 : 12, d = 2;
+            Action<double, double, double, Vector3, Color, int> crown = (cx, cy, cz, r, col, sd) =>
+            {
+                lf.Sphere(V(p.x + cx, p.y + cy, p.z + cz), r, col, d, SO(seed: sd, rough: 0.09f, bottomShade: 0.32f, top: 0.08f, smoothN: 0.6f));
+                if (!near) return;
+                for (int k = 0; k < 3; k++)
+                {
+                    double a = sd * 1.7 + k * 2.09, up = 0.25 + 0.3 * ((k + sd) % 2);
+                    lf.Sphere(V(p.x + cx + Math.Cos(a) * r.x * 0.62, p.y + cy + up * r.y, p.z + cz + Math.Sin(a) * r.z * 0.62), V(r.x * 0.5, r.y * 0.52, r.z * 0.5),
+                        Shade(col, k == 1 ? -0.06 : 0.04), 1, SO(seed: sd + 7 * k + 1, rough: 0.07f, bottomShade: 0.28f, top: 0.1f, smoothN: 0.6f));
+                }
+            };
+            if (type == "palm")
+            {
+                // 棕榈 / 椰枣：微弯的环纹树干（石块材质的横纹）+ 9 片下垂的羽状叶
+                double lean = (((seed % 7) - 3) * 0.05 + 0.04) * s; const int n = 6;
+                var pts = new Vector3[n]; var rr = new float[n];
+                for (int i = 0; i < n; i++) { double u = i / (double)(n - 1); pts[i] = V(p.x + lean * u * u, p.y + u * 0.92 * s, p.z + lean * 0.35 * u * u); rr[i] = (float)(Lerp(0.06, 0.034, u) * s); }
+                B[K_ROCK].Tube(pts, rr, 7, C(0.5f, 0.42f, 0.31f), false);
+                var top = pts[n - 1];
+                lf.Sphere(V(top.x, top.y + 0.01 * s, top.z), (float)(0.055 * s), Shade(leaf, -0.22), 1, SO(smoothN: 1));
+                for (int k = 0; k < 9; k++)
+                {
+                    double a = k * 2.399 + seed * 0.37, Ln = (0.42 + 0.08 * ((k * 7 + seed) % 3)) * s;
+                    FrondInto(lf, top, Math.Cos(a), Math.Sin(a), Ln, (k % 3 == 0 ? 0.2 : 0.13) * s, 0.075 * s, Shade(leaf, ((k % 3) - 1) * 0.05));
+                }
+                return;
+            }
+            if (type == "cypress")
+            {
+                // 地中海柏树：深绿、细高的尖塔形
+                tk.Lathe(p, new[] { L(0.05 * s, 0), L(0.035 * s, 0.16 * s) }, ts, TR);
+                lf.Lathe(V(p.x, p.y + 0.1 * s, p.z), new[] { L(0.02 * s, 0), L(0.15 * s, 0.1 * s), L(0.18 * s, 0.32 * s), L(0.14 * s, 0.66 * s), L(0.06 * s, 0.9 * s), L(0, 1.0 * s) }, cs, Shade(leaf, -0.14));
+                return;
+            }
+            if (type == "olive" || type == "acacia" || type == "umbrella" || type == "scrub")
+            {
+                // 橄榄（扭曲矮干、灰绿宽冠）/ 金合欢（斜干分叉、伞形平顶）/ 石松（高直干、扁平冠）/ 灌丛
+                int sd = seed % 13;
+                if (type == "scrub") { lf.Sphere(V(p.x, p.y + 0.12 * s, p.z), V(0.3 * s, 0.2 * s, 0.28 * s), Shade(leaf, 0.02), 2, SO(seed: sd, rough: 0.12f, bottomShade: 0.35f, flat: -0.4f, smoothN: 0.5f)); return; }
+                double hy = type == "olive" ? 0.36 : type == "acacia" ? 0.62 : 0.66, bend = (sd % 2 == 1 ? 1 : -1) * (type == "olive" ? 0.07 : 0.12) * s;
+                tk.Tube(new[] { V(p.x, p.y, p.z), V(p.x + bend * 0.6, p.y + hy * 0.5 * s, p.z), V(p.x + bend, p.y + hy * s, p.z + bend * 0.3) }, new[] { (float)(0.07 * s), (float)(0.05 * s), (float)(0.035 * s) }, ts, type == "olive" ? C(0.42f, 0.36f, 0.28f) : TR, false);
+                if (type == "acacia") tk.Tube(new[] { V(p.x + bend * 0.5, p.y + hy * 0.45 * s, p.z), V(p.x - bend * 0.9, p.y + hy * s, p.z - bend * 0.2) }, new[] { (float)(0.035 * s), (float)(0.025 * s) }, 6, TR, false);
+                var lc = type == "olive" ? C(0.45f, 0.52f, 0.36f) : leaf;
+                var r = type == "olive" ? V(0.42 * s, 0.27 * s, 0.4 * s) : V(0.5 * s, 0.13 * s, 0.46 * s);
+                crown(bend, (hy + (type == "olive" ? 0.14 : 0.06)) * s, 0, r, lc, seed);
+                if (type != "umbrella") crown(bend - 0.22 * s, (hy + 0.02) * s, 0.1 * s, V(r.x * 0.62, r.y * 0.8, r.z * 0.6), Shade(lc, 0.05), seed + 5);
+                return;
+            }
+            if (type == "pine")
+            {
+                tk.Lathe(p, new[] { L(0.06 * s, 0), L(0.04 * s, 0.32 * s) }, ts, TR);
+                Action<double, double, double, Color> tier = (y0, r, h, col) => lf.Lathe(V(p.x, p.y + y0 * s, p.z), new[] { L(0, h * s * 0.1), L(r * s, 0, true), L(r * s * 0.5, h * s * 0.5), L(0, h * s) }, cs, col);
+                tier(0.2, 0.44, 0.62, Shade(leaf, -0.06)); tier(0.52, 0.34, 0.56, leaf); tier(0.8, 0.22, 0.42, Shade(leaf, 0.06));
+            }
+            else if (type == "poplar")
+            {
+                tk.Lathe(p, new[] { L(0.05 * s, 0), L(0.035 * s, 0.26 * s) }, ts, TR);
+                crown(0, 0.78 * s, 0, V(0.18 * s, 0.56 * s, 0.18 * s), leaf, seed);
+            }
+            else if (type == "broad2")
+            {
+                tk.Lathe(p, new[] { L(0.065 * s, 0), L(0.045 * s, 0.4 * s) }, ts, TR);
+                crown(0.06 * s, 0.6 * s, 0, V(0.38 * s, 0.34 * s, 0.38 * s), leaf, seed);
+                crown(-0.15 * s, 0.82 * s, 0.06 * s, V(0.28 * s, 0.25 * s, 0.28 * s), Shade(leaf, 0.06), seed + 3);
+            }
+            else
+            {
+                tk.Lathe(p, new[] { L(0.065 * s, 0), L(0.045 * s, 0.42 * s) }, ts, TR);
+                crown(0, 0.66 * s, 0, V(0.44 * s, 0.4 * s, 0.44 * s), leaf, seed);
+            }
+        }
+        static void RockInto(MeshBuilder[] B, double x, double y, double z, double r, Color col, int seed)
+        {
+            B[K_ROCK].Sphere(P(x, y, z), V(r * 1.25, r * 0.75, r), col, r > 0.3 ? 2 : 1, SO(seed: seed, rough: 0.2f, flat: -0.35f, bottomShade: 0.25f, top: 0.08f, smoothN: 0.35f));
+        }
+        // 羽状叶（双面，中脉略折）：o 为叶柄起点（Unity），(ca, sa) 为水平方向，L 长、up 起拱、w 半宽
+        static void FrondInto(MeshBuilder mb, Vector3 o, double ca, double sa, double Ln, double up, double w, Color col)
+        {
+            const int N = 5; double sx = -sa, sz = ca;
+            var row = new Vector3[N + 1][];
+            for (int i = 0; i <= N; i++)
+            {
+                double u = i / (double)N, cx = o.x + ca * Ln * u, cz = o.z + sa * Ln * u, cy = o.y + up * Math.Sin(Math.PI * u * 0.9) - 0.42 * Ln * u * u;
+                double wd = w * Math.Pow(Math.Sin(Math.PI * Math.Min(1, 0.1 + u * 0.9)), 0.75);
+                row[i] = new[] { V(cx + sx * wd, cy - wd * 0.35, cz + sz * wd), V(cx, cy, cz), V(cx - sx * wd, cy - wd * 0.35, cz - sz * wd) };
+            }
+            Vector3 nU = V(ca * 0.25, 1, sa * 0.25), nD = V(-ca * 0.25, -1, -sa * 0.25);
+            Color cB = Shade(col, -0.12), cT = Shade(col, 0.08);
+            for (int i = 0; i < N; i++)
+            {
+                var A = row[i]; var Bq = row[i + 1]; Color c0 = i > 0 ? col : cB, c1 = i + 1 == N ? cT : col;
+                foreach (var lm in new[] { new[] { 0, 1 }, new[] { 1, 2 } })
+                {
+                    int l = lm[0], m = lm[1];
+                    mb.TriN(A[l], Bq[l], Bq[m], nU, nU, nU, c0, c1, c1); mb.TriN(A[l], Bq[m], A[m], nU, nU, nU, c0, c1, c0);
+                    mb.TriN(A[l], Bq[m], Bq[l], nD, nD, nD, c0, c1, c1); mb.TriN(A[l], A[m], Bq[m], nD, nD, nD, c0, c0, c1);
+                }
+            }
         }
 
-        // 分段构建（每段 yield 一次，由场景按帧时间预算推进）；生成的物体挂在 root 下
-        public static IEnumerator Build(Transform root, List<UnityEngine.Object> own, string kind, Height H, SeededRandom rnd, Color defColor)
+        // ---- 房屋（three 坐标经 P 转换；y 为地面高度）
+        static readonly Color WHITE = C(0.88f, 0.84f, 0.76f), MUD = C(0.8f, 0.66f, 0.48f), THATCH = C(0.68f, 0.57f, 0.36f), TERRA = C(0.72f, 0.36f, 0.24f), FELT = C(0.88f, 0.84f, 0.74f), DARKW = C(0.3f, 0.2f, 0.13f);
+        // 双坡顶：w 沿屋脊、d 为跨度、h 脊高；rz = true 时屋脊沿 z（山墙朝镜头）；wallCol 给出时补两端山墙三角
+        static void GableInto(MeshBuilder R, MeshBuilder Wl, double x, double y0, double z, double w, double d, double h, Color col, Color? wallCol, bool rz)
+        {
+            Func<double, double, double, Vector3> M3 = (u, yy, v) => rz ? P(x + v, yy, z + u) : P(x + u, yy, z + v);
+            Func<double, double, double, Vector3> Nn = (nu, ny, nv) => rz ? V(nv, ny, -nu) : V(nu, ny, -nv);
+            double hw = w / 2, hd = d / 2; var dark = Shade(col, -0.16);
+            Vector3 r0 = M3(-hw, y0 + h, 0), r1 = M3(hw, y0 + h, 0);
+            foreach (int sv in new[] { 1, -1 })
+            {
+                Vector3 e0 = M3(-hw, y0, sv * hd), e1 = M3(hw, y0, sv * hd), n = Nn(0, hd, sv * h);
+                R.TriN(r0, e0, e1, n, n, n, col, dark, dark);
+                R.TriN(r0, e1, r1, n, n, n, col, dark, col);
+                // 檐下（深色，略厚）
+                double t = Math.Min(0.06, h * 0.06); Vector3 u0 = M3(-hw, y0 - t, sv * hd), u1 = M3(hw, y0 - t, sv * hd), no = Nn(0, 0, sv);
+                Wl.TriN(e0, u0, u1, no, no, no, Shade(col, -0.45)); Wl.TriN(e0, u1, e1, no, no, no, Shade(col, -0.45));
+            }
+            if (wallCol.HasValue)
+                foreach (int su in new[] { 1, -1 })
+                {
+                    double g = hw - Math.Min(0.15, w * 0.06); var n = Nn(su, 0, 0);
+                    Wl.TriN(M3(su * g, y0, -hd * 0.86), M3(su * g, y0, hd * 0.86), M3(su * g, y0 + h * 0.9, 0), n, n, n, wallCol.Value);
+                }
+        }
+        // 四坡攒尖（金字塔形）
+        static void PyramidInto(MeshBuilder R, double x, double y0, double z, double w, double d, double h, Color col)
+        {
+            var a = P(x, y0 + h, z); double hw = w / 2, hd = d / 2; var dark = Shade(col, -0.14);
+            var c = new[] { P(x - hw, y0, z - hd), P(x + hw, y0, z - hd), P(x + hw, y0, z + hd), P(x - hw, y0, z + hd) };
+            var n = new[] { V(0, hd, h), V(h, hw, 0), V(0, hd, -h), V(-h, hw, 0) };
+            for (int i = 0; i < 4; i++) R.TriN(a, c[i], c[(i + 1) % 4], n[i], n[i], n[i], col, dark, dark);
+        }
+        static void DomeInto(MeshBuilder Wl, double x, double y, double z, double r, Color col, int seg = 14)
+        {
+            Wl.Lathe(P(x, y, z), new[] { L(r, 0), L(r * 0.98, r * 0.3), L(r * 0.8, r * 0.7), L(r * 0.45, r * 0.95), L(0.04 * r, r * 1.06), L(0, r * 1.08) }, seg, col);
+        }
+        static void StupaInto(MeshBuilder[] B, double x, double y, double z, double s)
+        {
+            var W = B[K_PLAIN]; var c = C(0.9f, 0.87f, 0.8f); var gold = C(0.85f, 0.68f, 0.3f);
+            W.Lathe(P(x, y, z), new[] { L(1.5 * s, 0), L(1.5 * s, 0.35 * s, true), L(1.3 * s, 0.4 * s), L(1.3 * s, 0.55 * s) }, 18, Shade(c, -0.08), true);
+            W.Lathe(P(x, y + 0.55 * s, z), new[] { L(1.2 * s, 0), L(1.18 * s, 0.35 * s), L(1.0 * s, 0.8 * s), L(0.6 * s, 1.1 * s), L(0, 1.22 * s) }, 18, c);
+            W.Box(P(x, y + 1.86 * s, z), V(0.36 * s, 0.24 * s, 0.36 * s), Shade(gold, -0.15));
+            W.Tube(new[] { P(x, y + 1.9 * s, z), P(x, y + 2.62 * s, z) }, new[] { (float)(0.03 * s), (float)(0.022 * s) }, 6, gold, false);
+            foreach (var hr in new[] { new[] { 2.15, 0.3 }, new[] { 2.33, 0.22 }, new[] { 2.48, 0.14 } })
+                W.Lathe(P(x, y + hr[0] * s, z), new[] { L(hr[1] * s, 0), L(hr[1] * s * 0.9, 0.04 * s), L(0, 0.05 * s) }, 12, gold);
+        }
+        static void HouseInto(MeshBuilder[] B, string style, double x, double y, double z, SeededRandom rnd, double s = 1)
+        {
+            MeshBuilder Wl = B[K_PLAIN], R = B[K_ROOF], T = B[K_ROCK];
+            bool ry = rnd.NextDouble() < 0.5; double w = (1.6 + rnd.NextDouble() * 0.6) * s, dd = 1.1 * s;
+            switch (style)
+            {
+                case "tile":
+                    {
+                        double hh = 1.05 * s;
+                        Wl.Box(P(x, y + hh / 2, z), V(dd + 0.3 * s, hh, w), WHITE);
+                        Wl.Box(P(x, y + 0.36 * s, z + w / 2 + 0.01), V(0.32 * s, 0.72 * s, 0.04), DARKW);
+                        GableInto(R, Wl, x, y + hh, z, w + 0.3 * s, dd + 0.65 * s, 0.5 * s, TERRA, WHITE, true);
+                        break;
+                    }
+                case "flat":
+                    {
+                        double hh = (1.1 + rnd.NextDouble() * 0.3) * s; var c = Shade(MUD, (rnd.NextDouble() - 0.5) * 0.1); double ph = 0.16 * s, pt = 0.08 * s;
+                        Action<double, double, double, double, double> box = (bx, by, bw, bh, bd) =>
+                        {
+                            Wl.Box(P(bx, by + bh / 2, z), V(bw, bh, bd), c);
+                            Wl.Box(P(bx, by + bh + ph / 2, z + bd / 2 - pt / 2), V(bw, ph, pt), Shade(c, 0.05));
+                            Wl.Box(P(bx, by + bh + ph / 2, z - bd / 2 + pt / 2), V(bw, ph, pt), Shade(c, 0.05));
+                            Wl.Box(P(bx - bw / 2 + pt / 2, by + bh + ph / 2, z), V(pt, ph, bd), Shade(c, 0.05));
+                            Wl.Box(P(bx + bw / 2 - pt / 2, by + bh + ph / 2, z), V(pt, ph, bd), Shade(c, 0.05));
+                        };
+                        box(x, y, w, hh, dd + 0.2 * s);
+                        if (rnd.NextDouble() < 0.5) box(x - w * 0.22, y + hh, w * 0.45, 0.62 * s, dd * 0.7);
+                        else if (rnd.NextDouble() < 0.45) DomeInto(Wl, x + w * 0.15, y + hh, z, 0.42 * s, C(0.9f, 0.88f, 0.82f));
+                        Wl.Box(P(x + w * 0.2, y + 0.33 * s, z + dd / 2 + 0.11 * s), V(0.3 * s, 0.66 * s, 0.03), DARKW);
+                        Wl.Box(P(x - w * 0.22, y + 0.7 * s, z + dd / 2 + 0.11 * s), V(0.18 * s, 0.2 * s, 0.03), C(0.18f, 0.14f, 0.12f));
+                        break;
+                    }
+                case "yurt":
+                    {
+                        double r = 0.78 * s;
+                        Wl.Lathe(P(x, y, z), new[] { L(r, 0), L(r, 0.5 * s), L(r * 0.95, 0.6 * s), L(r * 0.45, 0.95 * s), L(0.1 * s, 1.06 * s), L(0, 1.08 * s) }, 16, FELT);
+                        Wl.Lathe(P(x, y + 0.4 * s, z), new[] { L(r + 0.012, 0), L(r + 0.012, 0.07 * s) }, 16, C(0.62f, 0.28f, 0.18f));
+                        Wl.Lathe(P(x, y + 0.7 * s, z), new[] { L(r * 0.82, 0), L(r * 0.7, 0.06 * s) }, 16, C(0.62f, 0.28f, 0.18f));
+                        Wl.Box(P(x, y + 0.28 * s, z + r - 0.03), V(0.34 * s, 0.56 * s, 0.08), C(0.72f, 0.32f, 0.14f));
+                        break;
+                    }
+                case "long":
+                    {
+                        double Ln = 3.0 * s, D = 1.4 * s, hw = 0.6 * s;
+                        Wl.Box(P(x, y + hw / 2, z), V(Ln, hw, D), C(0.46f, 0.34f, 0.22f));
+                        Wl.Box(P(x + Ln * 0.2, y + 0.3 * s, z + D / 2 + 0.01), V(0.34 * s, 0.6 * s, 0.04), DARKW);
+                        GableInto(T, Wl, x, y + hw - 0.05, z, Ln + 0.3 * s, D + 0.8 * s, 1.25 * s, THATCH, C(0.5f, 0.38f, 0.25f), false);
+                        break;
+                    }
+                case "round":
+                    {
+                        double r = 0.85 * s;
+                        Wl.Lathe(P(x, y, z), new[] { L(r, 0), L(r, 0.72 * s) }, 16, C(0.64f, 0.54f, 0.4f));
+                        Wl.Box(P(x, y + 0.3 * s, z + r), V(0.32 * s, 0.6 * s, 0.06), DARKW);
+                        T.Lathe(P(x, y + 0.6 * s, z), new[] { L(r + 0.24 * s, 0), L(r * 0.6, 0.55 * s), L(0.06 * s, 1.18 * s), L(0, 1.22 * s) }, 16, THATCH);
+                        break;
+                    }
+                case "stilt":
+                    {
+                        double Ln = 2.0 * s, D = 1.3 * s, ph = 0.62 * s; var wc = C(0.66f, 0.56f, 0.38f);
+                        foreach (int sx in new[] { -1, 1 }) foreach (int sz in new[] { -1, 1 })
+                                Wl.Tube(new[] { P(x + sx * Ln * 0.42, y, z + sz * D * 0.38), P(x + sx * Ln * 0.42, y + ph, z + sz * D * 0.38) }, new[] { (float)(0.05 * s), (float)(0.045 * s) }, 6, C(0.4f, 0.3f, 0.2f), false);
+                        Wl.Box(P(x, y + ph, z), V(Ln + 0.2 * s, 0.1 * s, D + 0.3 * s), C(0.46f, 0.36f, 0.24f));
+                        Wl.Box(P(x, y + ph + 0.36 * s, z), V(Ln, 0.7 * s, D), wc);
+                        GableInto(T, Wl, x, y + ph + 0.68 * s, z, Ln + 0.5 * s, D + 0.8 * s, 1.0 * s, THATCH, wc, false);
+                        break;
+                    }
+                case "thatch":
+                    {
+                        double hh = 0.9 * s; var c = C(0.74f, 0.58f, 0.42f);
+                        Wl.Box(P(x, y + hh / 2, z), V(w * 0.8, hh, dd), c);
+                        Wl.Box(P(x, y + 0.32 * s, z + dd / 2 + 0.01), V(0.3 * s, 0.64 * s, 0.04), DARKW);
+                        PyramidInto(T, x, y + hh - 0.04, z, w * 0.8 + 0.5 * s, dd + 0.5 * s, 0.85 * s, THATCH);
+                        break;
+                    }
+                default:
+                    {
+                        Wl.Box(P(x, y + 0.5 * s, z), ry ? V(dd, 1.1 * s, w) : V(w, 1.1 * s, dd), C(0.86f, 0.8f, 0.68f));
+                        R.ChineseRoof(P(x, y + 1.05 * s, z), (float)((ry ? dd : w) + 0.5 * s), (float)((ry ? w : dd) + 0.45 * s), (float)(0.62 * s), C(0.3f, 0.32f, 0.36f));
+                        break;
+                    }
+            }
+        }
+        // 海滩上的小船（登陆）：U 形船壳 + 桅杆
+        static void BoatInto(MeshBuilder[] B, double x, double y, double z, double s, double ang)
+        {
+            var W = B[K_PLAIN]; var wood = C(0.42f, 0.3f, 0.2f); double ca = Math.Cos(ang), sa = Math.Sin(ang);
+            Func<double, double, double, Vector3> at = (u, v, h) => P(x + ca * u - sa * v, y + h, z + sa * u + ca * v);
+            const int NU = 8, NV = 5; double Ln = 1.5 * s;
+            var rp = new Vector3[NU + 1, NV + 1]; var rn = new Vector3[NU + 1, NV + 1];
+            for (int i = 0; i <= NU; i++)
+            {
+                double u = -1 + 2.0 * i / NU, wd = 0.44 * s * Math.Pow(Math.Max(0, 1 - u * u), 0.55), dp = 0.36 * s * (1 - 0.4 * u * u), sh = 0.1 * s * u * u;
+                for (int j = 0; j <= NV; j++)
+                {
+                    double th = Math.PI * j / NV, cx = Math.Cos(th), cy = -Math.Sin(th);
+                    rp[i, j] = at(u * Ln, cx * wd, sh + cy * dp + 0.26 * s); rn[i, j] = V(-sa * cx, cy, -ca * cx);
+                }
+            }
+            var up = V(0, 1, 0); var deck = C(0.5f, 0.38f, 0.26f);
+            for (int i = 0; i < NU; i++)
+            {
+                for (int j = 0; j < NV; j++)
+                {
+                    var k = Shade(wood, j == 0 || j == NV - 1 ? 0.08 : -0.05);
+                    W.TriN(rp[i, j], rp[i + 1, j], rp[i + 1, j + 1], rn[i, j], rn[i + 1, j], rn[i + 1, j + 1], k);
+                    W.TriN(rp[i, j], rp[i + 1, j + 1], rp[i, j + 1], rn[i, j], rn[i + 1, j + 1], rn[i, j + 1], k);
+                }
+                // 甲板（盖住船壳内侧）
+                W.TriN(rp[i, 0], rp[i + 1, 0], rp[i + 1, NV], up, up, up, deck); W.TriN(rp[i, 0], rp[i + 1, NV], rp[i, NV], up, up, up, deck);
+            }
+            W.Tube(new[] { at(0.2 * Ln, 0, 0.1 * s), at(0.2 * Ln, 0, 1.9 * s) }, new[] { (float)(0.035 * s), (float)(0.025 * s) }, 6, wood, false);
+            W.Tube(new[] { at(0.2 * Ln - 0.6 * s, 0, 1.25 * s), at(0.2 * Ln + 0.6 * s, 0, 1.25 * s) }, new[] { (float)(0.02 * s), (float)(0.02 * s) }, 5, wood, false);
+            W.Tube(new[] { at(0.2 * Ln - 0.5 * s, 0, 1.2 * s), at(0.2 * Ln + 0.5 * s, 0, 1.2 * s) }, new[] { (float)(0.07 * s), (float)(0.06 * s) }, 6, C(0.86f, 0.82f, 0.7f), true);   // 收起的帆
+        }
+        // 草丛（7 片弯叶，根暗梢亮，法线朝上，与地面同调）/ 野花（茎 + 五瓣花，花瓣乘实例颜色）。顶点色 a = aTint（乘实例颜色的权重）
+        public static Mesh TuftMesh()
         {
             var mb = new MeshBuilder();
-            // 地面网格（three 坐标 x、z）
-            var xs = Axis(-48, 48, 0.8f, 13, 0.25f);
-            var zs = new List<float>();
-            // 近处（z > 16）用越来越疏的行一直铺到镜头身后：竖屏 / 宽阵拉远机位时画面下缘不露底
-            for (float z = 64; z > -95;) { zs.Add(z); z -= z > 16 ? 0.75f + (z - 16) * 0.3f : z > -9 ? 0.75f : 0.75f + (-9 - z) * 0.16f; }
-            Func<float, float, float> pn = (x, z) => Mathf.PerlinNoise(x * 0.21f + 11.3f, z * 0.21f + 4.7f) - 0.465f;
-            for (int j = 0; j < zs.Count - 1; j++)
+            var rnd = new SeededRandom(91);
+            Color dark = C(0.55f, 0.55f, 0.55f), lite = C(1.05f, 1.05f, 1.0f), mid = C(0.8f, 0.8f, 0.78f);
+            for (int k = 0; k < 7; k++)
             {
-                if (j % 6 == 5) yield return null;
-                for (int i = 0; i < xs.Count - 1; i++)
+                double a = k * 0.9 + rnd.NextDouble() * 0.6, ca = Math.Cos(a), sa = Math.Sin(a);
+                double r0 = 0.02 + rnd.NextDouble() * 0.05, h = 0.14 + rnd.NextDouble() * 0.12, lean = 0.05 + rnd.NextDouble() * 0.08, w = 0.022;
+                double bx = ca * r0, bz = sa * r0;
+                Vector3 b0 = V(bx - sa * w, 0, bz + ca * w), b1 = V(bx + sa * w, 0, bz - ca * w);
+                Vector3 m0 = V(bx + ca * lean * 0.4 - sa * w * 0.6, h * 0.55, bz + sa * lean * 0.4 + ca * w * 0.6), m1 = V(bx + ca * lean * 0.4 + sa * w * 0.6, h * 0.55, bz + sa * lean * 0.4 - ca * w * 0.6);
+                var tip = V(bx + ca * lean, h, bz + sa * lean);
+                foreach (int sd in new[] { 1, -1 })
                 {
-                    float x0 = xs[i], x1 = xs[i + 1], z0 = zs[j], z1 = zs[j + 1];   // z0 > z1（近 → 远）
-                    Vector3 a = P(x0, H.H(x0, z0), z0), b = P(x0, H.H(x0, z1), z1), c = P(x1, H.H(x1, z1), z1), d = P(x1, H.H(x1, z0), z0);
-                    float cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, cy = (a.y + c.y) / 2;
-                    var col = GroundColor(kind, cx, cz, cy, pn(cx, cz));
-                    bool flip = ((i + j) & 1) == 0;
-                    if (flip)
-                    {
-                        mb.Tri(a, b, c, Shade(col, (R(rnd) - 0.5f) * 0.07f));
-                        mb.Tri(a, c, d, Shade(col, (R(rnd) - 0.5f) * 0.07f));
-                    }
-                    else
-                    {
-                        mb.Tri(a, b, d, Shade(col, (R(rnd) - 0.5f) * 0.07f));
-                        mb.Tri(b, c, d, Shade(col, (R(rnd) - 0.5f) * 0.07f));
-                    }
+                    var nf = V(ca * 0.35 * sd, 1, sa * 0.35 * sd).normalized;
+                    mb.TriN(b0, b1, m1, nf, nf, nf, dark, dark, mid); mb.TriN(b0, m1, m0, nf, nf, nf, dark, mid, mid);
+                    mb.TriN(m0, m1, tip, nf, nf, nf, mid, mid, lite);
+                }
+            }
+            for (int i = 0; i < mb.c.Count; i++) { var c = mb.c[i]; c.a = 1; mb.c[i] = c; }
+            return mb.ToMesh("clash tuft");
+        }
+        public static Mesh FlowerMesh()
+        {
+            var stem = new MeshBuilder(); var pet = new MeshBuilder(); var up = V(0, 1, 0);
+            var green = C(0.32f, 0.52f, 0.22f);
+            foreach (var p in new[] { new[] { 0, 0, 0.26 }, new[] { 0.1, 0.06, 0.2 }, new[] { -0.07, 0.08, 0.23 } })
+            {
+                double x = p[0], z = p[1], h = p[2];
+                stem.TriN(V(x - 0.012, 0, z), V(x + 0.012, 0, z), V(x, h, z), V(0, 0.3, 1), V(0, 0.3, 1), up, green);
+                stem.TriN(V(x + 0.012, 0, z), V(x - 0.012, 0, z), V(x, h, z), V(0, 0.3, -1), V(0, 0.3, -1), up, green);
+                const double r = 0.05;
+                for (int k = 0; k < 5; k++)
+                {
+                    double a0 = k * Math.PI * 2 / 5, a1 = a0 + Math.PI * 2 / 5;
+                    pet.TriN(V(x, h, z), V(x + Math.Cos(a0) * r, h + 0.01, z + Math.Sin(a0) * r), V(x + Math.Cos(a1) * r, h + 0.01, z + Math.Sin(a1) * r), up, up, up, C(1, 1, 1));
+                }
+                pet.TriN(V(x, h + 0.016, z), V(x + 0.016, h + 0.013, z), V(x, h + 0.013, z + 0.016), up, up, up, C(1.0f, 0.86f, 0.35f));
+            }
+            // 茎 aTint = 0，花瓣 = 1
+            for (int i = 0; i < stem.c.Count; i++) { var c = stem.c[i]; c.a = 0; stem.c[i] = c; }
+            for (int i = 0; i < pet.c.Count; i++) { var c = pet.c[i]; c.a = 1; pet.c[i] = c; }
+            int o = stem.v.Count;
+            stem.v.AddRange(pet.v); stem.n.AddRange(pet.n); stem.c.AddRange(pet.c); stem.uv.AddRange(pet.uv);
+            foreach (var i in pet.t) stem.t.Add(o + i);
+            return stem.ToMesh("clash flower");
+        }
+        // 草丛实例矩阵（three：compose(pos, Euler(0, yaw, 0), (s, s·k, s))）→ 根下 Unity 局部矩阵（three 的绕 Y 转 θ = Unity 绕 Y 转 −θ）
+        static Matrix4x4 InstU(double x, double y, double z, double s, double k, double yaw)
+        {
+            return Matrix4x4.TRS(P(x, y, z), Quaternion.AngleAxis((float)(-yaw * 180 / Math.PI), Vector3.up), V(s, s * k, s));
+        }
+        static Vector4 Col4(Color c) { return new Vector4(c.r, c.g, c.b, 1); }
+
+        // 三角形索引网格（three 坐标的顶点、按 three computeVertexNormals 求平滑法线）→ Unity 网格（z 取反、绕序反转）
+        static Mesh IndexedToUnity(double[] pos, Color[] col, Vector4[] uv2, List<int> idx, string name)
+        {
+            int nv = pos.Length / 3;
+            var nr = new double[nv * 3];
+            for (int q = 0; q < idx.Count; q += 3)
+            {
+                int a = idx[q] * 3, b = idx[q + 1] * 3, c = idx[q + 2] * 3;
+                // three：cb = C − B，ab = A − B，n = cb × ab
+                double cbx = pos[c] - pos[b], cby = pos[c + 1] - pos[b + 1], cbz = pos[c + 2] - pos[b + 2];
+                double abx = pos[a] - pos[b], aby = pos[a + 1] - pos[b + 1], abz = pos[a + 2] - pos[b + 2];
+                double nx = cby * abz - cbz * aby, ny = cbz * abx - cbx * abz, nz = cbx * aby - cby * abx;
+                nr[a] += nx; nr[a + 1] += ny; nr[a + 2] += nz;
+                nr[b] += nx; nr[b + 1] += ny; nr[b + 2] += nz;
+                nr[c] += nx; nr[c + 1] += ny; nr[c + 2] += nz;
+            }
+            var v = new Vector3[nv]; var n = new Vector3[nv];
+            for (int i = 0; i < nv; i++)
+            {
+                v[i] = P(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]);
+                double x = nr[i * 3], y = nr[i * 3 + 1], z = nr[i * 3 + 2], l = Math.Sqrt(x * x + y * y + z * z);
+                if (l > 0) { x /= l; y /= l; z /= l; } else y = 1;
+                n[i] = V(x, y, -z);
+            }
+            var t = new int[idx.Count];
+            for (int q = 0; q < idx.Count; q += 3) { t[q] = idx[q]; t[q + 1] = idx[q + 2]; t[q + 2] = idx[q + 1]; }
+            var m = new Mesh { name = name };
+            if (nv > 65535) m.indexFormat = IndexFormat.UInt32;
+            m.vertices = v; m.normals = n; m.colors = col;
+            if (uv2 != null) m.SetUVs(1, new List<Vector4>(uv2));
+            m.triangles = t;
+            m.RecalculateBounds();
+            return m;
+        }
+
+        // 生成器：每做完一段 yield 一次，由场景分帧执行（= JS buildTerrain）。detail：先生成地形细节纹理（Art.TerrainDetailGen，嵌套）
+        public static IEnumerator Build(ClashTerrainOut O, string kind, Height H, ClashLook look, SeededRandom rnd, Color defColor, Color colA, Color colD)
+        {
+            bool coast = look.coast;
+            bool walled = Walled(kind), hilly = kind == "hill" || kind == "mountain";
+            // 离海岸线的距离（非登陆战为无穷大）：树、石、房屋不放进海里
+            Func<double, double, double> dry = (x, z) => coast ? x - ShoreX(z) : 1e9;
+            yield return Art.TerrainDetailGen();
+            O.snowH = look.snow > 0 ? (float)((kind == "mountain" ? 13 : kind == "hill" ? 17 : 99) / Math.Max(0.5, look.snow)) : 99;
+            // ---- 地面：近处 0.5 的平滑网格，向外渐疏（最疏 2.6），向后延伸成远山；看不到的两侧不建三角形
+            var xs = Axis(-150, 150, 0.5, 12, 0.16, 2.6);
+            var zs = new List<double>();
+            for (double z = 64; z > -126;) { zs.Add(z); z -= z > 16 ? 0.5 + (z - 16) * 0.3 : z > -9 ? 0.5 : Math.Min(2.6, 0.5 + (-9 - z) * 0.09); }
+            int NX = xs.Count, NZ = zs.Count;
+            var pos = new double[NX * NZ * 3]; var colA2 = new Color[NX * NZ]; var gnd = new Vector4[NX * NZ];
+            Func<double, double, double> nA = (x, z) => Perlin(x * 0.17 + 11.3, z * 0.17 + 4.7) - 0.465, nF = (x, z) => Perlin(x * 0.09 + 3.1, z * 0.13 + 9.7) - 0.465;
+            for (int j = 0; j < NZ; j++)
+            {
+                if (j % 12 == 11) yield return null;
+                double z = zs[j];
+                for (int i = 0; i < NX; i++)
+                {
+                    double x = xs[i], y = H.H(x, z); int k = j * NX + i;
+                    pos[k * 3] = x; pos[k * 3 + 1] = y; pos[k * 3 + 2] = z;
+                    Color c; double g0, g1, g2, g3;
+                    GroundAttr(kind, x, z, y, nA(x, z), nF(x, z), look, out c, out g0, out g1, out g2, out g3);
+                    colA2[k] = new Color(c.r, c.g, c.b, 1);
+                    gnd[k] = new Vector4((float)g0, (float)g1, (float)g2, (float)g3);
+                }
+            }
+            Func<double, double> lim = z => Math.Max(15, 0.8 * (28 - z) + 6);
+            var idx = new List<int>();
+            for (int j = 0; j < NZ - 1; j++)
+            {
+                double Lm = lim(zs[j + 1]);
+                for (int i = 0; i < NX - 1; i++)
+                {
+                    if (Math.Min(Math.Abs(xs[i]), Math.Abs(xs[i + 1])) > Lm) continue;
+                    int a = j * NX + i, b = a + 1, c = a + NX, d = c + 1;
+                    // zs 由近到远（z 递减）：a(x0,z0) b(x1,z0) c(x0,z1) d(x1,z1)，朝上的绕向（three）
+                    if (((i + j) & 1) == 1) { idx.Add(a); idx.Add(b); idx.Add(c); idx.Add(b); idx.Add(d); idx.Add(c); }
+                    else { idx.Add(a); idx.Add(b); idx.Add(d); idx.Add(a); idx.Add(d); idx.Add(c); }
                 }
             }
             yield return null;
-            var deco = new MeshBuilder();
-            bool walled = Walled(kind);
-            // 草丛与小花
-            var flowers = new[] { C(0.98f, 0.95f, 0.85f), C(1, 0.82f, 0.3f), C(0.95f, 0.55f, 0.6f), C(0.75f, 0.62f, 0.95f) };
-            int tufts = walled ? 140 : kind == "river" ? 360 : 520;
-            for (int k = 0; k < tufts; k++)
-            {
-                if (k % 120 == 119) yield return null;
-                float x = (R(rnd) * 2 - 1) * 14, z = 7 - R(rnd) * (walled ? 9 : 20);
-                if (walled && z < -6.4f) continue;
-                if (kind == "river" && Mathf.Abs(x - RIVER_X) < RIVER_W + 0.6f) continue;
-                float y = H.H(x, z);
-                var gcol = kind == "forest" ? C(0.26f, 0.45f, 0.22f) : kind == "hill" ? C(0.5f, 0.58f, 0.3f) : C(0.36f, 0.58f, 0.26f);
-                var col = Shade(gcol, (R(rnd) - 0.5f) * 0.25f);
-                float s = 0.8f + R(rnd) * 0.7f;
-                for (int j = 0; j < 3; j++)
-                {
-                    float bx = x + (R(rnd) - 0.5f) * 0.12f, by = y - 0.02f, bz = z + (R(rnd) - 0.5f) * 0.12f;
-                    float bh = (0.16f + R(rnd) * 0.1f) * s, lean = (R(rnd) - 0.5f) * 0.14f, ang = R(rnd) * Mathf.PI;
-                    Blade(deco, bx, by, bz, bh, lean, ang, Shade(col, j * 0.06f));
-                }
-                if (!walled && z < 2.5f && R(rnd) < 0.12f)
-                {
-                    var fc = flowers[rnd.Next(flowers.Length)];
-                    deco.Box(P(x + 0.1f, y + 0.06f, z + 0.05f), V(0.05f, 0.035f, 0.05f), fc, 0.1f);
-                }
-            }
-            // 石块
-            int rocks = kind == "hill" || kind == "mountain" ? 26 : kind == "river" ? 22 : 8;
+            O.ground = IndexedToUnity(pos, colA2, gnd, idx, "clash ground");
+            O.groundTris = idx.Count / 3;
+            yield return null;
+            // ---- 道具：石块、树、村舍、城墙
+            MeshBuilder[] B = PropBuilders(), BF = PropBuilders();     // BF：远处（阴影相机之外）的树与村舍，不投影
+            var stone = C(0.6f, 0.59f, 0.56f);
+            int rocks = hilly ? 26 : kind == "river" ? 20 : walled ? 6 : 9;
             for (int k = 0; k < rocks; k++)
             {
-                float x = (R(rnd) * 2 - 1) * 16, z = 6 - R(rnd) * 22;
-                if (kind == "river") { x = RIVER_X + (R(rnd) < 0.5f ? -1 : 1) * (RIVER_W + 0.4f + R(rnd) * 1.6f); }
-                if (Mathf.Abs(x) < 6 && Mathf.Abs(z - ZC) < 3.5f) continue;
-                if (z > 1.8f && Mathf.Abs(x) < 9) continue;          // 镜头前不放大石头
-                if (walled && z < -6.5f) continue;
-                float r = 0.18f + R(rnd) * (kind == "mountain" ? 0.7f : 0.4f);
-                deco.Blob(P(x, H.H(x, z) + r * 0.25f, z), V(r * 1.2f, r * 0.75f, r), Shade(C(0.56f, 0.55f, 0.52f), (R(rnd) - 0.5f) * 0.15f), k + 3);
+                double x = (rnd.NextDouble() * 2 - 1) * 16, z = 6 - rnd.NextDouble() * 22;
+                if (kind == "river") x = RIVER_X + (rnd.NextDouble() < 0.5 ? -1 : 1) * (RIVER_W + 0.4 + rnd.NextDouble() * 1.6);
+                if (Math.Abs(x) < 6 && Math.Abs(z - ZCd) < 3.5) continue;
+                if (z > 1.8 && Math.Abs(x) < 9) continue;          // 镜头前不放大石头
+                if (walled && z < WALL_Z + 0.9) continue;
+                if (dry(x, z) < 1.2) continue;
+                double r = 0.16 + rnd.NextDouble() * (kind == "mountain" ? 0.6 : 0.36);
+                RockInto(B, x, H.H(x, z) + r * 0.12, z, r, Shade(stone, (rnd.NextDouble() - 0.5) * 0.14), k + 3);
+                if (rnd.NextDouble() < 0.5) RockInto(B, x + r * 1.3, H.H(x + r * 1.3, z + r * 0.4), z + r * 0.4, r * 0.45, Shade(stone, -0.04), k + 31);
             }
-            // 树
+            // 近景（镜头前 z 3–6.5）的战场遗物：折断的长枪、丢下的圆盾、倒地的军旗、碎石——框住画面下缘，不挡交锋处
+            {
+                var W = B[K_PLAIN]; var metal = C(0.62f, 0.62f, 0.64f); var cols = new[] { colA, colD };
+                Action<double, double, double, double, double, Color, bool> lie = (x, z, len, ang, r, col, tip) =>
+                {
+                    double ca = Math.Cos(ang) * len / 2, sa = Math.Sin(ang) * len / 2;
+                    Vector3 a = P(x - ca, H.H(x - ca, z - sa) + r, z - sa), b = P(x + ca, H.H(x + ca, z + sa) + r + 0.02, z + sa);
+                    W.Tube(new[] { a, b }, new[] { (float)r, (float)(r * 0.9) }, 5, col, false);
+                    if (tip) W.Tube(new[] { b, P(x + ca * 1.12, H.H(x + ca, z + sa) + r + 0.02, z + sa * 1.12) }, new[] { (float)(r * 1.3), 0.003f }, 5, metal, false);
+                };
+                for (int k = 0; k < 14; k++)
+                {
+                    double x = (rnd.NextDouble() * 2 - 1) * 12, z = 3.2 + rnd.NextDouble() * 3.4;
+                    if (dry(x, z) < 1) continue;
+                    double u = rnd.NextDouble();
+                    if (u < 0.28) { bool br = rnd.NextDouble() < 0.5; double len = (br ? 0.45 : 0.9) + rnd.NextDouble() * 0.35, ang = rnd.NextDouble() * 3.14; lie(x, z, len, ang, 0.014, Shade(WOOD, 0.1), !br); }
+                    else if (u < 0.5)
+                    {
+                        double y = H.H(x, z); var c = cols[k % cols.Length];
+                        // 斜倚在地上的圆盾（MeshBuilder.M：先绕水平轴倾斜再平移）
+                        var pu = P(x, y + 0.08, z);
+                        double ex = 0.5 + rnd.NextDouble() * 0.5, ey = rnd.NextDouble() * 6.28;
+                        W.M = Matrix4x4.Translate(pu) * Matrix4x4.Rotate(ClashUtil.YXZ((float)ex, (float)ey, 0));
+                        W.Lathe(V(0, 0, 0), new[] { L(0.21, -0.012, C(0.3f, 0.24f, 0.18f), true), L(0.2, 0.02, true), L(0.06, 0.04), L(0.035, 0.06, metal), L(0, 0.065, metal) }, 14, Shade(c, -0.15));
+                        W.M = Matrix4x4.identity;
+                    }
+                    else if (u < 0.6)
+                    {
+                        // 倒地的小旗：旗杆 + 平摊在地上的旗面
+                        double ang = rnd.NextDouble() * 3.14; var c = cols[k % cols.Length];
+                        lie(x, z, 1.3, ang, 0.016, Shade(WOOD, -0.05), false);
+                        double ca = Math.Cos(ang), sa = Math.Sin(ang), y = H.H(x, z) + 0.035, nx = -sa, nz = ca;
+                        Func<double, double, Vector3> q = (a, b) => P(x + ca * a + nx * b, y + 0.012 * Math.Sin(a * 5 + b * 3), z + sa * a + nz * b);
+                        var up = V(0, 1, 0);
+                        for (int i = 0; i < 3; i++)
+                        {
+                            double a0 = 0.1 + i * 0.16, a1 = a0 + 0.16;
+                            var cc = Shade(c, i % 2 == 1 ? -0.06 : 0.02);
+                            W.TriN(q(a0, 0), q(a1, 0), q(a1, 0.36), up, up, up, cc); W.TriN(q(a0, 0), q(a1, 0.36), q(a0, 0.36), up, up, up, cc);
+                        }
+                    }
+                    else RockInto(B, x, H.H(x, z) + 0.02, z, 0.1 + rnd.NextDouble() * 0.14, Shade(stone, (rnd.NextDouble() - 0.5) * 0.12), 70 + k);
+                }
+            }
+            yield return null;
+            Func<Color> leafC = () => Shade(kind == "forest" ? look.fleaf : look.leaf, (rnd.NextDouble() - 0.5) * 0.16);
+            Func<string> pickT = () => look.PickTree(rnd);
+            // 近景框边的树：在本群落的树种里挑「大冠」的一种（温带仍是松 / 阔叶）
+            Func<string> nearT = () => { var t = pickT(); return t == "scrub" ? "broad" : t == "poplar" ? "broad" : t; };
+            Action<double, double, double, string, bool> tree = (x, z, s, type, near) =>
+            {
+                if (dry(x, z) < 1.5) return;
+                // 网页版：缺省树种时按群落的第一种树是否为棕榈放大（不是按随后挑出的树种）
+                double sc = s * (type == "palm" || (type == null && look.FirstTree == "palm") ? 1.25 : 1);
+                string ty = type ?? pickT();
+                var lc = leafC();
+                TreeInto(z < -14 ? BF : B, x, H.H(x, z) - 0.05, z, sc, ty, lc, Math.Abs(JsRound(x * 13 + z * 7)) % 97, near);
+            };
             if (kind == "forest")
             {
-                for (int k = 0; k < 120; k++)
+                int nF0 = JsRound(110 * Math.Min(1, 0.55 + look.treeK * 0.45));
+                for (int k = 0; k < nF0; k++)
                 {
-                    if (k % 30 == 29) yield return null;
-                    float x = (R(rnd) * 2 - 1) * 26, z = -4.4f - R(rnd) * 26;
-                    float s = 2.2f + R(rnd) * 1.6f; bool pine = R(rnd) < 0.45f;
-                    Tree(deco, H, rnd, x, z, s, pine);
+                    if (k % 20 == 19) yield return null;
+                    double x = (rnd.NextDouble() * 2 - 1) * 26, z = -4.4 - rnd.NextDouble() * 26;
+                    tree(x, z, 2.2 + rnd.NextDouble() * 1.6, null, false);
                 }
                 // 两侧与近景的树（框住画面）
-                var frame = new[,] { { -9.5f, 3.5f, 3.4f }, { 10.2f, 2.8f, 3.1f }, { -12.5f, 0.5f, 3.6f }, { 12.8f, -1.2f, 3.8f }, { -7.6f, -3.6f, 2.8f }, { 8.4f, -4.0f, 3.0f }, { -10.6f, 6.4f, 3.2f }, { 11.4f, 6.0f, 3.3f } };
-                for (int k = 0; k < frame.GetLength(0); k++) { bool pine = R(rnd) < 0.4f; Tree(deco, H, rnd, frame[k, 0], frame[k, 1], frame[k, 2], pine); }
-                // 落叶
-                var leaves = new[] { C(0.62f, 0.42f, 0.18f), C(0.72f, 0.56f, 0.22f), C(0.5f, 0.36f, 0.16f) };
-                for (int k = 0; k < 160; k++)
+                foreach (var f in new[] { new[] { -9.5, 3.5, 3.4 }, new[] { 10.2, 2.8, 3.1 }, new[] { -12.5, 0.5, 3.6 }, new[] { 12.8, -1.2, 3.8 }, new[] { -7.6, -3.6, 2.8 }, new[] { 8.4, -4.0, 3.0 }, new[] { -10.6, 6.4, 3.2 }, new[] { 11.4, 6.0, 3.3 } })
                 {
-                    float x = (R(rnd) * 2 - 1) * 12, z = 6 - R(rnd) * 14, y = H.H(x, z) + 0.012f;
-                    var lc = leaves[rnd.Next(3)];
-                    float s = 0.06f + R(rnd) * 0.05f, a = R(rnd) * 3;
-                    deco.Tri(P(x + Mathf.Cos(a) * s, y, z + Mathf.Sin(a) * s), P(x - Mathf.Sin(a) * s, y, z + Mathf.Cos(a) * s), P(x - Mathf.Cos(a) * s, y, z - Mathf.Sin(a) * s), lc);
+                    string ty = look.biome == "temperate" ? (rnd.NextDouble() < 0.4 ? "pine" : "broad") : nearT();
+                    tree(f[0], f[1], f[2], ty, true);
+                }
+                // 林下灌丛
+                for (int k = 0; k < 24; k++)
+                {
+                    double x = (rnd.NextDouble() * 2 - 1) * 14, z = 4 - rnd.NextDouble() * 12;
+                    if (Math.Abs(z - ZCd) < 3.4 && Math.Abs(x) < 7.5) continue;
+                    if (dry(x, z) < 1.5) continue;
+                    B[K_LEAF].Sphere(P(x, H.H(x, z) + 0.05, z), V(0.36, 0.24, 0.32), Shade(look.fleaf, 0.03 + (rnd.NextDouble() - 0.5) * 0.15), 2, SO(seed: k, rough: 0.14f, bottomShade: 0.35f, flat: -0.4f, smoothN: 0.5f));
                 }
             }
             else if (!walled)
             {
-                int n = kind == "river" ? 28 : 22;
+                int n = JsRound((kind == "river" ? 30 : 24) * look.treeK);
                 for (int k = 0; k < n; k++)
                 {
-                    float x = (R(rnd) * 2 - 1) * 30, z = -9 - R(rnd) * 24;
-                    if (kind == "river" && Mathf.Abs(x - RIVER_X) < 4) continue;
-                    float s = 2 + R(rnd) * 1.4f; bool pine = R(rnd) < 0.4f;
-                    Tree(deco, H, rnd, x, z, s, pine);
+                    double x = (rnd.NextDouble() * 2 - 1) * 30, z = -9 - rnd.NextDouble() * 24;
+                    if (kind == "river" && Math.Abs(x - RIVER_X) < 4) continue;
+                    if (Math.Abs(x) < 9 && z > -16) continue;          // 不在两军交锋处的正后方挡住画面
+                    tree(x, z, 2 + rnd.NextDouble() * 1.4, null, false);
                 }
-                Tree(deco, H, rnd, -12.8f, -2.5f, 2.8f, false);
-                Tree(deco, H, rnd, 13.6f, -3.4f, 3.0f, false);
-            }
-            // 河岸芦苇
-            if (kind == "river")
-            {
-                for (int k = 0; k < 90; k++)
+                foreach (var f in new[] { new[] { -12.8, -2.5, 2.8 }, new[] { 13.6, -3.4, 3.0 } }) { string ty = look.biome == "temperate" ? "broad" : nearT(); tree(f[0], f[1], f[2], ty, true); }
+                // 田间村舍（平原、河川）：按防守城池的文化（灰瓦、白墙赤陶瓦、平顶土坯、毡帐、长屋、圆屋、干栏、茅屋）
+                if (kind == "plain" || kind == "river")
                 {
-                    float sideK = R(rnd) < 0.5f ? -1 : 1;
-                    float x = RIVER_X + sideK * (RIVER_W + 0.9f + R(rnd) * 1.1f), z = 6 - R(rnd) * 22;
-                    if (Mathf.Abs(z - ZC) < 3.6f && Mathf.Abs(x) < 5.5f) continue;
-                    if (z > 2.2f) continue;
-                    float y = H.H(x, z);
-                    for (int j = 0; j < 4; j++)
+                    for (int k = 0; k < 6; k++)
                     {
-                        float bx = x + (R(rnd) - 0.5f) * 0.2f, bz = z + (R(rnd) - 0.5f) * 0.2f, bh = 0.45f + R(rnd) * 0.35f;
-                        float lean = (R(rnd) - 0.5f) * 0.2f, ang = R(rnd) * Mathf.PI;
-                        Blade(deco, bx, y, bz, bh, lean, ang, Shade(C(0.58f, 0.6f, 0.32f), (R(rnd) - 0.5f) * 0.2f));
+                        double x = -22 + k * 8.5 + (rnd.NextDouble() - 0.5) * 4, z = -19 - rnd.NextDouble() * 9;
+                        if (kind == "river" && Math.Abs(x - RIVER_X) < 6) continue;
+                        if (dry(x, z) < 3) continue;
+                        HouseInto(BF, look.house, x, H.H(x, z), z, rnd, 1);
+                        string ty = look.house == "flat" ? "palm" : look.biome == "temperate" ? "broad" : nearT();
+                        tree(x + 1.9, z - 0.8, 1.8, ty, false);
                     }
                 }
             }
-            yield return null;
-            // 远山
-            var far = new MeshBuilder();
-            bool hilly = kind == "hill" || kind == "mountain";
-            for (int k = 0; k < 9; k++)
+            else
             {
-                float x = -70 + k * 17 + (R(rnd) - 0.5f) * 8, z = -62 - R(rnd) * 22;
-                float h = (hilly ? 14 : 8) + R(rnd) * (hilly ? 14 : 7);
-                float rad = 14 + R(rnd) * 10;
-                far.Cone(P(x, -2, z), rad, h, 7, Shade(C(0.5f, 0.56f, 0.52f), (R(rnd) - 0.5f) * 0.1f));
-                if (hilly && h > 18) far.Cone(P(x, -2 + h * 0.72f, z), (14 + 10 * 0.5f) * 0.28f, h * 0.28f, 7, C(0.93f, 0.94f, 0.96f));
+                // 城外两侧的树
+                foreach (var f in new[] { new[] { -12.6, -2.2, 2.9 }, new[] { -10.4, -5.6, 2.5 }, new[] { 14.4, -3.6, 2.7 } }) { string ty = look.biome == "temperate" ? "broad" : nearT(); tree(f[0], f[1], f[2], ty, true); }
             }
-            // 城墙与城门
-            if (walled) { yield return null; BuildWall(deco, kind, rnd, defColor, H); }
+            // 登陆：海滩上搁浅的小船（攻方身后）
+            if (coast)
+            {
+                foreach (var b in new[] { new[] { -4.2, 1.0, 0.5 }, new[] { -9.5, 1.15, 0.25 }, new[] { 2.8, 0.9, 0.7 } })
+                {
+                    double x = ShoreX(b[0]) - 0.2;
+                    BoatInto(B, x, Math.Max(SEA_Y - 0.12, H.H(x, b[0])) - 0.06, b[0], b[1], b[2]);
+                }
+            }
             yield return null;
-            var lp = Art.LowPoly;
-            var ground = mb.ToMesh("clash ground"); var decoM = deco.ToMesh("clash deco"); var farM = far.ToMesh("clash far");
-            own.Add(ground); own.Add(decoM); own.Add(farM);
-            var g0 = Art.MakeObject("Ground", ground, lp, root, false);
-            Art.MakeObject("Deco", decoM, lp, root, true);
-            var g2 = Art.MakeObject("Far", farM, lp, root, false);
-            g2.GetComponent<MeshRenderer>().receiveShadows = false;
-            g0.GetComponent<MeshRenderer>().receiveShadows = true;
-            // 河水
+            // 城墙与城门
+            if (walled) { BuildWall(B, kind, rnd, defColor, H, look); yield return null; }
+            if (B.Any(mb => mb.v.Count > 0)) O.propsNear = MergeProps(B, "clash props");
+            if (BF.Any(mb => mb.v.Count > 0)) O.propsFar = MergeProps(BF, "clash props far");
+            yield return null;
+            // ---- 草丛 / 芦苇 / 野花（实例化，随风轻摆；不投影）
+            int nT = walled ? 150 : kind == "river" ? 380 : kind == "forest" ? 420 : 480;
+            var gcol = look.tuft.HasValue ? (kind == "forest" ? Shade(look.tuft.Value, -0.08) : look.tuft.Value) : kind == "forest" ? C(0.3f, 0.48f, 0.24f) : hilly ? C(0.5f, 0.6f, 0.3f) : C(0.4f, 0.6f, 0.28f);
+            for (int k = 0; k < nT; k++)
+            {
+                double x = (rnd.NextDouble() * 2 - 1) * 15, z = 8 - rnd.NextDouble() * (walled ? 14 : 22);
+                if (dry(x, z) < 2.4) continue;
+                if (walled && z < WALL_Z + 0.8) continue;
+                if (kind == "river" && Math.Abs(x - RIVER_X) < RIVER_W + 0.5) continue;
+                if (walled && kind != "wall" && Math.Abs(x - GATE_X) < 1.6 + Math.Max(0, z - WALL_Z) * 0.07) continue;
+                double tr = Math.Exp(-(x * x) / 12 - ((z - ZCd) * (z - ZCd)) / 8);
+                if (rnd.NextDouble() < tr * 0.75) continue;
+                if (z > 3.5 && rnd.NextDouble() < 0.45) continue;    // 镜头前稀一些
+                double s = (0.75 + rnd.NextDouble() * 0.6) * (z > 3.5 ? 0.8 : 1), yaw = rnd.NextDouble() * 6.28;
+                var c = Shade(gcol, (rnd.NextDouble() - 0.5) * 0.24);
+                O.tufts.Add(InstU(x, H.H(x, z) - 0.02, z, s, 1, yaw)); O.tuftCols.Add(Col4(c));
+            }
+            if (kind == "river")
+            {
+                for (int k = 0; k < 110; k++)
+                {
+                    int sk = rnd.NextDouble() < 0.5 ? -1 : 1;
+                    double x = RIVER_X + sk * (RIVER_W + 0.7 + rnd.NextDouble() * 1.3), z = 6 - rnd.NextDouble() * 22;
+                    if (Math.Abs(z - ZCd) < 3.6 && Math.Abs(x) < 5.5) continue;
+                    if (z > 2.2) continue;
+                    double s = 1.0 + rnd.NextDouble() * 0.5, kk = 2.4 + rnd.NextDouble(), yaw = rnd.NextDouble() * 6.28;
+                    var c = Shade(C(0.62f, 0.62f, 0.34f), (rnd.NextDouble() - 0.5) * 0.2);
+                    O.tufts.Add(InstU(x, H.H(x, z) - 0.02, z, s, kk, yaw)); O.tuftCols.Add(Col4(c));
+                }
+            }
+            if (O.tufts.Count > 0) O.tuftMesh = TuftMesh();
+            if (!walled)
+            {
+                var fl = new[] { C(0.98f, 0.95f, 0.86f), C(1, 0.82f, 0.3f), C(0.95f, 0.55f, 0.62f), C(0.72f, 0.6f, 0.95f) };
+                int nFl = JsRound((kind == "forest" ? 40 : 70) * look.flowers);
+                for (int k = 0; k < nFl; k++)
+                {
+                    double x = (rnd.NextDouble() * 2 - 1) * 14, z = 3 - rnd.NextDouble() * 16;
+                    if (dry(x, z) < 3) continue;
+                    if (kind == "river" && Math.Abs(x - RIVER_X) < RIVER_W + RIVER_BANK) continue;
+                    if (Math.Abs(x) < 6 && Math.Abs(z - ZCd) < 3) continue;
+                    double s = 0.8 + rnd.NextDouble() * 0.5, yaw = rnd.NextDouble() * 6.28;
+                    var c = fl[rnd.Next(fl.Length)];
+                    O.flowers.Add(InstU(x, H.H(x, z) - 0.01, z, s, 1, yaw)); O.flowerCols.Add(Col4(c));
+                }
+                if (O.flowers.Count > 0) O.flowerMesh = FlowerMesh();
+            }
+            yield return null;
+            // 河水（顶点色 r = 离河心的远近 → 浅色与浪花）
             if (kind == "river")
             {
                 var wm = new MeshBuilder();
-                float x0 = RIVER_X - RIVER_W - RIVER_BANK - 0.2f, x1 = RIVER_X + RIVER_W + RIVER_BANK + 0.2f;
+                double x0 = RIVER_X - RIVER_W - RIVER_BANK - 0.2, x1 = RIVER_X + RIVER_W + RIVER_BANK + 0.2;
                 const int nx = 10;
-                var zz = new List<float>();
-                for (float z = 64; z > -95;) { zz.Add(z); z -= z > 16 ? 1.2f + (z - 16) * 0.3f : z > -10 ? 1.2f : 1.2f + (-10 - z) * 0.25f; }
+                var zz = new List<double>();
+                for (double z = 64; z > -95;) { zz.Add(z); z -= z > 16 ? 1.2 + (z - 16) * 0.3 : z > -10 ? 1.2 : 1.2 + (-10 - z) * 0.25; }
                 for (int j = 0; j < zz.Count - 1; j++)
                     for (int i = 0; i < nx; i++)
                     {
-                        float xa = ClashUtil.Lerp(x0, x1, (float)i / nx), xb = ClashUtil.Lerp(x0, x1, (float)(i + 1) / nx);
-                        float sa = ClashUtil.Clamp01(Mathf.Abs(xa - RIVER_X) / (RIVER_W + RIVER_BANK));
-                        var ka = C(0.25f + sa * 0.6f, 0, 0);
-                        float y = RIVER_SURF;
+                        double xa = Lerp(x0, x1, i / (double)nx), xb = Lerp(x0, x1, (i + 1) / (double)nx);
+                        double sa = Clamp01(Math.Abs(xa - RIVER_X) / (RIVER_W + RIVER_BANK));
+                        var ka = C((float)(0.25 + sa * 0.6), 0, 0);
+                        double y = RIVER_SURF;
                         Vector3 a = P(xa, y, zz[j]), b = P(xa, y, zz[j + 1]), c = P(xb, y, zz[j + 1]), d = P(xb, y, zz[j]);
                         wm.Tri(a, b, c, ka); wm.Tri(a, c, d, ka);
                     }
-                var wmesh = wm.ToMesh("clash water");
-                own.Add(wmesh);
-                var wmat = new Material(Art.Water);
-                wmat.SetFloat("_Alpha", 0.66f);
-                wmat.SetFloat("_Amp", 0.06f);
-                own.Add(wmat);
-                var w = Art.MakeObject("Water", wmesh, wmat, root, false);
-                w.GetComponent<MeshRenderer>().receiveShadows = false;
+                O.river = wm.ToMesh("clash river");
+            }
+            // 海（登陆战）：海岸线以外的水面，岸边浅（顶点色 r → 浪花），远海不做顶点起伏（g = 1）
+            if (coast)
+            {
+                var wm = new MeshBuilder();
+                var zz = new List<double>();
+                for (double z = 64; z > -126;) { zz.Add(z); z -= z > 16 ? 1.2 + (z - 16) * 0.3 : z > -10 ? 0.9 : 0.9 + (-10 - z) * 0.2; }
+                var D = new[] { -160, -70, -34, -18, -10, -6, -3.6, -2.2, -1.2, -0.5, 0 };
+                Func<double, double, Vector3> at = (z, d) => P(ShoreX(z) + 0.9 + d, SEA_Y, z);
+                Func<double, Color> col = d => C((float)Math.Pow(Clamp01(1 + d / 7), 1.6), d < -30 ? 1 : 0, 0);
+                var up = V(0, 1, 0);
+                for (int j = 0; j < zz.Count - 1; j++)
+                    for (int i = 0; i < D.Length - 1; i++)
+                    {
+                        Vector3 a = at(zz[j], D[i]), b = at(zz[j + 1], D[i]), c = at(zz[j + 1], D[i + 1]), d = at(zz[j], D[i + 1]);
+                        wm.TriN(a, b, c, up, up, up, col(D[i]), col(D[i]), col(D[i + 1]));
+                        wm.TriN(a, c, d, up, up, up, col(D[i]), col(D[i + 1]), col(D[i + 1]));
+                    }
+                O.sea = wm.ToMesh("clash sea");
             }
         }
 
-        static void BuildWall(MeshBuilder mb, string kind, SeededRandom rnd, Color defColor, Height H)
+        // 城墙：按防守城池的文化（look.wall）——
+        //   han：砖石墙身（错缝砖纹）、圆润的垛口、角楼与曲面屋顶；城门为半圆拱门（拱券石、包铁门扇与门钉）与城门楼
+        //   roman：浅色方石墙、方垛口、方塔赤陶瓦四坡顶，城门两侧方塔（拱窗）；城内白墙赤陶瓦房
+        //   mud：土坯墙、阶梯形垛口、圆塔，城门两侧圆塔；城内平顶土坯房与圆顶
+        //   brick：红砖墙、圆头垛口、方塔顶上圆顶亭；城内茅屋与窣堵波
+        //   palisade：土垒上的削尖木栅、木望楼（茅草攒尖顶）、木门；城内长屋 / 圆屋 / 毡帐 / 干栏
+        static readonly Dictionary<string, Color> WALL_STONE = new Dictionary<string, Color> { { "han", C(0.7f, 0.67f, 0.6f) }, { "roman", C(0.8f, 0.76f, 0.67f) }, { "mud", C(0.8f, 0.65f, 0.46f) }, { "brick", C(0.7f, 0.42f, 0.32f) } };
+        static void BuildWall(MeshBuilder[] B, string kind, SeededRandom rnd, Color defColor, Height H, ClashLook look)
         {
-            const float Z = WALL_Z, TH = 1.4f, WH = 3.3f, X0 = -0.6f, X1 = 44;
-            var stone = C(0.7f, 0.67f, 0.6f);
-            float zc = Z - TH / 2;
-            bool hasGate = kind != "wall";
-            float gx = GATE_X;
-            // 墙基与墙身
-            mb.Box(P((X0 + X1) / 2, 0.15f, zc), V(X1 - X0, 0.5f, TH + 0.25f), Shade(stone, -0.12f));
-            mb.Box(P((X0 + X1) / 2, WH / 2, zc), V(X1 - X0, WH, TH), stone);
-            // 墙砖（正面上不同明暗的块）
-            float fz = Z + 0.012f;
-            for (float x = X0; x < X1 - 0.01f; x += 1.25f)
-                for (int row = 0; row < 4; row++)
-                {
-                    float y0 = 0.42f + row * 0.7f, x0 = x + (row % 2) * 0.6f, x1 = Mathf.Min(X1, x0 + 1.2f);
-                    if (x1 <= x0) continue;
-                    if (hasGate && Mathf.Abs((x0 + x1) / 2 - gx) < 2.1f) continue;
-                    var col = Shade(stone, (R(rnd) - 0.5f) * 0.12f - 0.02f);
-                    mb.Quad(P(x0 + 0.04f, y0 + 0.04f, fz), P(x0 + 0.04f, y0 + 0.66f, fz), P(x1 - 0.04f, y0 + 0.66f, fz), P(x1 - 0.04f, y0 + 0.04f, fz), col);
-                }
-            // 垛口
-            for (float x = X0 + 0.3f; x < X1; x += 0.8f)
+            string st = look != null && look.wall != null ? look.wall : "han";
+            if (st == "palisade") { BuildPalisade(B, kind, rnd, defColor, H, look); return; }
+            const double Z = WALL_Z, TH = 1.4, WH = 3.3, X0 = -0.6, X1 = 44;
+            Color stone; if (!WALL_STONE.TryGetValue(st, out stone)) stone = WALL_STONE["han"];
+            double zc = Z - TH / 2;
+            double? gx = kind == "wall" ? (double?)null : GATE_X;
+            MeshBuilder S = B[K_BRICK], W = B[K_PLAIN], R = B[K_ROOF];
+            bool castle = kind == "castle";
+            // 墙基（略外扩）与墙身；城门两侧分段，门洞上方另砌
+            Action<double, double> seg = (a, b) =>
             {
-                if (hasGate && Mathf.Abs(x - gx) < 1.9f) continue;
-                mb.Box(P(x, WH + 0.2f, Z - 0.15f), V(0.45f, 0.4f, 0.3f), Shade(stone, 0.05f));
+                if (b - a < 0.05) return;
+                S.Box(P((a + b) / 2, 0.2, zc + 0.06), V(b - a, 0.5, TH + 0.3), Shade(stone, -0.1));
+                S.Box(P((a + b) / 2, WH / 2, zc), V(b - a, WH, TH), stone);
+            };
+            if (gx == null) seg(X0, X1); else { seg(X0, gx.Value - 1.8); seg(gx.Value + 1.8, X1); }
+            // 垛口与女墙
+            Action<double, double, double, double> merlon = (x, y, z, k) =>
+            {
+                var mc = Shade(stone, k);
+                if (st == "roman") S.Box(P(x, y + 0.26, z), V(0.46, 0.5, 0.3), mc);
+                else if (st == "mud") { S.Box(P(x, y + 0.14, z), V(0.5, 0.26, 0.3), mc); S.Box(P(x, y + 0.36, z), V(0.28, 0.2, 0.3), mc); S.Lathe(P(x, y + 0.46, z), new[] { L(0.13, 0), L(0.08, 0.06), L(0, 0.09) }, 8, mc); }
+                else if (st == "brick") { S.Box(P(x, y + 0.22, z), V(0.42, 0.4, 0.3), mc); S.Lathe(P(x, y + 0.42, z), new[] { L(0.21, 0), L(0.16, 0.1), L(0, 0.17) }, 8, Shade(mc, 0.03)); }
+                else { S.Box(P(x, y + 0.21, z), V(0.46, 0.34, 0.3), mc); S.Lathe(P(x, y + 0.38, z), new[] { L(0.2, 0), L(0.12, 0.08), L(0, 0.11) }, 8, Shade(mc, 0.02)); }
+            };
+            S.Box(P((X0 + X1) / 2, WH + 0.04, Z - 0.12), V(X1 - X0, 0.08, 0.3), Shade(stone, -0.06));
+            for (double x = X0 + 0.3; x < X1; x += st == "roman" ? 0.85 : 0.8)
+            {
+                if (gx != null && Math.Abs(x - gx.Value) < (st == "han" ? 1.9 : 3.0)) continue;
+                merlon(x, WH + 0.04, Z - 0.15, 0.04 + (rnd.NextDouble() - 0.5) * 0.06);
             }
-            mb.Box(P((X0 + X1) / 2, WH + 0.04f, Z - 0.12f), V(X1 - X0, 0.08f, 0.3f), Shade(stone, -0.08f));
             // 角楼（左端）
-            mb.Box(P(X0, 2.05f, zc), V(1.9f, 4.1f, 1.9f), Shade(stone, -0.05f));
-            mb.Box(P(X0, 4.45f, zc), V(1.5f, 0.7f, 1.5f), C(0.62f, 0.2f, 0.16f));
-            mb.ChineseRoof(P(X0, 4.8f, zc), 2.5f, 2.5f, 0.9f, C(0.24f, 0.28f, 0.36f));
-            // 城内屋顶
-            for (int k = 0; k < 7; k++)
+            Action<double, double, double, double> towerSq = (x, z, w, h) =>
             {
-                float x = 2 + k * 3.4f + R(rnd) * 1.2f, z = Z - 3.5f - R(rnd) * 5;
-                mb.Box(P(x, 1.8f, z), V(2.2f, 3.6f, 1.6f), C(0.86f, 0.8f, 0.68f));
-                mb.ChineseRoof(P(x, 3.6f, z), 3.0f, 2.2f, 1.0f + R(rnd) * 0.4f, C(0.27f, 0.3f, 0.37f));
+                S.Box(P(x, h / 2, z), V(w, h, w), Shade(stone, -0.05));
+                for (int i = 0; i < 3; i++) foreach (int sz in new[] { -1, 1 }) merlon(x - w * 0.36 + i * w * 0.36, h, z + sz * (w / 2 - 0.15), 0.06);
+                foreach (int sx in new[] { -1, 1 }) merlon(x + sx * (w / 2 - 0.15), h, z, 0.06);
+            };
+            Action<double, double, double, double> towerRound = (x, z, r, h) =>
+            {
+                S.Lathe(P(x, 0, z), new[] { L(r * 1.1, 0), L(r, h - 0.3, true), L(r * 1.1, h - 0.22, true), L(r * 1.1, h) }, 18, Shade(stone, -0.04), true);
+                for (int k = 0; k < 9; k++) { double a = k / 9.0 * Math.PI * 2; merlon(x + Math.Cos(a) * r * 0.9, h, z + Math.Sin(a) * r * 0.9, 0.05); }
+            };
+            Action<double, double, double, double> chhatri = (x, y, z, r) =>
+            {
+                var c = C(0.86f, 0.8f, 0.68f);
+                W.Box(P(x, y + 0.06, z), V(r * 2.2, 0.12, r * 2.2), Shade(stone, 0.05));
+                foreach (int sx in new[] { -1, 1 }) foreach (int sz in new[] { -1, 1 }) W.Lathe(P(x + sx * r * 0.8, y + 0.12, z + sz * r * 0.8), new[] { L(0.05, 0), L(0.05, 0.55) }, 6, c);
+                W.Box(P(x, y + 0.7, z), V(r * 2.3, 0.1, r * 2.3), Shade(c, -0.05));
+                DomeInto(W, x, y + 0.75, z, r * 0.95, c, 12);
+                W.Tube(new[] { P(x, y + 0.75 + r * 1.0, z), P(x, y + 0.95 + r * 1.2, z) }, new[] { 0.03f, 0.01f }, 5, GOLD, false);
+            };
+            if (st == "roman") { towerSq(X0, zc, 2.1, 4.9); PyramidInto(R, X0, 5.3, zc, 2.0, 2.0, 0.85, TERRA); W.Box(P(X0, 3.7, zc + 1.06), V(0.34, 0.6, 0.04), C(0.16f, 0.13f, 0.11f)); }
+            else if (st == "mud") towerRound(X0, zc, 1.15, 4.7);
+            else if (st == "brick") { towerSq(X0, zc, 2.0, 4.6); chhatri(X0, 4.6, zc, 0.7); }
+            else
+            {
+                S.Box(P(X0, 2.05, zc), V(1.9, 4.1, 1.9), Shade(stone, -0.05));
+                W.Box(P(X0, 4.45, zc), V(1.5, 0.7, 1.5), C(0.62f, 0.2f, 0.16f));
+                foreach (var dx in new[] { -0.62, 0.62 }) foreach (var dz in new[] { -0.62, 0.62 }) W.Lathe(P(X0 + dx, 4.1, zc + dz), new[] { L(0.07, 0), L(0.07, 0.72) }, 8, C(0.5f, 0.16f, 0.12f));
+                R.ChineseRoof(P(X0, 4.8, zc), 2.5f, 2.5f, 0.9f, C(0.24f, 0.28f, 0.36f));
+            }
+            // 城内屋顶（下半截在墙后看不见，只露出屋顶）
+            if (st == "han")
+            {
+                for (int k = 0; k < 7; k++)
+                {
+                    double x = 2 + k * 3.4 + rnd.NextDouble() * 1.2, z = Z - 3.5 - rnd.NextDouble() * 5;
+                    W.Box(P(x, 1.8, z), V(2.2, 3.6, 1.6), C(0.86f, 0.8f, 0.68f));
+                    R.ChineseRoof(P(x, 3.6, z), 3.0f, 2.2f, (float)(1.0 + rnd.NextDouble() * 0.4), C(0.27f, 0.3f, 0.37f));
+                }
+            }
+            else
+            {
+                string hs = look != null && look.house != null ? look.house : "flat";
+                for (int k = 0; k < 7; k++)
+                {
+                    double x = 2 + k * 3.4 + rnd.NextDouble() * 1.2, z = Z - 3.5 - rnd.NextDouble() * 5;
+                    if (k == 3)
+                    {
+                        // 城中的地标：罗马神庙山花 / 安息与阿拉伯的大圆顶 / 天竺的窣堵波
+                        if (st == "roman")
+                        {
+                            const double y0 = 2.2;
+                            W.Box(P(x, y0 + 0.9, z), V(3.4, 1.8, 2.4), WHITE);
+                            for (int i = 0; i < 6; i++) W.Lathe(P(x - 1.5 + i * 0.6, y0, z + 1.3), new[] { L(0.12, 0), L(0.1, 1.8) }, 8, Shade(WHITE, 0.04));
+                            GableInto(R, W, x, y0 + 1.8, z + 0.2, 3.8, 3.2, 0.7, TERRA, WHITE, true);
+                        }
+                        else if (st == "mud")
+                        {
+                            W.Lathe(P(x, 2.4, z), new[] { L(1.2, 0), L(1.2, 1.2) }, 16, Shade(MUD, 0.05));
+                            DomeInto(W, x, 3.6, z, 1.2, look != null && look.culture == "persia" ? C(0.36f, 0.62f, 0.66f) : C(0.9f, 0.86f, 0.78f), 18);
+                        }
+                        else StupaInto(B, x, 1.6, z, 1.2);
+                        continue;
+                    }
+                    HouseInto(B, hs, x, hs == "yurt" || hs == "round" ? 1.9 : 2.1, z, rnd, 1.45);
+                }
             }
             // 墙根碎石
             for (int k = 0; k < 9; k++)
             {
-                float x = X0 + 1.2f + R(rnd) * 16;
-                if (hasGate && Mathf.Abs(x - gx) < 2.4f) continue;
-                float r = 0.12f + R(rnd) * 0.16f;
-                float zz = Z + 0.25f + R(rnd) * 0.4f;
-                mb.Blob(P(x, H.H(x, Z + 0.35f) + r * 0.3f, zz), V(r * 1.3f, r * 0.8f, r), Shade(stone, -0.12f + (R(rnd) - 0.5f) * 0.1f), k + 11);
+                double x = X0 + 1.2 + rnd.NextDouble() * 16;
+                if (gx != null && Math.Abs(x - gx.Value) < 2.4) continue;
+                double r = 0.12 + rnd.NextDouble() * 0.16;
+                double y = H.H(x, Z + 0.35) + r * 0.1, zz = Z + 0.3 + rnd.NextDouble() * 0.4;
+                RockInto(B, x, y, zz, r, Shade(stone, -0.12 + (rnd.NextDouble() - 0.5) * 0.1), k + 11);
             }
-            // 拒马：横木上交叉的削尖木桩（城门两侧、墙前）
-            var stake = Shade(ClashArt.Wood, 0.08f);
-            Action<float, float, float> juma = (cx, cz, len) =>
+            WallDressing(W, gx, rnd, defColor, H, WH, st == "han" ? 1.9 : 3.0);
+            if (gx == null) return;
+            double g = gx.Value;
+            // 城门台：门洞两侧的墩台、拱顶以上的墙体
+            const double ar = 0.82, ah = 1.75; double fz = Z + 0.38, bz = zc + 0.12, depth = TH + 0.5;
+            S.Box(P(g - 1.31, 1.85, bz), V(0.98, 3.7, depth), Shade(stone, -0.04));
+            S.Box(P(g + 1.31, 1.85, bz), V(0.98, 3.7, depth), Shade(stone, -0.04));
+            S.Box(P(g, (ah + ar + 3.7) / 2, bz), V(1.64, 3.7 - ah - ar, depth), Shade(stone, -0.04));
+            // 拱腹（半圆拱，平滑法线朝内，越深越暗）与两侧门洞壁
+            const int N = 14; var dark = C(0.16f, 0.13f, 0.11f); var ins = Shade(stone, -0.35); var front = V(0, 0, -1); double ri = ar - 0.01;   // front：Unity −z = three +z（朝镜头）
+            for (int i = 0; i < N; i++)
             {
-                float y0 = H.H(cx, cz);
-                ClashArt.Beam(mb, P(cx - len / 2, y0 + 0.36f, cz), P(cx + len / 2, y0 + 0.36f, cz), 0.1f, 0.1f, Shade(ClashArt.Wood, -0.08f));
-                int n = Mathf.Max(2, Mathf.FloorToInt(len / 0.55f + 0.5f));
-                for (int i = 0; i < n; i++)
-                {
-                    float x = cx - len / 2 + 0.2f + (len - 0.4f) * ((float)i / (n - 1));
-                    ClashArt.Beam(mb, P(x, y0 + 0.02f, cz - 0.42f), P(x, y0 + 0.78f, cz + 0.4f), 0.06f, 0.012f, stake);
-                    ClashArt.Beam(mb, P(x + 0.04f, y0 + 0.02f, cz + 0.42f), P(x + 0.04f, y0 + 0.78f, cz - 0.4f), 0.06f, 0.012f, stake);
-                }
-            };
-            var jx = hasGate ? new[] { gx - 3.3f, gx + 3.3f, gx + 8.6f } : new[] { 1.4f, 6.8f };
-            foreach (var x in jx) juma(x, Z + 1.75f + (R(rnd) - 0.5f) * 0.3f, 1.9f);
-            // 倚墙的云梯（攻城痕迹）
-            {
-                float lx = hasGate ? gx + 6.2f : 9.5f, zb = Z + 1.25f, zt = Z + 0.12f, top = WH - 0.2f;
-                foreach (var s in new[] { -0.24f, 0.24f }) ClashArt.Beam(mb, P(lx + s, H.H(lx, zb) + 0.02f, zb), P(lx + s, top, zt), 0.07f, 0.06f, ClashArt.Wood);
-                for (int i = 1; i < 8; i++)
-                {
-                    float u = i / 8f;
-                    float yy = ClashUtil.Lerp(H.H(lx, zb), top, u), zz = ClashUtil.Lerp(zb, zt, u);
-                    ClashArt.Beam(mb, P(lx - 0.24f, yy, zz), P(lx + 0.24f, yy, zz), 0.045f, 0.045f, Shade(ClashArt.Wood, 0.05f));
-                }
+                double a0 = Math.PI * i / N, a1 = Math.PI * (i + 1) / N;
+                Vector3 n0 = V(-Math.Cos(a0), -Math.Sin(a0), 0), n1 = V(-Math.Cos(a1), -Math.Sin(a1), 0);
+                Vector3 A0 = P(g + Math.Cos(a0) * ri, ah + Math.Sin(a0) * ri, fz), A1 = P(g + Math.Cos(a1) * ri, ah + Math.Sin(a1) * ri, fz);
+                Vector3 B0 = P(g + Math.Cos(a0) * ri, ah + Math.Sin(a0) * ri, fz - depth + 0.2), B1 = P(g + Math.Cos(a1) * ri, ah + Math.Sin(a1) * ri, fz - depth + 0.2);
+                W.TriN(A0, B0, A1, n0, n0, n1, ins, dark, ins);
+                W.TriN(A1, B0, B1, n1, n0, n1, ins, dark, dark);
             }
-            // 城头旗帜
-            for (int k = 0; k < 6; k++)
+            foreach (int sx in new[] { -1, 1 })
             {
-                float x = 1.6f + k * 2.6f;
-                if (hasGate && Mathf.Abs(x - gx) < 1.9f) continue;
-                mb.Flag(P(x, WH + 0.1f, Z - 0.45f), 1.3f, 0.55f, 0.4f, defColor);
+                var n = V(-sx, 0, 0);
+                W.TriN(P(g + sx * ri, 0, fz), P(g + sx * ri, ah, fz), P(g + sx * ri, ah, fz - depth + 0.2), n, n, n, ins, ins, dark);
+                W.TriN(P(g + sx * ri, 0, fz), P(g + sx * ri, ah, fz - depth + 0.2), P(g + sx * ri, 0, fz - depth + 0.2), n, n, n, ins, dark, dark);
             }
-            if (!hasGate) return;
-            // 城门：门洞、门扇与门钉、城门楼
-            var red = C(0.62f, 0.2f, 0.16f);
-            mb.Box(P(gx, 1.85f, zc + 0.12f), V(3.6f, 3.7f, TH + 0.5f), Shade(stone, -0.04f));
-            float fz2 = Z + 0.38f;
-            mb.Quad(P(gx - 0.75f, 0.05f, fz2), P(gx - 0.75f, 1.75f, fz2), P(gx + 0.75f, 1.75f, fz2), P(gx + 0.75f, 0.05f, fz2), C(0.12f, 0.1f, 0.09f));
-            // 拱顶（三角形近似）
-            for (int i = 0; i < 6; i++)
+            // 拱肩：拱线与门台正面矩形（宽 2·ar、高至 ah + ar）之间的扇形填充
+            for (int i = 0; i < N; i++)
             {
-                float a0 = Mathf.PI * i / 6, a1 = Mathf.PI * (i + 1) / 6;
-                mb.Tri(P(gx, 1.75f, fz2), P(gx + Mathf.Cos(a1) * 0.75f, 1.75f + Mathf.Sin(a1) * 0.45f, fz2), P(gx + Mathf.Cos(a0) * 0.75f, 1.75f + Mathf.Sin(a0) * 0.45f, fz2), C(0.12f, 0.1f, 0.09f));
+                double a0 = Math.PI * i / N, a1 = Math.PI * (i + 1) / N;
+                double cx = i < N / 2.0 ? ar : -ar;
+                S.TriN(P(g + Math.Cos(a0) * ar, ah + Math.Sin(a0) * ar, fz), P(g + cx, ah + ar, fz), P(g + Math.Cos(a1) * ar, ah + Math.Sin(a1) * ar, fz), front, front, front, Shade(stone, -0.04));
             }
-            foreach (var sx in new[] { -1, 1 })
+            // 拱券石（浅色半环，略凸出墙面）
+            for (int i = 0; i < N; i++)
             {
-                mb.Box(P(gx + sx * 0.37f, 0.95f, fz2 + 0.03f), V(0.68f, 1.8f, 0.06f), C(0.4f, 0.23f, 0.12f));
+                double a0 = Math.PI * i / N, a1 = Math.PI * (i + 1) / N, r0 = ar, r1 = ar + 0.22;
+                Func<double, double, Vector3> q = (a, r) => P(g + Math.Cos(a) * r, ah + Math.Sin(a) * r, fz + 0.04);
+                var kc = Shade(stone, 0.1 - (i % 2) * 0.05);
+                S.TriN(q(a0, r0), q(a0, r1), q(a1, r1), front, front, front, kc);
+                S.TriN(q(a0, r0), q(a1, r1), q(a1, r0), front, front, front, kc);
+            }
+            // 门扇（深红木门 + 铜门钉；非中式为原木色包铁），退进门洞
+            double dzd = fz - 0.35; var doorC = st == "han" ? C(0.42f, 0.2f, 0.11f) : C(0.4f, 0.28f, 0.17f);
+            foreach (int sx in new[] { -1, 1 })
+            {
+                W.Box(P(g + sx * 0.4, ah * 0.5, dzd), V(0.8, ah, 0.08), doorC);
                 for (int r = 0; r < 4; r++)
                     for (int c = 0; c < 3; c++)
-                        mb.Box(P(gx + sx * (0.15f + c * 0.19f), 0.3f + r * 0.42f, fz2 + 0.07f), V(0.05f, 0.05f, 0.03f), ClashArt.Gold);
+                        W.Sphere(P(g + sx * (0.16 + c * 0.2), 0.3 + r * 0.38, dzd + 0.05), 0.028f, st == "han" ? GOLD : C(0.36f, 0.34f, 0.32f), 0, SO(top: 0.2f));
             }
-            mb.Box(P(gx, 3.8f, zc + 0.12f), V(3.3f, 0.2f, TH + 0.3f), Shade(stone, 0.04f));
-            mb.Box(P(gx, 4.4f, zc), V(2.9f, 1.0f, 1.3f), red);
-            for (int i = -2; i <= 2; i++) mb.Box(P(gx + i * 0.68f, 4.4f, Z + 0.06f), V(0.12f, 1.0f, 0.1f), Shade(red, -0.25f));
-            mb.Box(P(gx, 4.75f, Z + 0.07f), V(1.1f, 0.34f, 0.04f), C(0.12f, 0.1f, 0.09f));
-            mb.Box(P(gx, 4.75f, Z + 0.09f), V(0.9f, 0.24f, 0.02f), ClashArt.Gold);
-            // 本城：金顶城楼 + 守方大旗（不再叠第二层楼——宽屏 / 手机上第二层会顶进上方 HUD；轮廓与城门同高）
-            bool castle = kind == "castle";
-            mb.ChineseRoof(P(gx, 4.9f, zc), 4.0f, 2.2f, 1.15f, castle ? C(0.85f, 0.65f, 0.2f) : C(0.22f, 0.26f, 0.34f));
+            // 拱顶以内的门扇上半（半圆）
+            for (int i = 0; i < N; i++)
+            {
+                double a0 = Math.PI * i / N, a1 = Math.PI * (i + 1) / N;
+                W.TriN(P(g, ah, dzd + 0.04), P(g + Math.Cos(a0) * ar, ah + Math.Sin(a0) * ar, dzd + 0.04), P(g + Math.Cos(a1) * ar, ah + Math.Sin(a1) * ar, dzd + 0.04), front, front, front, Shade(doorC, -0.1));
+            }
+            if (st != "han")
+            {
+                // 城门两侧的塔与门上的女墙（罗马方塔拱窗赤陶顶 / 土坯圆塔 / 红砖方塔圆顶亭）
+                for (double x = g - 1.6; x <= g + 1.61; x += 0.8) merlon(x, 3.7, Z - 0.05, 0.05);
+                foreach (int sx in new[] { -1, 1 })
+                {
+                    double tx = g + sx * 2.35;
+                    if (st == "mud") towerRound(tx, zc + 0.2, 1.0, 5.0);
+                    else
+                    {
+                        towerSq(tx, zc + 0.15, 1.5, 5.2);
+                        if (st == "roman")
+                        {
+                            PyramidInto(R, tx, 5.6, zc + 0.15, 1.45, 1.45, 0.7, TERRA);
+                            foreach (var wy in new[] { 3.0, 4.3 }) W.Box(P(tx, wy, zc + 0.92), V(0.3, 0.46, 0.03), C(0.16f, 0.13f, 0.11f));
+                        }
+                        else chhatri(tx, 5.2, zc + 0.15, 0.55);
+                    }
+                    if (castle) W.Flag(P(tx + sx * 0.2, st == "mud" ? 5.0 : 5.2, Z - 0.3), 1.55f, 0.8f, 0.52f, defColor);
+                }
+                return;
+            }
+            // 城门楼：台基、红柱、檐下额枋与匾额、曲面重檐
+            var red = C(0.62f, 0.2f, 0.16f);
+            S.Box(P(g, 3.8, zc + 0.12), V(3.3, 0.2, TH + 0.3), Shade(stone, 0.04));
+            W.Box(P(g, 4.4, zc), V(2.9, 1.0, 1.3), Shade(red, -0.08));
+            for (int i = -2; i <= 2; i++) W.Lathe(P(g + i * 0.68, 3.9, Z + 0.08), new[] { L(0.07, 0), L(0.065, 1.0) }, 8, red);
+            W.Box(P(g, 4.82, Z + 0.06), V(3.0, 0.14, 0.1), C(0.2f, 0.36f, 0.4f));
+            W.Box(P(g, 4.6, Z + 0.07), V(1.1, 0.34, 0.04), C(0.12f, 0.1f, 0.09f));
+            W.Box(P(g, 4.6, Z + 0.09), V(0.9, 0.24, 0.02), GOLD);
+            // 本城：金顶城楼 + 守方大旗
+            R.ChineseRoof(P(g, 4.9, zc), 4.0f, 2.2f, 1.15f, castle ? C(0.85f, 0.65f, 0.2f) : C(0.22f, 0.26f, 0.34f));
             if (castle)
             {
-                mb.Flag(P(gx + 1.55f, 3.9f, Z), 1.55f, 0.8f, 0.52f, defColor);
-                mb.Flag(P(gx - 1.55f, 3.9f, Z), 1.55f, 0.8f, 0.52f, defColor);
+                W.Flag(P(g + 1.55, 3.9, Z), 1.55f, 0.8f, 0.52f, defColor);
+                W.Flag(P(g - 1.55, 3.9, Z), 1.55f, 0.8f, 0.52f, defColor);
             }
         }
+        // 拒马、倚墙的云梯、城头旗帜（各式城墙共用）；top：墙头高度，gap：城门两侧不插旗的半宽
+        static void WallDressing(MeshBuilder W, double? gx, SeededRandom rnd, Color defColor, Height H, double top, double gap)
+        {
+            const double Z = WALL_Z;
+            var stake = Shade(WOOD, 0.08);
+            Action<Vector3, Vector3, double, double, Color> pole = (a, b, r0, r1, col) => W.Tube(new[] { a, b }, new[] { (float)r0, (float)r1 }, 6, col, false);
+            Action<double, double, double> juma = (cx, cz, len) =>
+            {
+                double y0 = H.H(cx, cz);
+                pole(P(cx - len / 2, y0 + 0.36, cz), P(cx + len / 2, y0 + 0.36, cz), 0.055, 0.055, Shade(WOOD, -0.08));
+                int n = Math.Max(2, JsRound(len / 0.55));
+                for (int i = 0; i < n; i++)
+                {
+                    double x = cx - len / 2 + 0.2 + (len - 0.4) * (i / (double)(n - 1));
+                    pole(P(x, y0 + 0.02, cz - 0.42), P(x, y0 + 0.78, cz + 0.4), 0.035, 0.006, stake);
+                    pole(P(x + 0.04, y0 + 0.02, cz + 0.42), P(x + 0.04, y0 + 0.78, cz - 0.4), 0.035, 0.006, stake);
+                }
+            };
+            var jx = gx == null ? new[] { 1.4, 6.8 } : new[] { gx.Value - 3.3, gx.Value + 3.3, gx.Value + 8.6 };
+            foreach (var x in jx) juma(x, Z + 1.75 + (rnd.NextDouble() - 0.5) * 0.3, 1.9);
+            {
+                double lx = gx == null ? 9.5 : gx.Value + 6.2, zb = Z + 1.25, zt = Z + 0.12, tp = top - 0.2;
+                foreach (var s in new[] { -0.24, 0.24 }) pole(P(lx + s, H.H(lx, zb) + 0.02, zb), P(lx + s, tp, zt), 0.04, 0.035, WOOD);
+                for (int i = 1; i < 8; i++)
+                {
+                    double u = i / 8.0;
+                    pole(P(lx - 0.24, Lerp(H.H(lx, zb), tp, u), Lerp(zb, zt, u)), P(lx + 0.24, Lerp(H.H(lx, zb), tp, u), Lerp(zb, zt, u)), 0.025, 0.025, Shade(WOOD, 0.05));
+                }
+            }
+            for (int k = 0; k < 6; k++)
+            {
+                double x = 1.6 + k * 2.6;
+                if (gx != null && Math.Abs(x - gx.Value) < gap) continue;
+                W.Flag(P(x, top + 0.1, Z - 0.45), 1.3f, 0.55f, 0.4f, defColor);
+            }
+        }
+        // 木栅寨墙（日耳曼、凯尔特、草原、南方诸族）：土垒、削尖的原木、木望楼与木门
+        static void BuildPalisade(MeshBuilder[] B, string kind, SeededRandom rnd, Color defColor, Height H, ClashLook look)
+        {
+            const double Z = WALL_Z, X0 = -0.6, X1 = 44, zc = Z - 0.45;
+            double? gx = kind == "wall" ? (double?)null : GATE_X;
+            MeshBuilder W = B[K_PLAIN], T = B[K_ROCK];
+            var earth = C(0.5f, 0.42f, 0.3f); bool steppeHide = look != null && (look.culture == "steppe" || look.culture == "sarmatian");
+            var roofC = steppeHide ? C(0.62f, 0.52f, 0.4f) : THATCH;
+            // 土垒
+            Action<double, double> bank = (a, b) => { if (b - a > 0.1) T.Box(P((a + b) / 2, 0.12, zc + 0.15), V(b - a, 0.5, 1.9), earth); };
+            if (gx == null) bank(X0, X1); else { bank(X0, gx.Value - 1.25); bank(gx.Value + 1.25, X1); }
+            // 原木（顶端削尖），每根高低、粗细、色泽略不同
+            double top = 0;
+            for (double x = X0 + 0.12; x < X1; x += 0.25)
+            {
+                if (gx != null && Math.Abs(x - gx.Value) < 1.25) continue;
+                double h = 2.45 + rnd.NextDouble() * 0.35, r = 0.11 + rnd.NextDouble() * 0.025; var c = Shade(WOOD, 0.1 + (rnd.NextDouble() - 0.5) * 0.14);
+                W.Tube(new[] { P(x, 0.2, zc), P(x, h, zc) }, new[] { (float)r, (float)(r * 0.92) }, 6, c, false);
+                W.Lathe(P(x, h, zc), new[] { L(r * 0.92, 0), L(0, 0.28) }, 6, Shade(c, 0.08));
+                top = Math.Max(top, h);
+            }
+            // 横向绑木（正面两道）
+            Action<double, double, double> beam = (a, b, y) => { if (b - a > 0.1) W.Tube(new[] { P(a, y, Z + 0.06), P(b, y, Z + 0.06) }, new[] { 0.05f, 0.05f }, 5, Shade(WOOD, -0.12), false); };
+            foreach (var y in new[] { 0.9, 1.9 }) { if (gx == null) beam(X0, X1, y); else { beam(X0, gx.Value - 1.25, y); beam(gx.Value + 1.25, X1, y); } }
+            // 望楼：四根立柱、平台、栏杆、攒尖顶（草原为毡顶）
+            Action<double, double, double> post = (x, z, h) => W.Tube(new[] { P(x, 0, z), P(x, h, z) }, new[] { 0.08f, 0.07f }, 6, Shade(WOOD, -0.05), false);
+            Action<double, double, double, double> tower = (x, z, w, h) =>
+            {
+                foreach (int sx in new[] { -1, 1 }) foreach (int sz in new[] { -1, 1 }) post(x + sx * w * 0.42, z + sz * w * 0.42, h + 0.9);
+                W.Box(P(x, h, z), V(w + 0.2, 0.14, w + 0.2), Shade(WOOD, -0.1));
+                foreach (int sz in new[] { -1, 1 }) W.Box(P(x, h + 0.42, z + sz * (w / 2 + 0.08)), V(w + 0.2, 0.5, 0.06), Shade(WOOD, 0.05));
+                foreach (int sx in new[] { -1, 1 }) W.Box(P(x + sx * (w / 2 + 0.08), h + 0.42, z), V(0.06, 0.5, w + 0.2), Shade(WOOD, 0.05));
+                PyramidInto(T, x, h + 0.9, z, w + 0.6, w + 0.6, 0.95, roofC);
+            };
+            tower(X0 + 0.4, zc, 1.5, 3.4);
+            // 寨内房屋（只露出屋顶）
+            string hs = look != null && look.house != null ? look.house : "long";
+            for (int k = 0; k < 7; k++)
+            {
+                double x = 2 + k * 3.4 + rnd.NextDouble() * 1.2, z = Z - 3.6 - rnd.NextDouble() * 5;
+                double s = hs == "long" ? 1.3 : hs == "yurt" ? 1.6 : 1.45;
+                HouseInto(B, k == 3 && hs != "yurt" ? (hs == "stilt" ? "stilt" : "long") : hs, x, 1.25, z, rnd, k == 3 ? s * 1.25 : s);
+            }
+            WallDressing(W, gx, rnd, defColor, H, top, 2.0);
+            if (gx == null) return;
+            double g = gx.Value;
+            // 寨门：两座望楼、门上走道、原木门扇
+            foreach (int sx in new[] { -1, 1 }) tower(g + sx * 1.75, zc, 1.3, 3.6);
+            W.Box(P(g, 2.95, zc), V(3.6, 0.22, 1.0), Shade(WOOD, -0.12));
+            W.Box(P(g, 3.3, Z - 0.02), V(3.6, 0.5, 0.08), Shade(WOOD, 0.04));
+            foreach (int sx in new[] { -1, 1 })
+            {
+                for (int i = 0; i < 4; i++) W.Tube(new[] { P(g + sx * (0.15 + i * 0.26), 0.05, Z - 0.2), P(g + sx * (0.15 + i * 0.26), 2.55, Z - 0.2) }, new[] { 0.12f, 0.12f }, 6, Shade(WOOD, 0.02 + (i % 2) * 0.05), false);
+                W.Box(P(g + sx * 0.55, 1.9, Z - 0.05), V(1.05, 0.12, 0.06), Shade(WOOD, -0.15));
+                W.Box(P(g + sx * 0.55, 0.7, Z - 0.05), V(1.05, 0.12, 0.06), Shade(WOOD, -0.15));
+            }
+            if (kind == "castle") foreach (int sx in new[] { -1, 1 }) W.Flag(P(g + sx * 1.9, 4.5, Z - 0.3), 1.55f, 0.8f, 0.52f, defColor);
+        }
     }
-
     // ======================================================= 旗帜 --
     internal static class ClashBanner
     {
@@ -1380,6 +1923,10 @@ namespace Sanguo
                 r.StrokeStyle = Paint.Solid(Rgba(edge)); r.LineWidth = 3; r.Stroke();
             }
             var baseTex = r.ToTexture(false);
+#if CLASH_HEADLESS
+            own.Add(baseTex);
+            return baseTex;
+#else
             // 姓氏：用楷体字形画进 RenderTexture（Raster 不含文字）
             Color ink = big ? Art.Hex("#17130f") : (lum > 0.62f ? Art.Hex("#1d1a17") : Art.Hex("#f7efdc"));
             int fs = Mathf.Max(8, Mathf.RoundToInt(rad * (big ? 1.45f : 1.55f)));
@@ -1404,7 +1951,9 @@ namespace Sanguo
                 own.Add(baseTex);
                 return baseTex;
             }
+#endif
         }
+#if !CLASH_HEADLESS
         // 在 RenderTexture 上居中画一个字（canvas 坐标：左上为原点；cx、cy 为字心）
         static void DrawGlyph(RenderTexture rt, string glyph, int fs, Color ink, float cx, float cy, int W, int H)
         {
@@ -1433,46 +1982,67 @@ namespace Sanguo
             GL.PopMatrix();
             RenderTexture.active = prev;
         }
+#endif
     }
 
-    // 会飘动的旗面：局部（three）坐标里位于 y-z 平面，旗杆边在 z = 0，向 +z（身后）展开、自 y = 0 向下垂
+
+    // 会飘动的旗面（= JS class Flag）：网页版局部坐标里位于 y-z 平面，旗杆边在 z = 0，向 +z 展开、自 y = 0 向下垂。
+    // 第三版挂在人物骨骼 / 帅旗杆上（旗手的右手握点、马鞍后的旗杆），所以用人物局部的换算：JS 局部 (x, y, z) → Unity (−x, y, z)，
+    // 三角形绕序随之反转。网页版是双面材质（背面法线取反）：这里正反两面各一份顶点（背面法线取反、绕序相反），着色器只画正面。
+    // 法线每帧按 three 的 computeVertexNormals（面积加权）求出后同样换算。
     internal sealed class ClashFlag
     {
+        public readonly GameObject go;
         public readonly Mesh mesh;
-        public readonly Material mat;
-        public Matrix4x4 m3 = Matrix4x4.identity;   // three 空间的矩阵（每帧由姿态写入）
         public float k = 1;                         // 风力（0 = 下垂，1 = 正常飘扬，>1 疾驰）
         readonly float w, h, seed; readonly bool big;
-        readonly int nx, ny;
-        readonly Vector3[] pos; readonly Color[] col;
-        Vector3[] nrm;
-        public ClashFlag(Material mat, float w, float h, bool flipU, float seed, bool big)
+        readonly int nx, ny, nv;
+        readonly Vector3[] pos, nrm;
+        readonly double[] p3, n3;
+        readonly int[] idx3;
+        public ClashFlag(Material mat, float w, float h, bool flipU, float seed, bool big, Transform parent, Vector3 localPos, bool castShadow)
         {
-            this.w = w; this.h = h; this.seed = seed; this.big = big; this.mat = mat;
+            this.w = w; this.h = h; this.seed = seed; this.big = big;
             nx = 8; ny = big ? 6 : 4;
-            int nv = (nx + 1) * (ny + 1);
-            pos = new Vector3[nv]; col = new Color[nv];
-            var uv = new Vector2[nv];
+            nv = (nx + 1) * (ny + 1);
+            pos = new Vector3[nv * 2]; nrm = new Vector3[nv * 2];
+            p3 = new double[nv * 3]; n3 = new double[nv * 3];
+            var uv = new Vector2[nv * 2]; var col = new Color[nv * 2];
             for (int j = 0; j <= ny; j++)
                 for (int i = 0; i <= nx; i++)
                 {
                     int q = j * (nx + 1) + i;
-                    uv[q] = new Vector2(flipU ? 1 - (float)i / nx : (float)i / nx, 1 - (float)j / ny);
-                    col[q] = Color.white;
+                    uv[q] = uv[q + nv] = new Vector2(flipU ? 1 - (float)i / nx : (float)i / nx, 1 - (float)j / ny);
+                    col[q] = col[q + nv] = Color.white;
                 }
-            var idx = new List<int>();
+            var front = new List<int>();
             for (int j = 0; j < ny; j++)
                 for (int i = 0; i < nx; i++)
                 {
                     int a = j * (nx + 1) + i, b = a + 1, c = a + nx + 1, d = c + 1;
-                    idx.Add(a); idx.Add(c); idx.Add(b); idx.Add(b); idx.Add(c); idx.Add(d);
+                    front.Add(a); front.Add(c); front.Add(b); front.Add(b); front.Add(c); front.Add(d);
                 }
+            idx3 = front.ToArray();
+            // Unity：正面 = 网页版的正面经 x 镜像（绕序反转）；背面 = 另一份顶点、绕序再反（= 网页版原绕序）
+            var tris = new List<int>();
+            for (int q = 0; q < idx3.Length; q += 3) { tris.Add(idx3[q]); tris.Add(idx3[q + 2]); tris.Add(idx3[q + 1]); }
+            for (int q = 0; q < idx3.Length; q += 3) { tris.Add(idx3[q] + nv); tris.Add(idx3[q + 1] + nv); tris.Add(idx3[q + 2] + nv); }
             mesh = new Mesh { name = "clash flag" };
             mesh.MarkDynamic();
             mesh.vertices = pos;
+            mesh.normals = nrm;
             mesh.uv = uv;
             mesh.colors = col;
-            mesh.SetTriangles(idx, 0);
+            mesh.SetTriangles(tris, 0);
+            go = new GameObject(big ? "Banner" : "Flag");
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = localPos;
+            go.transform.localRotation = Quaternion.AngleAxis(180, Vector3.up);     // JS makeRotationY(π)（绕 Y 的转动在 x 镜像下不变）
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var mr = go.AddComponent<MeshRenderer>();
+            mr.sharedMaterial = mat;
+            mr.shadowCastingMode = castShadow ? ShadowCastingMode.On : ShadowCastingMode.Off;
+            mr.receiveShadows = false;
             Wave(0, 1);
         }
         public void Wave(float t, float kk)
@@ -1485,32 +2055,34 @@ namespace Sanguo
                     float amp = u * (big ? 0.3f + 0.7f * v : 1);
                     float ph = t * (6.5f + kk * 3) - u * 5.2f - v * 0.8f + seed;
                     float droop = (1 - Mathf.Min(1, kk)) * u;
-                    float x = (Mathf.Sin(ph) * 0.085f + Mathf.Sin(ph * 1.7f + 1.3f) * 0.03f) * w * amp * (0.4f + 0.6f * Mathf.Min(1.4f, kk));
-                    float y = -v * h - droop * w * 0.55f - u * w * 0.05f;
-                    float z = u * w * (1 - droop * 0.45f) * (1 - 0.06f * Mathf.Abs(Mathf.Sin(ph)));
-                    pos[q] = new Vector3(x, y, -z);          // Unity 局部坐标
+                    p3[q * 3] = (Mathf.Sin(ph) * 0.085f + Mathf.Sin(ph * 1.7f + 1.3f) * 0.03f) * w * amp * (0.4f + 0.6f * Mathf.Min(1.4f, kk));
+                    p3[q * 3 + 1] = -v * h - droop * w * 0.55f - u * w * 0.05f;
+                    p3[q * 3 + 2] = u * w * (1 - droop * 0.45f) * (1 - 0.06f * Mathf.Abs(Mathf.Sin(ph)));
                 }
-            mesh.vertices = pos;
-            mesh.RecalculateNormals();
-            mesh.RecalculateBounds();
-            nrm = mesh.normals;
-        }
-        // 旗面用无光照材质：按太阳方向把明暗写进顶点色（近似主场景的半兰伯特）
-        public void Light(Matrix4x4 worldU, Vector3 toLight)
-        {
-            if (nrm == null) return;
-            for (int i = 0; i < nrm.Length; i++)
+            // three computeVertexNormals（索引网格：cb × ab 面积加权累加后归一化）
+            Array.Clear(n3, 0, n3.Length);
+            for (int q = 0; q < idx3.Length; q += 3)
             {
-                var n = worldU.MultiplyVector(nrm[i]).normalized;
-                float ndl = Mathf.Abs(Vector3.Dot(n, toLight)) * 0.5f + 0.5f;
-                float c = Mathf.Min(1f, 0.5f + 0.62f * ndl * ndl);
-                col[i] = new Color(c, c, c, 1);
+                int a = idx3[q] * 3, b = idx3[q + 1] * 3, c = idx3[q + 2] * 3;
+                double cbx = p3[c] - p3[b], cby = p3[c + 1] - p3[b + 1], cbz = p3[c + 2] - p3[b + 2];
+                double abx = p3[a] - p3[b], aby = p3[a + 1] - p3[b + 1], abz = p3[a + 2] - p3[b + 2];
+                double nx_ = cby * abz - cbz * aby, ny_ = cbz * abx - cbx * abz, nz_ = cbx * aby - cby * abx;
+                for (int s = 0; s < 3; s++) { int o = idx3[q + s] * 3; n3[o] += nx_; n3[o + 1] += ny_; n3[o + 2] += nz_; }
             }
-            mesh.colors = col;
+            for (int q = 0; q < nv; q++)
+            {
+                double x = n3[q * 3], y = n3[q * 3 + 1], z = n3[q * 3 + 2], l = Math.Sqrt(x * x + y * y + z * z);
+                if (l > 0) { x /= l; y /= l; z /= l; } else y = 1;
+                var pp = new Vector3((float)-p3[q * 3], (float)p3[q * 3 + 1], (float)p3[q * 3 + 2]);
+                var nn = new Vector3((float)-x, (float)y, (float)z);
+                pos[q] = pp; pos[q + nv] = pp;
+                nrm[q] = nn; nrm[q + nv] = -nn;
+            }
+            mesh.vertices = pos;
+            mesh.normals = nrm;
+            mesh.RecalculateBounds();
         }
     }
-
-    // ======================================================= 粒子 --
     internal sealed class ClashParticle
     {
         public float x, y, z, vx, vy, vz, age, life, size, sizeEnd, r, g, b, r1, g1, b1, a, grav, drag, fadeIn, ac;
@@ -1589,6 +2161,7 @@ namespace Sanguo
         public void Clear() { parts.Clear(); }
     }
 
+
     // ======================================================= 场景 --
     internal sealed class ClashInfo
     {
@@ -1600,28 +2173,35 @@ namespace Sanguo
         public int formation;
         public Color? accent;          // 识别色，见 PickAccents
         public string culture;
+        public string Hex { get { return ClashUtil.HexJs(color); } }
     }
+    // 混战动作表的一项：t 起、片段、播放速度、时长（秒）
+    internal struct ClashAct { public float t, sp, d; public string clip; }
     internal sealed class ClashSoldier
     {
         public string role;            // inf 步兵 / arch 弓手 / flag 旗手
+        public string type = "spear";  // 兵种：spear / sword / archer（士兵群的模板）
         public float f, l; public int file, si;
+        public double fd, ld;          // 阵位的 double 原值（选旗手的排序与网页版逐位一致：相差 1e-16 的两排也分得出先后）
         public float x0, z0, ed, cd, rd, push;
         public float w1, p1, w2, p2, w3, p3, w4, p4, wt, pt, p0;
         public float fallT = float.PositiveInfinity; public string fallKind = "melee"; public float fallDir, kb;
         public readonly List<float> hits = new List<float>();
         public float shotDelay;
+        public int cid;                // 士兵群里的编号
+        public Figure fig;             // 旗手：单独的人物模型
         public ClashFlag flag;
-        // 每帧的姿态（three 空间矩阵）与颜色
-        public Matrix4x4 mBody, mLeg0, mLeg1, mWeapon; public float tint = 1;
+        public List<ClashAct> acts;
+        public string colKey = "";
     }
     internal sealed class ClashGeneral
     {
         public float x0, z0, ed, p0;
-        public Color horse;
-        public Mesh mesh;
+        public FigureHorse horse;
+        public Figure fig;
+        public GameObject pole;
         public ClashFlag flag;
-        public Matrix4x4 m3;
-        public readonly Matrix4x4[] legs = new Matrix4x4[4];
+        public float x, y, z;
     }
     internal sealed class ClashArmy
     {
@@ -1633,7 +2213,8 @@ namespace Sanguo
         public bool routed, brace, cheer;
         public float chargeDX, genDX, volleyT;
         public int fallen;
-        public Mesh infMesh, archMesh, legMesh;
+        public string hexBase, hexFlash, hexDead;
+        public string Hex(string key) { return key == "flash" ? hexFlash : key == "dead" ? hexDead : hexBase; }
     }
     internal sealed class ClashShot
     {
@@ -1644,7 +2225,7 @@ namespace Sanguo
         public Matrix4x4 m3;
     }
     internal sealed class ClashChunk { public int si; public float t; public int amount; public string kind; }
-    internal sealed class ClashFx { public Mesh mesh; public Material mat; public float t0, life; public Action<float> fn; public Matrix4x4 m3 = Matrix4x4.identity; public bool hit; }
+    internal sealed class ClashFx { public Mesh mesh; public Material mat; public float t0, life; public Action<float> fn; public Matrix4x4 m3 = Matrix4x4.identity; public bool hit; public bool ownMesh = true; }
     // 粒子发射参数（JS emit 的 o）
     internal sealed class ClashEmit
     {
@@ -1664,19 +2245,28 @@ namespace Sanguo
             Melee1 = 2.56f, Regroup1 = 3.08f, End = 3.34f;
         static readonly float[] Volley = { 0.46f, 0.6f };
         public const float FADE_IN = 0.2f, FADE_OUT = 0.2f, SKIP_HOLD = 0.4f;
-        const float ENTER_DX = 2.8f, ZC = ClashTerrain.ZC, FRONT = 2.05f, SP_F = 0.54f, SP_L = 0.62f, HIP = 0.36f;
-        static readonly Vector3 GRIP = new Vector3(0.2f, 0.5f, -0.2f);   // three 局部坐标：右手握点
+        // 第三版：入场距离缩短（人物按位移换算步频，免得滑步）；人物模型单位为米、面朝 +Z，本场景沿用旧单位（士兵约 0.9 高），统一缩放 FIG_S
+        const float ENTER_DX = 1.8f, ZC = ClashTerrain.ZC, FRONT = 2.05f, SP_F = 0.54f, SP_L = 0.62f;
+        public const float FIG_S = 0.5f;
+        const float BACK = 0.6f, GBACK = 0.45f;          // 收队时步兵 / 武将后撤的距离
+        // 旗手持杆（人物局部坐标，米）：网页版 FLAG_GRIP (−0.2, 1.12, 0.24)、FLAG_DIR (0.04, 1, 0.1) → Unity 人物局部 x 取反
+        static readonly Vector3 FLAG_GRIP = new Vector3(0.2f, 1.12f, 0.24f), FLAG_DIR = new Vector3(-0.04f, 1, 0.1f);
         public static readonly Color FOG = new Color(0.86f, 0.84f, 0.78f);
         public static readonly string[] FORM_NAMES = { "方圆", "长蛇", "鱼鳞", "鹤翼", "偃月", "锋矢", "雁行", "衡轭" };
         public static readonly Dictionary<string, string> KIND_NAME = new Dictionary<string, string>
         { { "plain", "平原" }, { "forest", "森林" }, { "hill", "山丘" }, { "mountain", "山岳" }, { "river", "河川" }, { "wall", "城墙" }, { "gate", "城门" }, { "castle", "本城" } };
         static readonly string[] NANMAN = { "孟获", "孟优", "祝融", "兀突骨", "木鹿", "朵思", "带来" };
+        // 光照（Unity 灯光强度 = JS 强度 / π，见 Figure.shader）：网页版主场景的太阳 1.15π × 0.75、半球光 π × 0.56
+        static readonly Color SUN_COLOR = new Color(1, 0.94f, 0.84f);
+        const float SUN_I = 1.15f * 0.75f, AMB_K = 0.56f;
+        static readonly Color AMB_SKY = new Color(0.62f, 0.68f, 0.8f), AMB_EQ = new Color(0.58f, 0.56f, 0.5f), AMB_GND = new Color(0.32f, 0.3f, 0.26f);
 
         static Color C(float r, float g, float b) { return new Color(r, g, b); }
         static Vector3 V(float x, float y, float z) { return new Vector3(x, y, z); }
         static float Seg(float t, float a, float b) { return ClashUtil.Seg(t, a, b); }
         static float Lerp(float a, float b, float t) { return a + (b - a) * t; }
         static float Clamp(float v, float a, float b) { return ClashUtil.Clamp(v, a, b); }
+        static float Sm(float t) { return ClashUtil.Sm(t); }
         static int JsRound(float v) { return (int)Mathf.Floor(v + 0.5f); }
         // Math.round 的 double 版（与网页版同精度：k * 0.45 等在 .5 处不因 float 误差取错）
         static int JsRoundD(double v) { return (int)Math.Floor(v + 0.5); }
@@ -1685,55 +2275,74 @@ namespace Sanguo
         // ------------------------------------------------------------ 状态 --
         public readonly string kind;
         public readonly ClashInfo A, D;
+        public readonly ClashLook look;
         public readonly ClashSpecial special;
         public readonly string specialKind;
         public readonly int playerSide;            // -1 = 无
         public readonly float optSpeed;
         public float speed;
         readonly SeededRandom rnd;
-        readonly int seed;
+        internal readonly int seed;
         public readonly bool recolored;
         public float t, real, tPrev;
-        public string state = "build";             // build | run | hold | out | done
+        public string state = "prep";              // prep | build | wait | run | hold | out | done
         public bool Skipped, Finished, paused, cutDone, built, shown;
         float shake;
         int evIdx;
         float holdUntil, holdWall, buildStart, showReal;
-        ClashTerrain.Height h;
+        bool waitShown;
+        internal ClashTerrain.Height h;
+        internal ClashTerrainOut terrainOut;
         public ClashArmy[] armies;
-        float xc, fit = 1;
-        List<ClashShot> arrows;
-        List<ClashChunk> chunks;
-        List<KeyValuePair<float, Action>> events;
+        internal float xc, fit = 1;
+        internal List<ClashShot> arrows;
+        internal List<ClashChunk> chunks;
+        internal List<KeyValuePair<float, Action>> events;
         readonly List<ClashFx> temp = new List<ClashFx>();
         ClashPool dust, fx, glow;
-        Mesh spearMesh, bowMesh, horseLegMesh, arrowMesh;
+        Mesh arrowMesh;
         Color arrowGlow = Color.white;
+        internal FigureCrowd crowd;
+        internal readonly List<Figure> figs = new List<Figure>();
+        internal readonly List<FigureHorse> horses = new List<FigureHorse>();
         readonly List<UnityEngine.Object> own = new List<UnityEngine.Object>();
         readonly List<ClashFlag> flags = new List<ClashFlag>();
-        GameObject root;
+        Material propMat, arrowMat, grassMat, flowerMat;
+        Matrix4x4[] tuftW, flowerW;
+        Vector4[] tuftC, flowerC;
+        MaterialPropertyBlock tuftMpb, flowerMpb;
+        internal GameObject root;
         public Camera cam;
         ClashRunner runner;
         public MonoBehaviour runnerHost { get { return runner; } }
         public ClashHud hud;
-        IEnumerator buildIt;
+        readonly Stack<IEnumerator> buildStack = new Stack<IEnumerator>();
+        IEnumerator prepIt;
         MaterialPropertyBlock mpb;
         bool disposed;
         int lastW, lastH;
         // 播放期间改动、结束时还原的全局状态
         bool fogSaved, fog0; FogMode fogMode0; Color fogColor0; float fogStart0, fogEnd0, shadowDist0;
+        bool ambSaved; AmbientMode ambMode0; Color ambSky0, ambEq0, ambGnd0;
+        readonly List<KeyValuePair<Light, int>> lightMasks = new List<KeyValuePair<Light, int>>();
+        Light sun;
         readonly List<Camera> camsOff = new List<Camera>();
+#if !CLASH_HEADLESS
         readonly List<KeyValuePair<CanvasGroup, bool>> groups = new List<KeyValuePair<CanvasGroup, bool>>();
         readonly List<float> groupAlpha = new List<float>();
         readonly List<bool> groupBlocks = new List<bool>();
         readonly List<bool> groupInter = new List<bool>();
+#endif
         bool rigSaved, rigInput0;
 
-        public ClashScene(ClashSide a, ClashSide d, Terrain terrain, ClashSpecial sp, int playerSide, float spd)
+        public ClashScene(ClashSide a, ClashSide d, Terrain terrain, ClashSpecial sp, int playerSide, float spd, ClashSceneInfo scene = null)
         {
             kind = Clash.TerrainKind(terrain);
             A = Norm(a, 0);
             D = Norm(d, 1);
+            // 布景：防守城池的文化与当地群落、是否登陆（缺省按防守方文化）
+            look = ClashLook.Of(scene, D.culture);
+            if (kind == "river") look.coast = false;
             float d0 = ColorDist(A.color, D.color);
             recolored = SeparateColors(A, D);
             if (d0 < ACC_DIST) PickAccents(A, D);
@@ -1829,7 +2438,7 @@ namespace Sanguo
             D.color = HslColor(hd[0], hd[1], hd[2]);
             return true;
         }
-        // 识别色：两军势力色相近（原始 RGB 距离 < ACC_DIST）时，各给一种与两军颜色都拉得开、彼此也不同的镶边色
+        // 识别色：两军势力色相近（原始 RGB 距离 < ACC_DIST）时，各给一种与两军颜色都拉得开、彼此也不同的镶边色（旗帜的犬牙边上）
         static readonly string[] ACCENTS = { "#f4ecd8", "#f0b42c", "#1b1815", "#d8342c", "#3cc0c8", "#9be05a" };
         static Color BestAccent(params Color[] avoid)
         {
@@ -1850,18 +2459,53 @@ namespace Sanguo
         }
 
         // ---------------------------------------------------------- 流程 --
+        // 先淡入黑幕（战场照常绘制），黑幕下等预热、分帧搭建场景，再切到自己的相机
         public void Start()
         {
-            mpb = new MaterialPropertyBlock();
-            root = new GameObject("Clash");
-            root.transform.position = Clash.Origin;
+            CreateRoot();
             runner = root.AddComponent<ClashRunner>();
-            // 先淡入黑幕（战场照常绘制），黑幕下分帧搭建场景，再切到自己的相机
             hud = new ClashHud(this);
             hud.FadeBlack(FADE_IN * 0.75f);
             buildStart = Time.realtimeSinceStartup;
-            buildIt = Build();
+            state = "prep";
             runner.sc = this;
+        }
+        void CreateRoot()
+        {
+            mpb = new MaterialPropertyBlock();
+            root = new GameObject("Clash");
+            root.layer = Clash.Layer;
+            root.transform.position = Clash.Origin;
+        }
+        // 人物模型库的预生成（= JS SG.Figure.preload：图集、环境贴图、两军文化的士兵群烘焙）
+        IEnumerator PrepJob()
+        {
+            var cs = new List<string> { A.culture }; if (!cs.Contains(D.culture)) cs.Add(D.culture);
+            return Figure.Preload(new FigPreload { cultures = new[] { A.culture, D.culture }, types = new string[0], crowd = Clash.CrowdSpecs(cs), budget = 24 });
+        }
+        // 嵌套协程的一步（yield return 子 IEnumerator 为嵌套）；返回 false = 做完
+        bool StepBuild()
+        {
+            while (buildStack.Count > 0)
+            {
+                var top = buildStack.Peek();
+                if (!top.MoveNext()) { buildStack.Pop(); continue; }
+                var sub = top.Current as IEnumerator;
+                if (sub != null) buildStack.Push(sub);
+                return true;
+            }
+            return false;
+        }
+        // 测试用：一次做完预热与构建（不切相机、不改全局状态）
+        internal void BuildSync()
+        {
+            if (root == null) CreateRoot();
+            var p = PrepJob();
+            while (p.MoveNext()) { }
+            buildStack.Clear(); buildStack.Push(Build());
+            while (StepBuild()) { }
+            built = true;
+            Resize();
         }
 
         public void Tick(float dt)
@@ -1869,18 +2513,33 @@ namespace Sanguo
             if (disposed) return;
             try
             {
+                if (state == "prep" || state == "build")
+                {
+                    // 黑幕下准备超过约 0.3 秒（首次遇到的文化、慢设备）时显示「布阵中」，不让玩家对着纯黑画面干等
+                    if (!waitShown && Time.realtimeSinceStartup - buildStart > 0.3f) { waitShown = true; if (hud != null) hud.Wait(true); }
+                    if (hud != null) hud.Update(dt, 0);       // 黑幕照常淡入
+                }
+                if (state == "prep")
+                {
+                    // 正在进行的预热（Clash.Prepare）先做完，免得同一模板并行生成两遍（= JS prepChain）
+                    if (Clash.PrepBusy) return;
+                    if (prepIt == null) prepIt = PrepJob();
+                    if (prepIt.MoveNext()) return;           // 预生成自己按每帧约 24 毫秒分片
+                    prepIt = null;
+                    buildStack.Clear(); buildStack.Push(Build());
+                    state = "build";
+                    return;
+                }
                 if (state == "build")
                 {
+                    // 黑幕下画面不可见：每片多做一些（约 40 毫秒），少等几帧
                     float f0 = Time.realtimeSinceStartup;
-                    // 每帧最多约 10 毫秒
-                    while (Time.realtimeSinceStartup - f0 < 0.010f)
-                        if (!buildIt.MoveNext()) { buildIt = null; break; }
-                    if (hud != null) hud.Update(dt, 0);       // 黑幕照常淡入
-                    if (buildIt == null)
+                    bool more = true;
+                    while (Time.realtimeSinceStartup - f0 < 0.040f) if (!(more = StepBuild())) break;
+                    if (!more)
                     {
                         built = true;
                         Resize();
-                        CameraPose(0);
                         state = "wait";
                     }
                     return;
@@ -1906,22 +2565,64 @@ namespace Sanguo
             }
         }
 
-        void Show()
+        // 自己的相机（深度高于其它相机，只拍本层）
+        internal void SetupCamera()
         {
-            // 自己的相机（深度高于其它相机，只拍本层）
             var cgo = new GameObject("ClashCamera");
             cgo.transform.SetParent(root.transform, false);
+            cgo.layer = Clash.Layer;
             cam = cgo.AddComponent<Camera>();
             float depth = 0;
             foreach (var c in Camera.allCameras) if (c != cam) depth = Mathf.Max(depth, c.depth);
             cam.depth = depth + 10;
             cam.cullingMask = 1 << Clash.Layer;
-            // 网页版 scene.background = FOG：纯雾色背景，远处地面雾化后与天际无缝（不用地图的天空盒）
-            cam.clearFlags = CameraClearFlags.SolidColor;
+            // 网页版：scene.background = 雾色，再画主场景的天空穹顶（Gfx.sky）——这里用同一个天空盒材质
+            cam.clearFlags = CameraClearFlags.Skybox;
             cam.backgroundColor = FOG;
+            cgo.AddComponent<Skybox>().material = Art.Sky;
             cam.fieldOfView = 34;
             cam.nearClipPlane = 0.3f; cam.farClipPlane = 300;
             cam.allowMSAA = true;
+        }
+        // 光照与主场景一致（网页版：太阳的颜色 / 强度取主场景，方向取 Gfx.sunDir，阴影只覆盖这条战场；半球光同主场景）
+        void SetupLights()
+        {
+            var sgo = new GameObject("ClashSun");
+            sgo.transform.SetParent(root.transform, false);
+            sgo.layer = Clash.Layer;
+            sgo.transform.rotation = Quaternion.Euler(48, -35, 0);      // = Game.SetupWorld 的太阳（网页版 SUN_DIR）
+            sun = sgo.AddComponent<Light>();
+            sun.type = LightType.Directional;
+            sun.color = SUN_COLOR;
+            sun.intensity = SUN_I;
+            sun.shadows = LightShadows.Soft;
+            sun.shadowStrength = 0.55f;
+            sun.shadowResolution = ClashUtil.IsTouch ? LightShadowResolution.Medium : LightShadowResolution.High;   // 网页版 1024 / 2048
+            sun.cullingMask = 1 << Clash.Layer;
+            // 其它灯光不照本画面（场景里的太阳等）：去掉本层，结束时还原
+            foreach (var l in UnityEngine.Object.FindObjectsOfType<Light>())
+                if (l != sun && (l.cullingMask & (1 << Clash.Layer)) != 0) { lightMasks.Add(new KeyValuePair<Light, int>(l, l.cullingMask)); l.cullingMask &= ~(1 << Clash.Layer); }
+            // 环境光：人物用 Unity 的 Trilight（天空 / 地面 = JS 半球光 × 强度 / π，地平线取两者平均，见 Figure.shader）；
+            // 本画面的地面 / 道具 / 草 / 旗着色器按网页版 LowPoly 补丁自己算三色环境光（地平线色同主场景）
+            ambSaved = true;
+            ambMode0 = RenderSettings.ambientMode; ambSky0 = RenderSettings.ambientSkyColor; ambEq0 = RenderSettings.ambientEquatorColor; ambGnd0 = RenderSettings.ambientGroundColor;
+            Color sky = AMB_SKY * AMB_K, gnd = AMB_GND * AMB_K;
+            RenderSettings.ambientMode = AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = sky; RenderSettings.ambientGroundColor = gnd; RenderSettings.ambientEquatorColor = (sky + gnd) * 0.5f;
+            try { DynamicGI.UpdateEnvironment(); } catch (Exception) { /* 忽略 */ }
+            SetGlobals();
+        }
+        internal static void SetGlobals()
+        {
+            Shader.SetGlobalColor("_SgClashSky", AMB_SKY * AMB_K);
+            Shader.SetGlobalColor("_SgClashEq", AMB_EQ * AMB_K);
+            Shader.SetGlobalColor("_SgClashGnd", AMB_GND * AMB_K);
+            Shader.SetGlobalVector("_SgClashOrigin", Clash.Origin);
+        }
+        void Show()
+        {
+            SetupCamera();
+            SetupLights();
             ClashUtil.SetLayer(root, Clash.Layer);
             CameraPose(t);
             // 其余相机暂停（全屏场景栈：只画最上层）
@@ -1935,6 +2636,7 @@ namespace Sanguo
             // 阴影只需覆盖这条战场（网页版太阳阴影相机 ±15）：缩短阴影距离让士兵影子清晰
             shadowDist0 = QualitySettings.shadowDistance;
             QualitySettings.shadowDistance = 45;
+#if !CLASH_HEADLESS
             // 隐藏战场 HUD、世界标签与提示层；相机不再接收按键
             var layers = UIKit.Root != null ? new[] { UIKit.Screens, UIKit.LabelLayer, UIKit.ToastLayer } : new RectTransform[0];
             foreach (var layer in layers)
@@ -1950,26 +2652,29 @@ namespace Sanguo
             // 空格 / 回车用于跳过：不让它们同时「提交」战场菜单里选中的按钮
             if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
             if (Game.I != null && Game.I.Rig != null) { rigSaved = true; rigInput0 = Game.I.Rig.InputEnabled; Game.I.Rig.InputEnabled = false; }
+#endif
             shown = true;
             showReal = Time.realtimeSinceStartup;
             state = "run";
-            hud.FadeIn(FADE_IN);
+            if (hud != null) hud.FadeIn(FADE_IN);
         }
 
         // ---------------------------------------------------------- 构建 --
         IEnumerator Build()
         {
-            h = new ClashTerrain.Height(kind, seed);
-            var it = ClashTerrain.Build(root.transform, own, kind, h, new SeededRandom(seed ^ 0x5bd1e995), D.color);
-            while (it.MoveNext()) yield return null;
+            h = new ClashTerrain.Height(kind, seed, look);
+            terrainOut = new ClashTerrainOut();
+            yield return ClashTerrain.Build(terrainOut, kind, h, look, new SeededRandom(seed ^ 0x5bd1e995), D.color, A.color, D.color);
+            BuildTerrainObjects();
+            yield return null;
             // 两军
             armies = new[] { BuildArmy(A, 0), BuildArmy(D, 1) };
             PlanCharge();
             PlanArrows();
             yield return null;
-            var m = BuildMeshes();
-            while (m.MoveNext()) yield return null;
+            yield return BuildFigures();
             PlanCasualties();
+            PlanActs();
             PlanEvents();
             // 粒子：扬尘（柔边）、溅水 / 火焰、发光
             var dustMat = Art.NewUnlit(Color.white, ClashTex.Dust); dustMat.renderQueue = 3011;
@@ -1980,21 +2685,69 @@ namespace Sanguo
             own.Add(dust.mesh); own.Add(fx.mesh); own.Add(glow.mesh);
             Pose(0);
         }
+        // 地面、道具、草丛、水面的物体与材质
+        void BuildTerrainObjects()
+        {
+            var O = terrainOut;
+            var gmat = new Material(Art.LoadShader("ClashGround")) { name = "ClashGround" };
+            gmat.SetTexture("_DetA", Art.TerrainDetailA); gmat.SetTexture("_DetB", Art.TerrainDetailB);
+            gmat.SetFloat("_SnowH", O.snowH);
+            // 触屏设备（手机 GPU、高像素密度）：地面省掉最细一级细节纹理（= JS SG_LITE）
+            gmat.SetFloat("_Lite", ClashUtil.IsTouch ? 1 : 0);
+            own.Add(gmat); own.Add(O.ground);
+            var g = Art.MakeObject("Ground", O.ground, gmat, root.transform, false);
+            g.GetComponent<MeshRenderer>().receiveShadows = true;
+            propMat = new Material(Art.LoadShader("ClashProp")) { name = "ClashProp" };
+            own.Add(propMat);
+            if (O.propsNear != null) { own.Add(O.propsNear); Art.MakeObject("Props", O.propsNear, propMat, root.transform, true); }
+            if (O.propsFar != null) { own.Add(O.propsFar); Art.MakeObject("PropsFar", O.propsFar, propMat, root.transform, false); }
+            // 草丛 / 野花：实例化（Graphics.DrawMeshInstanced，每帧在 Draw 里提交）
+            if (O.tuftMesh != null)
+            {
+                own.Add(O.tuftMesh);
+                grassMat = new Material(Art.LoadShader("ClashGrass")) { name = "ClashGrass", enableInstancing = true }; own.Add(grassMat);
+                tuftW = O.tufts.Select(m => Matrix4x4.Translate(Clash.Origin) * m).ToArray(); tuftC = O.tuftCols.ToArray();
+                tuftMpb = new MaterialPropertyBlock(); tuftMpb.SetVectorArray("_InstColor", tuftC);
+            }
+            if (O.flowerMesh != null)
+            {
+                own.Add(O.flowerMesh);
+                flowerMat = grassMat ?? new Material(Art.LoadShader("ClashGrass")) { name = "ClashGrass", enableInstancing = true };
+                if (grassMat == null) { grassMat = flowerMat; own.Add(flowerMat); }
+                flowerW = O.flowers.Select(m => Matrix4x4.Translate(Clash.Origin) * m).ToArray(); flowerC = O.flowerCols.ToArray();
+                flowerMpb = new MaterialPropertyBlock(); flowerMpb.SetVectorArray("_InstColor", flowerC);
+            }
+            // 河水 / 海：网页版的水面着色器（uAlpha 0.66、uAmp 0.06）
+            foreach (var wm in new[] { O.river, O.sea })
+            {
+                if (wm == null) continue;
+                var wmat = new Material(Art.LoadShader("ClashWater")) { name = "ClashWater" };
+                wmat.SetTexture("_Ripple", Art.Ripple);
+                wmat.SetFloat("_Alpha", 0.66f); wmat.SetFloat("_Amp", 0.06f);
+                wmat.renderQueue = 3001;
+                own.Add(wmat); own.Add(wm);
+                var w = Art.MakeObject(wm == O.river ? "River" : "Sea", wm, wmat, root.transform, false);
+                w.GetComponent<MeshRenderer>().receiveShadows = false;
+            }
+            ClashUtil.SetLayer(root, Clash.Layer);
+        }
 
         ClashArmy BuildArmy(ClashInfo info, int si)
         {
             int dir = si == 0 ? 1 : -1;
-            int n = info.before > 0 ? Math.Max(6, Math.Min(28, JsRoundD(info.before / 300.0))) : 6;
-            int nArch = Math.Max(2, Math.Min(6, JsRoundD(n * 0.22)));
+            // 第三版修订：兵更多（约多两排纵深），混战像人群而不是一条细线
+            int n = info.before > 0 ? Math.Max(6, Math.Min(36, JsRoundD(info.before / 240.0) + 3)) : 6;
+            int nArch = Math.Max(2, Math.Min(6, JsRoundD(n * 0.2)));
             int nInf = n - nArch;
             var slots = FormationSlots(info.formation, nInf);
-            float minF = 0;
-            foreach (var sl in slots) minF = Mathf.Min(minF, sl.x);
+            double minF = 0;
+            foreach (var sl in slots) minF = Math.Min(minF, sl.f);
             var soldiers = new List<ClashSoldier>();
             float xFront = -dir * FRONT;
-            Func<string, float, float, int, ClashSoldier> mk = (role, f, l, file) =>
+            Func<string, double, double, int, ClashSoldier> mk = (role, fD, lD, file) =>
             {
-                var s = new ClashSoldier { role = role, f = f, l = l, file = file, si = si };
+                float f = (float)fD, l = (float)lD;
+                var s = new ClashSoldier { role = role, f = f, l = l, fd = fD, ld = lD, file = file, si = si };
                 s.x0 = xFront + dir * f; s.z0 = ZC + l;
                 s.ed = Rn() * 0.08f + (-f) * 0.012f;
                 s.cd = Rn() * 0.07f + (-f) * 0.03f;
@@ -2007,26 +2760,28 @@ namespace Sanguo
                 soldiers.Add(s);
                 return s;
             };
-            foreach (var sl in slots) mk("inf", sl.x, sl.y, (int)sl.z);
+            // 兵种：前排刀盾、其后长枪（罗马为短剑与长枪交替），弓手单列
+            foreach (var sl in slots) { int file = sl.file; mk("inf", sl.f, sl.l, file).type = info.culture == "roman" ? (file % 2 == 1 ? "spear" : "sword") : (file == 0 ? "sword" : "spear"); }
             // 弓手：步兵之后一到两排
             int aRows = nArch > 4 ? 2 : 1, per = Mathf.CeilToInt(nArch / (float)aRows);
-            float minAll = minF;
+            double minAllD = minF;
             for (int k = 0; k < nArch; k++)
             {
                 int row = k / per, cnt = Mathf.Min(per, nArch - row * per), i = k - row * per;
-                float f = minF - 0.72f - row * 0.5f, l = (i - (cnt - 1) / 2f) * 0.82f + (row % 2) * 0.41f;
-                mk("arch", f, l, 99);
-                minAll = Mathf.Min(minAll, f);
+                double f = minF - 0.72 - row * 0.5, l = (i - (cnt - 1) / 2.0) * 0.82 + (row % 2) * 0.41;
+                mk("arch", f, l, 99).type = "archer";
+                minAllD = Math.Min(minAllD, f);
             }
+            float minAll = (float)minAllD;
             // 旗手：步兵最后一排中最靠近中线的一到两名
-            var rear = soldiers.Where(s => s.role == "inf").OrderBy(s => s.f).ThenBy(s => Mathf.Abs(s.l)).ToList();
+            var rear = soldiers.Where(s => s.role == "inf").OrderBy(s => s.fd).ThenBy(s => Math.Abs(s.ld)).ToList();
             int nFlag = n >= 14 ? 2 : 1;
             var fl = new List<ClashSoldier>();
             foreach (var s in rear)
             {
                 if (fl.Count >= nFlag) break;
-                if (fl.Any(o => Mathf.Abs(o.l - s.l) < 1.2f)) continue;
-                s.role = "flag"; fl.Add(s);
+                if (fl.Any(o => Math.Abs(o.ld - s.ld) < 1.2)) continue;
+                s.role = "flag"; s.type = "spear"; fl.Add(s);
             }
             // 前两排冲进敌阵的深度（交错进入）
             foreach (var s in soldiers) if (s.role == "inf" && s.file <= 1) s.push = (s.file == 0 ? 0.18f : 0.06f) + Rn() * 0.32f;
@@ -2040,7 +2795,8 @@ namespace Sanguo
         }
 
         // 返回 K 个步兵的队形位置（x = f 向敌为正、前排为 0；y = l 纵深方向；z = file）
-        static List<Vector3> FormationSlots(int fi, int K)
+        internal struct Slot { public double f, l; public int file; }
+        internal static List<Slot> FormationSlots(int fi, int K)
         {
             // 用 double 计算（同网页版）：前排序号按 Math.round 取整，float 误差会在 .5 处取错排
             const double spF = 0.54, spL = 0.62;     // 同 SP_F、SP_L（取 double 字面值）
@@ -2056,9 +2812,9 @@ namespace Sanguo
                 case 6: R = 6; break;                                                    // 雁行
                 default: R = 5; break;                                                   // 衡轭
             }
-            // 纵深（列数）有上限，免得后排与主将跑出画面
-            R = Math.Max(R, (int)Math.Ceiling(K / (double)(fi == 1 ? 6 : 4)));
-            R = Math.Max(1, Math.Min(Math.Min(R, K), 8));
+            // 纵深（列数）有上限，免得后排与主将跑出画面（第三版：最多 10 排）
+            R = Math.Max(R, (int)Math.Ceiling(K / (double)(fi == 1 ? 5 : 3)));
+            R = Math.Max(1, Math.Min(Math.Min(R, K), 10));
             int F = (int)Math.Ceiling(K / (double)R);
             var fs = new List<double>(); var ls = new List<double>();
             for (int c = 0; c < F; c++)
@@ -2086,12 +2842,12 @@ namespace Sanguo
             }
             double mx = double.NegativeInfinity;
             foreach (var f in fs) mx = Math.Max(mx, f);
-            var outp = new List<Vector3>();
+            var outp = new List<Slot>();
             for (int i = 0; i < fs.Count; i++)
             {
                 double f = fs[i] - mx;
                 // 前排序号：按离敌远近重新编号（file 0 = 最前）
-                outp.Add(new Vector3((float)f, (float)ls[i], (float)Math.Floor(-f / spF + 0.5)));
+                outp.Add(new Slot { f = f, l = ls[i], file = (int)Math.Floor(-f / spF + 0.5) });
             }
             return outp;
         }
@@ -2110,47 +2866,106 @@ namespace Sanguo
             L.cheer = R.routed && !L.routed; R.cheer = L.routed && !R.routed;
         }
 
-        IEnumerator BuildMeshes()
+        // 名驹与毛色（与旧版相同的人物对应；其余按姓名散列）
+        static readonly Dictionary<string, KeyValuePair<string, string>> HORSE_OF = new Dictionary<string, KeyValuePair<string, string>>
         {
-            foreach (var a in armies)
+            { "吕布", new KeyValuePair<string, string>("赤兔", null) }, { "关羽", new KeyValuePair<string, string>("赤兔", null) }, { "刘备", new KeyValuePair<string, string>("的卢", null) },
+            { "曹操", new KeyValuePair<string, string>("绝影", null) }, { "赵云", new KeyValuePair<string, string>("白龙驹", null) },
+            { "公孙瓒", new KeyValuePair<string, string>(null, "#e8e6e0") }, { "马超", new KeyValuePair<string, string>(null, "#d8d4ca") }, { "张飞", new KeyValuePair<string, string>(null, "#2a2422") },
+        };
+        static readonly string[] COATS = { "#7a4a2c", "#5e3a22", "#9a7448", "#38302a", "#b8ae9e", "#8a5634" };
+        static FigHorseOpts HorseOpts(ClashInfo info)
+        {
+            string n = info.name;
+            var o = new FigHorseOpts { lod = "mid", color = info.Hex, general = true, seed = ClashUtil.AbsMod(ClashUtil.HashStr(n), 5) };
+            KeyValuePair<string, string> hv;
+            if (HORSE_OF.TryGetValue(n, out hv)) { o.name = hv.Key; o.coat = hv.Value; }
+            if (string.IsNullOrEmpty(o.name) && string.IsNullOrEmpty(o.coat)) o.coat = COATS[ClashUtil.AbsMod(ClashUtil.HashStr(n), COATS.Length)];
+            // 具装：安息、萨尔马提亚为鳞甲；其余为势力色马衣
+            o.armor = info.culture == "persia" || info.culture == "sarmatian" ? "scale" : "cloth";
+            return o;
+        }
+        // 人物挂到本画面根下（Unity 局部坐标；网页版 three 坐标经 PosFromJs / YawFromJs）
+        void Place(Transform tr, float x, float y, float z, float yaw)
+        {
+            tr.localPosition = Figure.PosFromJs(x, y, z);
+            tr.localRotation = Quaternion.Euler(0, Figure.YawFromJs(yaw), 0);
+        }
+        // 士兵群（实例化）、旗手、武将与战马、帅旗、箭
+        IEnumerator BuildFigures()
+        {
+            crowd = new FigureCrowd(new FigCrowdOptions { lod = "low", shadow = true, capacity = 16, parent = root.transform });
+            crowd.gameObject.layer = Clash.Layer;
+            foreach (var A in armies)
             {
-                var team = a.info.color;
-                a.infMesh = ClashArt.Body(team, a.info.culture, false, a.info.accent);
-                a.archMesh = ClashArt.Body(team, a.info.culture, true, a.info.accent);
-                a.legMesh = ClashArt.Leg(a.info.culture);     // 腿按文化（裤 / 裸腿 / 长靴 / 绑腿），每方一组
-                own.Add(a.infMesh); own.Add(a.archMesh); own.Add(a.legMesh);
-                yield return null;
-            }
-            spearMesh = ClashArt.Spear(); bowMesh = ClashArt.Bow(); horseLegMesh = ClashArt.HorseLeg(); arrowMesh = ClashArt.Arrow();
-            own.Add(spearMesh); own.Add(bowMesh); own.Add(horseLegMesh); own.Add(arrowMesh);
-            // 武将、帅旗与士兵旗
-            foreach (var a in armies)
-            {
-                var g = a.general;
-                g.horse = ClashArt.HorseColor(a.info.name);
-                g.mesh = ClashArt.General(a.info.color, a.info.culture, g.horse, ClashArt.WeaponOf(a.info.gen), a.info.accent);
-                own.Add(g.mesh);
-                string glyph = Surname(a.info);
-                var bigTex = ClashBanner.Make(glyph, a.info.color, true, a.info.accent, own);
-                var smallTex = ClashBanner.Make(glyph, a.info.color, false, a.info.accent, own);
-                var bigMat = Art.NewUnlit(Color.white, bigTex); bigMat.renderQueue = 3001;
-                var smallMat = Art.NewUnlit(Color.white, smallTex); smallMat.renderQueue = 3001;
-                own.Add(bigMat); own.Add(smallMat);
-                g.flag = new ClashFlag(bigMat, 0.74f, 0.98f, a.dir > 0, a.si * 3.1f, true);
-                flags.Add(g.flag); own.Add(g.flag.mesh);
-                foreach (var s in a.soldiers) if (s.role == "flag")
+                var info = A.info;
+                A.hexBase = info.Hex; A.hexFlash = ClashUtil.MixHex(info.color, Color.white, 0.55); A.hexDead = ClashUtil.MixHex(info.color, Color.black, 0.28);
+                foreach (var s in A.soldiers)
+                {
+                    if (s.role == "flag") continue;
+                    s.cid = crowd.Add(new FigCrowdSpec { type = s.type, culture = info.culture, color = info.Hex, seed = Clash.TypeSeed(s.type) });
+                    s.colKey = "base";
+                    yield return null;
+                }
+                // 旗手：双手竖持长枪，旗面挂在枪头下
+                string glyph = Surname(info);
+                var bigTex = ClashBanner.Make(glyph, info.color, true, info.accent, own);
+                var smallTex = ClashBanner.Make(glyph, info.color, false, info.accent, own);
+                var bigMat = FlagMaterial(bigTex); var smallMat = FlagMaterial(smallTex);
+                foreach (var s in A.soldiers) if (s.role == "flag")
                     {
-                        s.flag = new ClashFlag(smallMat, 0.56f, 0.4f, a.dir > 0, Rn() * 6, false);
+                        var f = s.fig = Figure.Soldier(new FigOpts { type = "spear", culture = info.culture, color = info.Hex, seed = 2, lod = "low" });
+                        f.Root.SetParent(root.transform, false);
+                        f.Root.localScale = Vector3.one * FIG_S;
+                        ClashUtil.SetLayer(f.gameObject, Clash.Layer);
+                        figs.Add(f);
+                        var wi = f.WeaponInfo;
+                        float top = (float)((wi != null ? wi.tip.y : 2.3 - 0.3) - 0.16);
+                        s.flag = new ClashFlag(smallMat, 0.56f / FIG_S, 0.4f / FIG_S, A.dir > 0, Rn() * 6, false, f.Sockets["gripR"], new Vector3(0, top, 0), true);
+                        s.flag.go.layer = Clash.Layer;
                         flags.Add(s.flag); own.Add(s.flag.mesh);
+                        yield return null;
                     }
+                // 武将：中精度名将（专属兵器、与头像一致的面部）骑中精度战马；鞍后左侧插帅旗
+                var G = A.general;
+                G.horse = Figure.Horse(HorseOpts(info));
+                G.fig = Figure.General(info.gen, new FigOpts { lod = "mid", culture = info.culture, color = info.Hex, mounted = true });
+                G.horse.Mount(G.fig);
+                G.horse.Root.SetParent(root.transform, false);
+                G.horse.Root.localScale = Vector3.one * FIG_S;
+                figs.Add(G.fig); horses.Add(G.horse);
+                var pm = new MeshBuilder();
+                pm.Lathe(V(0, 0, 0), new[] { new LP(0.035f, 0), new LP(0.028f, 4.1f) }, 8, C(0.3f, 0.2f, 0.12f));
+                pm.Lathe(V(0, 4.1f, 0), new[] { new LP(0.05f, 0), new LP(0.06f, 0.05f), new LP(0.0f, 0.3f) }, 8, ClashGeo.GOLD);
+                pm.Sphere(V(0, 4.08f, 0), 0.06f, ClashGeo.GOLD, 1);
+                var pmesh = ClashTerrain.MergeProps(new[] { pm }, "clash pole");
+                own.Add(pmesh);
+                G.pole = Art.MakeObject("Pole", pmesh, propMat, null, true);
+                G.pole.GetComponent<MeshRenderer>().receiveShadows = true;
+                G.horse.Attach(G.pole.transform, "saddle");
+                G.pole.transform.localPosition = new Vector3(-0.3f, -0.35f, -0.52f);     // 网页版 (0.3, −0.35, −0.52)（人物局部 x 取反）
+                G.flag = new ClashFlag(bigMat, 0.74f / FIG_S, 0.98f / FIG_S, A.dir > 0, A.si * 3.1f, true, G.pole.transform, new Vector3(0, 3.96f, 0), true);
+                flags.Add(G.flag); own.Add(G.flag.mesh);
+                ClashUtil.SetLayer(G.horse.gameObject, Clash.Layer);
                 yield return null;
             }
             // 箭（特殊箭雨染成必杀技颜色并发光）
+            arrowMesh = ClashGeo.Arrow(); own.Add(arrowMesh);
+            arrowMat = propMat;
             if (special != null)
             {
                 var sc = special.color;
                 arrowGlow = new Color(0.6f + sc.r * 1.6f, 0.6f + sc.g * 1.6f, 0.6f + sc.b * 1.6f);
             }
+        }
+        // 旗面材质：Sanguo/ClashFlag（贴图 + alphaTest 0.5，LowPoly 光照）
+        Material FlagMaterial(Texture tex)
+        {
+            var m = new Material(Art.LoadShader("ClashFlag")) { name = "ClashFlag" };
+            m.SetTexture("_MainTex", tex);
+            m.SetFloat("_Cutoff", 0.5f);
+            own.Add(m);
+            return m;
         }
 
         // 箭：每方一轮齐射
@@ -2187,7 +3002,7 @@ namespace Sanguo
                 double frac = info.before > 0 ? info.loss / (double)info.before : 0;
                 int k = JsRoundD(A.n * Math.Min(frac, A.routed ? 0.6 : 0.9));
                 if (A.routed) k = Math.Max(k, (int)Math.Ceiling(A.n * 0.45));
-                if (info.loss > 0 && k == 0 && frac >= 0.035f) k = 1;
+                if (info.loss > 0 && k == 0 && frac >= 0.035) k = 1;
                 if (!A.routed) k = Mathf.Min(k, A.n - 2);
                 k = Mathf.Max(0, k);
                 bool sp = special != null && A.si == 1;
@@ -2293,6 +3108,31 @@ namespace Sanguo
         }
         static KeyValuePair<float, KeyValuePair<double, string>> Part(float t, double w, string kind) { return new KeyValuePair<float, KeyValuePair<double, string>>(t, new KeyValuePair<double, string>(w, kind)); }
 
+        // 混战动作表（前两排步兵）：横斩、反撩、重劈、格挡交替，受击时插入「受击」
+        void PlanActs()
+        {
+            foreach (var A in armies)
+                foreach (var s in A.soldiers)
+                {
+                    if (s.role != "inf" || s.file > 1) continue;
+                    var acts = new List<ClashAct>();
+                    float tt = Contact - 0.08f + Rn() * 0.1f + s.file * 0.14f;
+                    float end = Mathf.Min(s.fallT, Melee1 + s.rd);
+                    while (tt < end)
+                    {
+                        float u = Rn();
+                        string clip = u < 0.36f ? "light1" : u < 0.7f ? "light2" : u < 0.86f ? "heavy" : "block";
+                        float sp = clip == "heavy" ? 1.55f : clip == "block" ? 1 : 1.12f + Rn() * 0.3f;
+                        float d = clip == "block" ? 0.22f + Rn() * 0.16f : (clip == "heavy" ? 0.9f : 0.42f) / sp;
+                        acts.Add(new ClashAct { t = tt, clip = clip, sp = sp, d = d });
+                        tt += d + Rn() * 0.07f;
+                    }
+                    foreach (var hh in s.hits) acts.Add(new ClashAct { t = hh, clip = "hit", sp = 1.4f, d = 0.42f / 1.4f });
+                    // 稳定排序（同 JS Array.prototype.sort）
+                    s.acts = acts.Select((a, i) => new KeyValuePair<int, ClashAct>(i, a)).OrderBy(p => p.Value.t).ThenBy(p => p.Key).Select(p => p.Value).ToList();
+                }
+        }
+
         void PlanEvents()
         {
             var ev = new List<KeyValuePair<float, Action>>();
@@ -2314,7 +3154,7 @@ namespace Sanguo
 
         // ---------------------------------------------------------- 动作函数 --
         // 士兵在时刻 t 的位置（不含倒地后的位移）；jit = 混战抖动权重
-        void SoldierXZ(ClashArmy A, ClashSoldier s, float tt, out float ox, out float oz, out float jit)
+        internal void SoldierXZ(ClashArmy A, ClashSoldier s, float tt, out float ox, out float oz, out float jit)
         {
             int dir = A.dir;
             float x = s.x0, z = s.z0;
@@ -2326,139 +3166,183 @@ namespace Sanguo
             }
             jit = s.role == "arch" ? 0 : Seg(tt, Contact, Contact + 0.18f) * (1 - Seg(tt, Melee1, Melee1 + 0.25f));
             float engage = s.file <= 1 ? 1 : 0.4f;
-            x += dir * jit * engage * (Mathf.Sin(tt * s.w1 + s.p1) * 0.13f + Mathf.Sin(tt * s.w2 + s.p2) * 0.06f);
-            z += jit * Mathf.Sin(tt * s.w3 + s.p3) * 0.09f;
+            x += dir * jit * engage * (Mathf.Sin(tt * s.w1 + s.p1) * 0.09f + Mathf.Sin(tt * s.w2 + s.p2) * 0.04f);
+            z += jit * Mathf.Sin(tt * s.w3 + s.p3) * 0.06f;
             if (A.routed)
             {
                 float uf = Seg(tt, Melee1 + s.rd, Regroup1 + 0.25f);
                 x -= dir * 8 * Mathf.Pow(uf, 1.4f);
             }
-            else if (s.role != "arch")
+            else if (s.role != "arch" && !A.cheer)
             {
-                x -= dir * 0.85f * ClashUtil.Eio(Seg(tt, Melee1 + s.rd, Regroup1 - 0.04f));
+                x -= dir * BACK * ClashUtil.Eio(Seg(tt, Melee1 + s.rd, Regroup1 - 0.04f));
             }
             ox = x; oz = z;
         }
-        void SoldierXZ(ClashArmy A, ClashSoldier s, float tt, out float ox, out float oz) { float j; SoldierXZ(A, s, tt, out ox, out oz, out j); }
+        internal void SoldierXZ(ClashArmy A, ClashSoldier s, float tt, out float ox, out float oz) { float j; SoldierXZ(A, s, tt, out ox, out oz, out j); }
 
-        // 步态：相位（腿摆动）、幅度、身体前倾
-        void Gait(ClashArmy A, ClashSoldier s, float tt, out float oph, out float oamp, out float olean)
+        // 步幅（米 / 周期）与步频上限（周期 / 秒）：位移过快时把步幅放大（略有滑步），步频不超过自然值的 1.3 倍
+        static float GaitStride(string g) { return g == "walk" ? 1.45f : g == "run" ? 3.0f : g == "hwalk" ? 1.9f : g == "trot" ? 2.6f : 5.0f; }
+        static float GaitDur(string g) { return g == "walk" ? 1.0f : g == "run" ? 0.66f : g == "hwalk" ? 1.1f : g == "trot" ? 0.7f : 0.5f; }
+        // 一段匀加速 / 缓动位移的步态时刻：dist = 已走距离（场景单位），D / T = 全程距离与时长
+        static float GaitT(string g, float dist, float Dd, float T)
         {
-            var segs = new List<float[]>();
-            segs.Add(new[] { s.ed, March1 + s.ed * 0.5f, 11, 0.5f, -0.05f });
-            if (s.role != "arch")
+            float stride = Mathf.Max(GaitStride(g) * FIG_S, (Dd / Mathf.Max(0.05f, T)) * GaitDur(g) / 1.3f);
+            return (dist / stride) * GaitDur(g);
+        }
+        // 动作：时刻 t 该士兵播放的片段与片段内时刻（纯函数；步频由位移换算，倒放即为后退）
+        internal void AnimOf(ClashArmy A, ClashSoldier s, float tt, out string clip, out float ct)
+        {
+            clip = "idle"; ct = tt + s.p0;
+            if (tt >= s.fallT)
             {
-                segs.Add(new[] { Charge0 + s.cd, Contact + s.cd * 0.35f, 18, 0.75f, -0.3f });
-                segs.Add(new[] { Contact, Melee1, 6, 0.2f, -0.1f });
-                segs.Add(A.routed ? new[] { Melee1 + s.rd, Regroup1 + 0.3f, 18, 0.75f, -0.3f } : new[] { Melee1 + s.rd, Regroup1 - 0.04f, 10, 0.36f, 0.07f });
+                float u = tt - s.fallT;
+                if (s.fallKind == "blast") { clip = "knockdown"; ct = u * 1.4f; }
+                else { clip = "die"; ct = Mathf.Min(1.4f, 0.12f + u * 1.75f); }
+                return;
             }
-            if (s.role == "arch" && A.routed) segs.Add(new[] { Melee1 + s.rd, Regroup1 + 0.3f, 18, 0.75f, -0.3f });
-            float ph = 0, amp = 0, lean = 0, wsum = 0;
-            foreach (var g in segs)
+            float m0 = s.ed, m1 = March1 + s.ed * 0.5f;
+            if (tt < m0) return;
+            if (tt < m1) { clip = "run"; ct = GaitT("run", ENTER_DX * ClashUtil.Eo(Seg(tt, m0, m1)), ENTER_DX, m1 - m0) + s.p0 * 0.1f; return; }
+            if (A.routed && tt >= Melee1 + s.rd)
             {
-                ph += g[2] * Clamp(tt - g[0], 0, g[1] - g[0]);
-                float w = ClashUtil.Trap(tt, g[0], g[1], 0.1f);
-                amp = Mathf.Max(amp, w * g[3]);
-                lean += w * g[4]; wsum += w;
+                float r0 = Melee1 + s.rd, r1 = Regroup1 + 0.25f;
+                clip = "run"; ct = GaitT("run", 8 * Mathf.Pow(Seg(tt, r0, r1), 1.4f), 8, r1 - r0) + s.p0 * 0.1f;
+                return;
             }
-            oph = ph + s.p0; oamp = amp; olean = wsum > 0 ? lean / Mathf.Max(1, wsum) : 0;
+            if (s.role == "arch")
+            {
+                float aim = Aim + s.ed * 0.2f, rel = A.volleyT + s.shotDelay;
+                if (tt >= aim && tt < rel) { clip = "bowDraw"; ct = 0.8f * Seg(tt, aim, rel); }
+                else if (tt >= rel && tt < rel + 0.5f) { clip = "bowShoot"; ct = tt - rel; }
+                else if (A.cheer && tt > Melee1 + 0.15f) { clip = "cheer"; ct = tt - Melee1 - 0.15f + s.p0 * 0.2f; }
+                return;
+            }
+            float c0 = Charge0 + s.cd, c1 = Contact + s.cd * 0.35f;
+            if (tt < c0)
+            {
+                // 敌方箭雨落下前后：前两排举盾（举兵器）护身
+                var E = armies[1 - A.si];
+                if (s.role == "inf" && s.file <= 1 && tt > E.volleyT + 0.12f && tt < E.volleyT + Flight + 0.3f) { clip = "block"; ct = tt - E.volleyT; }
+                return;
+            }
+            if (tt < c1)
+            {
+                float Dd = A.chargeDX + s.push, u = Seg(tt, c0, c1);
+                clip = "run"; ct = GaitT("run", Dd * u * u, Dd, c1 - c0) + s.p0 * 0.1f;
+                return;
+            }
+            if (tt < Melee1 + s.rd)
+            {
+                if (s.acts != null)
+                    for (int i = s.acts.Count - 1; i >= 0; i--)
+                    {
+                        var a = s.acts[i];
+                        if (tt >= a.t) { if (tt < a.t + a.d) { clip = a.clip; ct = (tt - a.t) * a.sp; } break; }
+                    }
+                return;
+            }
+            if (A.cheer) { clip = "cheer"; ct = tt - Melee1 - s.rd + s.p0 * 0.2f; return; }
+            float b0 = Melee1 + s.rd, b1 = Regroup1 - 0.04f;
+            if (s.role != "arch" && tt < b1) { clip = "walk"; ct = 10 - GaitT("walk", BACK * ClashUtil.Eio(Seg(tt, b0, b1)), BACK, b1 - b0); }
+        }
+        // 武将与战马的动作；骑手动作之间用 bclip / bt / bw（bw = 前一动作的残留权重）交叉淡化，不在切换处跳帧
+        internal struct GenPose { public string hclip, rclip, bclip; public float ht, rt, bt, bw, move; }
+        internal GenPose GenAnim(ClashArmy A, float tt)
+        {
+            var G = A.general;
+            var o = new GenPose { hclip = "idle", ht = tt + G.p0, rclip = "idle", rt = tt + G.p0, move = 0, bclip = null, bt = 0, bw = 0 };
+            Action<string, float, float, float> fadeFrom = (clip, ct, t0, dur) => { float w = 1 - Sm(Seg(tt, t0, t0 + dur)); if (w > 0.001f) { o.bclip = clip; o.bt = ct; o.bw = w; } };
+            float m0 = G.ed, m1 = March1 + 0.05f;
+            if (tt >= m0 && tt < m1) { o.hclip = "trot"; o.ht = GaitT("trot", ENTER_DX * ClashUtil.Eo(Seg(tt, m0, m1)), ENTER_DX, m1 - m0) + G.p0; o.move = 0.8f; }
+            // 号令放箭：高举兵器（举起、放下都淡入淡出）
+            float a0 = Aim - 0.06f, a1 = A.volleyT + 0.3f;
+            if (tt > a0 && tt < a1) { o.rclip = "charge"; o.rt = tt - Aim; fadeFrom("idle", tt + G.p0, a0, 0.2f); }
+            else if (tt >= a1) fadeFrom("charge", a1 - Aim, a1, 0.22f);
+            float c0 = Charge0 + 0.1f, c1 = Contact + 0.1f;
+            if (!A.routed)
+            {
+                if (tt >= c0 && tt < c1) { o.hclip = "gallop"; o.ht = (tt - c0) * 1.15f; o.rclip = "charge"; o.rt = tt - c0; o.move = 1; o.bclip = null; o.bw = 0; fadeFrom("idle", tt + G.p0, c0, 0.2f); }
+                // 接敌：武将在本阵后方督战，不对空挥砍——勒马人立，兵器自高举处向前一指号令全军，随后高举兵器激励士卒。
+                // heavy 片段 0.42 秒处正是 charge 的举起姿势，从那里接着播到前指（约 0.58 秒）定住，无跳帧
+                float p0 = Contact - 0.12f, q0 = Contact + 0.5f, e0 = Melee1 + 0.1f;
+                float ptT = Mathf.Min(0.58f, 0.42f + (tt - p0) * 0.9f);
+                if (tt >= p0 && tt < e0)
+                {
+                    o.rclip = "heavy"; o.rt = ptT;
+                    if (tt >= q0) { o.rclip = "cheer"; o.rt = tt - q0; fadeFrom("heavy", 0.58f, q0, 0.35f); }
+                }
+                if (tt >= Contact && tt < Contact + 1.0f) { o.hclip = "rear"; o.ht = (tt - Contact) * 1.6f; }
+                if (tt >= e0)
+                {
+                    if (A.cheer) { o.rclip = "victory"; o.rt = tt - e0; fadeFrom("cheer", e0 - q0, e0, 0.3f); }
+                    else
+                    {
+                        fadeFrom("cheer", e0 - q0, e0, 0.3f);
+                        float b1 = Regroup1;
+                        if (tt < b1) { o.hclip = "walk"; o.ht = 10 - GaitT("hwalk", GBACK * ClashUtil.Eio(Seg(tt, e0, b1)), GBACK, b1 - e0); }
+                    }
+                }
+            }
+            else
+            {
+                if (tt >= c0 && tt < c1) { o.hclip = "trot"; o.ht = (tt - c0) * 1.1f; o.move = 0.6f; }
+                if (tt >= Melee1 + 0.12f)
+                {
+                    float r0 = Melee1 + 0.12f, r1 = Regroup1 + 0.3f;
+                    o.hclip = "gallop"; o.ht = GaitT("gallop", 9 * Mathf.Pow(Seg(tt, r0, r1), 1.4f), 9, r1 - r0); o.move = 1;
+                }
+            }
+            return o;
         }
 
-        float GroundY(float x, float z) { return h.H(x, z); }
+        internal float GroundY(float x, float z) { return (float)h.H(x, z); }
 
-        // 按时刻 t 摆出全部士兵、武将、箭（纯函数式：跳过时直接摆出结束姿态）
-        void Pose(float tt0)
+        // 按时刻 t 摆出全部士兵、旗手、武将、箭（纯函数式：跳过时直接摆出结束姿态）
+        internal void Pose(float tt0)
         {
+            crowd.SetTime(tt0);
             foreach (var A in armies)
             {
-                float yaw0 = A.dir > 0 ? -Mathf.PI / 2 : Mathf.PI / 2;
+                float yaw0 = A.dir > 0 ? Mathf.PI / 2 : -Mathf.PI / 2;
                 foreach (var s in A.soldiers)
                 {
                     bool dead = tt0 >= s.fallT;
                     float tt = dead ? s.fallT : tt0;
-                    float ox, oz, jit, gph, gamp, glean;
+                    float ox, oz, jit;
                     SoldierXZ(A, s, tt, out ox, out oz, out jit);
-                    Gait(A, s, tt, out gph, out gamp, out glean);
                     float x = ox, z = oz, lift = 0;
-                    float fk = dead ? Mathf.Pow(Seg(tt0, s.fallT, s.fallT + (s.fallKind == "blast" ? 0.5f : 0.34f)), 2) : 0;
-                    float spin = 0;
                     if (dead && s.fallKind == "blast")
                     {
                         float u = Seg(tt0, s.fallT, s.fallT + 0.5f);
                         x -= A.dir * s.kb * ClashUtil.Eo(u);       // 被震飞：朝本方后方
-                        lift += 4 * 1.1f * u * (1 - u);
-                        spin = (1 - u) * u * 4 * 1.6f * (s.p0 > 3.1f ? 1 : -1);
+                        lift = 4 * 1.1f * u * (1 - u);
                     }
-                    float y = GroundY(x, z);
-                    float bob = Mathf.Abs(Mathf.Sin(gph)) * 0.035f * (gamp / 0.75f);
-                    // 朝向：溃逃时转身
+                    float y = GroundY(x, z) + lift;
                     float yaw = yaw0;
-                    if (A.routed) yaw += Mathf.PI * ClashUtil.Sm(Seg(tt, Melee1 + s.rd, Melee1 + s.rd + 0.2f)) * (s.p0 > 3.1f ? 1 : -1);
-                    yaw += jit * Mathf.Sin(tt * s.w4 + s.p4) * 0.28f;
-                    float pitch = glean + (jit != 0 ? Mathf.Sin(tt * s.w2 + s.p1) * 0.08f * jit : 0);
-                    // 胜方欢呼：收队时轻跳
-                    float cheer = 0;
-                    if (A.cheer && !dead) cheer = Seg(tt0, Melee1 + 0.15f, Melee1 + 0.3f);
-                    float jump = cheer != 0 ? Mathf.Max(0, Mathf.Sin((tt0 - Melee1) * 13 + s.p0)) * 0.12f * cheer : 0;
-                    if (dead)
+                    if (A.routed) yaw += Mathf.PI * Sm(Seg(tt, Melee1 + s.rd, Melee1 + s.rd + 0.2f)) * (s.p0 > 3.1f ? 1 : -1);
+                    yaw += jit * Mathf.Sin(tt * s.w4 + s.p4) * 0.22f;
+                    string clip; float ct;
+                    AnimOf(A, s, tt0, out clip, out ct);
+                    // 颜色：受击闪亮、阵亡变暗
+                    string key = "base";
+                    if (dead) key = tt0 - s.fallT < 0.12f ? "flash" : tt0 - s.fallT > 0.5f ? "dead" : "base";
+                    else foreach (var ht in s.hits) { float d = tt0 - ht; if (d >= 0 && d < 0.14f) { key = "flash"; break; } }
+                    if (s.fig != null)
                     {
-                        pitch = Lerp(pitch, s.fallDir * Mathf.PI / 2 * 0.96f, fk);
-                        lift += 0.1f * fk;
-                        if (fk >= 1) pitch += Mathf.Sin(Mathf.Min(1, (tt0 - s.fallT - 0.34f) * 6) * Mathf.PI) * 0.05f * s.fallDir;
-                    }
-                    // 身体矩阵 B = T · Ry(yaw) · Rx(pitch) · Rz(spin)
-                    var m = ClashUtil.TRS(x, y + lift + (dead ? 0 : bob + jump), z, ClashUtil.YXZ(pitch, yaw, spin));
-                    s.mBody = m;
-                    // 腿
-                    float swing = dead ? 0.15f * s.fallDir : Mathf.Sin(gph) * gamp;
-                    s.mLeg0 = m * ClashUtil.TRS(-0.065f, HIP, 0, ClashUtil.AxisX(swing));
-                    s.mLeg1 = m * ClashUtil.TRS(0.065f, HIP, 0, ClashUtil.AxisX(-swing));
-                    // 兵器
-                    float wp, thrust = 0;
-                    if (s.role == "arch")
-                    {
-                        float rel = A.volleyT + s.shotDelay;
-                        float upk = ClashUtil.Sm(Seg(tt, Aim + s.ed * 0.2f, Aim + 0.16f));
-                        float down = ClashUtil.Sm(Seg(tt, rel + 0.12f, rel + 0.5f));
-                        wp = 0.95f * upk * (1 - down) + 0.12f * down - 0.1f * (1 - upk) - Mathf.Max(0, 1 - Mathf.Abs(tt - rel) * 12) * 0.12f;
-                        if (A.routed) wp = Lerp(wp, 0.5f, Seg(tt, Melee1, Melee1 + 0.3f));
-                    }
-                    else if (s.role == "flag")
-                    {
-                        wp = Mathf.Sin(tt * 2.3f + s.p0) * 0.05f - 0.08f * Seg(tt, Charge0, Contact);
+                        var f = s.fig;
+                        Place(f.Root, x, y, z, yaw);
+                        f.SetPose(clip, ct, new FigPoseOpts { ik = false });
+                        if (clip != "die" && clip != "knockdown") f.Grip(FLAG_GRIP, FLAG_DIR, null, 0);
+                        if (key != s.colKey) { s.colKey = key; f.SetTint("#ffffff", key == "flash" ? 0.5f : 0); }
+                        s.flag.k = dead ? 0.15f : clip == "run" ? 1.5f : 0.85f;
                     }
                     else
                     {
-                        wp = Mathf.Sin(tt * 2.1f + s.p0) * 0.04f - 0.06f;
-                        float lower = ClashUtil.Sm(Seg(tt, Charge0 - 0.12f + s.cd * 0.4f, Charge0 + 0.14f + s.cd * 0.4f));
-                        wp = Lerp(wp, -1.42f, lower);
-                        if (jit > 0)
-                        {
-                            float eng = s.file <= 1 ? 1 : 0.35f;
-                            wp += jit * Mathf.Sin(tt * s.w4 + s.pt) * 0.16f;
-                            thrust = jit * eng * Mathf.Pow(Mathf.Max(0, Mathf.Sin(tt * s.wt + s.pt)), 3) * 0.34f;
-                        }
-                        float back = Seg(tt, Melee1 + s.rd, Regroup1);
-                        if (A.routed) wp = Lerp(wp, 0.55f, ClashUtil.Sm(back));
-                        else if (A.cheer) wp = Lerp(wp, -0.12f + Mathf.Sin(tt0 * 9 + s.p0) * 0.12f, ClashUtil.Sm(back));
-                        else wp = Lerp(wp, -0.95f, ClashUtil.Sm(back));
+                        crowd.SetTransform(s.cid, Figure.PosFromJs(x, y, z), Figure.YawFromJs(yaw), FIG_S);
+                        crowd.Play(s.cid, clip, tt0 - ct);
+                        if (key != s.colKey) { s.colKey = key; crowd.SetColor(s.cid, A.Hex(key)); }
                     }
-                    // 倒地后兵器顺着身体躺平
-                    if (dead) { wp = Lerp(wp, s.role == "arch" ? 0.3f : 0.12f * s.fallDir, fk); thrust = 0; }
-                    var mw = m * ClashUtil.TRS(GRIP.x, GRIP.y, GRIP.z, ClashUtil.AxisX(wp));
-                    if (thrust != 0) mw = mw * Matrix4x4.Translate(new Vector3(0, thrust, 0));
-                    s.mWeapon = mw;
-                    if (s.flag != null)
-                    {
-                        s.flag.m3 = mw * Matrix4x4.Translate(new Vector3(0, 0.82f, 0));
-                        s.flag.k = dead ? 0.15f : 0.75f + gamp * 0.8f;
-                    }
-                    // 颜色：受击闪白、阵亡变暗
-                    float fl = 0;
-                    if (!dead) foreach (var ht in s.hits) { float d = tt0 - ht; if (d >= 0 && d < 0.16f) fl = Mathf.Max(fl, 1 - d / 0.16f); }
-                    if (dead) fl = Mathf.Max(fl, 1 - (tt0 - s.fallT) / 0.18f);
-                    float darkK = dead ? Lerp(1, 0.52f, Seg(tt0, s.fallT + 0.1f, s.fallT + 0.7f)) : 1;
-                    s.tint = darkK * (1 + Mathf.Max(0, fl) * 0.75f);
                 }
                 PoseGeneral(A, tt0);
             }
@@ -2467,33 +3351,23 @@ namespace Sanguo
 
         void PoseGeneral(ClashArmy A, float tt)
         {
-            var G = A.general; int dir = A.dir;
-            float x = GeneralX(A, tt);
-            float z = G.z0;
-            float y = GroundY(x, z);
-            // 步态：入场与冲锋时小跑，溃逃时疾驰
-            float moving = ClashUtil.Trap(tt, 0.08f, March1 + 0.05f, 0.12f) * 0.8f + ClashUtil.Trap(tt, Charge0 + 0.1f, Contact + 0.1f, 0.12f) * 0.6f
-                + (A.routed ? ClashUtil.Trap(tt, Melee1 + 0.12f, Regroup1 + 0.5f, 0.1f) : ClashUtil.Trap(tt, Melee1 + 0.1f, Regroup1, 0.1f) * 0.4f);
-            float ph = tt * 13 + G.p0;
-            float rear = (A.routed ? 0 : 1) * Mathf.Sin(Mathf.PI * Seg(tt, Contact + 0.02f, Contact + 0.6f)) * 0.36f;
-            float yaw = dir > 0 ? -Mathf.PI / 2 : Mathf.PI / 2;
-            if (A.routed) yaw += Mathf.PI * ClashUtil.Sm(Seg(tt, Melee1 + 0.12f, Melee1 + 0.35f));
-            float pitch = rear + Mathf.Sin(ph * 2) * 0.03f * moving;
-            // 扬蹄时绕后蹄抬起
-            float lift = Mathf.Abs(Mathf.Sin(ph)) * 0.05f * moving + Mathf.Sin(rear) * 0.4f;
-            var m = ClashUtil.TRS(x, y + lift, z, ClashUtil.YXZ(pitch, yaw, 0), 1.12f);
-            G.m3 = m;
-            // 马腿（前后腿交替）
-            float[,] legs = { { -0.1f, 0.56f, -0.36f, 0 }, { 0.1f, 0.56f, -0.36f, 0.6f }, { -0.1f, 0.56f, 0.38f, 2.6f }, { 0.1f, 0.56f, 0.38f, 3.3f } };
-            for (int i = 0; i < 4; i++)
-            {
-                float sw = Mathf.Sin(ph + legs[i, 3]) * 0.55f * moving;
-                if (rear > 0.05f && i < 2) sw = -0.9f * rear / 0.36f + Mathf.Sin(tt * 20 + i) * 0.15f;
-                G.legs[i] = m * ClashUtil.TRS(legs[i, 0], legs[i, 1], legs[i, 2], ClashUtil.AxisX(sw));
-            }
-            // 帅旗：旗杆顶端横杆下（局部 Unity (-0.18, 2.86, -0.3) → three (-0.18, 2.86, 0.3)）
-            G.flag.m3 = m * Matrix4x4.Translate(new Vector3(-0.18f, 2.84f, 0.32f));
-            G.flag.k = 0.85f + moving * 0.7f;
+            var G = A.general;
+            float x = GeneralX(A, tt), z = G.z0, y = GroundY(x, z);
+            float yaw = A.dir > 0 ? Mathf.PI / 2 : -Mathf.PI / 2;
+            if (A.routed) yaw += Mathf.PI * Sm(Seg(tt, Melee1 + 0.12f, Melee1 + 0.35f));
+            var ga = GenAnim(A, tt);
+            Place(G.horse.Root, x, y, z, yaw);
+            G.horse.SetPose(ga.hclip, ga.ht);
+            var po = new FigPoseOpts { gallop = ga.hclip == "gallop" };
+            if (ga.bw > 0) { po.blendClip = ga.bclip; po.blendT = ga.bt; po.blendW = 1 - ga.bw; }
+            G.fig.SetPose(ga.rclip, ga.rt, po);
+            // 帅旗竖插在鞍后：战马人立（整匹马抬头约 42°）时旗杆只随之倾斜约四分之一，不像硬牌子一样向后倒、滑出画面
+            // （网页版 pole.rotation.x = −(root.rotation.x + body.rotation.x) × 0.75；绕 x 的转动在人物局部的 x 镜像下不变）
+            var hr = G.horse.Rig;
+            double ex = hr.euler[FigBones.HB("root")].x + hr.euler[FigBones.HB("body")].x;
+            G.pole.transform.localRotation = Quaternion.AngleAxis((float)(-ex * 0.75 * 180 / Math.PI), Vector3.right);
+            G.x = x; G.y = y; G.z = z;
+            G.flag.k = 0.85f + ga.move * 0.7f;
         }
 
         void PoseArrows(float tt)
@@ -2509,7 +3383,7 @@ namespace Sanguo
                 d.y += r.apex * 4 * (1 - 2 * u);
                 d.Normalize();
                 var q = Quaternion.FromToRotation(new Vector3(0, 0, -1), d);
-                if (u >= 1) p += d * (r.water ? 0.4f : 0.14f);   // 插入地面
+                if (u >= 1) p += d * (r.water ? 0.4f : -0.08f);   // 插入地面约 0.17（露出约六成箭杆与箭羽）
                 if (u >= 1 && r.water) { r.visible = false; continue; }
                 r.m3 = Matrix4x4.TRS(p, q, Vector3.one);
                 r.visible = true;
@@ -2520,11 +3394,11 @@ namespace Sanguo
             r.ready = true;
             float ox, oz;
             SoldierXZ(r.S, r.archer, r.t0, out ox, out oz);
-            r.p0 = V(ox + r.S.dir * 0.25f, GroundY(ox, oz) + 0.95f, oz);
+            r.p0 = V(ox + r.S.dir * 0.3f, GroundY(ox, oz) + 0.74f, oz);
             if (r.target != null)
             {
                 SoldierXZ(r.E, r.target, r.land, out ox, out oz);
-                r.p1 = V(ox, GroundY(ox, oz) + 0.55f, oz);
+                r.p1 = V(ox, GroundY(ox, oz) + 0.6f, oz);
                 r.hit = true;
             }
             else
@@ -2536,7 +3410,7 @@ namespace Sanguo
                 cx /= Mathf.Max(1, n);
                 float x = cx + (Rn() - 0.5f) * 3.2f, z = ZC + (Rn() - 0.5f) * 4.4f;
                 r.p1 = V(x, GroundY(x, z), z);
-                r.water = kind == "river" && Mathf.Abs(x - ClashTerrain.RIVER_X) < ClashTerrain.RIVER_W + 0.6f;
+                r.water = kind == "river" && Mathf.Abs(x - (float)ClashTerrain.RIVER_X) < (float)ClashTerrain.RIVER_W + 0.6f;
             }
             float dd = Mathf.Abs(r.p1.x - r.p0.x);
             r.apex = Mathf.Min(2.5f, 1.6f + dd * 0.22f);     // 弧顶不进入画面上方的 HUD 带
@@ -2579,18 +3453,19 @@ namespace Sanguo
                 });
             }
         }
+        const float RIVER_SURF = (float)ClashTerrain.RIVER_SURF;
         void DustAt(float x, float z, float k, bool big)
         {
             float y = GroundY(x, z);
-            bool wet = kind == "river" && y < ClashTerrain.RIVER_SURF - 0.05f;
+            bool wet = kind == "river" && y < RIVER_SURF - 0.05f;
             if (wet)
             {
-                EmitP(fx, V(x, ClashTerrain.RIVER_SURF + 0.03f, z), big ? 10 : 4, new ClashEmit
+                EmitP(fx, V(x, RIVER_SURF + 0.03f, z), big ? 10 : 4, new ClashEmit
                 {
                     color = C(0.97f, 0.99f, 1), color2 = C(0.78f, 0.9f, 0.96f), alpha = 0.95f * k, life = 0.6f, speed = big ? 2.6f : 1.9f, size = 0.2f, sizeEnd = 0.55f,
                     gravity = 0.85f, radius = 0.15f, up = true, lifeVar = 0.3f, speedVar = 0.45f,
                 });
-                EmitP(fx, V(x, ClashTerrain.RIVER_SURF + 0.04f, z), 1, new ClashEmit { color = C(0.9f, 0.96f, 1), alpha = 0.55f * k, life = 0.5f, speed = 0, size = 0.6f, sizeEnd = 2.2f, radius = 0.05f });
+                EmitP(fx, V(x, RIVER_SURF + 0.04f, z), 1, new ClashEmit { color = C(0.9f, 0.96f, 1), alpha = 0.55f * k, life = 0.5f, speed = 0, size = 0.6f, sizeEnd = 2.2f, radius = 0.05f });
                 return;
             }
             var col = kind == "forest" ? C(0.62f, 0.57f, 0.47f) : ClashTerrain.Walled(kind) ? C(0.8f, 0.74f, 0.62f) : C(0.8f, 0.74f, 0.6f);
@@ -2619,7 +3494,7 @@ namespace Sanguo
             }
             else if (r.water)
             {
-                EmitP(fx, V(r.p1.x, ClashTerrain.RIVER_SURF + 0.02f, r.p1.z), 5, new ClashEmit
+                EmitP(fx, V(r.p1.x, RIVER_SURF + 0.02f, r.p1.z), 5, new ClashEmit
                 {
                     color = C(0.92f, 0.96f, 1), alpha = 0.85f, life = 0.45f, speed = 1.6f, size = 0.1f, sizeEnd = 0.4f, gravity = 1, radius = 0.05f, up = true, lifeVar = 0.3f,
                 });
@@ -2652,7 +3527,7 @@ namespace Sanguo
                 DustAt(x + (Rn() - 0.5f) * 0.8f, z, 1, true);
                 if (i % 2 == 0) Sparks(V(x, GroundY(x, z) + 0.6f + Rn() * 0.4f, z), 6);
             }
-            hud.Flash(new Color(1, 244 / 255f, 214 / 255f, 0.32f), 0.35f);
+            if (hud != null) hud.Flash(new Color(1, 244 / 255f, 214 / 255f, 0.32f), 0.35f);
         }
         void OnFall(ClashArmy A, ClashSoldier s)
         {
@@ -2664,7 +3539,7 @@ namespace Sanguo
         void OnChunk(ClashChunk ch)
         {
             var A = armies[ch.si];
-            hud.Loss(ch.si, ch.amount);
+            if (hud != null) hud.Loss(ch.si, ch.amount);
             // 世界坐标飘字：在该部队中心上方
             float x = 0; int n = 0;
             foreach (var s in A.soldiers) if (!(t >= s.fallT + 0.6f)) { float ox, oz; SoldierXZ(A, s, t, out ox, out oz); x += ox; n++; }
@@ -2674,12 +3549,12 @@ namespace Sanguo
             // 两军接战后中心会挤在一起：各自的飘字保持在接敌线本方一侧，免得数字叠在一起
             float line = ContactLine(), gap = 1.35f;
             x = A.dir > 0 ? Mathf.Min(x, line - gap) : Mathf.Max(x, line + gap);
-            hud.Pop(V(x, 2.0f + (k % 3) * 0.32f + ch.si * 0.18f, ZC), "−" + ch.amount, ch.kind == "special");
+            if (hud != null) hud.Pop(V(x, 2.0f + (k % 3) * 0.32f + ch.si * 0.18f, ZC), "−" + ch.amount, ch.kind == "special");
         }
         void OnRout(ClashArmy A)
         {
             ClashUtil.Sfx("lose", 0.3f);
-            hud.Stamp(A.info.name + "部", "溃 散", false);
+            if (hud != null) hud.Stamp(A.info.name + "部", "溃 散", false);
         }
         void SpecialImpact()
         {
@@ -2690,7 +3565,7 @@ namespace Sanguo
             foreach (var s in Dd.soldiers) { float ox, oz; SoldierXZ(Dd, s, t, out ox, out oz); cx += ox; n++; }
             cx = n > 0 ? cx / n : Dd.xFront;
             shake = 1.4f;
-            hud.Flash(new Color(col.r, col.g, col.b, 1), 0.45f);
+            if (hud != null) hud.Flash(new Color(col.r, col.g, col.b, 1), 0.45f);
             ClashUtil.Sfx("magic", 0.7f); ClashUtil.Sfx("hit", 0.9f);
             string k = specialKind;
             if (k == "blaze")
@@ -2739,40 +3614,40 @@ namespace Sanguo
             m.renderQueue = queue;
             return m;
         }
-        // 圆环弧（three 的 RingGeometry(r0, r1, 28, 1, -0.95, 1.9)，在 xy 平面）
-        static Mesh RingArc(float r0, float r1)
-        {
-            var mb = new MeshBuilder();
-            const int N = 28; const float a0 = -0.95f, len = 1.9f;
-            for (int i = 0; i < N; i++)
-            {
-                float u0 = a0 + len * i / N, u1 = a0 + len * (i + 1) / N;
-                Vector3 i0 = V(Mathf.Cos(u0) * r0, Mathf.Sin(u0) * r0, 0), i1 = V(Mathf.Cos(u1) * r0, Mathf.Sin(u1) * r0, 0);
-                Vector3 o0 = V(Mathf.Cos(u0) * r1, Mathf.Sin(u0) * r1, 0), o1 = V(Mathf.Cos(u1) * r1, Mathf.Sin(u1) * r1, 0);
-                mb.Quad(i0, o0, o1, i1, Color.white);
-            }
-            return mb.ToMesh("clash slash");
-        }
+        // 斩光（第三版修订）：月牙形弧（外缘圆、内缘向两端收拢），径向 / 沿弧两端渐隐的柔边贴图，加色混合；
+        // 弧面正对镜头（不再侧对镜头成一堵半透明的墙），沿弧撒火花
         void Slash(Vector3 pos, Color col)
         {
-            var specs = new[] { new Vector4(1.6f, 3.3f, 0.35f, 0.98f), new Vector4(2.15f, 3.0f, 0.85f, 1f), new Vector4(2.55f, 2.82f, 0.95f, 1.05f) };
+            // three Object3D.lookAt：局部 +z 指向镜头（相机位置换回 three 坐标）
+            var camP = cam != null ? ClashUtil.Three(cam.transform.position) : pos + V(0, 0, 1);
+            var fwd = camP - pos;
+            Quaternion bas = fwd.sqrMagnitude > 1e-12f ? Quaternion.LookRotation(fwd.normalized, Vector3.up) : Quaternion.identity;
+            var specs = new[] { new Vector4(1.5f, 3.3f, 0.4f, 0.98f), new Vector4(2.1f, 3.0f, 0.9f, 1f), new Vector4(2.6f, 2.9f, 1.0f, 1.05f) };
+            var wids = new[] { 1.0f, 0.85f, 0.7f };
             for (int i = 0; i < 3; i++)
             {
                 var sp = specs[i];
                 var c = i == 2 ? C(1, 1, 0.95f) : col;
-                var mesh = RingArc(sp.x, sp.y);
-                var mat = FxMat(new Color(c.r, c.g, c.b, sp.z), null, 3015);
-                var f = new ClashFx { mesh = mesh, mat = mat, t0 = t, life = 0.42f };
+                var mesh = ClashGeo.SlashGeo(sp.x, sp.y, wids[i]);
+                var mat = FxMat(new Color(c.r, c.g, c.b, sp.z), ClashGeo.SlashTexture(), 3015);
+                var f = new ClashFx { mesh = mesh, mat = mat, t0 = t, life = 0.46f };
                 float kk = sp.w;
                 f.fn = u =>
                 {
                     float s = 0.55f + ClashUtil.Eo(u) * 0.75f * kk;
-                    float rot = -0.35f - u * 0.9f;
-                    f.m3 = Matrix4x4.TRS(pos, Quaternion.AngleAxis(rot * Mathf.Rad2Deg, Vector3.forward), new Vector3(s, s, 1));
-                    var cc = f.mat.color; cc.a = (1 - u * u) * (kk > 1 ? 0.95f : kk < 1 ? 0.35f : 0.85f); f.mat.color = cc;
+                    var q = bas * Quaternion.AngleAxis((-0.35f - u * 0.9f) * Mathf.Rad2Deg, Vector3.forward);
+                    f.m3 = Matrix4x4.TRS(pos, q, new Vector3(s, s, 1));
+                    var cc = f.mat.color; cc.a = (1 - u * u) * (kk > 1 ? 1.0f : kk < 1 ? 0.4f : 0.9f); f.mat.color = cc;
                 };
-                f.fn(0);
+                f.m3 = Matrix4x4.TRS(pos, bas * Quaternion.AngleAxis(-0.35f * Mathf.Rad2Deg, Vector3.forward), Vector3.one);
                 temp.Add(f);
+            }
+            // 沿弧的火花
+            Vector3 right = bas * Vector3.right, up = bas * Vector3.up;
+            for (int i = 0; i < 5; i++)
+            {
+                float a = -0.8f + i * 0.4f - 0.35f, r = 2.4f;
+                Sparks(pos + right * (Mathf.Cos(a) * r * 0.9f) + up * (Mathf.Sin(a) * r * 0.9f), 4, Art.Shade(col, 0.5f));
             }
         }
         void Shockwave(Vector3 pos, Color col)
@@ -2801,8 +3676,8 @@ namespace Sanguo
             while (y > gy)
             {
                 float nx = bas.x + (Rn() - 0.5f) * 0.9f, ny = Mathf.Max(gy, y - 0.6f - Rn() * 0.5f), nz = z + (Rn() - 0.5f) * 0.3f;
-                // 网页版这里误用了 Unity 坐标（雷落在镜像的 z 上，偏近镜头约 1.1）；此处按 three 坐标建在落点上
-                ClashArt.Beam(mb, ClashUtil.P(x, y, z), ClashUtil.P(nx, ny, nz), 0.12f, 0.1f, Color.white);
+                // 折线按 three 坐标求出，建网格时换成 Unity 坐标（= 网页版第三版 beam(V(x, y, z), …)，雷落在落点上）
+                ClashGeo.Beam(mb, ClashUtil.P(x, y, z), ClashUtil.P(nx, ny, nz), 0.12f, 0.1f, Color.white);
                 x = nx; y = ny; z = nz;
                 if (ny <= gy + 0.01f) break;
             }
@@ -2824,7 +3699,7 @@ namespace Sanguo
         }
 
         // ---------------------------------------------------------- 镜头 --
-        void CameraPose(float tt)
+        internal void CameraPose(float tt)
         {
             if (cam == null) return;
             // 注视点比两军略高一点：画面上方约 1/6 被 HUD 占去，让军阵落在 HUD 之下的画面中部
@@ -2832,15 +3707,16 @@ namespace Sanguo
             {
                 new[] { 0f, -1.1f, 4.0f, 18.4f, 0.2f, 2.05f, -0.8f },
                 new[] { 0.7f, -0.4f, 2.55f, 15.0f, 0, 2.1f, -0.8f },
-                new[] { Charge0, -0.3f, 2.5f, 14.6f, 0, 2.05f, -0.8f },
-                new[] { Contact, xc * 0.45f + 0.2f, 2.18f, 11.9f, xc * 0.5f, 1.78f, -0.8f },
-                new[] { Melee1, xc * 0.45f + 0.5f, 2.1f, 11.4f, xc * 0.5f + 0.2f, 1.72f, -0.8f },
+                new[] { Charge0, -0.3f, 2.3f, 14.0f, 0, 1.88f, -0.8f },
+                // 第三版修订：接敌到混战时机位更低、更近（士兵占满画面中下部，不再是远处的一条细带）
+                new[] { Contact, xc * 0.45f + 0.2f, 1.5f, 9.8f, xc * 0.5f, 1.22f, -0.8f },
+                new[] { Melee1, xc * 0.45f + 0.5f, 1.42f, 9.4f, xc * 0.5f + 0.2f, 1.16f, -0.8f },
                 new[] { Regroup1, xc * 0.3f + 0.2f, 2.5f, 13.8f, xc * 0.3f, 2.02f, -0.8f },
             };
             int i = 0;
             while (i < K.Length - 2 && tt > K[i + 1][0]) i++;
             var a = K[i]; var b = K[i + 1];
-            float u = ClashUtil.Sm(Seg(tt, a[0], b[0]));
+            float u = Sm(Seg(tt, a[0], b[0]));
             float lx0 = Lerp(a[4], b[4], u), ly = Lerp(a[5], b[5], u), lz = Lerp(a[6], b[6], u);
             float dx = Lerp(a[1], b[1], u) - lx0, dy = Lerp(a[2], b[2], u) - ly, dz = Lerp(a[3], b[3], u) - lz;
             float aspect = cam.aspect > 0 ? cam.aspect : 1.78f;
@@ -2849,40 +3725,48 @@ namespace Sanguo
             ArmyExtent(tt, out el, out er, out egl, out egr);
             float lx = Lerp(lx0, (el + er) / 2, 0.5f);
             if (special != null) lx = Lerp(lx, egl, 0.22f * ClashUtil.Trap(tt, Charge0 - 0.3f, Melee1, 0.4f));
-            // 推近不得把两军（尤其两端的武将与帅旗）推出画面：按实际军阵外缘求最小拉远倍数（左右各留约 4%）
-            float tanH = Mathf.Tan(cam.fieldOfView * Mathf.Deg2Rad / 2) * aspect * 0.92f;
-            float need = ViewNeed(tt, lx, lz, dz, tanH);
-            float ft = Mathf.Max(fit, need);
             // 竖屏：拉远之后再抬高机位俯视，压低天空、让纵深铺开
             float kP = Clamp((1.15f - aspect) / 0.6f, 0, 1);
+            // 竖屏（画面很窄）：冲锋到混战期间镜头推向接敌线，只保证前两排在画面内（两端的弓手、武将与帅旗可出画，头像与姓名在上方 HUD 里）
+            float wP0 = kP * Sm(ClashUtil.Trap(tt, Charge0 + 0.35f, Regroup1 + 0.35f, 0.7f));
+            // 横屏同样在混战时推近：只保证前几排在画面内（两端的武将与帅旗可出画，头像在 HUD 里）
+            float wP = Mathf.Max(wP0, (1 - kP) * 0.62f * Sm(ClashUtil.Trap(tt, Charge0 + 0.3f, Regroup1 + 0.1f, 0.75f)));
+            if (wP > 0) lx = Lerp(lx, xc, wP * 0.8f);
+            // 推近不得把两军（尤其两端的武将与帅旗）推出画面：按实际军阵外缘求最小拉远倍数（左右各留约 4%）
+            float tanH = Mathf.Tan(cam.fieldOfView * Mathf.Deg2Rad / 2) * aspect * 0.92f;
+            float need = ViewNeed(tt, lx, lz, dz, tanH, wP);
+            float ft = Mathf.Max(Lerp(fit, 1, wP), need);
             float dist = Mathf.Sqrt(dx * dx + dy * dy + dz * dz) * ft;
-            float px = lx + dx * ft, py = ly + dy * ft + kP * dist * 0.27f, pz = lz + dz * ft;
+            float px = lx + dx * ft, py = ly + dy * ft + kP * dist * 0.27f * (1 - 0.5f * wP0), pz = lz + dz * ft;
             if (shake > 0.001f)
             {
                 float k = shake * 0.11f;
                 px += Mathf.Sin(real * 71) * k;
                 py += Mathf.Sin(real * 57 + 1.3f) * k * 0.7f;
             }
-            float lookY = ly - kP * 0.35f;
+            // 竖屏推近时注视点降到士兵胸口附近（远景时高处的注视点到了近处会把军阵压到画面底部）
+            float lookY = ly - kP * 0.35f - wP0 * 0.95f;
             var tr = cam.transform;
             tr.position = Clash.Origin + ClashUtil.P(px, py, pz);
             tr.LookAt(Clash.Origin + ClashUtil.P(lx, lookY, lz), Vector3.up);
             // 城门 / 本城：城门楼屋脊不得顶进上方 HUD——投影屋脊，若高于 HUD 下沿就抬高注视点，最多抬 1.6
-            if (kind == "gate" || kind == "castle")
+            // 竖屏推近混战时不做（近景里城楼本就出画，不再是「无顶红楼」）
+            if ((kind == "gate" || kind == "castle") && wP < 0.999f)
             {
                 float hb = hud != null ? hud.BarBottomNdc() : 1;
+                float upMax = 1.6f * (1 - wP);
                 if (hb < 0.98f)
                 {
                     float tanV = Mathf.Tan(cam.fieldOfView * Mathf.Deg2Rad / 2);
                     float dl = Mathf.Sqrt((px - lx) * (px - lx) + (py - lookY) * (py - lookY) + (pz - lz) * (pz - lz));
                     float up = 0;
-                    var ridge = Clash.Origin + ClashUtil.P(ClashTerrain.GATE_X, 6.2f, ClashTerrain.WALL_Z - 0.7f);
+                    var ridge = Clash.Origin + ClashUtil.P((float)ClashTerrain.GATE_X, 6.2f, (float)ClashTerrain.WALL_Z - 0.7f);
                     for (int it = 0; it < 4; it++)
                     {
                         float y = cam.WorldToViewportPoint(ridge).y * 2 - 1;
                         float over = y - (hb - 0.03f);
-                        if (over <= 0.004f || up >= 1.6f) break;
-                        up = Mathf.Min(1.6f, up + over * tanV * dl * 0.9f);
+                        if (over <= 0.004f || up >= upMax) break;
+                        up = Mathf.Min(upMax, up + over * tanV * dl * 0.9f);
                         tr.LookAt(Clash.Origin + ClashUtil.P(lx, lookY + up, lz), Vector3.up);
                     }
                 }
@@ -2893,7 +3777,9 @@ namespace Sanguo
                 float extra = Mathf.Max(0, dist - 19);
                 RenderSettings.fogStartDistance = 34 + extra; RenderSettings.fogEndDistance = 135 + extra;
             }
+            lastDist = dist;
         }
+        internal float lastDist;
         // 武将 x（与 PoseGeneral 同一公式；镜头取景用）
         float GeneralX(ClashArmy A, float tt)
         {
@@ -2902,7 +3788,7 @@ namespace Sanguo
             float uc = Seg(tt, Charge0 + 0.1f, Contact + 0.1f);
             x += dir * A.genDX * uc * uc;
             if (A.routed) x -= dir * 9 * Mathf.Pow(Seg(tt, Melee1 + 0.12f, Regroup1 + 0.3f), 1.4f);
-            else x -= dir * 0.45f * ClashUtil.Eio(Seg(tt, Melee1 + 0.1f, Regroup1));
+            else if (!A.cheer) x -= dir * GBACK * ClashUtil.Eio(Seg(tt, Melee1 + 0.1f, Regroup1));
             return x;
         }
         // 取景用的时刻：入场时按列阵位置（让队伍走进画面），溃逃时停在溃散前（不追着逃兵拉远）
@@ -2913,27 +3799,31 @@ namespace Sanguo
             gl = GeneralX(L, FrameT(L, tt)); gr = GeneralX(R, FrameT(R, tt));
             l = gl - 1.75f; r = gr + 1.75f;
         }
-        float ViewNeed(float tt, float cx, float lz, float dz, float tanH)
+        // wCore > 0（混战推近）：在「全军」与「前两排」两种取景需求之间插值
+        float ViewNeed(float tt, float cx, float lz, float dz, float tanH, float wCore)
         {
             if (!(dz > 0.1f) || !(tanH > 0.01f)) return 1;
-            float need = 0;
+            float need = 0, core = 0;
+            Func<float, float, float> nOf = (x, z) => (Mathf.Abs(x - cx) / tanH + (z - lz)) / dz;
             foreach (var A in armies)
             {
                 float ft = FrameT(A, tt), gx = GeneralX(A, ft), gz = A.general.z0;
-                need = Mathf.Max(need, (Mathf.Abs(gx - A.dir * 1.75f - cx) / tanH + (gz - 0.25f - lz)) / dz);   // 帅旗（含旗面飘动）在武将身后
-                need = Mathf.Max(need, (Mathf.Abs(gx + A.dir * 1.0f - cx) / tanH + (gz - lz)) / dz);           // 马头
+                need = Mathf.Max(need, nOf(gx - A.dir * 1.75f, gz - 0.25f));   // 帅旗（含旗面飘动）在武将身后
+                need = Mathf.Max(need, nOf(gx + A.dir * 1.0f, gz));             // 马头
                 foreach (var s in A.soldiers)
                 {
                     float ox, oz; SoldierXZ(A, s, ft, out ox, out oz);
-                    need = Mathf.Max(need, (Mathf.Abs(ox - A.dir * 0.3f - cx) / tanH + (oz + 0.25f - lz)) / dz);
+                    float n = nOf(ox - A.dir * 0.3f, oz + 0.25f);
+                    if (n > need) need = n;
+                    if (s.file <= 1 && s.role != "arch" && n > core) core = n;
                 }
             }
-            return need;
+            return wCore > 0 ? Lerp(need, core * 1.05f, wCore) : need;
         }
-        void Resize()
+        internal void Resize()
         {
             lastW = Screen.width; lastH = Screen.height;
-            float aspect = lastW / (float)Mathf.Max(1, lastH);
+            float aspect = cam != null && cam.aspect > 0 ? cam.aspect : lastW / (float)Mathf.Max(1, lastH);
             // 以 16:9 为基准：更窄的屏幕拉远，更宽的屏幕（手机横屏）适当推近；两军外缘的约束见 ViewNeed
             fit = Clamp(1.78f / aspect, 0.86f, 1.75f);
             if (hud != null) hud.Layout();
@@ -2975,6 +3865,7 @@ namespace Sanguo
             CameraPose(t);
             // 粒子、旗帜、临时特效：播放中随时间轴推进（慢镜头、特写定格、调试冻结时一并停住）
             float step = wasRun ? Mathf.Max(0, t - tBefore) : dt * speed;
+            Shader.SetGlobalFloat("_SgClashTime", real);
             dust.Step(step); fx.Step(step); glow.Step(step);
             float ws = real * Mathf.Min(1.6f, speed);
             foreach (var a in armies)
@@ -2994,12 +3885,12 @@ namespace Sanguo
         }
         void DestroyFx(ClashFx f)
         {
-            if (f.mesh != null) UnityEngine.Object.Destroy(f.mesh);
+            if (f.mesh != null && f.ownMesh) UnityEngine.Object.Destroy(f.mesh);
             if (f.mat != null) UnityEngine.Object.Destroy(f.mat);
             f.mesh = null; f.mat = null;
         }
         // 推进时间轴并触发途经的事件（fx = false 时只更新状态，不放特效）
-        void SetTime(float nt, bool withFx)
+        internal void SetTime(float nt, bool withFx)
         {
             float prev = t;
             t = nt;
@@ -3042,52 +3933,52 @@ namespace Sanguo
 
         // ---------------------------------------------------------- 绘制 --
         static readonly int ColorId = Shader.PropertyToID("_Color");
-        void DrawU(Mesh mesh, Matrix4x4 m3, Material mat, float tint, bool shadows = true)
-        {
-            var m = Matrix4x4.Translate(Clash.Origin) * ClashUtil.ToU(m3);
-            mpb.SetColor(ColorId, new Color(tint, tint, tint, 1));
-            Graphics.DrawMesh(mesh, m, mat, Clash.Layer, cam, 0, mpb, shadows, true, false);
-        }
         void DrawU(Mesh mesh, Matrix4x4 m3, Material mat, Color tint, bool shadows = true)
         {
             var m = Matrix4x4.Translate(Clash.Origin) * ClashUtil.ToU(m3);
             mpb.SetColor(ColorId, tint);
             Graphics.DrawMesh(mesh, m, mat, Clash.Layer, cam, 0, mpb, shadows, true, false);
         }
+        // 每帧提交的绘制：箭、草丛 / 野花（实例化）、临时特效、粒子（人物、士兵群、地形、旗面是物体，自己绘制）
         public void Draw()
         {
             if (disposed || !shown || cam == null || armies == null) return;
-            var lp = Art.LowPoly;
-            Vector3 toLight = RenderSettings.sun != null ? -RenderSettings.sun.transform.forward : new Vector3(0.38f, 0.74f, -0.55f).normalized;
-            foreach (var A in armies)
-            {
-                foreach (var s in A.soldiers)
-                {
-                    DrawU(s.role == "arch" ? A.archMesh : A.infMesh, s.mBody, lp, s.tint);
-                    DrawU(A.legMesh, s.mLeg0, lp, s.tint);
-                    DrawU(A.legMesh, s.mLeg1, lp, s.tint);
-                    DrawU(s.role == "arch" ? bowMesh : spearMesh, s.mWeapon, lp, s.tint);
-                }
-                var G = A.general;
-                DrawU(G.mesh, G.m3, lp, 1f);
-                for (int i = 0; i < 4; i++) DrawU(horseLegMesh, G.legs[i], lp, G.horse);
-            }
-            foreach (var r in arrows) if (r.visible) DrawU(arrowMesh, r.m3, lp, r.spec && special != null ? arrowGlow : Color.white);
-            foreach (var f in flags)
-            {
-                var mu = Matrix4x4.Translate(Clash.Origin) * ClashUtil.ToU(f.m3);
-                f.Light(mu, toLight);
-                Graphics.DrawMesh(f.mesh, mu, f.mat, Clash.Layer, cam, 0, null, false, false, false);
-            }
+            foreach (var r in arrows) if (r.visible) DrawU(arrowMesh, r.m3, arrowMat, r.spec && special != null ? arrowGlow : Color.white, true);
+            DrawInstanced(terrainOut.tuftMesh, tuftW, tuftC, tuftMpb);
+            DrawInstanced(terrainOut.flowerMesh, flowerW, flowerC, flowerMpb);
             foreach (var f in temp)
                 if (f.mesh != null && f.mat != null)
                     Graphics.DrawMesh(f.mesh, Matrix4x4.Translate(Clash.Origin) * ClashUtil.ToU(f.m3), f.mat, Clash.Layer, cam, 0, null, false, false, false);
             var tr = cam.transform;
+            // 面向镜头的方片：ClashPool.Build 把粒子的 three 坐标换成 Unity 坐标后，沿镜头的 right / up（Unity 世界方向）展开
             foreach (var p in new[] { dust, fx, glow })
             {
                 if (p.Count == 0) continue;
                 p.Build(tr.right, tr.up);
                 Graphics.DrawMesh(p.mesh, Matrix4x4.Translate(Clash.Origin), p.mat, Clash.Layer, cam, 0, null, false, false, false);
+            }
+        }
+        // 草丛 / 野花：一组一次实例化绘制（每批 ≤ 1023；不投影、接受阴影）；不支持实例化时逐个绘制
+        void DrawInstanced(Mesh mesh, Matrix4x4[] w, Vector4[] cols, MaterialPropertyBlock block)
+        {
+            if (mesh == null || w == null || w.Length == 0 || grassMat == null) return;
+            if (SystemInfo.supportsInstancing)
+            {
+                if (w.Length <= 1023) { Graphics.DrawMeshInstanced(mesh, 0, grassMat, w, w.Length, block, ShadowCastingMode.Off, true, Clash.Layer, cam); return; }
+                for (int s = 0; s < w.Length; s += 1023)
+                {
+                    int n = Math.Min(1023, w.Length - s);
+                    var mb = new Matrix4x4[n]; var cb = new Vector4[n];
+                    Array.Copy(w, s, mb, 0, n); Array.Copy(cols, s, cb, 0, n);
+                    var pb = new MaterialPropertyBlock(); pb.SetVectorArray("_InstColor", cb);
+                    Graphics.DrawMeshInstanced(mesh, 0, grassMat, mb, n, pb, ShadowCastingMode.Off, true, Clash.Layer, cam);
+                }
+                return;
+            }
+            for (int i = 0; i < w.Length; i++)
+            {
+                mpb.SetVector("_InstColor", cols[i]);
+                Graphics.DrawMesh(mesh, w[i], grassMat, Clash.Layer, cam, 0, mpb, false, true, false);
             }
         }
 
@@ -3101,8 +3992,11 @@ namespace Sanguo
             if (Clash.cut != null) Clash.cut.Skip();
             SetTime(Regroup1, false);
             dust.Clear(); fx.Clear(); glow.Clear();
-            hud.Final();
-            foreach (var a in armies) if (a.routed) hud.Stamp(a.info.name + "部", "溃 散", true);
+            if (hud != null)
+            {
+                hud.Final();
+                foreach (var a in armies) if (a.routed) hud.Stamp(a.info.name + "部", "溃 散", true);
+            }
             state = "hold";
             holdUntil = real + SKIP_HOLD;
             holdWall = Time.realtimeSinceStartup + SKIP_HOLD;
@@ -3111,8 +4005,19 @@ namespace Sanguo
         {
             if (state == "out" || state == "done") return;
             state = "out";
+            if (hud == null) { state = "done"; Dispose(); return; }
             hud.Final();
             hud.FadeOut(FADE_OUT, () => { state = "done"; Dispose(); });
+        }
+
+        // 测试用：模型与预算统计（= JS stats()）
+        internal string Stats()
+        {
+            int figTris = 0;
+            foreach (var f in figs) figTris += f.Triangles;
+            foreach (var h0 in horses) figTris += h0.Triangles;
+            var c = crowd != null ? crowd.Stats() : null;
+            return "crowd " + (c != null ? c.soldiers + "/" + c.groups + "/" + c.drawCalls + "/" + c.triangles : "-") + " figs " + (figs.Count + horses.Count) + " figTris " + figTris + " groundTris " + (terrainOut != null ? terrainOut.groundTris : 0);
         }
 
         public void Dispose()
@@ -3124,6 +4029,14 @@ namespace Sanguo
             // 还原全局状态
             foreach (var c in camsOff) if (c != null) c.enabled = true;
             camsOff.Clear();
+            foreach (var kv in lightMasks) if (kv.Key != null) kv.Key.cullingMask = kv.Value;
+            lightMasks.Clear();
+            if (ambSaved)
+            {
+                RenderSettings.ambientMode = ambMode0; RenderSettings.ambientSkyColor = ambSky0; RenderSettings.ambientEquatorColor = ambEq0; RenderSettings.ambientGroundColor = ambGnd0;
+                try { DynamicGI.UpdateEnvironment(); } catch (Exception) { /* 忽略 */ }
+                ambSaved = false;
+            }
             if (fogSaved)
             {
                 RenderSettings.fog = fog0; RenderSettings.fogMode = fogMode0; RenderSettings.fogColor = fogColor0;
@@ -3131,6 +4044,7 @@ namespace Sanguo
                 QualitySettings.shadowDistance = shadowDist0;
                 fogSaved = false;
             }
+#if !CLASH_HEADLESS
             for (int i = 0; i < groups.Count; i++)
             {
                 var g = groups[i].Key;
@@ -3140,11 +4054,16 @@ namespace Sanguo
             }
             groups.Clear();
             if (rigSaved && Game.I != null && Game.I.Rig != null) Game.I.Rig.InputEnabled = rigInput0;
+#endif
             rigSaved = false;
-            // 释放
+            // 释放：人物与战马（模板与面部贴图的引用）、士兵群、网格 / 材质 / 纹理
             if (hud != null) { hud.Dispose(); hud = null; }
             foreach (var f in temp) DestroyFx(f);
             temp.Clear();
+            if (crowd != null) { try { crowd.Dispose(); } catch (Exception e) { Debug.LogException(e); } crowd = null; }
+            foreach (var hz in horses) { try { hz.Dispose(); } catch (Exception e) { Debug.LogException(e); } }
+            foreach (var f in figs) { try { f.Dispose(); } catch (Exception e) { Debug.LogException(e); } }
+            horses.Clear(); figs.Clear();
             foreach (var o in own)
             {
                 if (o == null) continue;
@@ -3161,7 +4080,6 @@ namespace Sanguo
             Finished = true;
         }
     }
-
     // 粒子贴图
     internal static class ClashTex
     {
@@ -3187,6 +4105,7 @@ namespace Sanguo
         }
     }
 
+#if !CLASH_HEADLESS
     // ======================================================= 界面小工具 --
     // 本画面的界面按网页版 CSS 的像素排版：画布用固定像素缩放（scaleFactor = 设备像素比），
     // 单位 u = clamp(min(1.3vw, 2.45vh), 8.5px, 26px)（竖屏另算），全部位置由 Layout() 计算。
@@ -3430,6 +4349,22 @@ namespace Sanguo
         static Sprite vig, shade, hgrad, seal, stampBg;
         static Sprite Make(Texture2D t, Vector4 border) { return Sprite.Create(t, new Rect(0, 0, t.width, t.height), new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border); }
         static Texture2D Tex(int w, int h) { return new Texture2D(w, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, hideFlags = HideFlags.DontSave }; }
+        // 「布阵中」的转圈：2px 圆环 rgba(243,201,105,.25)，上边（±45°）为 #f3c969（= CSS border-top-color）；每次新建，由 HUD 释放
+        public static Texture2D Spinner()
+        {
+            const int n = 64; var t = Tex(n, n);
+            float r1 = n / 2f - 0.5f, r0 = r1 * (1 - 0.24f);       // 1.1em 直径里 2px 边（15px 字号时约占半径的 24%）
+            for (int y = 0; y < n; y++) for (int x = 0; x < n; x++)
+                {
+                    float dx = x + 0.5f - n / 2f, dy = y + 0.5f - n / 2f, d = Mathf.Sqrt(dx * dx + dy * dy);
+                    float cov = Mathf.Clamp01(r1 + 0.5f - d) * Mathf.Clamp01(d - (r0 - 0.5f));
+                    float ang = Mathf.Atan2(dx, dy) * Mathf.Rad2Deg;          // 0 = 正上（纹理 y 向上）
+                    float top = Mathf.Clamp01((45 - Mathf.Abs(ang)) / 3f + 0.5f);
+                    t.SetPixel(x, y, new Color(243 / 255f, 201 / 255f, 105 / 255f, cov * Mathf.Lerp(0.25f, 1, top)));
+                }
+            t.Apply();
+            return t;
+        }
         // 暗角：ellipse 75% 70% at 50% 58%，55% 内透明 → 边缘 rgba(10,8,6,.42)
         public static Sprite Vignette
         {
@@ -3576,6 +4511,9 @@ namespace Sanguo
         float flashA; Color flashC;
         float stampT = -1; bool stampNow;
         bool handed;
+        // 黑幕上的「布阵中…」提示（第三版：准备超过约 0.3 秒时淡入）
+        RectTransform waitRt, spinRt; Text waitText; ClashSpacing waitSp; Texture2D spinTex;
+        bool waitOn; float waitA;
 
         sealed class Side
         {
@@ -3650,6 +4588,12 @@ namespace Sanguo
             ModeLabel();
             flashImg = ClashUI.Img(root, null, new Color(1, 1, 1, 0), "Flash"); ClashUI.Full(flashImg.rectTransform);
             fadeImg = ClashUI.Img(root, null, ClashUI.Css("#0b0a0f", 0), "Fade"); ClashUI.Full(fadeImg.rectTransform);
+            waitRt = ClashUI.Rect("Wait", fadeImg.transform);
+            spinTex = ClashSprites.Spinner(); own.Add(spinTex);
+            spinRt = ClashUI.Raw(waitRt, spinTex, Color.white, "Spin").rectTransform;
+            waitText = ClashUI.Label(waitRt, "布阵中…", kai, 15, GOLDC, TextAnchor.MiddleLeft);
+            waitSp = waitText.gameObject.AddComponent<ClashSpacing>();
+            SetGroupAlpha(waitRt, 0);
             Layout();
             SetPre(true);
             if (sc.runnerHost != null) sc.runnerHost.StartCoroutine(LoadPortraits());
@@ -3786,6 +4730,13 @@ namespace Sanguo
             bgr.localEulerAngles = new Vector3(0, 0, 5);
             ClashUI.Full(stampBig.rectTransform);
             stampBgImg.pixelsPerUnitMultiplier = 12f / Mathf.Max(1, bfs * 0.12f);
+            // 「布阵中…」：屏幕正中，转圈 1.1em + 间隔 .7em + 字（字距 .3em）
+            float wfs = Mathf.Max(15, u * 1.5f);
+            waitText.fontSize = Mathf.RoundToInt(wfs); waitSp.Set(wfs * 0.3f);
+            float tw = ClashUI.Width(waitText, wfs * 0.3f) + wfs * 0.3f, sp = wfs * 1.1f, ww = sp + wfs * 0.7f + tw, wh = wfs * 1.3f;
+            ClashUI.PlaceC(waitRt, vw / 2, vh / 2, ww, wh);
+            ClashUI.PlaceC(spinRt, sp / 2, wh / 2, sp, sp);
+            ClashUI.Place(waitText.rectTransform, sp + wfs * 0.7f, 0, tw + 4, wh);
         }
 
         // 计算一侧面板的内部排版，返回面板高度
@@ -3983,8 +4934,11 @@ namespace Sanguo
         }
         // 进场前：战场上淡入黑幕
         public void FadeBlack(float sec) { StartFade(0, 1, sec, ClashUI.EaseIn, null); }
+        // 黑幕上的「布阵中」提示
+        public void Wait(bool on) { waitOn = on; }
         public void FadeIn(float sec)
         {
+            Wait(false);
             StartFade(1, 0, sec, ClashUI.EaseOut, null);
             live = true; liveT = 0;
             SetPre(false);
@@ -4065,6 +5019,10 @@ namespace Sanguo
                 var c = fadeImg.color; c.a = Mathf.Lerp(fadeFrom, fadeTo, fadeEase != null ? fadeEase(p) : p); fadeImg.color = c;
                 if (p >= 1 && fadeDone != null && !fadeDoneCalled) { fadeDoneCalled = true; var d = fadeDone; fadeDone = null; d(); return; }
             }
+            // 「布阵中」：opacity .25 秒过渡到 .92，随黑幕一起显隐；转圈 .9 秒一周（顺时针）
+            waitA = Mathf.MoveTowards(waitA, waitOn ? 0.92f : 0, dt / 0.25f * 0.92f);
+            SetGroupAlpha(waitRt, waitA * fadeImg.color.a);
+            if (waitA > 0) spinRt.localEulerAngles = new Vector3(0, 0, spinRt.localEulerAngles.z - 360 * dt / 0.9f);
             // 进场：两侧滑入、印章弹出；跳过提示与动画按钮延迟 .5 秒淡入
             if (liveT >= 0) liveT += dt;
             float lt = Mathf.Max(0, liveT);
@@ -4635,4 +5593,34 @@ namespace Sanguo
             }
         }
     }
+#else
+    // 无头测试（Tests~/clash，CLASH_HEADLESS）：界面（HUD、特写）换成同名的空实现，场景代码不变
+    internal sealed class ClashHud
+    {
+        public static float BarNdc = 1;        // 测试设定：HUD 顶栏下沿的 NDC（网页版 hudLineNdc 的值）
+        public ClashHud(ClashScene sc) { }
+        public void FadeBlack(float sec) { }
+        public void Wait(bool on) { }
+        public void FadeIn(float sec) { }
+        public void FadeOut(float sec, Action done) { if (done != null) done(); }
+        public void Flash(Color c, float a) { }
+        public void Loss(int si, int amount) { }
+        public void Pop(Vector3 world, string text, bool big) { }
+        public void Stamp(string sub, string text, bool instant) { }
+        public void Final() { }
+        public float BarBottomNdc() { return BarNdc; }
+        public void Update(float dt, float popDt) { }
+        public void Layout() { }
+        public void Dispose() { }
+    }
+    internal sealed class CutInView
+    {
+        public bool Ended = true;
+        public Action onEnd;
+        public static int PortraitPx() { return 64; }
+        public static CutInView Open(General g, string moveName, Color color, int side, string cry, float speed) { return null; }
+        public void Skip() { }
+        public void End() { }
+    }
+#endif
 }
