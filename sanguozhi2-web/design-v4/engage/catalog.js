@@ -402,7 +402,7 @@ const MISSIONS = [
   { id: 'm_defend', name: '固守', goal: 'defense', params: { def: [50, 60, 70] }, dl: [6, 10, 14], weight: 'threat' },
   { id: 'm_conquer', name: '拓土', goal: 'conquer', params: { n: [1, 1, 2] }, dl: [6, 9, 12], military: true },
 ];
-const MISSION_REWARD = { goldK: [1.5, 2.5, 4], prestige: [10, 20, 35], exp: [20, 35, 50], item: [null, { uncommon: 0.25 }, { uncommon: 0.6, rare: 0.15 }], fame: [0, 0, 1] };
+const MISSION_REWARD = { goldK: [0.4, 0.8, 1.2], prestige: [10, 20, 35], exp: [20, 35, 50], item: [null, { uncommon: 0.25 }, { uncommon: 0.6, rare: 0.15 }], fame: [0, 0, 1] };
 
 // ------------------------------------------------------------------ 营建 --
 // cost 金；work 工作量（每月进度 = 10 + 监工政治 / 8）；req 前提；fx 效果（城）
@@ -476,14 +476,23 @@ const SITES = [
   { id: 'hercynia', name: '赫西尼亚森林', type: 'wild', near: 'marcomannia', culture: 'german' },
   { id: 'mekong', name: '扶南金洲', type: 'sea', near: 'oceo', culture: 'seasia' },
   { id: 'atlas', name: '阿特拉斯山', type: 'mountain', near: 'baquates', culture: 'moor', myth: true },
+  // 经典剧本可达的另外 8 处（中原）
+  { id: 'huashan', name: '华山', type: 'mountain', near: 'changan', culture: 'han' },
+  { id: 'lushan', name: '庐山', type: 'mountain', near: 'yuzhang', culture: 'han' },
+  { id: 'jiuyi', name: '九嶷山舜陵', type: 'holy', near: 'lingling', culture: 'han', myth: true },
+  { id: 'qingcheng', name: '青城山', type: 'holy', near: 'chengdu', culture: 'han' },
+  { id: 'baima', name: '白马寺', type: 'holy', near: 'luoyang', culture: 'han' },
+  { id: 'qilian', name: '祁连山', type: 'mine', near: 'wuwei', culture: 'han' },
+  { id: 'qufu', name: '曲阜孔林', type: 'holy', near: 'xiaopei', culture: 'han' },
+  { id: 'zhandao', name: '秦岭栈道', type: 'wild', near: 'hanzhong', culture: 'han' },
 ];
 const SITE_TYPES = {
-  mountain: { gold: [80, 200], item: { common: 0.25, uncommon: 0.12, rare: 0.03 }, pool: ['medicine', 'amulet', 'music'], exp: 'intel', prestige: 5, mishap: 0.10 },
-  ruin: { gold: [120, 300], item: { common: 0.30, uncommon: 0.15, rare: 0.04 }, pool: ['relic', 'milbook', 'civbook', 'seal', 'weapon'], exp: 'intel', prestige: 8, mishap: 0.08, clue: 0.08 },
-  wild: { gold: [60, 160], item: { common: 0.30, uncommon: 0.14, rare: 0.035 }, pool: ['mount', 'jewel', 'medicine'], exp: 'war', prestige: 4, mishap: 0.15 },
-  sea: { gold: [150, 400], item: { common: 0.30, uncommon: 0.15, rare: 0.04 }, pool: ['jewel', 'relic'], exp: 'war', prestige: 6, mishap: 0.14 },
-  holy: { gold: [40, 120], item: { common: 0.20, uncommon: 0.12, rare: 0.03 }, pool: ['relic', 'amulet', 'civbook'], exp: 'pol', prestige: 15, mishap: 0.04, virtue: 1 },
-  mine: { gold: [200, 450], item: { common: 0.25, uncommon: 0.10, rare: 0.025 }, pool: ['weapon', 'armour', 'jewel'], exp: 'war', prestige: 3, mishap: 0.12 },
+  mountain: { gold: [40, 100], item: { common: 0.25, uncommon: 0.12, rare: 0.03 }, pool: ['medicine', 'amulet', 'music'], exp: 'intel', prestige: 5, mishap: 0.10 },
+  ruin: { gold: [60, 150], item: { common: 0.30, uncommon: 0.15, rare: 0.04 }, pool: ['relic', 'milbook', 'civbook', 'seal', 'weapon'], exp: 'intel', prestige: 8, mishap: 0.08, clue: 0.08 },
+  wild: { gold: [30, 80], item: { common: 0.30, uncommon: 0.14, rare: 0.035 }, pool: ['mount', 'jewel', 'medicine'], exp: 'war', prestige: 4, mishap: 0.15 },
+  sea: { gold: [80, 200], item: { common: 0.30, uncommon: 0.15, rare: 0.04 }, pool: ['jewel', 'relic'], exp: 'war', prestige: 6, mishap: 0.14 },
+  holy: { gold: [20, 60], item: { common: 0.20, uncommon: 0.12, rare: 0.03 }, pool: ['relic', 'amulet', 'civbook'], exp: 'pol', prestige: 15, mishap: 0.04, virtue: 1 },
+  mine: { gold: [100, 220], item: { common: 0.25, uncommon: 0.10, rare: 0.025 }, pool: ['weapon', 'armour', 'jewel'], exp: 'war', prestige: 3, mishap: 0.12 },
 };
 
 // ------------------------------------------------------------------ 节庆 --
@@ -504,8 +513,8 @@ const FESTIVALS = {
 };
 // 庆典三档：盛大 / 从简 / 免（花费按势力城数；「以后照此办理」可设为自动）
 const FESTIVAL_RULE = {
-  grand: { cost: { base: 30, perCity: 15, cap: 400 }, order: 6, capitalLoyalty: 3, prestige: 8, miniGame: 'touhu' },
-  modest: { costK: 1 / 3, order: 2, prestige: 2 },
+  grand: { cost: { base: 30, perCity: 15, cap: 400 }, order: 6, capitalLoyalty: 3, prestige: 10, miniGame: 'touhu' },
+  modest: { costK: 1 / 3, order: 2, prestige: 3 },
   skip: { order: 0, prestige: 0 },
 };
 
@@ -583,7 +592,7 @@ const BONDS = [
   ['张郃', '高览', 'friend', 60], ['典韦', '许褚', 'friend', 40], ['黄盖', '程普', 'friend', 60], ['程普', '周瑜', 'feud', -40, 'jiangbiaozhuan-chengpu'],
   ['甘宁', '凌统', 'feud', -70], ['关羽', '黄忠', 'rival', -10], ['张飞', '吕布', 'rival', -40], ['马超', '张飞', 'rival', 0], ['马超', '许褚', 'rival', 0],
   ['孙策', '太史慈', 'rival', 20], ['吕布', '董卓', 'feud', -20], ['张辽', '高顺', 'friend', 50],
-  ['司马懿', '曹操', 'feud', -10], ['卑弥呼', '卑弥弓呼', 'feud', -60],
+  ['卑弥呼', '卑弥弓呼', 'feud', -60],
 ];
 
 // 初始邦交（势力键对；未列出者 0）

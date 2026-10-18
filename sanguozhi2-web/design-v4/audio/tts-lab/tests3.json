@@ -1,0 +1,22 @@
+[
+ {"id":"sa_via_ur_fasih","lang":"sa","engine":"piper","model":"vits-piper-ur_PK-fasih-medium","phon":"hi","text":"यथाज्ञापयति देवः।"},
+ {"id":"pra_via_ur_fasih","lang":"sa","engine":"piper","model":"vits-piper-ur_PK-fasih-medium","phon":"hi","text":"जं देवो आणवेदि।"},
+ {"id":"xpr_via_fa_amir","lang":"xpr","engine":"piper","model":"vits-piper-fa_IR-amir-medium","text":"[[ ʃˈɑːhɑːn ʃˈɑːh! pˈeːroːz! ]]"},
+ {"id":"xbc_via_fa_reza","lang":"xbc","engine":"piper","model":"vits-piper-fa_IR-reza_ibrahim-medium","text":"[[ ʃaːˈonaːnoʃaːo! ]]"},
+ {"id":"grc_via_it_ricc","lang":"grc","engine":"piper","model":"vits-piper-it_IT-riccardo-x_low","phon":"grc","text":"Ἀλαλαί! Ὁρμᾶτε, ὦ ἄνδρες!"},
+ {"id":"grc_via_el_nai","lang":"grc","engine":"piper","model":"vits-piper-el_GR-rapunzelina-low","phon":"grc","text":"Ναί, δέσποτα."},
+ {"id":"si_via_ml_arjun","lang":"si","engine":"piper","model":"vits-piper-ml_IN-arjun-medium","phon":"si","text":"ජය වේවා!"},
+ {"id":"got_emo_angry","lang":"got","engine":"piper","model":"vits-piper-de_DE-thorsten_emotional-medium","sid":1,"phon":"is","text":"Hails, þiudan! Gaggam!"},
+ {"id":"syc_via_ar","lang":"syc","engine":"piper","model":"vits-piper-ar_JO-kareem-medium","text":"[[ ʔezˈal lqraːˈβaː! ]]"},
+ {"id":"gez_via_ar_moa","lang":"gez","engine":"piper","model":"vits-piper-ar_JO-kareem-medium","phon":"am","text":"ሞዐ ንጉሥ!"},
+ {"id":"xmr_via_sw","lang":"xmr","engine":"piper","model":"vits-piper-sw_CD-lanfrica-medium","text":"Kore! Amani!"},
+ {"id":"os_via_kk","lang":"os","engine":"piper","model":"vits-piper-kk_KZ-issai-high","text":"[[ rɐzˈmɐ! wɐlɐχˈiz! ]]"},
+ {"id":"ga_via_cybu","lang":"ga","engine":"piper","model":"vits-piper-cy_GB-bu_tts-medium","sid":4,"phon":"ga","text":"Ar aghaidh! Abú!"},
+ {"id":"cy_bu_f","lang":"cy","engine":"piper","model":"vits-piper-cy_GB-bu_tts-medium","sid":0,"text":"Ymlaen! I'r gad!"},
+ {"id":"zh_kokoro_xiaoyi","lang":"zh","engine":"sherpa","model":"kokoro-multi-lang-v1_0","sid":48,"text":"全军突击，冲啊！"},
+ {"id":"zh_kokoro_xiaoyi_long","lang":"zh","engine":"sherpa","model":"kokoro-multi-lang-v1_0","sid":48,"text":"主公，今年秋收丰盛，可以出兵了。"},
+ {"id":"zh_kokoro_yunjian_long","lang":"zh","engine":"sherpa","model":"kokoro-multi-lang-v1_0","sid":49,"text":"主公，今年秋收丰盛，可以出兵了。"},
+ {"id":"ko_kss_long","lang":"ko","engine":"sherpa","model":"vits-mimic3-ko_KO-kss_low","text":"전군, 돌격하라! 적을 물리쳐라!"},
+ {"id":"vi_vais_long","lang":"vi","engine":"piper","model":"vits-piper-vi_VN-vais1000-medium","text":"Toàn quân, xung phong! Đánh tan quân giặc!"},
+ {"id":"ka_natia_long","lang":"ka","engine":"piper","model":"vits-piper-ka_GE-natia-medium","text":"დიახ, ბატონო! გაუმარჯოს!"}
+]

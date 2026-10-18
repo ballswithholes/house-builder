@@ -1,0 +1,66 @@
+{
+ "aerial": {
+  "errors": [],
+  "calls": 126,
+  "drawnTris": 145274,
+  "static": 19192,
+  "crowd": 71025
+ },
+ "duel-roman": {
+  "errors": [],
+  "duelCam": {
+   "dist": 7.73,
+   "hc": 1.9,
+   "pitchDeg": 6.76
+  },
+  "calls": 66,
+  "drawnTris": 68513,
+  "static": 19192,
+  "crowd": 71025
+ },
+ "duel-hua": {
+  "errors": [],
+  "duelCam": {
+   "dist": 7.73,
+   "hc": 1.9,
+   "pitchDeg": 6.76
+  },
+  "calls": 67,
+  "drawnTris": 67022,
+  "static": 19192,
+  "crowd": 71025
+ },
+ "duel-indic-phone": {
+  "errors": [],
+  "duelCam": {
+   "dist": 6.35,
+   "hc": 1.84,
+   "pitchDeg": 9.09
+  },
+  "calls": 68,
+  "drawnTris": 55729,
+  "static": 19192,
+  "crowd": 31125
+ },
+ "walkon": {
+  "errors": [],
+  "calls": 79,
+  "drawnTris": 74196,
+  "static": 19192,
+  "crowd": 71025
+ },
+ "night": {
+  "errors": [],
+  "calls": 103,
+  "drawnTris": 120559,
+  "static": 19192,
+  "crowd": 71025
+ },
+ "ceremony": {
+  "errors": [],
+  "calls": 99,
+  "drawnTris": 102934,
+  "static": 19192,
+  "crowd": 71025
+ }
+}

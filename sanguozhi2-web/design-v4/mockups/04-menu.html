@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>UI-V4 · 04 菜单（记录 / 读取）</title>
+<link rel="stylesheet" href="kit.css">
+<style>
+  .win { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(980px, 94vw); height: min(600px, 92vh); display: flex; flex-direction: column; padding: 6px; }
+  .win .v4-modal-head .v4-h2 { color: var(--gold-hi); }
+  .win .cols { flex: 1; min-height: 0; display: flex; gap: 8px; }
+  .nav { width: 230px; flex: none; display: flex; flex-direction: column; gap: 4px; padding: 2px 6px 6px 8px; overflow: hidden; }
+  .nav .gh { font-family: var(--f-display); font-size: .82rem; color: #b7a690; letter-spacing: .3em; margin: 8px 0 2px 4px; }
+  .nav .it { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 10px; border-radius: 8px; font-family: var(--f-display); font-size: 1.12rem; letter-spacing: .1em; color: #e9dcc4; cursor: pointer; }
+  .nav .it svg { width: 30px; height: 30px; }
+  .nav .it small { margin-left: auto; font: .72rem var(--f-num); color: #b7a690; letter-spacing: 0; }
+  .nav .it.on { color: var(--ink); background: var(--paper) var(--tx-paper); background-size: 256px; box-shadow: 0 2px 0 var(--ink), inset 0 0 0 1px var(--paper-edge); margin-right: -14px; border-radius: 8px 0 0 8px; }
+  .nav .it.hov { background: rgba(255, 210, 140, .12); box-shadow: inset 0 0 0 1px rgba(232, 181, 74, .5); }
+  .page { flex: 1; min-width: 0; padding: 14px 16px; overflow: hidden; display: flex; flex-direction: column; gap: 10px; }
+  .page .ph { display: flex; align-items: center; gap: 10px; }
+  .page .ph .v4-h2 { flex: 1; }
+  .slots { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .slot { position: relative; display: flex; gap: 10px; padding: 8px; border-radius: 8px; background: rgba(255, 255, 255, .35); box-shadow: inset 0 0 0 1.5px var(--paper-edge); }
+  .slot.sel { background: rgba(255, 236, 190, .75); box-shadow: inset 0 0 0 2px var(--gold-lo), 0 0 14px rgba(255, 200, 120, .45); }
+  .slot canvas { width: 150px; height: 86px; border: 2px solid var(--ink); border-radius: 4px; flex: none; }
+  .slot .meta { min-width: 0; display: flex; flex-direction: column; gap: 3px; font-size: .82rem; color: var(--ink-2); }
+  .slot .meta .t { display: flex; align-items: center; gap: 6px; font-family: var(--f-display); font-size: 1.1rem; color: var(--ink); }
+  .slot .meta .t .v4-face { --s: 26px !important; }
+  .slot .num { font-size: .82rem; }
+  .slot .no { position: absolute; top: -8px; left: -6px; font-family: var(--f-display); font-size: .8rem; color: #fff3e2; background: var(--zhu); border: 1.5px solid var(--ink); border-radius: 4px; padding: 0 5px; }
+  .slot .no.auto { background: var(--patina); }
+  .slot.empty { align-items: center; justify-content: center; min-height: 102px; color: var(--ink-3); font-family: var(--f-display); font-size: 1.05rem; border: 2px dashed rgba(36, 26, 33, .25); background: transparent; box-shadow: none; }
+  .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: auto; }
+  .foot { display: flex; justify-content: space-between; padding: 4px 14px 2px; font-size: .78rem; color: #b7a690; }
+  html.is-phone .win { width: 100vw; height: 100vh; border-radius: 0; top: 50%; }
+  html.is-phone .nav { width: 168px; padding: 0 2px 4px 4px; gap: 1px; }
+  html.is-phone .nav .gh, html.is-phone .nav .v4-small { display: none; }
+  html.is-phone .nav .it { min-height: 40px; font-size: .98rem; padding: 2px 8px; }
+  html.is-phone .nav .it svg { width: 24px; height: 24px; }
+  html.is-phone .v4-modal-head { padding: 4px 8px 2px 12px; }
+  html.is-phone .page { padding: 8px 10px; gap: 6px; }
+  html.is-phone .slots { grid-template-columns: 1fr; gap: 8px; overflow: hidden; }
+  html.is-phone .slot canvas { width: 108px; height: 62px; }
+  html.is-phone .slot .meta { font-size: .74rem; }
+  html.is-phone .foot { display: none; }
+  html.is-phone .page .ph .v4-small { display: none; }
+</style>
+</head>
+<body>
+<div class="v4-stage">
+  <canvas class="v4-mapbg" id="map"></canvas>
+  <div class="v4-scrim"></div>
+  <div class="win v4-lacquer" id="win">
+    <div class="v4-modal-head"><span class="v4-seal" style="font-size:1.3rem">菜</span><div class="v4-h2">菜　单</div><span class="v4-caption" style="color:#b7a690">Esc 返回游戏</span><button class="v4-close" id="close"></button></div>
+    <div class="cols">
+      <div class="nav" id="nav"></div>
+      <div class="page v4-paper" id="page"></div>
+    </div>
+    <div class="foot"><span>董卓专横 · 刘备军 · 192年3月 · 已游玩 6 小时 12 分</span><span>第四版 · 存档版本 4</span></div>
+  </div>
+  <div id="notes"></div>
+</div>
+<script src="../../js/core.js"></script>
+<script src="../../js/portrait-data.js"></script>
+<script src="../../js/portrait.js"></script>
+<script src="kit.js"></script>
+<script>
+K.ready(() => {
+  const phone = document.documentElement.classList.contains('is-phone');
+  K.map(K.$('#map'), { seed: 7, cities: [{ x: 640, y: 360, color: '#2f9a55', lit: true }, { x: 380, y: 330, color: '#2a6fd1' }, { x: 900, y: 330, color: '#c46a2a' }] });
+  K.$('#close').innerHTML = K.icon('x');
+  const nav = [
+    ['游戏'], ['play', '继续', ''], ['save', '记录', 'on'], ['load', '读取', ''], ['history', '卷宗', 'hov', '新'], ['settings', '设置', ''], ['help', '操作说明', ''],
+    [''], ['gate', '返回标题', ''],
+  ];
+  K.$('#nav').innerHTML = nav.map(n => n.length === 1 ? (n[0] ? `<div class="gh">${n[0]}</div>` : '<div style="flex:1"></div>') : `<div class="it ${n[2]}">${K.icon(n[0])}${n[1]}${n[3] ? `<small class="v4-badge" style="position:static;margin-left:auto">${n[3]}</small>` : ''}</div>`).join('');
+  K.$('#nav').insertAdjacentHTML('beforeend', `<div class="v4-small" style="color:#b7a690;padding:4px 6px 0;line-height:1.5">卷宗：图鉴 · 功业录 · 天下榜 · 大事记 · 国策 · 营建总览 · 商队探索 · 外交</div>`);
+  const G = K.GENS;
+  const slot = (no, auto, sel, face, fac, scen, date, stats, when) => `<div class="slot ${sel ? 'sel' : ''}"><span class="no ${auto ? 'auto' : ''}">${no}</span><canvas data-seed="${no.length * 7 + date.length}"></canvas><div class="meta"><div class="t">${K.face(face, 26, 'r2')}${fac}</div><div>${scen} · <b class="num">${date}</b></div><div class="num">${stats}</div><div class="muted">${when}</div></div></div>`;
+  K.$('#page').innerHTML = `<div class="ph"><div class="v4-h2">记录进度</div><span class="v4-small muted">每月初自动记录一份；手动记录三份</span></div>
+    <div class="slots">
+      ${slot('自动', true, false, G.liubei, '刘备军', '董卓专横', '192年3月', '城 5 · 将 21 · 金 3,240', '月初自动 · 今天 21:02')}
+      ${slot('一', false, true, G.liubei, '刘备军', '董卓专横', '192年2月', '城 4 · 将 19 · 金 2,880', '今天 20:41 · 6 小时 03 分')}
+      ${slot('二', false, false, G.caocao, '曹操军', '董卓专横', '197年11月', '城 14 · 将 46 · 金 9,120', '10月12日 · 18 小时 40 分')}
+      ${phone ? '' : '<div class="slot empty">空 · 第三份</div>'}
+    </div>
+    <div class="actions"><button class="v4-btn ghost">删除</button><button class="v4-btn seal">记录于「一」</button></div>`;
+  document.querySelectorAll('.slot canvas').forEach((c, i) => K.map(c, { seed: 30 + i * 11, cities: [{ x: 640, y: 360, color: ['#2f9a55', '#2f9a55', '#2b4b9a'][i] || '#2f9a55', lit: true, size: 2 }] }));
+  if (!phone && !/nonotes/.test(location.search)) K.$('#notes').innerHTML = K.note(1, '2%', '20%', '左栏：书签式导航，当前项与纸页相连') + K.note(2, '72%', '87%', '存档卡：地图缩略 + 君主立绘 + 年月 + 规模 + 时间') + K.note(3, '50%', '7%', '菜单从顶栏「菜单」铜钮展开（卷轴下垂 380ms）');
+  document.body.dataset.ready = '1';
+});
+</script>
+</body>
+</html>

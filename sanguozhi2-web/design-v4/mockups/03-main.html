@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>UI-V4 · 03 主界面（战略画面）</title>
+<link rel="stylesheet" href="kit.css">
+<style>
+  /* ---------------- 顶梁（UI-V4 §5.2） ---------------- */
+  .top { position: absolute; left: 8px; right: 8px; top: 6px; height: 58px; display: flex; align-items: center; gap: 14px; padding: 0 12px 0 92px; border-radius: 10px; }
+  .top::after { /* 梁下彩画带：青绿底 + 金点 */ content: ""; position: absolute; left: 14px; right: 14px; bottom: -6px; height: 7px; border: 2px solid var(--ink); border-top: 0; border-radius: 0 0 6px 6px;
+    background: radial-gradient(circle, var(--gold-hi) 1.4px, transparent 1.8px) 0 1px / 16px 6px, linear-gradient(180deg, #4e8c86, #3a6e6a); }
+  .medal { position: absolute; left: 6px; top: -2px; width: 78px; height: 78px; z-index: 3; }
+  .medal .v4-face { --s: 72px; position: absolute; left: 3px; top: 3px; }
+  .medal .pres { position: absolute; right: -8px; bottom: -6px; display: flex; align-items: center; gap: 2px; padding: 1px 6px 1px 1px; border-radius: 14px; background: var(--paper); border: 2px solid var(--ink); color: var(--ink); font: 700 .78rem/1 var(--f-num); box-shadow: var(--sh-1); }
+  .medal .pres svg { width: 22px; height: 22px; }
+  .plaque-wrap { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+  .plaque-wrap .v4-plaque { font-size: 1.28rem; padding: .08em .6em .12em; }
+  .plaque-wrap .sub { font-size: .72rem; color: #cdbb9f; letter-spacing: .1em; padding-left: 4px; white-space: nowrap; }
+  .flag { width: 12px; height: 16px; background: var(--fc); clip-path: polygon(0 0, 100% 0, 75% 50%, 100% 100%, 0 100%); border-left: 2px solid #f2c45c; }
+  .center { flex: 1; display: flex; align-items: center; justify-content: center; gap: 16px; min-width: 0; }
+  .cal { position: relative; display: flex; align-items: center; gap: 8px; padding: 3px 10px 3px 6px; border-radius: 6px; background: var(--paper) var(--tx-paper); background-size: 256px; border: 2px solid var(--ink); color: var(--ink); box-shadow: 0 3px 0 var(--ink); transform: rotate(-1deg); }
+  .cal .yr { font: 600 .74rem/1 var(--f-num); color: var(--ink-3); }
+  .cal .mo { font-family: var(--f-display); font-size: 1.35rem; line-height: 1; color: var(--zhu-lo); }
+  .cal svg { width: 26px; height: 26px; }
+  .cal .next { display: flex; align-items: center; gap: 3px; font-size: .72rem; color: var(--ink-2); padding-left: 6px; border-left: 1px dashed var(--paper-shade); }
+  .cal .next svg { width: 22px; height: 22px; }
+  .quiver { position: relative; display: flex; align-items: center; gap: 6px; }
+  .quiver svg { width: 40px; height: 44px; }
+  .quiver .n { font: 700 1.05rem/1 var(--f-num); color: var(--gold-hi); }
+  .quiver .n small { font-size: .72rem; color: #b7a690; }
+  .res-row { display: flex; gap: 14px; align-items: center; position: relative; }
+  .missions { display: flex; gap: 3px; align-items: center; padding-left: 4px; }
+  .missions i { width: 8px; height: 22px; border-radius: 2px; border: 1.5px solid var(--ink); background: var(--ochre); }
+  .missions i.off { background: transparent; border-color: #8d7d6a; }
+  .missions span { font-family: var(--f-display); font-size: .78rem; color: #cdbb9f; margin-left: 4px; }
+  .actions { display: flex; gap: 8px; align-items: center; }
+  .actions .sep { width: 2px; height: 34px; background: linear-gradient(180deg, transparent, rgba(232, 181, 74, .45), transparent); margin: 0 2px; }
+  .v4-lantern { top: 62px; }
+  .v4-lantern svg { width: 22px; height: 46px; }
+  /* ---------------- 城名签（§5.6） ---------------- */
+  .clabel { position: absolute; transform: translate(-50%, -100%); display: flex; align-items: center; gap: 5px; padding: 2px 8px 3px 5px; white-space: nowrap;
+    font-family: var(--f-display); font-size: 1.02rem; color: var(--ink); background: var(--paper) var(--tx-paper); background-size: 256px; border: 2px solid var(--ink); border-radius: 4px; box-shadow: 0 2px 0 var(--ink); }
+  .clabel::after { content: ""; position: absolute; left: 50%; top: 100%; width: 2px; height: 10px; background: var(--ink); }
+  .clabel i { width: 9px; height: 12px; background: var(--fc); clip-path: polygon(0 0, 100% 0, 70% 50%, 100% 100%, 0 100%); }
+  .clabel small { font: 600 .72rem/1 var(--f-num); color: var(--ink-3); }
+  .clabel.mine small { color: var(--pol-lo); }
+  .clabel.sel { background: linear-gradient(180deg, var(--dai-hi), var(--dai)); color: #f2c45c; box-shadow: 0 2px 0 var(--ink), 0 0 0 3px rgba(255, 210, 140, .35), 0 0 22px rgba(255, 196, 110, .7); }
+  .clabel.sel small { color: #cfe0ff; }
+  .ring { position: absolute; transform: translate(-50%, -50%); width: 150px; height: 64px; border-radius: 50%; border: 3px solid rgba(255, 220, 150, .9); box-shadow: 0 0 18px rgba(255, 200, 120, .7), inset 0 0 18px rgba(255, 200, 120, .45); }
+  /* ---------------- 案头（§5.5） ---------------- */
+  .agenda { position: absolute; left: 10px; top: 96px; display: flex; flex-direction: column; gap: 8px; width: 238px; }
+  .slip { position: relative; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 5px 10px 5px 6px; color: var(--ink); background: var(--paper) var(--tx-paper); background-size: 256px; border: 2px solid var(--ink); border-left-width: 6px; border-radius: 3px 10px 10px 3px; box-shadow: var(--sh-2); font-size: .84rem; line-height: 1.25; cursor: pointer; }
+  .slip svg { width: 32px; height: 32px; flex: none; }
+  .slip b { font-family: var(--f-display); font-size: 1rem; display: block; }
+  .slip.hot { border-left-color: var(--zhu); }
+  .slip.jade { border-left-color: var(--jade); }
+  .slip.plum { border-left-color: var(--plum); }
+  .slip .go { margin-left: auto; font-family: var(--f-display); color: var(--zhu); font-size: .9rem; white-space: nowrap; }
+  .slip .face-s { display: flex; }
+  .slip .face-s .v4-face { --s: 26px; margin-left: -6px; box-shadow: 0 0 0 2px var(--ink); }
+  /* ---------------- 城池面板（§5.4） ---------------- */
+  .city { position: absolute; right: 10px; top: 78px; bottom: 10px; width: 376px; display: flex; flex-direction: column; padding: 6px; }
+  .city .head { display: flex; align-items: center; gap: 8px; padding: 4px 6px 8px 8px; }
+  .city .cname { white-space: nowrap; font-family: var(--f-display); font-size: 1.85rem; line-height: 1; letter-spacing: .12em; }
+  .city .own { white-space: nowrap; display: flex; flex-direction: column; gap: 3px; font-size: .76rem; color: #cdbb9f; }
+  .city .own b { color: var(--paper); font-weight: 500; }
+  .city .lvl { white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; font-family: var(--f-display); font-size: .78rem; color: var(--gold-hi); }
+  .city .head .sp { flex: 1; }
+  .city .enter { white-space: nowrap; min-height: 40px; padding: 0 .7rem; font-size: .95rem; }
+  .city .enter svg { width: 22px; height: 22px; }
+  .city .v4-close { width: 40px; height: 40px; }
+  .city .body { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 8px 10px 6px; border-radius: 4px; }
+  .dev { display: grid; grid-template-columns: auto auto 1fr; gap: 1px 8px; align-items: center; font-size: .82rem; }
+  .dev .k { font-family: var(--f-display); font-size: .92rem; color: var(--ink-2); }
+  .dev .v { font: 600 .82rem/1 var(--f-num); text-align: right; color: var(--ink); }
+  .dev .v small { color: var(--ink-3); font-weight: 400; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 7px 0 4px; font-size: .84rem; color: var(--ink-2); }
+  .chips span { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+  .chips svg { width: 20px; height: 20px; }
+  .chips b { font: 600 .9rem/1 var(--f-num); color: var(--ink); }
+  .gh { display: flex; align-items: center; gap: 6px; margin: 6px 0 4px; font-family: var(--f-display); font-size: 1rem; color: var(--ink-2); }
+  .gh .v4-brushline { flex: 1; height: 6px; }
+  .glist { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 4px; }
+  .grow { position: relative; display: flex; align-items: center; gap: 8px; min-height: 46px; padding: 3px 6px; border-radius: 6px; background: rgba(255, 255, 255, .28); box-shadow: inset 0 0 0 1px rgba(195, 165, 116, .6); }
+  .grow.hov { background: rgba(255, 236, 190, .7); box-shadow: inset 0 0 0 1.5px var(--gold-lo), 0 0 12px rgba(255, 200, 120, .45); }
+  .grow .nm { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .grow .nm b { font-family: var(--f-display); font-size: 1.08rem; font-weight: 400; line-height: 1.05; display: flex; align-items: center; gap: 4px; }
+  .grow .nm .off { font-size: .7rem; letter-spacing: .04em; }
+  .tag { display: inline-grid; place-items: center; width: 18px; height: 18px; font-family: var(--f-display); font-size: .74rem; color: #fff3e2; background: var(--zhu); border-radius: 3px; }
+  .tag.gov { background: var(--patina); }
+  .lv { display: inline-grid; place-items: center; min-width: 20px; height: 18px; padding: 0 3px; font: 700 .7rem/1 var(--f-num); color: var(--ink); background: var(--gold-hi); border: 1.5px solid var(--ink); border-radius: 9px; }
+  .grow .st { margin-left: auto; display: grid; grid-template-columns: repeat(3, 26px); gap: 1px 3px; text-align: center; font: 600 .78rem/1.1 var(--f-num); }
+  .grow .st i { font-style: normal; font-family: var(--f-display); font-size: .66rem; font-weight: 400; }
+  .grow .tr { width: 52px; text-align: right; font: 600 .8rem/1.15 var(--f-num); color: var(--ink-2); }
+  .grow .tr small { display: block; font-weight: 400; font-size: .66rem; color: var(--ink-3); }
+  .stamp { position: absolute; left: 2px; top: 50%; transform: translateY(-50%) rotate(-14deg); background: rgba(243,231,204,.85); font-family: var(--f-display); font-size: .78rem; color: rgba(140, 40, 25, .75); border: 2px solid rgba(140, 40, 25, .6); border-radius: 4px; padding: 0 4px; letter-spacing: .1em; }
+  .newb { font-family: var(--f-display); font-size: .7rem; color: #fff3e2; background: var(--jade); border: 1.5px solid var(--ink); border-radius: 4px; padding: 0 3px; }
+  .dock { display: grid; grid-template-columns: 24px repeat(4, 1fr); gap: 6px 6px; padding: 10px 6px 4px 4px; }
+  .dock .grp { display: grid; place-items: center; font-family: var(--f-display); font-size: .82rem; color: #fff3e2; border-radius: 4px; border: 1.5px solid var(--ink); writing-mode: vertical-rl; letter-spacing: .1em; }
+  .dock .v4-tile { aspect-ratio: auto; height: 56px; padding: 6px 0 5px; font-size: .9rem; border-radius: 12px; }
+  .dock .v4-tile svg { width: 32px; height: 32px; }
+  /* ---------------- 结束本月（§5.7） ---------------- */
+  .endm { position: absolute; right: 402px; bottom: 16px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .endm .disc { width: 84px; height: 84px; border-radius: 50%; border: 2px solid var(--ink); display: grid; place-items: center; cursor: pointer;
+    background: radial-gradient(circle at 35% 30%, var(--zhu-hi), var(--zhu) 55%, var(--zhu-lo)); box-shadow: inset 0 0 0 3px var(--zhu), inset 0 0 0 4.5px rgba(255, 228, 200, .6), 0 4px 0 var(--ink), 0 10px 18px rgba(80, 20, 8, .45); }
+  .endm .disc svg { width: 54px; height: 54px; }
+  .endm .rib { font-family: var(--f-display); font-size: 1rem; letter-spacing: .14em; color: var(--ink); padding: 2px 12px; background: var(--paper) var(--tx-paper); background-size: 256px; border: 2px solid var(--ink); border-radius: 3px; box-shadow: 0 2px 0 var(--ink); white-space: nowrap; }
+  .endm .rib small { font: 600 .72rem var(--f-num); color: var(--ink-3); margin-left: 4px; letter-spacing: 0; }
+  /* ---------------- 提示条 ---------------- */
+  .toasts { position: absolute; left: 50%; top: 96px; transform: translateX(-62%); display: flex; flex-direction: column; gap: 6px; align-items: center; }
+  .fly { position: absolute; width: 34px; height: 34px; }
+  /* ---------------- 夜晚 ---------------- */
+  html.night .v4-lantern .glow { --night: 1; }
+  html.night .city .body { box-shadow: inset 0 0 0 1px rgba(195, 165, 116, .55), inset 0 0 60px rgba(255, 190, 110, .45); }
+  /* ---------------- 换月 ---------------- */
+  .monthfx { position: absolute; inset: 0; display: none; place-items: center; z-index: 50; background: radial-gradient(70% 60% at 50% 50%, rgba(243, 231, 204, .92), rgba(243, 231, 204, .55) 60%, rgba(243, 231, 204, 0) 100%); }
+  html.month .monthfx { display: grid; }
+  .monthfx .mbig { font-family: var(--f-display); font-size: 8rem; color: var(--ink); letter-spacing: .1em; filter: url(#brush-ink); line-height: 1; }
+  .monthfx .msub { font-family: var(--f-display); font-size: 1.3rem; color: var(--ink-2); letter-spacing: .3em; text-align: center; margin-top: 10px; }
+  .petal { position: absolute; width: 14px; height: 10px; border-radius: 60% 0 60% 0; background: #f2b8c6; border: 1px solid #b06a7a; }
+  /* ---------------- 手机横屏 844×390（§5.9） ---------------- */
+  html.is-phone .top { left: 4px; right: 4px; top: 3px; height: 44px; gap: 8px; padding: 0 6px 0 54px; }
+  html.is-phone .top::after { bottom: -5px; height: 5px; left: 10px; right: 10px; }
+  html.is-phone .medal { left: 2px; top: -1px; width: 52px; height: 52px; }
+  html.is-phone .medal .v4-face { --s: 46px; }
+  html.is-phone .medal .pres { right: -6px; bottom: -4px; font-size: .7rem; padding-right: 4px; }
+  html.is-phone .medal .pres svg { width: 16px; height: 16px; }
+  html.is-phone .plaque-wrap .v4-plaque { font-size: 1rem; }
+  html.is-phone .plaque-wrap .sub, html.is-phone .missions, html.is-phone .cal .next span, html.is-phone .cal .yr, html.is-phone .actions .sep { display: none; }
+  html.is-phone .center { gap: 8px; justify-content: flex-start; }
+  html.is-phone .cal { padding: 2px 6px; }
+  html.is-phone .cal .mo { font-size: 1.1rem; }
+  html.is-phone .cal svg { width: 20px; height: 20px; }
+  html.is-phone .quiver svg { width: 30px; height: 34px; }
+  html.is-phone .res-row { gap: 8px; }
+  html.is-phone .v4-res { font-size: .98rem; }
+  html.is-phone .v4-res svg { width: 1.35em; height: 1.35em; }
+  html.is-phone .actions { gap: 4px; }
+  html.is-phone .v4-lantern { display: none; }
+  html.is-phone .agenda { top: 58px; left: 4px; width: 44px; gap: 6px; }
+  html.is-phone .agenda .slip { padding: 4px; justify-content: center; border-left-width: 4px; }
+  html.is-phone .agenda .slip > div, html.is-phone .agenda .slip .go { display: none; }
+  html.is-phone .agenda .slip svg { width: 28px; height: 28px; }
+  html.is-phone .city { top: 54px; right: 4px; bottom: 4px; width: 476px; flex-direction: row; flex-wrap: wrap; padding: 4px; }
+  html.is-phone .city .head { width: 100%; padding: 0 4px 4px 6px; }
+  html.is-phone .city .cname { font-size: 1.45rem; }
+  html.is-phone .city .body { width: 214px; flex: none; padding: 5px 6px; }
+  html.is-phone .dev { font-size: .74rem; gap: 2px 6px; }
+  html.is-phone .chips { font-size: .74rem; gap: 2px 6px; margin: 4px 0 2px; }
+  html.is-phone .chips svg { width: 16px; height: 16px; }
+  html.is-phone .grow { min-height: 44px; gap: 5px; padding: 2px 4px; }
+  html.is-phone .grow .st { display: none; }
+  html.is-phone .grow .v4-face { --s: 34px !important; }
+  html.is-phone .gh { margin: 3px 0 2px; font-size: .86rem; }
+  html.is-phone .dock { flex: 1; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 0 2px 0 6px; align-content: start; }
+  html.is-phone .dock .grp { display: none; }
+  html.is-phone .dock .v4-tile { height: 56px; font-size: .78rem; border-radius: 10px; }
+  html.is-phone .dock .v4-tile svg { width: 26px; height: 26px; }
+  html.is-phone .dock .v4-tile .pip { top: 4px; right: 4px; width: 6px; height: 6px; }
+  html.is-phone .endm { right: auto; left: 8px; bottom: 8px; }
+  html.is-phone .endm .disc { width: 62px; height: 62px; }
+  html.is-phone .endm .disc svg { width: 40px; height: 40px; }
+  html.is-phone .endm .rib { font-size: .82rem; padding: 1px 8px; }
+  html.is-phone .toasts { top: auto; bottom: 10px; left: 190px; transform: none; align-items: flex-start; }
+  html.is-phone .city .enter span { display: none; }
+</style>
+</head>
+<body>
+<div class="v4-stage">
+  <canvas class="v4-mapbg" id="map"></canvas>
+  <div id="labels"></div>
+
+  <div class="top v4-lacquer" id="top">
+    <div class="medal" id="medal"></div>
+    <div class="plaque-wrap"><span class="v4-plaque"><i class="flag" style="--fc:#2f9a55"></i>刘备军</span><span class="sub">君主 刘备 · 公孙瓒属</span></div>
+    <div class="center">
+      <div class="cal" id="cal"></div>
+      <div class="quiver" id="quiver"></div>
+      <div class="res-row" id="res"></div>
+      <div class="missions"><i></i><i></i><i class="off"></i><span>国策</span></div>
+    </div>
+    <div class="actions" id="acts"></div>
+  </div>
+  <div class="v4-lantern" style="left:268px" id="lan1"></div>
+  <div class="v4-lantern" style="right:420px;animation-delay:-1.3s" id="lan2"></div>
+
+  <div class="agenda" id="agenda"></div>
+
+  <div class="city v4-lacquer" id="city">
+    <div class="head">
+      <div class="cname goldleaf">平原</div>
+      <div class="own"><span><i class="flag" style="--fc:#2f9a55;display:inline-block;vertical-align:-2px;margin-right:3px"></i><b>刘备</b> · 太守 <b>刘备</b></span><span class="lvl">${'县'}</span></div>
+      <div class="sp"></div>
+      <button class="v4-btn small enter" id="enter"></button>
+      <button class="v4-close" id="close"></button>
+    </div>
+    <div class="body v4-paper" id="cbody"></div>
+    <div class="dock" id="dock"></div>
+  </div>
+
+  <div class="endm" id="endm"><div class="disc" id="disc"></div><div class="rib">结束本月<small>余 2 令</small></div></div>
+  <div class="toasts" id="toasts"></div>
+  <div class="monthfx" id="monthfx"><div><div class="mbig">二月</div><div class="msub">一九〇年 · 仲春 · 惊蛰</div></div></div>
+  <div id="notes"></div>
+</div>
+<script src="../../js/core.js"></script>
+<script src="../../js/portrait-data.js"></script>
+<script src="../../js/portrait.js"></script>
+<script src="kit.js"></script>
+<script>
+K.ready(() => {
+  const phone = document.documentElement.classList.contains('is-phone');
+  const night = /night/.test(location.search), month = /month/.test(location.search);
+  if (night) document.documentElement.classList.add('night');
+  if (month) document.documentElement.classList.add('month');
+  const W = innerWidth, H = innerHeight;
+  // 地图上的城（坐标为 1280×720 参考）
+  const cities = [
+    { n: '平原', x: 640, y: 360, c: '#2f9a55', mine: true, t: '13,500', sel: true },
+    { n: '南皮', x: 700, y: 210, c: '#2a6fd1' }, { n: '邺', x: 380, y: 330, c: '#2a6fd1' }, { n: '北海', x: 900, y: 330, c: '#c46a2a' },
+    { n: '濮阳', x: 470, y: 520, c: '#2b4b9a' }, { n: '陈留', x: 300, y: 640, c: '#2b4b9a' }, { n: '小沛', x: 760, y: 610, c: '#8a8a3a' },
+    { n: '晋阳', x: 150, y: 200, c: '#7a1e2c' },
+  ];
+  const sx = phone ? W / 1280 : 1, sy = phone ? H / 720 : 1;
+  K.map(K.$('#map'), { seed: 7, night, cities: cities.map(c => ({ x: c.x, y: c.y, color: c.c, size: c.sel ? 1.15 : .95, lit: night || c.sel })) });
+  let lab = '';
+  for (const c of cities) {
+    const x = c.x * (W / 1280), y = c.y * (H / 720) - 46 * Math.min(W / 1280, H / 720);
+    if (phone && x > W - 490) continue;
+    if (!phone && x > W - 400) continue;
+    if (c.sel) lab += `<div class="ring" style="left:${x}px;top:${y + 50 * Math.min(W / 1280, H / 720)}px"></div>`;
+    lab += `<div class="clabel ${c.mine ? 'mine' : ''} ${c.sel ? 'sel' : ''}" style="left:${x}px;top:${y}px;--fc:${c.c}"><i></i>${c.n}${c.t ? `<small>${c.t}</small>` : ''}</div>`;
+  }
+  K.$('#labels').innerHTML = lab;
+  const G = K.GENS;
+  K.$('#medal').innerHTML = K.face(G.liubei, phone ? 46 : 72, 'r1 round', 'win') + `<span class="pres">${K.icon('prestige')}120</span>`;
+  K.$('#cal').innerHTML = `${K.icon('calendar')}<div><div class="yr">190 年</div><div class="mo">${month ? '二月' : '正月'}</div></div><div class="next">${K.icon('tourney')}<span>本月<br>武林大会</span></div>`;
+  // 令箭筒：3 支，已用 1
+  const quiver = (n, used) => { let s = `<svg viewBox="0 0 40 44"><g stroke="#241a21" stroke-width="1.6" stroke-linejoin="round">`;
+    for (let i = 0; i < n; i++) { const x = 12 + i * 8, sp = i >= n - used; s += sp ? `<path d="M${x} 20 V16" stroke="#8d7d6a" stroke-dasharray="2 2"/>` : `<path d="M${x} 22 V5" stroke-width="2.6"/><path d="M${x} 22 V5" stroke="#d2a06a" stroke-width="1"/><path d="M${x - 4} 4 L${x} 1 L${x + 4} 4 L${x + 4} 9 L${x} 7 L${x - 4} 9Z" fill="#c8382c"/>`; }
+    s += `<path d="M7 18 H33 L31 42 H9Z" fill="#7a2419"/><path d="M7 18 H33 L32.4 24 H7.6Z" fill="#b23b2a"/><path d="M9 30 H31" stroke="#e8b54a" stroke-width="1.6"/></g></svg>`; return s; };
+  K.$('#quiver').innerHTML = quiver(3, 1) + `<span class="n">2<small>/3</small></span>`;
+  K.$('#res').innerHTML = `<span class="v4-res">${K.icon('gold')}<span>1,980</span></span><span class="v4-res">${K.icon('food')}<span>6,000</span></span><span class="v4-res">${K.icon('city')}<span>1</span></span>` +
+    (month ? '' : `<span class="v4-delta up" style="left:64px;top:-17px">+120</span>`);
+  const btn = (ic, l, badge, cls) => `<button class="v4-ibtn ${cls || ''}" aria-label="${l}"><span class="face">${K.icon(ic)}</span><span class="lbl">${l}</span>${badge ? `<span class="v4-badge ${badge === '2' ? 'pulse' : ''}">${badge}</span>` : ''}</button>`;
+  K.$('#acts').innerHTML = btn('generals', '武将', '新') + btn('titles', '官制', '2') + btn('factions', '势力') + btn('chronicle', '大事') + '<i class="sep"></i>' + btn('settings', '设置', null) + btn('menu', '菜单', null, phone ? '' : 'is-hover');
+  const lantern = `<svg viewBox="0 0 22 46"><path d="M11 0 V8" stroke="#241a21" stroke-width="1.5"/><rect x="6" y="7" width="10" height="4" rx="1" fill="#e8b54a" stroke="#241a21" stroke-width="1.2"/><ellipse cx="11" cy="22" rx="10" ry="12" fill="${night ? '#ff8a4a' : '#c8402e'}" stroke="#241a21" stroke-width="1.5"/><path d="M11 10 V34 M5 13 Q2 22 5 31 M17 13 Q20 22 17 31" stroke="#8a2418" stroke-width="1" fill="none"/><rect x="6" y="33" width="10" height="4" rx="1" fill="#e8b54a" stroke="#241a21" stroke-width="1.2"/><path d="M11 37 V46" stroke="#c8382c" stroke-width="2.5"/></svg>`;
+  K.$('#lan1').innerHTML = `<div class="glow"></div>` + lantern; K.$('#lan2').innerHTML = `<div class="glow"></div>` + lantern;
+  // 案头
+  const ag = [
+    ['hot', 'tourney', '武林大会', '本月于洛阳平乐观举行 · 选派至多 5 人', '选将'],
+    ['jade', 'level', '可习得新招', `<span class="face-s">${K.face(G.guanyu, 26, 'r1')}${K.face(G.zhangfei, 26, 'r1')}</span>`, '查看'],
+    ['plum', 'titles', '官制空缺 2', '关羽 已可出任五品官', '授官'],
+    ['', 'market', '胡商抵达', '平原市中来了一位大宛马商（2 个月）', '市场'],
+  ];
+  K.$('#agenda').innerHTML = ag.map(([c, ic, t, d, go]) => `<div class="slip ${c}">${K.icon(ic)}<div><b>${t}</b>${d}</div><span class="go">${go} ›</span></div>`).join('');
+  // 城池面板
+  K.$('#city .lvl').innerHTML = `${K.icon('city', 16)}县城 · 二级 <span style="color:#cdbb9f;font-family:var(--f-body)">· 30万人</span>`;
+  K.$('#enter').innerHTML = K.icon('gate') + '<span>入城</span>';
+  K.$('#close').innerHTML = K.icon('x');
+  const devRow = (k, v, max, c, g) => `<span class="k">${k}</span><span class="v">${v}<small>/${max}</small></span><div class="v4-bar" style="--v:${v / max};--c:${c};${g ? '--g:' + g : ''}"><i></i>${g ? '<b></b>' : ''}</div>`;
+  const gen = (g, tag, off, offc, lv, tr, tn, extra, hov) => `<div class="grow ${hov ? 'hov' : ''}">${K.face(g, phone ? 34 : 40, 'r1')}<div class="nm"><b>${tag}${g.name}<span class="lv">${lv}</span>${extra || ''}</b><span class="off" style="color:${offc}">${off}</span></div>
+    <div class="st"><span style="color:var(--war)"><i>武</i>${g.war}</span><span style="color:var(--int)"><i>智</i>${g.intel}</span><span style="color:var(--pol)"><i>政</i>${g.pol}</span></div><div class="tr">${tr}<small>${tn}</small></div>${extra && extra.includes('已') ? '' : ''}</div>`;
+  K.$('#cbody').innerHTML = `<div class="dev">${devRow('土地', 384, 999, 'var(--jade)', .02)}${devRow('产业', 260, 999, 'var(--ember)')}${devRow('町', 240, 999, 'var(--amber)')}${devRow('民心', 72, 100, 'var(--zhu)')}</div>
+    <div class="chips"><span>${K.icon('gold')}<b>400</b></span><span>${K.icon('food')}<b>6,000</b></span><span>${K.icon('troops')}<b>13,500</b></span><span>${K.icon('shield')}<b>40</b></span></div>
+    <div class="gh">武将 4<div class="v4-brushline"></div><span class="v4-small muted">兵 / 训</span></div>
+    <div class="glist">
+      ${gen(G.liubei, '<span class="tag">君</span>', '君主 · 德 80', 'var(--ink-3)', 3, '3,500', '训 63')}
+      ${gen(G.guanyu, '', '武官 · 军司马', 'var(--war)', 5, '4,500', '训 68', '<span class="newb">新</span>', true)}
+      ${gen(G.zhangfei, '', '武官 · 军司马', 'var(--war)', 4, '4,500', '训 73')}
+      ${gen(G.jianyong, '<span class="tag gov">守</span>', '文官 · 从事', 'var(--pol)', 2, '1,000', '训 40')}
+    </div>`;
+  K.$('.glist .grow:nth-child(3)').insertAdjacentHTML('beforeend', '<span class="stamp">已行动</span>');
+  // 指令：4 组 × 4（治 · 人 · 运 · 策）
+  const D = [
+    ['治', 'var(--jade)', [['develop', '开发'], ['build', '营建'], ['recruit', '征兵'], ['train', '训练']]],
+    ['人', 'var(--plum)', [['search', '搜索'], ['hire', '登用', 'dis'], ['reward', '赏赐', 'free'], ['appoint', '任命', 'free']]],
+    ['运', 'var(--ochre)', [['move', '移动', 'dis'], ['transport', '输送', 'dis'], ['trade', '交易', 'free'], ['market', '市场', 'free']]],
+    ['策', 'var(--zhu)', [['caravan', '通商'], ['explore', '探索'], ['diplomacy', '外交'], ['attack', '出征', 'pri']]],
+  ];
+  let k = 0, dock = '';
+  for (const [gname, gc, cmds] of D) {
+    dock += `<span class="grp" style="background:${gc}">${gname}</span>`;
+    for (const [ic, l, f] of cmds) {
+      k++;
+      const cls = [f === 'dis' ? 'is-disabled' : '', f === 'pri' ? 'primary' : '', (!phone && ic === 'develop') ? 'is-great' : '', (!phone && ic === 'search') ? 'is-hover' : ''].join(' ');
+      dock += `<button class="v4-tile ${cls}">${f === 'free' ? '' : '<i class="pip"></i>'}${K.icon(ic)}<span class="lb">${l}</span><span class="key">${'1234567890-=QWER'[k - 1]}</span></button>`;
+    }
+  }
+  K.$('#dock').innerHTML = dock;
+  K.$('#disc').innerHTML = K.icon('endMonth');
+  if (!month) K.$('#toasts').innerHTML = `<div class="v4-toast"><span class="v4-seal" style="font-size:1rem">成</span>${K.face(G.guanyu, 28, 'r1')}<span>关羽 开发土地 <b class="good">+24</b> · <span class="kai">大成</span></span></div>`;
+  if (month) { let p = ''; const r = K.rng(3); for (let i = 0; i < 26; i++) p += `<i class="petal" style="left:${r() * 100}%;top:${r() * 100}%;transform:rotate(${r() * 360}deg)"></i>`; K.$('#monthfx').insertAdjacentHTML('beforeend', p); }
+  if (!phone && !/nonotes/.test(location.search)) K.$('#notes').innerHTML =
+    K.note(1, '96px', '74px', '君主立绘章（位阶框）+ 声望') + K.note(2, '330px', '74px', '年历签：月份 + 下一件大事') + K.note(3, '470px', '74px', '令箭筒：令牌，用时一支飞出') +
+    K.note(4, '640px', '74px', '金 / 粮翻滚计数 + 增减签') + K.note(5, '930px', '64px', '铜钮：武将 · 官制 · 势力 · 大事 | 设置 · 菜单（悬停出名签）') +
+    K.note(6, '252px', '320px', '案头：本月待办（点按直达）') + K.note(7, '760px', '640px', '结束本月：朱印圆钮') + K.note(8, '610px', '410px', '选中城：黛匾 + 灯光圈') + K.note(9, '640px', '200px', '提示条：纸条 + 朱印 + 头像');
+  document.body.dataset.ready = '1';
+});
+</script>
+</body>
+</html>

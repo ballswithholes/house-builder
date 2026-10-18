@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>UI-V4 · 02 标题画面</title>
+<link rel="stylesheet" href="kit.css">
+<style>
+  .wash { position: absolute; inset: 0; background: radial-gradient(60% 75% at 30% 45%, rgba(243, 231, 204, .82), rgba(243, 231, 204, .55) 45%, rgba(243, 231, 204, 0) 75%), linear-gradient(180deg, rgba(30, 18, 10, .1), rgba(30, 18, 10, .45)); }
+  .hero { position: absolute; left: 7%; top: 13%; width: 50%; color: var(--ink); }
+  .hero .row1 { display: flex; align-items: center; gap: 14px; font-family: var(--f-display); font-size: 2rem; letter-spacing: .5em; color: var(--ink-2); }
+  .hero .row1 i { flex: 0 0 60px; height: 8px; background: var(--brush-line) center / 100% 100% no-repeat; opacity: .7; }
+  .hero .main { position: relative; font-family: var(--f-display); font-size: 6.4rem; line-height: 1.05; letter-spacing: .06em; color: var(--ink); filter: url(#brush-ink); -webkit-text-stroke: .02em var(--ink); white-space: nowrap; }
+  .hero .main .ba { font-size: 1.22em; color: var(--zhu-lo); }
+  .hero .seal { position: absolute; right: -10px; top: -26px; font-size: 3.4rem; transform: rotate(6deg); }
+  .hero .sub { margin-top: 10px; font-family: var(--f-display); font-size: 1.35rem; letter-spacing: .6em; color: var(--ink-2); }
+  .hero .splash { position: absolute; left: -40px; top: 40px; width: 520px; height: 200px; z-index: -1; opacity: .16; background: radial-gradient(closest-side, var(--ink), transparent); filter: blur(6px); }
+  .board { position: absolute; right: 6%; top: 50%; transform: translateY(-50%); width: 330px; padding: 54px 26px 24px; display: flex; flex-direction: column; gap: 12px; }
+  .board .beam { position: absolute; left: -18px; right: -18px; top: 8px; height: 22px; border: 2px solid var(--ink); border-radius: 6px; background: linear-gradient(180deg, #8a5a36, #5b3a22 60%, #3a2414); box-shadow: 0 4px 6px rgba(0, 0, 0, .4); }
+  .board .beam::before, .board .beam::after { content: ""; position: absolute; top: -6px; width: 18px; height: 30px; border: 2px solid var(--ink); border-radius: 5px; background: radial-gradient(circle at 40% 35%, var(--gold-hi), var(--gold) 50%, var(--gold-lo)); }
+  .board .beam::before { left: -6px; } .board .beam::after { right: -6px; }
+  .board .v4-btn { width: 100%; justify-content: flex-start; padding-left: 16px; font-size: 1.3rem; min-height: 3.1rem; }
+  .board .v4-btn .ico { width: 1.6em; height: 1.6em; }
+  .board .v4-btn.seal { justify-content: center; font-size: 1.55rem; min-height: 3.6rem; }
+  .cont { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: var(--ink); }
+  .cont .t { font-family: var(--f-display); font-size: 1.15rem; }
+  .cont .d { font-size: .8rem; color: var(--ink-3); }
+  .foot { position: absolute; left: 0; right: 0; bottom: 12px; display: flex; justify-content: center; gap: 22px; font-size: .8rem; color: #f3e7cc; text-shadow: 0 1px 2px #000; letter-spacing: .1em; }
+  .lanterns { position: absolute; right: calc(6% + 12px); top: calc(50% - 250px); width: 306px; display: flex; justify-content: space-between; }
+  html.is-phone .hero { left: 4%; top: 12%; width: 54%; }
+  html.is-phone .hero .row1 { font-size: 1.3rem; }
+  html.is-phone .hero .main { font-size: 3.6rem; }
+  html.is-phone .hero .seal { font-size: 2rem; top: -14px; right: 0; }
+  html.is-phone .hero .sub { font-size: .95rem; letter-spacing: .4em; }
+  html.is-phone .board { right: 2.5%; width: 300px; padding: 38px 16px 14px; gap: 7px; }
+  html.is-phone .board .v4-btn { min-height: 44px; font-size: 1.05rem; }
+  html.is-phone .board .v4-btn.seal { min-height: 48px; font-size: 1.2rem; }
+  html.is-phone .cont { padding: 4px 8px; }
+  html.is-phone .cont .v4-face { --s: 34px !important; }
+  html.is-phone .lanterns, html.is-phone .foot span:nth-child(n+2) { display: none; }
+  html.is-phone .foot { bottom: 4px; justify-content: flex-start; left: 14px; }
+</style>
+</head>
+<body>
+<div class="v4-stage">
+  <canvas class="v4-mapbg" id="map"></canvas>
+  <div class="wash"></div>
+  <div class="hero">
+    <div class="splash"></div>
+    <div class="row1"><i></i>三国志<i></i></div>
+    <div class="main"><span class="ba">霸</span>王的世界<span class="v4-seal seal">霸</span></div>
+    <div class="sub">群雄逐鹿 · 四海归一</div>
+  </div>
+  <div class="v4-lacquer board" id="board"><div class="beam"></div></div>
+  <div class="foot"><span>第四版 · 程序生成的山河与人物</span><span>拖动平移 · 滚轮缩放 · WASD 移动 · Q / E 旋转</span></div>
+  <div id="notes"></div>
+</div>
+<script src="../../js/core.js"></script>
+<script src="../../js/portrait-data.js"></script>
+<script src="../../js/portrait.js"></script>
+<script src="kit.js"></script>
+<script>
+K.ready(() => {
+  K.map(K.$('#map'), { seed: 21, cities: [{ x: 760, y: 300, color: '#2f9a55', lit: true, size: 1.2 }, { x: 1040, y: 520, color: '#2b4b9a' }, { x: 560, y: 600, color: '#c0392b' }, { x: 1150, y: 200, color: '#7a1e2c' }] });
+  const b = K.$('#board');
+  b.insertAdjacentHTML('beforeend', `<button class="v4-btn seal is-hover">新的征程</button>
+    <div class="cont v4-paper">${K.face(K.GENS.liubei, 46, 'r2', 'win')}<div><div class="t">继续征程</div><div class="d">董卓专横 · 刘备军 · 192年3月 · 城 5</div></div></div>
+    <button class="v4-btn">${K.icon('load')}读取记录</button>
+    <button class="v4-btn">${K.icon('history')}功业 · 图鉴</button>
+    <button class="v4-btn">${K.icon('settings')}设　　置</button>
+    <button class="v4-btn">${K.icon('help')}操作说明</button>`);
+  if (!document.documentElement.classList.contains('is-phone') && !/nonotes/.test(location.search)) K.$('#notes').innerHTML =
+    K.note(1, '7%', '46%', '大字：系统楷体 + 干笔滤镜；「霸」放大朱色，右上朱印') + K.note(2, '64%', '84%', '木牌挂在横梁上（梁两端铜轴头），悬停时牌下灯光亮起，按下盖印') + K.note(3, '64%', '12%', '「继续征程」是一张纸卡：存档君主立绘 + 剧本 · 势力 · 年月') + K.note(4, '7%', '75%', '背景：Lanternvale 地图黄昏缓慢环绕；标题后有宣纸晕染保证可读');
+  document.body.dataset.ready = '1';
+});
+</script>
+</body>
+</html>

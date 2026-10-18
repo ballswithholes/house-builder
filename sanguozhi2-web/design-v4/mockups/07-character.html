@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>UI-V4 · 07 武将菜单</title>
+<link rel="stylesheet" href="kit.css">
+<style>
+  .win { position: absolute; inset: 8px; display: flex; flex-direction: column; padding: 6px; }
+  .hd { display: flex; align-items: center; gap: 10px; padding: 4px 8px 6px 6px; }
+  .hd .arrow { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--ink); display: grid; place-items: center; color: var(--paper); font-family: var(--f-display); font-size: 1.4rem; background: var(--lq-3); box-shadow: 0 3px 0 var(--ink); }
+  .hd .who { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+  .hd .nm { font-family: var(--f-display); font-size: 2.2rem; line-height: 1; letter-spacing: .1em; }
+  .hd .meta { display: flex; flex-direction: column; gap: 3px; font-size: .82rem; color: #cdbb9f; white-space: nowrap; }
+  .hd .meta b { font-family: var(--f-display); font-size: 1rem; font-weight: 400; }
+  .hd .lvbox { display: flex; align-items: center; gap: 8px; margin-left: 10px; }
+  .hd .lvseal { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; border: 2px solid var(--ink); background: radial-gradient(circle at 35% 30%, var(--gold-hi), var(--gold) 55%, var(--gold-lo)); font: 700 1.25rem/1 var(--f-num); color: var(--ink); box-shadow: 0 3px 0 var(--ink); position: relative; }
+  .hd .lvseal small { position: absolute; top: -8px; font-family: var(--f-display); font-size: .66rem; color: var(--paper); background: var(--lq-2); border: 1.5px solid var(--ink); border-radius: 4px; padding: 0 3px; font-weight: 400; }
+  .hd .xp { width: 170px; display: flex; flex-direction: column; gap: 3px; font: .76rem var(--f-num); color: #cdbb9f; }
+  .hd .xp .v4-bar { --c: var(--gold); height: 9px; }
+  .main { flex: 1; min-height: 0; display: flex; gap: 8px; }
+  .stage { width: 300px; flex: none; position: relative; display: flex; flex-direction: column; border-radius: 6px; overflow: hidden; border: 2px solid var(--ink);
+    background: radial-gradient(70% 45% at 50% 30%, rgba(255, 220, 150, .55), transparent 70%), linear-gradient(180deg, #f2dfb4, #e2c993 60%, #c9a874); }
+  .stage .floor { position: absolute; left: 50%; bottom: 52px; width: 230px; height: 56px; transform: translateX(-50%); border-radius: 50%; border: 2px solid var(--ink);
+    background: radial-gradient(closest-side, #a57a4c, #7e5634 80%); box-shadow: 0 8px 0 #5a3c22, 0 8px 0 2px var(--ink), 0 16px 18px rgba(60, 30, 10, .35); }
+  .stage img { position: absolute; left: 50%; bottom: 60px; height: calc(100% - 90px); transform: translateX(-50%); }
+  .stage .lan { position: absolute; top: 10px; }
+  .stage .lan svg { width: 22px; height: 46px; }
+  .stage .ctl { position: absolute; left: 0; right: 0; bottom: 8px; display: flex; justify-content: center; gap: 6px; }
+  .stage .ctl .v4-seg > span { min-height: 34px; font-size: .82rem; padding: 0 .55rem; }
+  .stage .hint { position: absolute; top: 10px; left: 0; right: 0; text-align: center; font-size: .72rem; color: var(--ink-3); }
+  .stage .rot { position: absolute; left: 50%; bottom: 66px; width: 200px; height: 40px; transform: translateX(-50%); border: 2px dashed rgba(36, 26, 33, .35); border-radius: 50%; }
+  .right { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .right .v4-tabs { padding-left: 8px; flex-wrap: nowrap; }
+  .right .v4-tab { min-height: 42px; font-size: 1rem; padding: .4rem .7rem .3rem; }
+  .page { flex: 1; min-height: 0; padding: 12px 16px; border: 2px solid var(--ink); border-radius: 6px; overflow: hidden; }
+  .acts { display: flex; gap: 8px; padding: 8px 4px 2px; align-items: center; }
+  .acts .v4-btn { min-height: 44px; font-size: 1rem; padding: 0 .9rem; }
+  .acts .v4-btn svg { width: 24px; height: 24px; }
+  .acts .sp { flex: 1; }
+  /* 总览 */
+  .ov { display: grid; grid-template-columns: 1.15fr 1fr; gap: 12px 18px; height: 100%; }
+  .attr { display: grid; grid-template-columns: auto auto 1fr auto; gap: 7px 10px; align-items: center; }
+  .attr .k { font-family: var(--f-display); font-size: 1.2rem; }
+  .attr .v { font: 700 1.35rem/1 var(--f-num); }
+  .attr .v sup { font-size: .7rem; color: var(--gold-lo); }
+  .attr .v4-bar { height: 13px; }
+  .attr .n { font-size: .74rem; color: var(--ink-3); white-space: nowrap; }
+  .der { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .der div { padding: 6px 8px; border-radius: 6px; background: rgba(255, 255, 255, .35); box-shadow: inset 0 0 0 1px var(--paper-edge); }
+  .der b { display: block; font: 700 1.1rem/1.1 var(--f-num); color: var(--ink); }
+  .der span { font-family: var(--f-display); font-size: .82rem; color: var(--ink-2); }
+  .der small { display: block; font-size: .66rem; color: var(--ink-3); }
+  .sec { font-family: var(--f-display); font-size: 1.02rem; color: var(--ink-2); display: flex; align-items: center; gap: 6px; margin: 2px 0 4px; }
+  .sec .v4-brushline { flex: 1; height: 6px; }
+  .office { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 8px; background: linear-gradient(90deg, rgba(200, 69, 47, .12), rgba(255, 255, 255, .25)); box-shadow: inset 0 0 0 1.5px rgba(200, 69, 47, .4); }
+  .office svg { width: 46px; height: 46px; }
+  .office b { font-family: var(--f-display); font-size: 1.2rem; font-weight: 400; color: var(--war-lo); }
+  .office small { display: block; font-size: .76rem; color: var(--ink-2); }
+  .gearstrip { display: flex; gap: 8px; }
+  .gearstrip .v4-slot { --s: 48px; }
+  .bio { font-size: .86rem; line-height: 1.55; color: var(--ink-2); }
+  .bio b { font-family: var(--f-display); color: var(--ink); font-weight: 400; }
+  .sk { display: flex; flex-wrap: wrap; gap: 6px; }
+  .sk span { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 12px; font-family: var(--f-display); font-size: .88rem; border: 1.5px solid var(--ink); background: var(--paper-2); }
+  .sk span.sp { color: #fff3e2; background: var(--war); }
+  .sk span.tc { color: #fff3e2; background: var(--int); }
+  .sk span.op { border-style: dashed; color: var(--jade); background: transparent; }
+  /* 装备 */
+  .gearp { display: grid; grid-template-columns: 1fr 1fr 1.25fr; gap: 10px 12px; height: 100%; }
+  .gslot { display: flex; gap: 8px; align-items: center; padding: 6px; border-radius: 8px; background: rgba(255, 255, 255, .3); box-shadow: inset 0 0 0 1px var(--paper-edge); min-height: 74px; }
+  .gslot.on { background: rgba(255, 236, 190, .8); box-shadow: inset 0 0 0 2px var(--gold-lo), 0 0 12px rgba(255, 200, 120, .5); }
+  .gslot .v4-slot { --s: 58px; flex: none; }
+  .gslot .t { font-family: var(--f-display); font-size: 1.02rem; }
+  .gslot .s { font-size: .72rem; color: var(--ink-2); line-height: 1.35; }
+  .gslot .slab { font-family: var(--f-display); font-size: .72rem; color: var(--ink-3); }
+  .cand { grid-row: 1 / span 4; grid-column: 3; display: flex; flex-direction: column; gap: 4px; padding: 8px; border-radius: 8px; background: rgba(36, 26, 33, .05); box-shadow: inset 0 0 0 1.5px rgba(36, 26, 33, .2); }
+  .cand .ch { display: flex; align-items: center; gap: 6px; font-family: var(--f-display); font-size: 1rem; }
+  .crow { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 4px 6px; border-radius: 6px; background: rgba(255, 255, 255, .45); }
+  .crow.hov { background: rgba(255, 236, 190, .9); box-shadow: inset 0 0 0 1.5px var(--gold-lo); }
+  .crow.no { opacity: .55; }
+  .crow .v4-slot { --s: 40px; border-radius: 7px; }
+  .crow .t { font-family: var(--f-display); font-size: .98rem; line-height: 1.1; }
+  .crow .d { font: .72rem var(--f-num); }
+  .crow .src { margin-left: auto; text-align: right; font-size: .7rem; color: var(--ink-3); white-space: nowrap; }
+  .crow .src b { display: block; font: 700 .82rem var(--f-num); color: var(--ink); }
+  .sumrow { grid-column: 1 / span 2; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .sumrow div { padding: 4px 8px; border-radius: 6px; background: rgba(255, 255, 255, .35); box-shadow: inset 0 0 0 1px var(--paper-edge); font-size: .72rem; color: var(--ink-2); }
+  .sumrow b { display: block; font: 700 1rem var(--f-num); color: var(--ink); }
+  .abil { grid-column: 1 / span 2; display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 8px; background: linear-gradient(90deg, rgba(240, 165, 42, .22), rgba(255, 255, 255, .2)); box-shadow: inset 0 0 0 1.5px rgba(240, 165, 42, .7); font-size: .8rem; color: var(--ink-2); }
+  .abil b { font-family: var(--f-display); font-size: 1.02rem; color: #8a4c08; font-weight: 400; }
+  .abil .v4-btn { margin-left: auto; min-height: 36px; font-size: .86rem; }
+  /* 武艺 */
+  .combo { display: flex; align-items: flex-end; gap: 8px; padding: 6px 0 2px; }
+  .cs { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .cs .g { width: 50px; height: 50px; display: grid; place-items: center; border-radius: 10px; border: 2px solid var(--ink); font-size: 1.5rem; box-shadow: 0 3px 0 var(--ink); color: #fff3e2; }
+  .cs .g.L { background: var(--zhu); } .cs .g.M { background: var(--int); } .cs .g.H { background: var(--gold-lo); }
+  .cs .g.fin { width: 64px; height: 64px; font-size: 2rem; box-shadow: 0 3px 0 var(--ink), 0 0 0 3px var(--gold), 0 0 16px rgba(240, 165, 42, .6); }
+  .cs .key { font: 700 .8rem/1 var(--f-num); padding: 2px 6px; border: 1.5px solid var(--ink); border-radius: 4px; background: var(--paper); color: var(--ink); }
+  .cs .pc { font: .68rem var(--f-num); color: var(--ink-2); }
+  .cs .sf { font-family: var(--f-display); font-size: .64rem; padding: 0 3px; border-radius: 3px; color: #fff3e2; }
+  .cs .arrow2 { align-self: center; color: var(--ink-3); font-size: 1rem; margin-bottom: 30px; }
+  .skrow { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+  .spc { display: flex; gap: 10px; padding: 8px 10px; border-radius: 8px; background: rgba(255, 255, 255, .35); box-shadow: inset 0 0 0 1px var(--paper-edge); }
+  .spc svg { width: 40px; height: 40px; flex: none; }
+  .spc b { font-family: var(--f-display); font-size: 1.1rem; font-weight: 400; }
+  .spc .tier { font-family: var(--f-display); font-size: .72rem; padding: 0 4px; border-radius: 3px; background: var(--war); color: #fff3e2; margin-left: 4px; }
+  .spc p { margin: 2px 0 0; font-size: .76rem; line-height: 1.4; color: var(--ink-2); }
+  .spc.open { border: 2px dashed var(--jade); background: rgba(79, 154, 118, .08); box-shadow: none; align-items: center; color: var(--jade); font-family: var(--f-display); }
+  .prev { position: relative; height: 150px; border-radius: 8px; border: 2px solid var(--ink); overflow: hidden; background: linear-gradient(180deg, #e8d3a6, #cfae7a); display: flex; align-items: flex-end; justify-content: center; }
+  .prev img { height: 140px; }
+  .prev .trail { position: absolute; left: 30%; top: 22%; width: 160px; height: 90px; border-radius: 50%; border-top: 6px solid rgba(200, 56, 44, .7); transform: rotate(-18deg); filter: url(#brush-ink); }
+  .prev .lbl { position: absolute; left: 8px; top: 6px; font-size: .72rem; color: var(--ink-3); }
+  /* 部队 */
+  .army { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; }
+  .big { font: 700 2rem/1 var(--f-num); color: var(--ink); }
+  .big small { font-size: .9rem; color: var(--ink-3); }
+  .forms { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .fm { position: relative; padding: 6px; border-radius: 8px; text-align: center; background: rgba(255, 255, 255, .35); box-shadow: inset 0 0 0 1px var(--paper-edge); }
+  .fm svg { width: 42px; height: 30px; }
+  .fm b { display: block; font-family: var(--f-display); font-size: 1rem; font-weight: 400; }
+  .fm small { font: .66rem var(--f-num); color: var(--ink-3); }
+  .fm.on { background: rgba(255, 236, 190, .9); box-shadow: inset 0 0 0 2px var(--zhu); }
+  .fm.no { opacity: .45; }
+  .fm.no::after { content: ""; position: absolute; right: 4px; top: 4px; width: 12px; height: 12px; background: var(--lock-ico) center / contain no-repeat; }
+  html.is-phone .win { inset: 0; border-radius: 0; padding: 3px; }
+  html.is-phone .hd { padding: 0 4px 3px; gap: 6px; }
+  html.is-phone .hd .nm { font-size: 1.5rem; }
+  html.is-phone .hd .arrow { width: 40px; height: 40px; }
+  html.is-phone .hd .meta span:nth-child(2) { display: none; }
+  html.is-phone .hd .xp { width: 110px; }
+  html.is-phone .hd .lvseal { width: 38px; height: 38px; font-size: 1rem; }
+  html.is-phone .hd .who .v4-face { display: none; }
+  html.is-phone .stage { width: 168px; }
+  html.is-phone .stage .ctl, html.is-phone .stage .hint, html.is-phone .stage .lan { display: none; }
+  html.is-phone .stage .floor { width: 140px; height: 34px; bottom: 14px; }
+  html.is-phone .stage img { bottom: 20px; height: calc(100% - 26px); }
+  html.is-phone .stage .rot { display: none; }
+  html.is-phone .right .v4-tab { font-size: .8rem; padding: .3rem .38rem .2rem; min-height: 36px; letter-spacing: 0; }
+  html.is-phone .right .v4-tab svg { display: none; }
+  html.is-phone .right .v4-tabs { gap: 2px; padding-left: 4px; }
+  html.is-phone .page { padding: 6px 8px; }
+  html.is-phone .ov { grid-template-columns: 1fr; gap: 6px; }
+  html.is-phone .ov .col2 { display: none; }
+  html.is-phone .attr { gap: 3px 8px; grid-template-columns: auto auto 1fr; }
+  html.is-phone .attr .n { display: none; }
+  html.is-phone .attr .k { font-size: 1rem; } html.is-phone .attr .v { font-size: 1.1rem; }
+  html.is-phone .der div { padding: 3px 6px; } html.is-phone .der small { display: none; }
+  html.is-phone .acts { padding: 4px 2px 0; gap: 4px; }
+  html.is-phone .acts .v4-btn { font-size: .82rem; padding: 0 .5rem; letter-spacing: .02em; }
+  html.is-phone .acts .v4-btn svg { width: 18px; height: 18px; }
+  html.is-phone .acts .ph-hide { display: none; }
+  html.is-phone .gearp { grid-template-columns: 1fr 1fr; gap: 5px; }
+  html.is-phone .cand, html.is-phone .sumrow, html.is-phone .abil { display: none; }
+  html.is-phone .gslot { min-height: 50px; padding: 3px; gap: 5px; }
+  html.is-phone .gslot .v4-slot { --s: 42px; }
+  html.is-phone .gslot .s { display: none; }
+</style>
+</head>
+<body>
+<div class="v4-stage">
+  <canvas class="v4-mapbg" id="map"></canvas>
+  <div class="v4-scrim"></div>
+  <div class="win v4-lacquer">
+    <div class="hd" id="hd"></div>
+    <div class="main">
+      <div class="stage" id="stage"></div>
+      <div class="right"><div class="v4-tabs" id="tabs"></div><div class="page v4-paper" id="page"></div></div>
+    </div>
+    <div class="acts" id="acts"></div>
+  </div>
+  <div id="notes"></div>
+</div>
+<script src="../../js/core.js"></script>
+<script src="../../js/portrait-data.js"></script>
+<script src="../../js/portrait.js"></script>
+<script src="kit.js"></script>
+<script>
+K.ready(async () => {
+  const phone = document.documentElement.classList.contains('is-phone');
+  const tab = (location.search.match(/tab=(\w+)/) || [])[1] || 'ov';
+  const notes = !phone && !/nonotes/.test(location.search);
+  K.map(K.$('#map'), { seed: 7 });
+  const G = K.GENS, gy = G.guanyu;
+  K.$('#hd').innerHTML = `<span class="arrow">‹</span><div class="who">${K.face(gy, 52, 'r4', 'win')}<span class="nm goldleaf">关羽</span>
+    <div class="meta"><span><i class="flag" style="display:inline-block;width:10px;height:13px;background:#2f9a55;clip-path:polygon(0 0,100% 0,70% 50%,100% 100%,0 100%);margin-right:4px"></i>刘备军 · 平原太守 · <b style="color:#ffb9a6">荡寇将军</b></span><span>字 云长 · 河东解良 · 161 年生（30 岁）</span></div>
+    <div class="lvbox"><div class="lvseal"><small>等级</small>7</div><div class="xp"><span>经验 1,240 / 2,000</span><div class="v4-bar" style="--v:.62"><i></i></div><span>老练 +24%</span></div></div></div>
+    <span class="arrow">›</span><button class="v4-close">${K.icon('x')}</button>`;
+  const fig = await K.cutout('assets/ours_guanyu_full.png');
+  const lantern = `<svg viewBox="0 0 22 46"><path d="M11 0 V8" stroke="#241a21" stroke-width="1.5"/><rect x="6" y="7" width="10" height="4" rx="1" fill="#e8b54a" stroke="#241a21" stroke-width="1.2"/><ellipse cx="11" cy="22" rx="10" ry="12" fill="#c8402e" stroke="#241a21" stroke-width="1.5"/><rect x="6" y="33" width="10" height="4" rx="1" fill="#e8b54a" stroke="#241a21" stroke-width="1.2"/><path d="M11 37 V46" stroke="#c8382c" stroke-width="2.5"/></svg>`;
+  K.$('#stage').innerHTML = `<div class="hint">拖动旋转 · 滚轮缩放</div><span class="lan" style="left:14px">${lantern}</span><span class="lan" style="right:14px">${lantern}</span><div class="floor"></div><div class="rot"></div><img src="${fig}" alt=""><div class="ctl"><div class="v4-seg"><span class="on">待机</span><span>演武</span><span>骑乘</span><span>得胜</span></div></div>`;
+  const tabs = [['ov', 'level', '总览'], ['gear', 'armour', '装备'], ['skills', 'combo', '武艺'], ['tac', 'tactic', '计略'], ['army', 'troops', '部队'], ['title', 'titles', '官爵'], ['bonds', 'bonds', '关系'], ['hist', 'history', '履历']];
+  K.$('#tabs').innerHTML = tabs.map(([id, ic, t]) => `<span class="v4-tab ${id === tab ? 'on' : ''}">${K.icon(ic)}${t}${id === 'skills' ? '<span class="v4-badge">新</span>' : ''}</span>`).join('');
+  const page = K.$('#page');
+  const attr = (k, c, v, g, n) => `<span class="k" style="color:${c}">${k}</span><span class="v" style="color:${c}">${v}${g ? `<sup>+${g}</sup>` : ''}</span><div class="v4-bar" style="--v:${v / 110};--g:${g / 110};--c:${c}"><i></i>${g ? '<b></b>' : ''}</div><span class="n">${n}</span>`;
+  if (tab === 'ov') {
+    page.innerHTML = `<div class="ov"><div>
+      <div class="sec">能力<div class="v4-brushline"></div><span class="v4-small muted">最高：武 → 武官</span></div>
+      <div class="attr">${attr('武力', 'var(--war)', 98, 6, '青龙偃月刀 +6')}${attr('智力', 'var(--int)', 78, 0, '')}${attr('政治', 'var(--pol)', 62, 0, '')}</div>
+      <div class="sec" style="margin-top:10px">战场与单挑<div class="v4-brushline"></div></div>
+      <div class="der"><div><span>攻击</span><b>×1.42</b><small>老练 +24% · 装备 +14%</small></div><div><span>防御</span><b>×1.33</b><small>老练 +24% · 装备 +7%</small></div><div><span>会心</span><b>9%</b><small>基础 5 · 官 2 · 刀 2</small></div>
+        <div><span>计策威力</span><b>+24%</b><small>老练</small></div><div><span>单挑体力</span><b>118</b><small>甲 +6 · 官 +2</small></div><div><span>机动</span><b>5</b><small>骑 · 无马</small></div></div>
+      <div class="sec" style="margin-top:10px">招式<div class="v4-brushline"></div></div>
+      <div class="sk"><span class="sp">${K.icon('special', 18)}青龙斩</span><span class="sp">千里走单骑</span><span class="sp">刮骨</span><span class="op">＋ 可习得一招（三阶）</span><span class="tc">火计</span><span class="tc">激励</span><span style="background:var(--paper)">◆◆●▲◆●▲·▲ 万众取首 ★★</span></div>
+    </div><div class="col2">
+      <div class="sec">官爵<div class="v4-brushline"></div></div>
+      <div class="office">${K.icon('titles')}<div><b>荡寇将军</b><small>武官 · 四品 · 191年5月拜</small><small class="good">攻击 +8% · 单挑伤害 +2% · 统帅时全军士气 +4</small></div></div>
+      <div class="sec" style="margin-top:10px">装备<div class="v4-brushline"></div><span class="v4-small muted">点按进入「装备」</span></div>
+      <div class="gearstrip"><span class="v4-slot legend">${K.icon('guandao')}</span><span class="v4-slot uncommon">${K.icon('shield')}</span><span class="v4-slot rare">${K.icon('armour')}</span><span class="v4-slot uncommon">${K.icon('helmet')}</span><span class="v4-slot empty"></span><span class="v4-slot common">${K.icon('book')}</span></div>
+      <div class="sec" style="margin-top:10px">生平<div class="v4-brushline"></div><span class="v4-seal" style="font-size:.8rem">史</span></div>
+      <div class="bio"><b>关羽</b>，字云长，本字长生，河东解良人。亡命奔涿郡，与张飞为先主御侮。先主于乡里合徒众，羽与飞为之左右；寝则同床，恩若兄弟。<span class="muted">——《三国志·蜀书·关羽传》</span></div>
+      <div class="sec" style="margin-top:10px">忠诚 · 羁绊<div class="v4-brushline"></div></div>
+      <div style="display:flex;gap:14px;align-items:center;font-size:.86rem"><span style="display:flex;align-items:center;gap:4px">${K.icon('loyalty', 22)}<b class="num" style="font-size:1.1rem">96</b></span><span style="display:inline-flex;align-items:center;gap:6px">${K.face(G.liubei, 30, 'r1')}刘备 · <b style="color:var(--zhu)">结义</b></span><span style="display:inline-flex;align-items:center;gap:6px">${K.face(G.zhangfei, 30, 'r1')}张飞 · <b style="color:var(--zhu)">结义</b></span></div>
+    </div></div>`;
+  } else if (tab === 'gear') {
+    const gs = (sl, r, ic, t, s, on) => `<div class="gslot ${on ? 'on' : ''}"><span class="v4-slot ${r}">${ic ? K.icon(ic) : ''}</span><div><div class="slab">${sl}</div><div class="t rar ${r}">${t}</div><div class="s">${s}</div></div></div>`;
+    const cr = (r, ic, t, d, src, price, cls) => `<div class="crow ${cls || ''}"><span class="v4-slot ${r}">${K.icon(ic)}</span><div><div class="t rar ${r}">${t}</div><div class="d">${d}</div></div><div class="src">${src}<b>${price}</b></div></div>`;
+    page.innerHTML = `<div class="gearp">
+      ${gs('兵器', 'legend', 'guandao', '青龙偃月刀', '武力 +6 · 攻击 +14% · 会心 +2')}
+      ${gs('副手', 'uncommon', 'shield', '蒙皮圆盾', '防御 +5% · 格挡 +2')}
+      ${gs('铠甲', 'rare', 'armour', '玄铁札甲', '防御 +12% · 体力 +6')}
+      ${gs('头盔', 'uncommon', 'helmet', '鹖冠', '防御 +3% · 士气 +4')}
+      ${gs('坐骑', 'empty', null, '— 空 —', '点按：从府库或市场选马', true)}
+      ${gs('宝物', 'common', 'book', '春秋左传', '智力 +1 · 计策 +3%')}
+      <div class="cand"><div class="ch">${K.icon('horse', 24)}坐骑 · 可换<span class="v4-small muted" style="margin-left:auto">府库 3 · 平原市 2</span></div>
+        ${cr('epic', 'horse', '赤兔', '<span class="good">机动 +2 · 冲锋 +14% · 脱身 70%</span>', '府库', '武力需 85 ✓', 'hov')}
+        ${cr('rare', 'horse', '的卢', '<span class="good">机动 +1 · 冲锋 +11%</span> <span class="bad">妨主</span>', '府库', '—')}
+        ${cr('uncommon', 'horse', '西凉大马', '<span class="good">冲锋 +8% · 脱身 20%</span>', '平原市', '380 金')}
+        ${cr('common', 'horse', '驽马', '<span class="good">冲锋 +3%</span>', '平原市', '80 金')}
+        ${cr('uncommon', 'horse', '果下马', '机动 0 · <span class="bad">武力需 30（倭）</span>', '府库', '—', 'no')}
+        <div class="v4-small muted" style="margin-top:auto">绿 = 比现有好；红 = 变差或条件不符（灰显并说明）。换下的装备回到府库。</div>
+      </div>
+      <div class="sumrow"><div>攻击<b>×1.42 → <span class="good">×1.50</span></b></div><div>机动<b>5 → <span class="good">7</span></b></div><div>会心<b>9%</b></div><div>单挑体力<b>118</b></div></div>
+      <div class="abil"><span class="v4-slot legend" style="--s:40px">${K.icon('guandao')}</span><div><b>青龙偃月刀 · 「青龙」</b> 普通攻击会心时，青龙虚影追斩相邻一军（30% 伤害）；单挑中满蓄重击带龙吟，破防 +12 点</div><button class="v4-btn paper small">${K.icon('play', 16)}演示</button></div>
+    </div>`;
+  } else if (tab === 'skills') {
+    const seq = 'MMLHMLHH', key = { L: 'J', M: 'K', H: 'L' }, gl = { L: '●', M: '◆', H: '▲' }, nm = { L: '轻', M: '中', H: '重' };
+    const pcs = ['3%', '3%', '2%', '5%', '3%', '2%', '5%', '7%'], safe = [['安全', 'var(--jade)'], ['小破绽', 'var(--ochre)'], ['安全', 'var(--jade)'], ['可迟滞', 'var(--plum)'], ['可被看破', 'var(--int)'], ['安全', 'var(--jade)'], ['大破绽', 'var(--zhu)'], ['终结', 'var(--gold-lo)']];
+    let c = '';
+    for (let i = 0; i < 8; i++) { const t = seq[i]; c += `<div class="cs"><span class="key">${key[t]}</span><div class="g ${t} ${i === 7 ? 'fin' : ''}">${gl[t]}</div><span class="pc">${nm[t]} ${pcs[i]}</span><span class="sf" style="background:${safe[i][1]}">${safe[i][0]}</span></div>${i < 7 ? '<span class="arrow2">›</span>' : ''}`; }
+    page.innerHTML = `<div class="sec">招式谱 · 八式连段<div class="v4-brushline"></div><span class="v4-small muted">J 轻 · K 中 · L 重（设置 → 单挑键位）</span></div>
+      <div style="display:flex;gap:16px;align-items:flex-start"><div class="combo">${c}</div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-left:auto;min-width:150px"><div class="kai" style="font-size:1.5rem;color:var(--zhu-lo)">万众取首</div><div class="v4-small">全中约 <b>28%</b> · 用时 1.4 秒 · 终结会心 +10%</div><div style="color:var(--gold-lo);font-size:1.2rem">★★<span style="color:var(--ink-3)">☆</span> <span class="v4-small muted">熟练</span></div><button class="v4-btn seal small">${K.icon('train', 18)}演武场</button></div></div>
+      <div class="skrow"><div class="prev"><span class="lbl">动作预览 2.6 秒循环（高精度模型 · 暖光）</span><div class="trail"></div><img src="${fig}" alt=""></div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="spc">${K.icon('special')}<div><b>青龙斩</b><span class="tier">专属</span><p>纵马一刀劈出青龙刀气，直线三格内敌军受重创（威力 2.2），40% 混乱。</p></div></div>
+        <div class="spc">${K.icon('special')}<div><b>千里走单骑</b><span class="tier" style="background:var(--ochre)">三阶</span><p>突破包围：本回合移动后仍可攻击，且不受反击。</p></div></div>
+        <div class="spc open">＋ 可习得新招（三阶以内）· 从 3 个候选中选择</div>
+      </div></div>`;
+  } else if (tab === 'army') {
+    const fms = [['方圆', '攻 ×0.85 · 防 ×1.35', ''], ['长蛇', '机动 +2', ''], ['鱼鳞', '攻 ×1.15', ''], ['鹤翼', '攻防 ×1.10', ''], ['偃月', '攻 ×1.25 · 防 ×0.90', 'on'], ['锋矢', '攻 ×1.40 · 防 ×0.75', ''], ['雁行', '机动 +1', ''], ['衡轭', '防 ×1.25 · 需智 80', 'no']];
+    const fmIco = i => { let s = '<svg viewBox="0 0 42 30">'; const pts = [[[21, 6], [10, 15], [32, 15], [21, 24]], [[6, 15], [14, 15], [22, 15], [30, 15], [38, 15]], [[21, 5], [15, 13], [27, 13], [9, 21], [21, 21], [33, 21]], [[4, 8], [12, 14], [21, 20], [30, 14], [38, 8]], [[21, 6], [10, 18], [32, 18], [16, 24], [26, 24]], [[21, 4], [15, 12], [27, 12], [9, 20], [33, 20]], [[6, 22], [14, 16], [22, 10], [30, 16], [38, 22]], [[8, 8], [34, 8], [21, 15], [8, 22], [34, 22]]][i]; for (const [x, y] of pts) s += `<rect x="${x - 3.5}" y="${y - 3.5}" width="7" height="7" rx="1.5" fill="${i === 4 ? '#c8382c' : '#5f78a8'}" stroke="#241a21" stroke-width="1.2"/>`; return s + '</svg>'; };
+    page.innerHTML = `<div class="army"><div>
+      <div class="sec">兵力<div class="v4-brushline"></div></div>
+      <div class="big">5,800 <small>/ 8,900 上限（武力 98）</small></div>
+      <div class="v4-bar" style="--v:.65;--c:var(--zhu);height:14px;margin:6px 0"><i></i></div>
+      <div class="v4-small muted">平原兵源 2,400 · 征兵每次 +500–900（政治 / 民心）</div>
+      <div class="sec" style="margin-top:12px">训练<div class="v4-brushline"></div></div>
+      <div class="big">92 <small>/ 100</small></div><div class="v4-bar" style="--v:.92;--c:var(--ochre);height:14px;margin:6px 0"><i></i></div>
+      <div class="v4-small muted">训练影响战场攻防与士气；每月不训练 −1</div>
+      <div style="display:flex;gap:8px;margin-top:12px"><button class="v4-btn small">${K.icon('recruit', 20)}征兵（平原）</button><button class="v4-btn small">${K.icon('train', 20)}训练（平原）</button></div>
+    </div><div>
+      <div class="sec">惯用阵型<div class="v4-brushline"></div><span class="v4-small muted">开战时的默认阵型</span></div>
+      <div class="forms">${fms.map(([n, d, c], i) => `<div class="fm ${c}">${fmIco(i)}<b>${n}</b><small>${d}</small></div>`).join('')}</div>
+      <div class="sec" style="margin-top:12px">兵种 · 坐骑<div class="v4-brushline"></div></div>
+      <div style="display:flex;gap:10px;align-items:center;font-size:.86rem"><span class="v4-slot uncommon" style="--s:44px">${K.icon('troops')}</span><div><b class="kai" style="font-size:1.05rem">荆州长枪兵</b><br><span class="muted">汉 · 步骑混编 · 外观随文化</span></div><span class="v4-slot empty" style="--s:44px;margin-left:auto"></span><span class="muted">未乘马</span></div>
+    </div></div>`;
+  }
+  K.$('#acts').innerHTML = `<button class="v4-btn">${K.icon('reward')}赏赐</button><button class="v4-btn">${K.icon('gift')}赐宝物</button><button class="v4-btn ph-hide">${K.icon('move')}移动</button><button class="v4-btn">${K.icon('titles')}授官</button><button class="v4-btn ph-hide">${K.icon('train')}演武</button><span class="sp"></span><button class="v4-btn ghost ph-hide">解任</button><button class="v4-btn seal">${K.icon('level')}习得新招</button>`;
+  if (notes) {
+    const N = { ov: [[1, '22%', '78%', '立绘台：3D 模型（高精度，Lanternvale 暖光），拖动旋转；动作：待机 / 演武 / 骑乘 / 得胜'], [2, '58%', '12%', '八个页签；「新」= 有可习得的招式'], [3, '76%', '93%', '常用操作；不可用的灰显并在点按时说明']],
+      gear: [[1, '30%', '62%', '六槽纸偶式排列；选中的槽亮灯'], [2, '72%', '15%', '候选：府库 + 本城市场（价）；绿红为对比'], [3, '40%', '84%', '换装后的变化即时预览']],
+      skills: [[1, '30%', '20%', '招式谱：8 枚印（● 轻 ◆ 中 ▲ 重）+ 键位 + 每步伤害与安全标签（COMBAT-V4 §12.1）'], [2, '30%', '70%', '小视窗循环播放这套连段']],
+      army: [[1, '62%', '20%', '惯用阵型（武力 / 智力不足者锁住并说明）']] }[tab] || [];
+    K.$('#notes').innerHTML = N.map(n => K.note(...n)).join('');
+  }
+  document.body.dataset.ready = '1';
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,3782 @@
+[
+ {
+  "key": "suite:董卓:map",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.443,
+  "rmsDb": -23.3,
+  "nan": 0,
+  "renderMs": 1646
+ },
+ {
+  "key": "suite:董卓:battle",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.539,
+  "rmsDb": -19.3,
+  "nan": 0,
+  "renderMs": 1411
+ },
+ {
+  "key": "suite:董卓:battle-defend",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.543,
+  "rmsDb": -19.8,
+  "nan": 0,
+  "renderMs": 1439
+ },
+ {
+  "key": "suite:董卓:council",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.443,
+  "rmsDb": -23.5,
+  "nan": 0,
+  "renderMs": 1371
+ },
+ {
+  "key": "suite:董卓:victory",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.578,
+  "rmsDb": -17.9,
+  "nan": 0,
+  "renderMs": 1264
+ },
+ {
+  "key": "suite:董卓:defeat",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.374,
+  "rmsDb": -27.3,
+  "nan": 0,
+  "renderMs": 1279
+ },
+ {
+  "key": "suite:董卓:fanfare",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.551,
+  "rmsDb": -19.2,
+  "nan": 0,
+  "renderMs": 245
+ },
+ {
+  "key": "suite:董卓:clash",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.553,
+  "rmsDb": -17.7,
+  "nan": 0,
+  "renderMs": 300
+ },
+ {
+  "key": "suite:董卓:clash-short",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.561,
+  "rmsDb": -21.6,
+  "nan": 0,
+  "renderMs": 233
+ },
+ {
+  "key": "suite:董卓:clash-crit",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.549,
+  "rmsDb": -18.5,
+  "nan": 0,
+  "renderMs": 283
+ },
+ {
+  "key": "suite:袁绍:map",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.435,
+  "rmsDb": -22.6,
+  "nan": 0,
+  "renderMs": 1201
+ },
+ {
+  "key": "suite:袁绍:battle",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.525,
+  "rmsDb": -19.2,
+  "nan": 0,
+  "renderMs": 1541
+ },
+ {
+  "key": "suite:袁绍:battle-defend",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.536,
+  "rmsDb": -19.4,
+  "nan": 0,
+  "renderMs": 1237
+ },
+ {
+  "key": "suite:袁绍:council",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.346,
+  "rmsDb": -24.7,
+  "nan": 0,
+  "renderMs": 1191
+ },
+ {
+  "key": "suite:袁绍:victory",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.576,
+  "rmsDb": -17.9,
+  "nan": 0,
+  "renderMs": 1106
+ },
+ {
+  "key": "suite:袁绍:defeat",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.323,
+  "rmsDb": -26.8,
+  "nan": 0,
+  "renderMs": 1201
+ },
+ {
+  "key": "suite:袁绍:fanfare",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.545,
+  "rmsDb": -18.7,
+  "nan": 0,
+  "renderMs": 324
+ },
+ {
+  "key": "suite:袁绍:clash",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.56,
+  "rmsDb": -17.8,
+  "nan": 0,
+  "renderMs": 342
+ },
+ {
+  "key": "suite:袁绍:clash-short",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.554,
+  "rmsDb": -21.5,
+  "nan": 0,
+  "renderMs": 258
+ },
+ {
+  "key": "suite:袁绍:clash-crit",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.56,
+  "rmsDb": -19.4,
+  "nan": 0,
+  "renderMs": 257
+ },
+ {
+  "key": "suite:曹操:map",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.453,
+  "rmsDb": -23,
+  "nan": 0,
+  "renderMs": 1509
+ },
+ {
+  "key": "suite:曹操:battle",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.547,
+  "rmsDb": -19.8,
+  "nan": 0,
+  "renderMs": 1625
+ },
+ {
+  "key": "suite:曹操:battle-defend",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.531,
+  "rmsDb": -19.6,
+  "nan": 0,
+  "renderMs": 1359
+ },
+ {
+  "key": "suite:曹操:council",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.416,
+  "rmsDb": -23.3,
+  "nan": 0,
+  "renderMs": 1308
+ },
+ {
+  "key": "suite:曹操:victory",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.561,
+  "rmsDb": -18.2,
+  "nan": 0,
+  "renderMs": 1230
+ },
+ {
+  "key": "suite:曹操:defeat",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.321,
+  "rmsDb": -27,
+  "nan": 0,
+  "renderMs": 1887
+ },
+ {
+  "key": "suite:曹操:fanfare",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.555,
+  "rmsDb": -19.3,
+  "nan": 0,
+  "renderMs": 272
+ },
+ {
+  "key": "suite:曹操:clash",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.566,
+  "rmsDb": -17.8,
+  "nan": 0,
+  "renderMs": 315
+ },
+ {
+  "key": "suite:曹操:clash-short",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.563,
+  "rmsDb": -21.6,
+  "nan": 0,
+  "renderMs": 209
+ },
+ {
+  "key": "suite:曹操:clash-crit",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.567,
+  "rmsDb": -19.4,
+  "nan": 0,
+  "renderMs": 251
+ },
+ {
+  "key": "suite:刘备:map",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.421,
+  "rmsDb": -21.4,
+  "nan": 0,
+  "renderMs": 1313
+ },
+ {
+  "key": "suite:刘备:battle",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.541,
+  "rmsDb": -18.9,
+  "nan": 0,
+  "renderMs": 1798
+ },
+ {
+  "key": "suite:刘备:battle-defend",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.534,
+  "rmsDb": -19.3,
+  "nan": 0,
+  "renderMs": 1334
+ },
+ {
+  "key": "suite:刘备:council",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.405,
+  "rmsDb": -23,
+  "nan": 0,
+  "renderMs": 1311
+ },
+ {
+  "key": "suite:刘备:victory",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.586,
+  "rmsDb": -17.8,
+  "nan": 0,
+  "renderMs": 1510
+ },
+ {
+  "key": "suite:刘备:defeat",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.321,
+  "rmsDb": -26.5,
+  "nan": 0,
+  "renderMs": 1170
+ },
+ {
+  "key": "suite:刘备:fanfare",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.537,
+  "rmsDb": -19,
+  "nan": 0,
+  "renderMs": 263
+ },
+ {
+  "key": "suite:刘备:clash",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.547,
+  "rmsDb": -17.8,
+  "nan": 0,
+  "renderMs": 309
+ },
+ {
+  "key": "suite:刘备:clash-short",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.546,
+  "rmsDb": -21.6,
+  "nan": 0,
+  "renderMs": 263
+ },
+ {
+  "key": "suite:刘备:clash-crit",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.555,
+  "rmsDb": -19.3,
+  "nan": 0,
+  "renderMs": 301
+ },
+ {
+  "key": "suite:孙坚:map",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.446,
+  "rmsDb": -22.6,
+  "nan": 0,
+  "renderMs": 1393
+ },
+ {
+  "key": "suite:孙坚:battle",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.56,
+  "rmsDb": -19.2,
+  "nan": 0,
+  "renderMs": 1483
+ },
+ {
+  "key": "suite:孙坚:battle-defend",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.548,
+  "rmsDb": -19.3,
+  "nan": 0,
+  "renderMs": 1274
+ },
+ {
+  "key": "suite:孙坚:council",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.455,
+  "rmsDb": -23.6,
+  "nan": 0,
+  "renderMs": 1142
+ },
+ {
+  "key": "suite:孙坚:victory",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.571,
+  "rmsDb": -17.8,
+  "nan": 0,
+  "renderMs": 1317
+ },
+ {
+  "key": "suite:孙坚:defeat",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.354,
+  "rmsDb": -27.6,
+  "nan": 0,
+  "renderMs": 1179
+ },
+ {
+  "key": "suite:孙坚:fanfare",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.535,
+  "rmsDb": -19,
+  "nan": 0,
+  "renderMs": 270
+ },
+ {
+  "key": "suite:孙坚:clash",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.555,
+  "rmsDb": -17.5,
+  "nan": 0,
+  "renderMs": 295
+ },
+ {
+  "key": "suite:孙坚:clash-short",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.562,
+  "rmsDb": -21.6,
+  "nan": 0,
+  "renderMs": 255
+ },
+ {
+  "key": "suite:孙坚:clash-crit",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.544,
+  "rmsDb": -19,
+  "nan": 0,
+  "renderMs": 265
+ },
+ {
+  "key": "suite:袁术:map",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.461,
+  "rmsDb": -24.9,
+  "nan": 0,
+  "renderMs": 1275
+ },
+ {
+  "key": "suite:袁术:battle",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.548,
+  "rmsDb": -20,
+  "nan": 0,
+  "renderMs": 1461
+ },
+ {
+  "key": "suite:袁术:battle-defend",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.536,
+  "rmsDb": -19.3,
+  "nan": 0,
+  "renderMs": 1321
+ },
+ {
+  "key": "suite:袁术:council",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.416,
+  "rmsDb": -25,
+  "nan": 0,
+  "renderMs": 1272
+ },
+ {
+  "key": "suite:袁术:victory",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.566,
+  "rmsDb": -18.2,
+  "nan": 0,
+  "renderMs": 1407
+ },
+ {
+  "key": "suite:袁术:defeat",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.335,
+  "rmsDb": -25.7,
+  "nan": 0,
+  "renderMs": 1184
+ },
+ {
+  "key": "suite:袁术:fanfare",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.538,
+  "rmsDb": -18.9,
+  "nan": 0,
+  "renderMs": 245
+ },
+ {
+  "key": "suite:袁术:clash",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.553,
+  "rmsDb": -17.5,
+  "nan": 0,
+  "renderMs": 244
+ },
+ {
+  "key": "suite:袁术:clash-short",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.541,
+  "rmsDb": -21.7,
+  "nan": 0,
+  "renderMs": 251
+ },
+ {
+  "key": "suite:袁术:clash-crit",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.562,
+  "rmsDb": -19,
+  "nan": 0,
+  "renderMs": 280
+ },
+ {
+  "key": "suite:公孙瓒:map",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.417,
+  "rmsDb": -22.1,
+  "nan": 0,
+  "renderMs": 1155
+ },
+ {
+  "key": "suite:公孙瓒:battle",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.525,
+  "rmsDb": -19,
+  "nan": 0,
+  "renderMs": 1559
+ },
+ {
+  "key": "suite:公孙瓒:battle-defend",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.545,
+  "rmsDb": -19.2,
+  "nan": 0,
+  "renderMs": 1121
+ },
+ {
+  "key": "suite:公孙瓒:council",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.418,
+  "rmsDb": -22.7,
+  "nan": 0,
+  "renderMs": 1168
+ },
+ {
+  "key": "suite:公孙瓒:victory",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.56,
+  "rmsDb": -17.9,
+  "nan": 0,
+  "renderMs": 1310
+ },
+ {
+  "key": "suite:公孙瓒:defeat",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.321,
+  "rmsDb": -29.1,
+  "nan": 0,
+  "renderMs": 942
+ },
+ {
+  "key": "suite:公孙瓒:fanfare",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.54,
+  "rmsDb": -18.9,
+  "nan": 0,
+  "renderMs": 263
+ },
+ {
+  "key": "suite:公孙瓒:clash",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.553,
+  "rmsDb": -17.7,
+  "nan": 0,
+  "renderMs": 313
+ },
+ {
+  "key": "suite:公孙瓒:clash-short",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.547,
+  "rmsDb": -21.5,
+  "nan": 0,
+  "renderMs": 239
+ },
+ {
+  "key": "suite:公孙瓒:clash-crit",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.549,
+  "rmsDb": -18.8,
+  "nan": 0,
+  "renderMs": 276
+ },
+ {
+  "key": "suite:刘表:map",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.402,
+  "rmsDb": -22.2,
+  "nan": 0,
+  "renderMs": 1249
+ },
+ {
+  "key": "suite:刘表:battle",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.543,
+  "rmsDb": -20,
+  "nan": 0,
+  "renderMs": 1324
+ },
+ {
+  "key": "suite:刘表:battle-defend",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.535,
+  "rmsDb": -19.5,
+  "nan": 0,
+  "renderMs": 1334
+ },
+ {
+  "key": "suite:刘表:council",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.402,
+  "rmsDb": -22.9,
+  "nan": 0,
+  "renderMs": 1228
+ },
+ {
+  "key": "suite:刘表:victory",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.565,
+  "rmsDb": -17.9,
+  "nan": 0,
+  "renderMs": 1296
+ },
+ {
+  "key": "suite:刘表:defeat",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.329,
+  "rmsDb": -26.7,
+  "nan": 0,
+  "renderMs": 1373
+ },
+ {
+  "key": "suite:刘表:fanfare",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.541,
+  "rmsDb": -18.5,
+  "nan": 0,
+  "renderMs": 250
+ },
+ {
+  "key": "suite:刘表:clash",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.553,
+  "rmsDb": -17.8,
+  "nan": 0,
+  "renderMs": 308
+ },
+ {
+  "key": "suite:刘表:clash-short",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.552,
+  "rmsDb": -21.7,
+  "nan": 0,
+  "renderMs": 341
+ },
+ {
+  "key": "suite:刘表:clash-crit",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.559,
+  "rmsDb": -19.2,
+  "nan": 0,
+  "renderMs": 326
+ },
+ {
+  "key": "suite:刘焉:map",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.329,
+  "rmsDb": -23.2,
+  "nan": 0,
+  "renderMs": 1116
+ },
+ {
+  "key": "suite:刘焉:battle",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.554,
+  "rmsDb": -19.9,
+  "nan": 0,
+  "renderMs": 1480
+ },
+ {
+  "key": "suite:刘焉:battle-defend",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.547,
+  "rmsDb": -19.1,
+  "nan": 0,
+  "renderMs": 1219
+ },
+ {
+  "key": "suite:刘焉:council",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.345,
+  "rmsDb": -24.8,
+  "nan": 0,
+  "renderMs": 1259
+ },
+ {
+  "key": "suite:刘焉:victory",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.565,
+  "rmsDb": -17.9,
+  "nan": 0,
+  "renderMs": 1235
+ },
+ {
+  "key": "suite:刘焉:defeat",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.337,
+  "rmsDb": -26.6,
+  "nan": 0,
+  "renderMs": 1331
+ },
+ {
+  "key": "suite:刘焉:fanfare",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.554,
+  "rmsDb": -18.9,
+  "nan": 0,
+  "renderMs": 252
+ },
+ {
+  "key": "suite:刘焉:clash",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.582,
+  "rmsDb": -17.8,
+  "nan": 0,
+  "renderMs": 317
+ },
+ {
+  "key": "suite:刘焉:clash-short",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.533,
+  "rmsDb": -21.5,
+  "nan": 0,
+  "renderMs": 189
+ },
+ {
+  "key": "suite:刘焉:clash-crit",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.556,
+  "rmsDb": -19.1,
+  "nan": 0,
+  "renderMs": 243
+ },
+ {
+  "key": "suite:马腾:map",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.456,
+  "rmsDb": -22.4,
+  "nan": 0,
+  "renderMs": 1253
+ },
+ {
+  "key": "suite:马腾:battle",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.541,
+  "rmsDb": -18.8,
+  "nan": 0,
+  "renderMs": 1426
+ },
+ {
+  "key": "suite:马腾:battle-defend",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.543,
+  "rmsDb": -19.4,
+  "nan": 0,
+  "renderMs": 1218
+ },
+ {
+  "key": "suite:马腾:council",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.422,
+  "rmsDb": -23.8,
+  "nan": 0,
+  "renderMs": 1320
+ },
+ {
+  "key": "suite:马腾:victory",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.562,
+  "rmsDb": -17.7,
+  "nan": 0,
+  "renderMs": 1196
+ },
+ {
+  "key": "suite:马腾:defeat",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.317,
+  "rmsDb": -28.1,
+  "nan": 0,
+  "renderMs": 1147
+ },
+ {
+  "key": "suite:马腾:fanfare",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.542,
+  "rmsDb": -18.8,
+  "nan": 0,
+  "renderMs": 306
+ },
+ {
+  "key": "suite:马腾:clash",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.56,
+  "rmsDb": -17.4,
+  "nan": 0,
+  "renderMs": 300
+ },
+ {
+  "key": "suite:马腾:clash-short",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.541,
+  "rmsDb": -21.5,
+  "nan": 0,
+  "renderMs": 213
+ },
+ {
+  "key": "suite:马腾:clash-crit",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.544,
+  "rmsDb": -19.1,
+  "nan": 0,
+  "renderMs": 262
+ },
+ {
+  "key": "suite:陶谦:map",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.4,
+  "rmsDb": -23.2,
+  "nan": 0,
+  "renderMs": 1267
+ },
+ {
+  "key": "suite:陶谦:battle",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.54,
+  "rmsDb": -19.3,
+  "nan": 0,
+  "renderMs": 1320
+ },
+ {
+  "key": "suite:陶谦:battle-defend",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.55,
+  "rmsDb": -19.8,
+  "nan": 0,
+  "renderMs": 1243
+ },
+ {
+  "key": "suite:陶谦:council",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.423,
+  "rmsDb": -23.2,
+  "nan": 0,
+  "renderMs": 1212
+ },
+ {
+  "key": "suite:陶谦:victory",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.564,
+  "rmsDb": -18.1,
+  "nan": 0,
+  "renderMs": 1444
+ },
+ {
+  "key": "suite:陶谦:defeat",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.325,
+  "rmsDb": -26.4,
+  "nan": 0,
+  "renderMs": 1184
+ },
+ {
+  "key": "suite:陶谦:fanfare",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.552,
+  "rmsDb": -19.1,
+  "nan": 0,
+  "renderMs": 265
+ },
+ {
+  "key": "suite:陶谦:clash",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.548,
+  "rmsDb": -18,
+  "nan": 0,
+  "renderMs": 283
+ },
+ {
+  "key": "suite:陶谦:clash-short",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.54,
+  "rmsDb": -21.8,
+  "nan": 0,
+  "renderMs": 217
+ },
+ {
+  "key": "suite:陶谦:clash-crit",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.564,
+  "rmsDb": -19,
+  "nan": 0,
+  "renderMs": 258
+ },
+ {
+  "key": "suite:孔融:map",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.391,
+  "rmsDb": -22.3,
+  "nan": 0,
+  "renderMs": 1310
+ },
+ {
+  "key": "suite:孔融:battle",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.55,
+  "rmsDb": -20.1,
+  "nan": 0,
+  "renderMs": 1413
+ },
+ {
+  "key": "suite:孔融:battle-defend",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.535,
+  "rmsDb": -19.1,
+  "nan": 0,
+  "renderMs": 1173
+ },
+ {
+  "key": "suite:孔融:council",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.393,
+  "rmsDb": -22.8,
+  "nan": 0,
+  "renderMs": 1189
+ },
+ {
+  "key": "suite:孔融:victory",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.567,
+  "rmsDb": -17.8,
+  "nan": 0,
+  "renderMs": 1188
+ },
+ {
+  "key": "suite:孔融:defeat",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.347,
+  "rmsDb": -26.2,
+  "nan": 0,
+  "renderMs": 1020
+ },
+ {
+  "key": "suite:孔融:fanfare",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.54,
+  "rmsDb": -19.4,
+  "nan": 0,
+  "renderMs": 255
+ },
+ {
+  "key": "suite:孔融:clash",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.548,
+  "rmsDb": -17.8,
+  "nan": 0,
+  "renderMs": 269
+ },
+ {
+  "key": "suite:孔融:clash-short",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.543,
+  "rmsDb": -21.6,
+  "nan": 0,
+  "renderMs": 235
+ },
+ {
+  "key": "suite:孔融:clash-crit",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.55,
+  "rmsDb": -19.3,
+  "nan": 0,
+  "renderMs": 239
+ },
+ {
+  "key": "suite:韩馥:map",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.383,
+  "rmsDb": -22.7,
+  "nan": 0,
+  "renderMs": 1247
+ },
+ {
+  "key": "suite:韩馥:battle",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.547,
+  "rmsDb": -20.1,
+  "nan": 0,
+  "renderMs": 1368
+ },
+ {
+  "key": "suite:韩馥:battle-defend",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.538,
+  "rmsDb": -20.1,
+  "nan": 0,
+  "renderMs": 1180
+ },
+ {
+  "key": "suite:韩馥:council",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.365,
+  "rmsDb": -25,
+  "nan": 0,
+  "renderMs": 1220
+ },
+ {
+  "key": "suite:韩馥:victory",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.574,
+  "rmsDb": -18,
+  "nan": 0,
+  "renderMs": 1108
+ },
+ {
+  "key": "suite:韩馥:defeat",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.3,
+  "rmsDb": -28.3,
+  "nan": 0,
+  "renderMs": 1086
+ },
+ {
+  "key": "suite:韩馥:fanfare",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.542,
+  "rmsDb": -18.8,
+  "nan": 0,
+  "renderMs": 264
+ },
+ {
+  "key": "suite:韩馥:clash",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.552,
+  "rmsDb": -17.9,
+  "nan": 0,
+  "renderMs": 294
+ },
+ {
+  "key": "suite:韩馥:clash-short",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.563,
+  "rmsDb": -21.8,
+  "nan": 0,
+  "renderMs": 208
+ },
+ {
+  "key": "suite:韩馥:clash-crit",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.551,
+  "rmsDb": -18.8,
+  "nan": 0,
+  "renderMs": 308
+ },
+ {
+  "key": "suite:张鲁:map",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.329,
+  "rmsDb": -23.3,
+  "nan": 0,
+  "renderMs": 1156
+ },
+ {
+  "key": "suite:张鲁:battle",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.545,
+  "rmsDb": -19.3,
+  "nan": 0,
+  "renderMs": 1454
+ },
+ {
+  "key": "suite:张鲁:battle-defend",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.551,
+  "rmsDb": -19.3,
+  "nan": 0,
+  "renderMs": 1292
+ },
+ {
+  "key": "suite:张鲁:council",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.423,
+  "rmsDb": -23,
+  "nan": 0,
+  "renderMs": 1365
+ },
+ {
+  "key": "suite:张鲁:victory",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.586,
+  "rmsDb": -18.1,
+  "nan": 0,
+  "renderMs": 1323
+ },
+ {
+  "key": "suite:张鲁:defeat",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.308,
+  "rmsDb": -26.4,
+  "nan": 0,
+  "renderMs": 1369
+ },
+ {
+  "key": "suite:张鲁:fanfare",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.566,
+  "rmsDb": -18.9,
+  "nan": 0,
+  "renderMs": 249
+ },
+ {
+  "key": "suite:张鲁:clash",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.55,
+  "rmsDb": -17.8,
+  "nan": 0,
+  "renderMs": 265
+ },
+ {
+  "key": "suite:张鲁:clash-short",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.553,
+  "rmsDb": -21.8,
+  "nan": 0,
+  "renderMs": 239
+ },
+ {
+  "key": "suite:张鲁:clash-crit",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.567,
+  "rmsDb": -19.5,
+  "nan": 0,
+  "renderMs": 334
+ },
+ {
+  "key": "suite:张杨:map",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.455,
+  "rmsDb": -24.4,
+  "nan": 0,
+  "renderMs": 1323
+ },
+ {
+  "key": "suite:张杨:battle",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.539,
+  "rmsDb": -19.8,
+  "nan": 0,
+  "renderMs": 1602
+ },
+ {
+  "key": "suite:张杨:battle-defend",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.539,
+  "rmsDb": -19,
+  "nan": 0,
+  "renderMs": 1127
+ },
+ {
+  "key": "suite:张杨:council",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.34,
+  "rmsDb": -25.3,
+  "nan": 0,
+  "renderMs": 1029
+ },
+ {
+  "key": "suite:张杨:victory",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.59,
+  "rmsDb": -18,
+  "nan": 0,
+  "renderMs": 1245
+ },
+ {
+  "key": "suite:张杨:defeat",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.352,
+  "rmsDb": -26,
+  "nan": 0,
+  "renderMs": 1199
+ },
+ {
+  "key": "suite:张杨:fanfare",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.533,
+  "rmsDb": -18.8,
+  "nan": 0,
+  "renderMs": 309
+ },
+ {
+  "key": "suite:张杨:clash",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.564,
+  "rmsDb": -17.8,
+  "nan": 0,
+  "renderMs": 288
+ },
+ {
+  "key": "suite:张杨:clash-short",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.557,
+  "rmsDb": -21.6,
+  "nan": 0,
+  "renderMs": 180
+ },
+ {
+  "key": "suite:张杨:clash-crit",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.559,
+  "rmsDb": -19.5,
+  "nan": 0,
+  "renderMs": 275
+ },
+ {
+  "key": "suite:刘繇:map",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.432,
+  "rmsDb": -23.4,
+  "nan": 0,
+  "renderMs": 1244
+ },
+ {
+  "key": "suite:刘繇:battle",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.542,
+  "rmsDb": -19.9,
+  "nan": 0,
+  "renderMs": 1391
+ },
+ {
+  "key": "suite:刘繇:battle-defend",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.536,
+  "rmsDb": -20.2,
+  "nan": 0,
+  "renderMs": 1261
+ },
+ {
+  "key": "suite:刘繇:council",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.38,
+  "rmsDb": -25,
+  "nan": 0,
+  "renderMs": 1070
+ },
+ {
+  "key": "suite:刘繇:victory",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.57,
+  "rmsDb": -17.9,
+  "nan": 0,
+  "renderMs": 1215
+ },
+ {
+  "key": "suite:刘繇:defeat",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.318,
+  "rmsDb": -27.5,
+  "nan": 0,
+  "renderMs": 1274
+ },
+ {
+  "key": "suite:刘繇:fanfare",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.55,
+  "rmsDb": -18.9,
+  "nan": 0,
+  "renderMs": 258
+ },
+ {
+  "key": "suite:刘繇:clash",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.553,
+  "rmsDb": -17.9,
+  "nan": 0,
+  "renderMs": 279
+ },
+ {
+  "key": "suite:刘繇:clash-short",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.545,
+  "rmsDb": -21.9,
+  "nan": 0,
+  "renderMs": 273
+ },
+ {
+  "key": "suite:刘繇:clash-crit",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.55,
+  "rmsDb": -19.7,
+  "nan": 0,
+  "renderMs": 291
+ },
+ {
+  "key": "suite:陆康:map",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.397,
+  "rmsDb": -22.5,
+  "nan": 0,
+  "renderMs": 1265
+ },
+ {
+  "key": "suite:陆康:battle",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.548,
+  "rmsDb": -19,
+  "nan": 0,
+  "renderMs": 1600
+ },
+ {
+  "key": "suite:陆康:battle-defend",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.537,
+  "rmsDb": -19.8,
+  "nan": 0,
+  "renderMs": 1195
+ },
+ {
+  "key": "suite:陆康:council",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.4,
+  "rmsDb": -23.4,
+  "nan": 0,
+  "renderMs": 1127
+ },
+ {
+  "key": "suite:陆康:victory",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.559,
+  "rmsDb": -18.1,
+  "nan": 0,
+  "renderMs": 1480
+ },
+ {
+  "key": "suite:陆康:defeat",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.359,
+  "rmsDb": -26.1,
+  "nan": 0,
+  "renderMs": 1250
+ },
+ {
+  "key": "suite:陆康:fanfare",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.547,
+  "rmsDb": -19.4,
+  "nan": 0,
+  "renderMs": 265
+ },
+ {
+  "key": "suite:陆康:clash",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.573,
+  "rmsDb": -18.1,
+  "nan": 0,
+  "renderMs": 306
+ },
+ {
+  "key": "suite:陆康:clash-short",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.536,
+  "rmsDb": -21.6,
+  "nan": 0,
+  "renderMs": 251
+ },
+ {
+  "key": "suite:陆康:clash-crit",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.554,
+  "rmsDb": -19.3,
+  "nan": 0,
+  "renderMs": 323
+ },
+ {
+  "key": "suite:孟获:map",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.468,
+  "rmsDb": -23.4,
+  "nan": 0,
+  "renderMs": 1338
+ },
+ {
+  "key": "suite:孟获:battle",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.544,
+  "rmsDb": -19.8,
+  "nan": 0,
+  "renderMs": 1490
+ },
+ {
+  "key": "suite:孟获:battle-defend",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.539,
+  "rmsDb": -19.9,
+  "nan": 0,
+  "renderMs": 1214
+ },
+ {
+  "key": "suite:孟获:council",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.468,
+  "rmsDb": -23.4,
+  "nan": 0,
+  "renderMs": 1257
+ },
+ {
+  "key": "suite:孟获:victory",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.571,
+  "rmsDb": -18.3,
+  "nan": 0,
+  "renderMs": 1667
+ },
+ {
+  "key": "suite:孟获:defeat",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.299,
+  "rmsDb": -30,
+  "nan": 0,
+  "renderMs": 949
+ },
+ {
+  "key": "suite:孟获:fanfare",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.54,
+  "rmsDb": -19.3,
+  "nan": 0,
+  "renderMs": 261
+ },
+ {
+  "key": "suite:孟获:clash",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.562,
+  "rmsDb": -17.6,
+  "nan": 0,
+  "renderMs": 279
+ },
+ {
+  "key": "suite:孟获:clash-short",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.553,
+  "rmsDb": -21.6,
+  "nan": 0,
+  "renderMs": 205
+ },
+ {
+  "key": "suite:孟获:clash-crit",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.546,
+  "rmsDb": -19.6,
+  "nan": 0,
+  "renderMs": 296
+ },
+ {
+  "key": "suite:孙策:map",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.455,
+  "rmsDb": -23,
+  "nan": 0,
+  "renderMs": 1207
+ },
+ {
+  "key": "suite:孙策:battle",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.552,
+  "rmsDb": -19.8,
+  "nan": 0,
+  "renderMs": 1530
+ },
+ {
+  "key": "suite:孙策:battle-defend",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.535,
+  "rmsDb": -19.3,
+  "nan": 0,
+  "renderMs": 1446
+ },
+ {
+  "key": "suite:孙策:council",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.384,
+  "rmsDb": -22.8,
+  "nan": 0,
+  "renderMs": 1261
+ },
+ {
+  "key": "suite:孙策:victory",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.567,
+  "rmsDb": -18.2,
+  "nan": 0,
+  "renderMs": 1208
+ },
+ {
+  "key": "suite:孙策:defeat",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.316,
+  "rmsDb": -28.3,
+  "nan": 0,
+  "renderMs": 1173
+ },
+ {
+  "key": "suite:孙策:fanfare",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.554,
+  "rmsDb": -18.9,
+  "nan": 0,
+  "renderMs": 262
+ },
+ {
+  "key": "suite:孙策:clash",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.561,
+  "rmsDb": -17.8,
+  "nan": 0,
+  "renderMs": 280
+ },
+ {
+  "key": "suite:孙策:clash-short",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.551,
+  "rmsDb": -21.5,
+  "nan": 0,
+  "renderMs": 262
+ },
+ {
+  "key": "suite:孙策:clash-crit",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.543,
+  "rmsDb": -19.1,
+  "nan": 0,
+  "renderMs": 261
+ },
+ {
+  "key": "suite:刘璋:map",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.361,
+  "rmsDb": -23.6,
+  "nan": 0,
+  "renderMs": 1111
+ },
+ {
+  "key": "suite:刘璋:battle",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.534,
+  "rmsDb": -20.1,
+  "nan": 0,
+  "renderMs": 1471
+ },
+ {
+  "key": "suite:刘璋:battle-defend",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.545,
+  "rmsDb": -19.3,
+  "nan": 0,
+  "renderMs": 1164
+ },
+ {
+  "key": "suite:刘璋:council",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.366,
+  "rmsDb": -25.3,
+  "nan": 0,
+  "renderMs": 1279
+ },
+ {
+  "key": "suite:刘璋:victory",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.574,
+  "rmsDb": -17.8,
+  "nan": 0,
+  "renderMs": 1273
+ },
+ {
+  "key": "suite:刘璋:defeat",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.339,
+  "rmsDb": -26.6,
+  "nan": 0,
+  "renderMs": 1084
+ },
+ {
+  "key": "suite:刘璋:fanfare",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.56,
+  "rmsDb": -18.8,
+  "nan": 0,
+  "renderMs": 261
+ },
+ {
+  "key": "suite:刘璋:clash",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.551,
+  "rmsDb": -17.8,
+  "nan": 0,
+  "renderMs": 327
+ },
+ {
+  "key": "suite:刘璋:clash-short",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.566,
+  "rmsDb": -21.6,
+  "nan": 0,
+  "renderMs": 250
+ },
+ {
+  "key": "suite:刘璋:clash-crit",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.567,
+  "rmsDb": -19.7,
+  "nan": 0,
+  "renderMs": 352
+ },
+ {
+  "key": "suite:马超:map",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.455,
+  "rmsDb": -22.6,
+  "nan": 0,
+  "renderMs": 1242
+ },
+ {
+  "key": "suite:马超:battle",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.56,
+  "rmsDb": -19.7,
+  "nan": 0,
+  "renderMs": 1349
+ },
+ {
+  "key": "suite:马超:battle-defend",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.553,
+  "rmsDb": -19.4,
+  "nan": 0,
+  "renderMs": 1278
+ },
+ {
+  "key": "suite:马超:council",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.392,
+  "rmsDb": -22.8,
+  "nan": 0,
+  "renderMs": 1193
+ },
+ {
+  "key": "suite:马超:victory",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.571,
+  "rmsDb": -18.2,
+  "nan": 0,
+  "renderMs": 1273
+ },
+ {
+  "key": "suite:马超:defeat",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.314,
+  "rmsDb": -28.1,
+  "nan": 0,
+  "renderMs": 1171
+ },
+ {
+  "key": "suite:马超:fanfare",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.539,
+  "rmsDb": -19,
+  "nan": 0,
+  "renderMs": 284
+ },
+ {
+  "key": "suite:马超:clash",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.55,
+  "rmsDb": -17.5,
+  "nan": 0,
+  "renderMs": 303
+ },
+ {
+  "key": "suite:马超:clash-short",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.555,
+  "rmsDb": -21.3,
+  "nan": 0,
+  "renderMs": 229
+ },
+ {
+  "key": "suite:马超:clash-crit",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.559,
+  "rmsDb": -19.6,
+  "nan": 0,
+  "renderMs": 298
+ },
+ {
+  "key": "suite:公孙康:map",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.415,
+  "rmsDb": -21.7,
+  "nan": 0,
+  "renderMs": 1426
+ },
+ {
+  "key": "suite:公孙康:battle",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.528,
+  "rmsDb": -19.1,
+  "nan": 0,
+  "renderMs": 1448
+ },
+ {
+  "key": "suite:公孙康:battle-defend",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.551,
+  "rmsDb": -19.3,
+  "nan": 0,
+  "renderMs": 1269
+ },
+ {
+  "key": "suite:公孙康:council",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.421,
+  "rmsDb": -22.9,
+  "nan": 0,
+  "renderMs": 1293
+ },
+ {
+  "key": "suite:公孙康:victory",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.563,
+  "rmsDb": -17.9,
+  "nan": 0,
+  "renderMs": 1165
+ },
+ {
+  "key": "suite:公孙康:defeat",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.307,
+  "rmsDb": -26.6,
+  "nan": 0,
+  "renderMs": 1171
+ },
+ {
+  "key": "suite:公孙康:fanfare",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.545,
+  "rmsDb": -18.4,
+  "nan": 0,
+  "renderMs": 252
+ },
+ {
+  "key": "suite:公孙康:clash",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.556,
+  "rmsDb": -17.8,
+  "nan": 0,
+  "renderMs": 293
+ },
+ {
+  "key": "suite:公孙康:clash-short",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.54,
+  "rmsDb": -21.6,
+  "nan": 0,
+  "renderMs": 225
+ },
+ {
+  "key": "suite:公孙康:clash-crit",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.586,
+  "rmsDb": -19.2,
+  "nan": 0,
+  "renderMs": 298
+ },
+ {
+  "key": "suite:公孙度:map",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.44,
+  "rmsDb": -21.6,
+  "nan": 0,
+  "renderMs": 1255
+ },
+ {
+  "key": "suite:公孙度:battle",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.529,
+  "rmsDb": -19.1,
+  "nan": 0,
+  "renderMs": 1455
+ },
+ {
+  "key": "suite:公孙度:battle-defend",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.542,
+  "rmsDb": -19.3,
+  "nan": 0,
+  "renderMs": 1178
+ },
+ {
+  "key": "suite:公孙度:council",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.412,
+  "rmsDb": -22.9,
+  "nan": 0,
+  "renderMs": 1260
+ },
+ {
+  "key": "suite:公孙度:victory",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.565,
+  "rmsDb": -17.8,
+  "nan": 0,
+  "renderMs": 1402
+ },
+ {
+  "key": "suite:公孙度:defeat",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.309,
+  "rmsDb": -26.3,
+  "nan": 0,
+  "renderMs": 1224
+ },
+ {
+  "key": "suite:公孙度:fanfare",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.548,
+  "rmsDb": -18.6,
+  "nan": 0,
+  "renderMs": 268
+ },
+ {
+  "key": "suite:公孙度:clash",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.544,
+  "rmsDb": -17.6,
+  "nan": 0,
+  "renderMs": 304
+ },
+ {
+  "key": "suite:公孙度:clash-short",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.542,
+  "rmsDb": -21.7,
+  "nan": 0,
+  "renderMs": 250
+ },
+ {
+  "key": "suite:公孙度:clash-crit",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.568,
+  "rmsDb": -19,
+  "nan": 0,
+  "renderMs": 308
+ },
+ {
+  "key": "suite:士燮:map",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.408,
+  "rmsDb": -23.3,
+  "nan": 0,
+  "renderMs": 1181
+ },
+ {
+  "key": "suite:士燮:battle",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.535,
+  "rmsDb": -20,
+  "nan": 0,
+  "renderMs": 1314
+ },
+ {
+  "key": "suite:士燮:battle-defend",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.538,
+  "rmsDb": -19,
+  "nan": 0,
+  "renderMs": 1228
+ },
+ {
+  "key": "suite:士燮:council",
+  "family": "hua",
+  "sec": 20,
+  "peak": 0.421,
+  "rmsDb": -25.1,
+  "nan": 0,
+  "renderMs": 1136
+ },
+ {
+  "key": "suite:士燮:victory",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.572,
+  "rmsDb": -18.2,
+  "nan": 0,
+  "renderMs": 1290
+ },
+ {
+  "key": "suite:士燮:defeat",
+  "family": "hua",
+  "sec": 22,
+  "peak": 0.331,
+  "rmsDb": -26.4,
+  "nan": 0,
+  "renderMs": 1097
+ },
+ {
+  "key": "suite:士燮:fanfare",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.52,
+  "rmsDb": -19.7,
+  "nan": 0,
+  "renderMs": 273
+ },
+ {
+  "key": "suite:士燮:clash",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.554,
+  "rmsDb": -17.6,
+  "nan": 0,
+  "renderMs": 346
+ },
+ {
+  "key": "suite:士燮:clash-short",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.565,
+  "rmsDb": -21.7,
+  "nan": 0,
+  "renderMs": 239
+ },
+ {
+  "key": "suite:士燮:clash-crit",
+  "family": "hua",
+  "sec": 5,
+  "peak": 0.554,
+  "rmsDb": -18.7,
+  "nan": 0,
+  "renderMs": 311
+ },
+ {
+  "key": "suite:卑弥呼:map",
+  "family": "wa",
+  "sec": 20,
+  "peak": 0.433,
+  "rmsDb": -22.9,
+  "nan": 0,
+  "renderMs": 1209
+ },
+ {
+  "key": "suite:卑弥呼:battle",
+  "family": "wa",
+  "sec": 20,
+  "peak": 0.546,
+  "rmsDb": -18.1,
+  "nan": 0,
+  "renderMs": 1266
+ },
+ {
+  "key": "suite:卑弥呼:battle-defend",
+  "family": "wa",
+  "sec": 20,
+  "peak": 0.528,
+  "rmsDb": -20,
+  "nan": 0,
+  "renderMs": 1069
+ },
+ {
+  "key": "suite:卑弥呼:council",
+  "family": "wa",
+  "sec": 20,
+  "peak": 0.331,
+  "rmsDb": -28,
+  "nan": 0,
+  "renderMs": 997
+ },
+ {
+  "key": "suite:卑弥呼:victory",
+  "family": "wa",
+  "sec": 22,
+  "peak": 0.57,
+  "rmsDb": -17.9,
+  "nan": 0,
+  "renderMs": 1326
+ },
+ {
+  "key": "suite:卑弥呼:defeat",
+  "family": "wa",
+  "sec": 22,
+  "peak": 0.26,
+  "rmsDb": -25.3,
+  "nan": 0,
+  "renderMs": 1211
+ },
+ {
+  "key": "suite:卑弥呼:fanfare",
+  "family": "wa",
+  "sec": 5,
+  "peak": 0.544,
+  "rmsDb": -19.1,
+  "nan": 0,
+  "renderMs": 286
+ },
+ {
+  "key": "suite:卑弥呼:clash",
+  "family": "wa",
+  "sec": 5,
+  "peak": 0.562,
+  "rmsDb": -17.3,
+  "nan": 0,
+  "renderMs": 329
+ },
+ {
+  "key": "suite:卑弥呼:clash-short",
+  "family": "wa",
+  "sec": 5,
+  "peak": 0.561,
+  "rmsDb": -19.5,
+  "nan": 0,
+  "renderMs": 222
+ },
+ {
+  "key": "suite:卑弥呼:clash-crit",
+  "family": "wa",
+  "sec": 5,
+  "peak": 0.575,
+  "rmsDb": -19.3,
+  "nan": 0,
+  "renderMs": 250
+ },
+ {
+  "key": "suite:卑弥弓呼:map",
+  "family": "wa",
+  "sec": 20,
+  "peak": 0.382,
+  "rmsDb": -22.6,
+  "nan": 0,
+  "renderMs": 1279
+ },
+ {
+  "key": "suite:卑弥弓呼:battle",
+  "family": "wa",
+  "sec": 20,
+  "peak": 0.546,
+  "rmsDb": -18,
+  "nan": 0,
+  "renderMs": 1210
+ },
+ {
+  "key": "suite:卑弥弓呼:battle-defend",
+  "family": "wa",
+  "sec": 20,
+  "peak": 0.517,
+  "rmsDb": -19.2,
+  "nan": 0,
+  "renderMs": 1143
+ },
+ {
+  "key": "suite:卑弥弓呼:council",
+  "family": "wa",
+  "sec": 20,
+  "peak": 0.339,
+  "rmsDb": -27.2,
+  "nan": 0,
+  "renderMs": 1175
+ },
+ {
+  "key": "suite:卑弥弓呼:victory",
+  "family": "wa",
+  "sec": 22,
+  "peak": 0.583,
+  "rmsDb": -17.8,
+  "nan": 0,
+  "renderMs": 1450
+ },
+ {
+  "key": "suite:卑弥弓呼:defeat",
+  "family": "wa",
+  "sec": 22,
+  "peak": 0.306,
+  "rmsDb": -24.3,
+  "nan": 0,
+  "renderMs": 1148
+ },
+ {
+  "key": "suite:卑弥弓呼:fanfare",
+  "family": "wa",
+  "sec": 5,
+  "peak": 0.539,
+  "rmsDb": -19.5,
+  "nan": 0,
+  "renderMs": 292
+ },
+ {
+  "key": "suite:卑弥弓呼:clash",
+  "family": "wa",
+  "sec": 5,
+  "peak": 0.553,
+  "rmsDb": -17.3,
+  "nan": 0,
+  "renderMs": 351
+ },
+ {
+  "key": "suite:卑弥弓呼:clash-short",
+  "family": "wa",
+  "sec": 5,
+  "peak": 0.556,
+  "rmsDb": -19.8,
+  "nan": 0,
+  "renderMs": 301
+ },
+ {
+  "key": "suite:卑弥弓呼:clash-crit",
+  "family": "wa",
+  "sec": 5,
+  "peak": 0.589,
+  "rmsDb": -19.2,
+  "nan": 0,
+  "renderMs": 300
+ },
+ {
+  "key": "suite:故国川王:map",
+  "family": "han3",
+  "sec": 20,
+  "peak": 0.419,
+  "rmsDb": -21.9,
+  "nan": 0,
+  "renderMs": 1264
+ },
+ {
+  "key": "suite:故国川王:battle",
+  "family": "han3",
+  "sec": 20,
+  "peak": 0.579,
+  "rmsDb": -19.1,
+  "nan": 0,
+  "renderMs": 1124
+ },
+ {
+  "key": "suite:故国川王:battle-defend",
+  "family": "han3",
+  "sec": 20,
+  "peak": 0.568,
+  "rmsDb": -20.2,
+  "nan": 0,
+  "renderMs": 1048
+ },
+ {
+  "key": "suite:故国川王:council",
+  "family": "han3",
+  "sec": 20,
+  "peak": 0.445,
+  "rmsDb": -24.3,
+  "nan": 0,
+  "renderMs": 1140
+ },
+ {
+  "key": "suite:故国川王:victory",
+  "family": "han3",
+  "sec": 22,
+  "peak": 0.576,
+  "rmsDb": -19.1,
+  "nan": 0,
+  "renderMs": 1332
+ },
+ {
+  "key": "suite:故国川王:defeat",
+  "family": "han3",
+  "sec": 22,
+  "peak": 0.346,
+  "rmsDb": -25.4,
+  "nan": 0,
+  "renderMs": 1415
+ },
+ {
+  "key": "suite:故国川王:fanfare",
+  "family": "han3",
+  "sec": 5,
+  "peak": 0.538,
+  "rmsDb": -20.4,
+  "nan": 0,
+  "renderMs": 245
+ },
+ {
+  "key": "suite:故国川王:clash",
+  "family": "han3",
+  "sec": 5,
+  "peak": 0.571,
+  "rmsDb": -18.4,
+  "nan": 0,
+  "renderMs": 308
+ },
+ {
+  "key": "suite:故国川王:clash-short",
+  "family": "han3",
+  "sec": 5,
+  "peak": 0.559,
+  "rmsDb": -21,
+  "nan": 0,
+  "renderMs": 230
+ },
+ {
+  "key": "suite:故国川王:clash-crit",
+  "family": "han3",
+  "sec": 5,
+  "peak": 0.564,
+  "rmsDb": -20,
+  "nan": 0,
+  "renderMs": 311
+ },
+ {
+  "key": "suite:首露王:map",
+  "family": "han3",
+  "sec": 20,
+  "peak": 0.429,
+  "rmsDb": -23.4,
+  "nan": 0,
+  "renderMs": 1208
+ },
+ {
+  "key": "suite:首露王:battle",
+  "family": "han3",
+  "sec": 20,
+  "peak": 0.58,
+  "rmsDb": -18.7,
+  "nan": 0,
+  "renderMs": 1102
+ },
+ {
+  "key": "suite:首露王:battle-defend",
+  "family": "han3",
+  "sec": 20,
+  "peak": 0.55,
+  "rmsDb": -19.7,
+  "nan": 0,
+  "renderMs": 1176
+ },
+ {
+  "key": "suite:首露王:council",
+  "family": "han3",
+  "sec": 20,
+  "peak": 0.294,
+  "rmsDb": -27,
+  "nan": 0,
+  "renderMs": 1044
+ },
+ {
+  "key": "suite:首露王:victory",
+  "family": "han3",
+  "sec": 22,
+  "peak": 0.58,
+  "rmsDb": -18.5,
+  "nan": 0,
+  "renderMs": 1346
+ },
+ {
+  "key": "suite:首露王:defeat",
+  "family": "han3",
+  "sec": 22,
+  "peak": 0.33,
+  "rmsDb": -26.4,
+  "nan": 0,
+  "renderMs": 1175
+ },
+ {
+  "key": "suite:首露王:fanfare",
+  "family": "han3",
+  "sec": 5,
+  "peak": 0.544,
+  "rmsDb": -19.7,
+  "nan": 0,
+  "renderMs": 247
+ },
+ {
+  "key": "suite:首露王:clash",
+  "family": "han3",
+  "sec": 5,
+  "peak": 0.565,
+  "rmsDb": -18.5,
+  "nan": 0,
+  "renderMs": 378
+ },
+ {
+  "key": "suite:首露王:clash-short",
+  "family": "han3",
+  "sec": 5,
+  "peak": 0.551,
+  "rmsDb": -20.4,
+  "nan": 0,
+  "renderMs": 230
+ },
+ {
+  "key": "suite:首露王:clash-crit",
+  "family": "han3",
+  "sec": 5,
+  "peak": 0.572,
+  "rmsDb": -19.7,
+  "nan": 0,
+  "renderMs": 289
+ },
+ {
+  "key": "suite:魁头:map",
+  "family": "steppe",
+  "sec": 20,
+  "peak": 0.389,
+  "rmsDb": -23,
+  "nan": 0,
+  "renderMs": 1314
+ },
+ {
+  "key": "suite:魁头:battle",
+  "family": "steppe",
+  "sec": 20,
+  "peak": 0.573,
+  "rmsDb": -16.7,
+  "nan": 0,
+  "renderMs": 1765
+ },
+ {
+  "key": "suite:魁头:battle-defend",
+  "family": "steppe",
+  "sec": 20,
+  "peak": 0.558,
+  "rmsDb": -17.4,
+  "nan": 0,
+  "renderMs": 1488
+ },
+ {
+  "key": "suite:魁头:council",
+  "family": "steppe",
+  "sec": 20,
+  "peak": 0.247,
+  "rmsDb": -29.2,
+  "nan": 0,
+  "renderMs": 1210
+ },
+ {
+  "key": "suite:魁头:victory",
+  "family": "steppe",
+  "sec": 22,
+  "peak": 0.57,
+  "rmsDb": -18.7,
+  "nan": 0,
+  "renderMs": 1298
+ },
+ {
+  "key": "suite:魁头:defeat",
+  "family": "steppe",
+  "sec": 22,
+  "peak": 0.407,
+  "rmsDb": -22.2,
+  "nan": 0,
+  "renderMs": 1157
+ },
+ {
+  "key": "suite:魁头:fanfare",
+  "family": "steppe",
+  "sec": 5,
+  "peak": 0.558,
+  "rmsDb": -20.4,
+  "nan": 0,
+  "renderMs": 272
+ },
+ {
+  "key": "suite:魁头:clash",
+  "family": "steppe",
+  "sec": 5,
+  "peak": 0.551,
+  "rmsDb": -18.2,
+  "nan": 0,
+  "renderMs": 288
+ },
+ {
+  "key": "suite:魁头:clash-short",
+  "family": "steppe",
+  "sec": 5,
+  "peak": 0.566,
+  "rmsDb": -20.5,
+  "nan": 0,
+  "renderMs": 271
+ },
+ {
+  "key": "suite:魁头:clash-crit",
+  "family": "steppe",
+  "sec": 5,
+  "peak": 0.558,
+  "rmsDb": -20.3,
+  "nan": 0,
+  "renderMs": 370
+ },
+ {
+  "key": "suite:於夫罗:map",
+  "family": "steppe",
+  "sec": 20,
+  "peak": 0.42,
+  "rmsDb": -23.7,
+  "nan": 0,
+  "renderMs": 1582
+ },
+ {
+  "key": "suite:於夫罗:battle",
+  "family": "steppe",
+  "sec": 20,
+  "peak": 0.574,
+  "rmsDb": -17.1,
+  "nan": 0,
+  "renderMs": 2178
+ },
+ {
+  "key": "suite:於夫罗:battle-defend",
+  "family": "steppe",
+  "sec": 20,
+  "peak": 0.544,
+  "rmsDb": -18.1,
+  "nan": 0,
+  "renderMs": 1734
+ },
+ {
+  "key": "suite:於夫罗:council",
+  "family": "steppe",
+  "sec": 20,
+  "peak": 0.253,
+  "rmsDb": -29.2,
+  "nan": 0,
+  "renderMs": 1593
+ },
+ {
+  "key": "suite:於夫罗:victory",
+  "family": "steppe",
+  "sec": 22,
+  "peak": 0.568,
+  "rmsDb": -18.9,
+  "nan": 0,
+  "renderMs": 1411
+ },
+ {
+  "key": "suite:於夫罗:defeat",
+  "family": "steppe",
+  "sec": 22,
+  "peak": 0.371,
+  "rmsDb": -24.3,
+  "nan": 0,
+  "renderMs": 1227
+ },
+ {
+  "key": "suite:於夫罗:fanfare",
+  "family": "steppe",
+  "sec": 5,
+  "peak": 0.554,
+  "rmsDb": -20.5,
+  "nan": 0,
+  "renderMs": 263
+ },
+ {
+  "key": "suite:於夫罗:clash",
+  "family": "steppe",
+  "sec": 5,
+  "peak": 0.599,
+  "rmsDb": -18.7,
+  "nan": 0,
+  "renderMs": 268
+ },
+ {
+  "key": "suite:於夫罗:clash-short",
+  "family": "steppe",
+  "sec": 5,
+  "peak": 0.562,
+  "rmsDb": -21.2,
+  "nan": 0,
+  "renderMs": 260
+ },
+ {
+  "key": "suite:於夫罗:clash-crit",
+  "family": "steppe",
+  "sec": 5,
+  "peak": 0.571,
+  "rmsDb": -20.5,
+  "nan": 0,
+  "renderMs": 271
+ },
+ {
+  "key": "suite:胡维色迦:map",
+  "family": "indic",
+  "sec": 20,
+  "peak": 0.429,
+  "rmsDb": -23.6,
+  "nan": 0,
+  "renderMs": 1372
+ },
+ {
+  "key": "suite:胡维色迦:battle",
+  "family": "indic",
+  "sec": 20,
+  "peak": 0.554,
+  "rmsDb": -19.4,
+  "nan": 0,
+  "renderMs": 1326
+ },
+ {
+  "key": "suite:胡维色迦:battle-defend",
+  "family": "indic",
+  "sec": 20,
+  "peak": 0.531,
+  "rmsDb": -20.3,
+  "nan": 0,
+  "renderMs": 1229
+ },
+ {
+  "key": "suite:胡维色迦:council",
+  "family": "indic",
+  "sec": 20,
+  "peak": 0.422,
+  "rmsDb": -23.4,
+  "nan": 0,
+  "renderMs": 1231
+ },
+ {
+  "key": "suite:胡维色迦:victory",
+  "family": "indic",
+  "sec": 22,
+  "peak": 0.584,
+  "rmsDb": -19.2,
+  "nan": 0,
+  "renderMs": 1363
+ },
+ {
+  "key": "suite:胡维色迦:defeat",
+  "family": "indic",
+  "sec": 22,
+  "peak": 0.263,
+  "rmsDb": -26.6,
+  "nan": 0,
+  "renderMs": 1359
+ },
+ {
+  "key": "suite:胡维色迦:fanfare",
+  "family": "indic",
+  "sec": 5,
+  "peak": 0.554,
+  "rmsDb": -20.3,
+  "nan": 0,
+  "renderMs": 338
+ },
+ {
+  "key": "suite:胡维色迦:clash",
+  "family": "indic",
+  "sec": 5,
+  "peak": 0.584,
+  "rmsDb": -18.8,
+  "nan": 0,
+  "renderMs": 248
+ },
+ {
+  "key": "suite:胡维色迦:clash-short",
+  "family": "indic",
+  "sec": 5,
+  "peak": 0.555,
+  "rmsDb": -20.9,
+  "nan": 0,
+  "renderMs": 340
+ },
+ {
+  "key": "suite:胡维色迦:clash-crit",
+  "family": "indic",
+  "sec": 5,
+  "peak": 0.567,
+  "rmsDb": -20.7,
+  "nan": 0,
+  "renderMs": 299
+ },
+ {
+  "key": "suite:耶若室利:map",
+  "family": "indic",
+  "sec": 20,
+  "peak": 0.404,
+  "rmsDb": -23.4,
+  "nan": 0,
+  "renderMs": 1408
+ },
+ {
+  "key": "suite:耶若室利:battle",
+  "family": "indic",
+  "sec": 20,
+  "peak": 0.581,
+  "rmsDb": -19.5,
+  "nan": 0,
+  "renderMs": 1400
+ },
+ {
+  "key": "suite:耶若室利:battle-defend",
+  "family": "indic",
+  "sec": 20,
+  "peak": 0.552,
+  "rmsDb": -20.3,
+  "nan": 0,
+  "renderMs": 1414
+ },
+ {
+  "key": "suite:耶若室利:council",
+  "family": "indic",
+  "sec": 20,
+  "peak": 0.414,
+  "rmsDb": -27.6,
+  "nan": 0,
+  "renderMs": 1090
+ },
+ {
+  "key": "suite:耶若室利:victory",
+  "family": "indic",
+  "sec": 22,
+  "peak": 0.591,
+  "rmsDb": -19.1,
+  "nan": 0,
+  "renderMs": 1300
+ },
+ {
+  "key": "suite:耶若室利:defeat",
+  "family": "indic",
+  "sec": 22,
+  "peak": 0.233,
+  "rmsDb": -26.3,
+  "nan": 0,
+  "renderMs": 1508
+ },
+ {
+  "key": "suite:耶若室利:fanfare",
+  "family": "indic",
+  "sec": 5,
+  "peak": 0.574,
+  "rmsDb": -20.4,
+  "nan": 0,
+  "renderMs": 242
+ },
+ {
+  "key": "suite:耶若室利:clash",
+  "family": "indic",
+  "sec": 5,
+  "peak": 0.582,
+  "rmsDb": -18.3,
+  "nan": 0,
+  "renderMs": 266
+ },
+ {
+  "key": "suite:耶若室利:clash-short",
+  "family": "indic",
+  "sec": 5,
+  "peak": 0.558,
+  "rmsDb": -21.5,
+  "nan": 0,
+  "renderMs": 266
+ },
+ {
+  "key": "suite:耶若室利:clash-crit",
+  "family": "indic",
+  "sec": 5,
+  "peak": 0.574,
+  "rmsDb": -20.8,
+  "nan": 0,
+  "renderMs": 266
+ },
+ {
+  "key": "suite:迦梨迦罗:map",
+  "family": "indic",
+  "sec": 20,
+  "peak": 0.503,
+  "rmsDb": -24.5,
+  "nan": 0,
+  "renderMs": 1243
+ },
+ {
+  "key": "suite:迦梨迦罗:battle",
+  "family": "indic",
+  "sec": 20,
+  "peak": 0.572,
+  "rmsDb": -19.2,
+  "nan": 0,
+  "renderMs": 1393
+ },
+ {
+  "key": "suite:迦梨迦罗:battle-defend",
+  "family": "indic",
+  "sec": 20,
+  "peak": 0.578,
+  "rmsDb": -19.8,
+  "nan": 0,
+  "renderMs": 1156
+ },
+ {
+  "key": "suite:迦梨迦罗:council",
+  "family": "indic",
+  "sec": 20,
+  "peak": 0.395,
+  "rmsDb": -27.3,
+  "nan": 0,
+  "renderMs": 1198
+ },
+ {
+  "key": "suite:迦梨迦罗:victory",
+  "family": "indic",
+  "sec": 22,
+  "peak": 0.579,
+  "rmsDb": -19.1,
+  "nan": 0,
+  "renderMs": 1275
+ },
+ {
+  "key": "suite:迦梨迦罗:defeat",
+  "family": "indic",
+  "sec": 22,
+  "peak": 0.279,
+  "rmsDb": -26,
+  "nan": 0,
+  "renderMs": 1231
+ },
+ {
+  "key": "suite:迦梨迦罗:fanfare",
+  "family": "indic",
+  "sec": 5,
+  "peak": 0.565,
+  "rmsDb": -20.1,
+  "nan": 0,
+  "renderMs": 287
+ },
+ {
+  "key": "suite:迦梨迦罗:clash",
+  "family": "indic",
+  "sec": 5,
+  "peak": 0.571,
+  "rmsDb": -18.7,
+  "nan": 0,
+  "renderMs": 258
+ },
+ {
+  "key": "suite:迦梨迦罗:clash-short",
+  "family": "indic",
+  "sec": 5,
+  "peak": 0.556,
+  "rmsDb": -22,
+  "nan": 0,
+  "renderMs": 243
+ },
+ {
+  "key": "suite:迦梨迦罗:clash-crit",
+  "family": "indic",
+  "sec": 5,
+  "peak": 0.566,
+  "rmsDb": -20.5,
+  "nan": 0,
+  "renderMs": 206
+ },
+ {
+  "key": "suite:沃洛吉斯:map",
+  "family": "persia",
+  "sec": 20,
+  "peak": 0.489,
+  "rmsDb": -22,
+  "nan": 0,
+  "renderMs": 1497
+ },
+ {
+  "key": "suite:沃洛吉斯:battle",
+  "family": "persia",
+  "sec": 20,
+  "peak": 0.564,
+  "rmsDb": -18.8,
+  "nan": 0,
+  "renderMs": 1183
+ },
+ {
+  "key": "suite:沃洛吉斯:battle-defend",
+  "family": "persia",
+  "sec": 20,
+  "peak": 0.536,
+  "rmsDb": -20.2,
+  "nan": 0,
+  "renderMs": 1066
+ },
+ {
+  "key": "suite:沃洛吉斯:council",
+  "family": "persia",
+  "sec": 20,
+  "peak": 0.399,
+  "rmsDb": -24.4,
+  "nan": 0,
+  "renderMs": 1305
+ },
+ {
+  "key": "suite:沃洛吉斯:victory",
+  "family": "persia",
+  "sec": 22,
+  "peak": 0.579,
+  "rmsDb": -19.3,
+  "nan": 0,
+  "renderMs": 1330
+ },
+ {
+  "key": "suite:沃洛吉斯:defeat",
+  "family": "persia",
+  "sec": 22,
+  "peak": 0.327,
+  "rmsDb": -26.4,
+  "nan": 0,
+  "renderMs": 1283
+ },
+ {
+  "key": "suite:沃洛吉斯:fanfare",
+  "family": "persia",
+  "sec": 5,
+  "peak": 0.545,
+  "rmsDb": -20.5,
+  "nan": 0,
+  "renderMs": 262
+ },
+ {
+  "key": "suite:沃洛吉斯:clash",
+  "family": "persia",
+  "sec": 5,
+  "peak": 0.562,
+  "rmsDb": -18.7,
+  "nan": 0,
+  "renderMs": 277
+ },
+ {
+  "key": "suite:沃洛吉斯:clash-short",
+  "family": "persia",
+  "sec": 5,
+  "peak": 0.556,
+  "rmsDb": -21.2,
+  "nan": 0,
+  "renderMs": 183
+ },
+ {
+  "key": "suite:沃洛吉斯:clash-crit",
+  "family": "persia",
+  "sec": 5,
+  "peak": 0.568,
+  "rmsDb": -20.5,
+  "nan": 0,
+  "renderMs": 306
+ },
+ {
+  "key": "suite:戈契赫尔:map",
+  "family": "persia",
+  "sec": 20,
+  "peak": 0.51,
+  "rmsDb": -22.6,
+  "nan": 0,
+  "renderMs": 1506
+ },
+ {
+  "key": "suite:戈契赫尔:battle",
+  "family": "persia",
+  "sec": 20,
+  "peak": 0.567,
+  "rmsDb": -18.3,
+  "nan": 0,
+  "renderMs": 1496
+ },
+ {
+  "key": "suite:戈契赫尔:battle-defend",
+  "family": "persia",
+  "sec": 20,
+  "peak": 0.523,
+  "rmsDb": -19.7,
+  "nan": 0,
+  "renderMs": 1082
+ },
+ {
+  "key": "suite:戈契赫尔:council",
+  "family": "persia",
+  "sec": 20,
+  "peak": 0.356,
+  "rmsDb": -25.2,
+  "nan": 0,
+  "renderMs": 1257
+ },
+ {
+  "key": "suite:戈契赫尔:victory",
+  "family": "persia",
+  "sec": 22,
+  "peak": 0.58,
+  "rmsDb": -18.8,
+  "nan": 0,
+  "renderMs": 1565
+ },
+ {
+  "key": "suite:戈契赫尔:defeat",
+  "family": "persia",
+  "sec": 22,
+  "peak": 0.323,
+  "rmsDb": -25.9,
+  "nan": 0,
+  "renderMs": 1180
+ },
+ {
+  "key": "suite:戈契赫尔:fanfare",
+  "family": "persia",
+  "sec": 5,
+  "peak": 0.556,
+  "rmsDb": -20,
+  "nan": 0,
+  "renderMs": 273
+ },
+ {
+  "key": "suite:戈契赫尔:clash",
+  "family": "persia",
+  "sec": 5,
+  "peak": 0.567,
+  "rmsDb": -18.6,
+  "nan": 0,
+  "renderMs": 288
+ },
+ {
+  "key": "suite:戈契赫尔:clash-short",
+  "family": "persia",
+  "sec": 5,
+  "peak": 0.557,
+  "rmsDb": -21,
+  "nan": 0,
+  "renderMs": 249
+ },
+ {
+  "key": "suite:戈契赫尔:clash-crit",
+  "family": "persia",
+  "sec": 5,
+  "peak": 0.564,
+  "rmsDb": -20.7,
+  "nan": 0,
+  "renderMs": 277
+ },
+ {
+  "key": "suite:阿布加尔:map",
+  "family": "arabia",
+  "sec": 20,
+  "peak": 0.464,
+  "rmsDb": -25.2,
+  "nan": 0,
+  "renderMs": 1086
+ },
+ {
+  "key": "suite:阿布加尔:battle",
+  "family": "arabia",
+  "sec": 20,
+  "peak": 0.561,
+  "rmsDb": -19.4,
+  "nan": 0,
+  "renderMs": 1241
+ },
+ {
+  "key": "suite:阿布加尔:battle-defend",
+  "family": "arabia",
+  "sec": 20,
+  "peak": 0.541,
+  "rmsDb": -20.5,
+  "nan": 0,
+  "renderMs": 1075
+ },
+ {
+  "key": "suite:阿布加尔:council",
+  "family": "arabia",
+  "sec": 20,
+  "peak": 0.36,
+  "rmsDb": -25,
+  "nan": 0,
+  "renderMs": 1105
+ },
+ {
+  "key": "suite:阿布加尔:victory",
+  "family": "arabia",
+  "sec": 22,
+  "peak": 0.587,
+  "rmsDb": -19.5,
+  "nan": 0,
+  "renderMs": 1343
+ },
+ {
+  "key": "suite:阿布加尔:defeat",
+  "family": "arabia",
+  "sec": 22,
+  "peak": 0.324,
+  "rmsDb": -26.4,
+  "nan": 0,
+  "renderMs": 1234
+ },
+ {
+  "key": "suite:阿布加尔:fanfare",
+  "family": "arabia",
+  "sec": 5,
+  "peak": 0.571,
+  "rmsDb": -20.9,
+  "nan": 0,
+  "renderMs": 286
+ },
+ {
+  "key": "suite:阿布加尔:clash",
+  "family": "arabia",
+  "sec": 5,
+  "peak": 0.554,
+  "rmsDb": -18.7,
+  "nan": 0,
+  "renderMs": 272
+ },
+ {
+  "key": "suite:阿布加尔:clash-short",
+  "family": "arabia",
+  "sec": 5,
+  "peak": 0.571,
+  "rmsDb": -21.5,
+  "nan": 0,
+  "renderMs": 259
+ },
+ {
+  "key": "suite:阿布加尔:clash-crit",
+  "family": "arabia",
+  "sec": 5,
+  "peak": 0.573,
+  "rmsDb": -20.7,
+  "nan": 0,
+  "renderMs": 323
+ },
+ {
+  "key": "suite:加达拉特:map",
+  "family": "nile",
+  "sec": 20,
+  "peak": 0.469,
+  "rmsDb": -25.1,
+  "nan": 0,
+  "renderMs": 1259
+ },
+ {
+  "key": "suite:加达拉特:battle",
+  "family": "nile",
+  "sec": 20,
+  "peak": 0.564,
+  "rmsDb": -18.9,
+  "nan": 0,
+  "renderMs": 1280
+ },
+ {
+  "key": "suite:加达拉特:battle-defend",
+  "family": "nile",
+  "sec": 20,
+  "peak": 0.549,
+  "rmsDb": -19.8,
+  "nan": 0,
+  "renderMs": 1190
+ },
+ {
+  "key": "suite:加达拉特:council",
+  "family": "nile",
+  "sec": 20,
+  "peak": 0.314,
+  "rmsDb": -27.1,
+  "nan": 0,
+  "renderMs": 1132
+ },
+ {
+  "key": "suite:加达拉特:victory",
+  "family": "nile",
+  "sec": 22,
+  "peak": 0.57,
+  "rmsDb": -18.9,
+  "nan": 0,
+  "renderMs": 1310
+ },
+ {
+  "key": "suite:加达拉特:defeat",
+  "family": "nile",
+  "sec": 22,
+  "peak": 0.283,
+  "rmsDb": -25.9,
+  "nan": 0,
+  "renderMs": 1317
+ },
+ {
+  "key": "suite:加达拉特:fanfare",
+  "family": "nile",
+  "sec": 5,
+  "peak": 0.548,
+  "rmsDb": -20.3,
+  "nan": 0,
+  "renderMs": 301
+ },
+ {
+  "key": "suite:加达拉特:clash",
+  "family": "nile",
+  "sec": 5,
+  "peak": 0.579,
+  "rmsDb": -18.2,
+  "nan": 0,
+  "renderMs": 253
+ },
+ {
+  "key": "suite:加达拉特:clash-short",
+  "family": "nile",
+  "sec": 5,
+  "peak": 0.548,
+  "rmsDb": -20.8,
+  "nan": 0,
+  "renderMs": 212
+ },
+ {
+  "key": "suite:加达拉特:clash-crit",
+  "family": "nile",
+  "sec": 5,
+  "peak": 0.572,
+  "rmsDb": -19.9,
+  "nan": 0,
+  "renderMs": 328
+ },
+ {
+  "key": "suite:康茂德:map",
+  "family": "roman",
+  "sec": 20,
+  "peak": 0.455,
+  "rmsDb": -22,
+  "nan": 0,
+  "renderMs": 1566
+ },
+ {
+  "key": "suite:康茂德:battle",
+  "family": "roman",
+  "sec": 20,
+  "peak": 0.554,
+  "rmsDb": -18.3,
+  "nan": 0,
+  "renderMs": 1478
+ },
+ {
+  "key": "suite:康茂德:battle-defend",
+  "family": "roman",
+  "sec": 20,
+  "peak": 0.523,
+  "rmsDb": -20.1,
+  "nan": 0,
+  "renderMs": 1107
+ },
+ {
+  "key": "suite:康茂德:council",
+  "family": "roman",
+  "sec": 20,
+  "peak": 0.424,
+  "rmsDb": -23.6,
+  "nan": 0,
+  "renderMs": 1356
+ },
+ {
+  "key": "suite:康茂德:victory",
+  "family": "roman",
+  "sec": 22,
+  "peak": 0.559,
+  "rmsDb": -17.9,
+  "nan": 0,
+  "renderMs": 1608
+ },
+ {
+  "key": "suite:康茂德:defeat",
+  "family": "roman",
+  "sec": 22,
+  "peak": 0.378,
+  "rmsDb": -27.2,
+  "nan": 0,
+  "renderMs": 1240
+ },
+ {
+  "key": "suite:康茂德:fanfare",
+  "family": "roman",
+  "sec": 5,
+  "peak": 0.544,
+  "rmsDb": -19.1,
+  "nan": 0,
+  "renderMs": 290
+ },
+ {
+  "key": "suite:康茂德:clash",
+  "family": "roman",
+  "sec": 5,
+  "peak": 0.562,
+  "rmsDb": -17.2,
+  "nan": 0,
+  "renderMs": 373
+ },
+ {
+  "key": "suite:康茂德:clash-short",
+  "family": "roman",
+  "sec": 5,
+  "peak": 0.562,
+  "rmsDb": -20,
+  "nan": 0,
+  "renderMs": 324
+ },
+ {
+  "key": "suite:康茂德:clash-crit",
+  "family": "roman",
+  "sec": 5,
+  "peak": 0.566,
+  "rmsDb": -18.5,
+  "nan": 0,
+  "renderMs": 337
+ },
+ {
+  "key": "suite:阿根托科克斯:map",
+  "family": "north",
+  "sec": 20,
+  "peak": 0.52,
+  "rmsDb": -24.5,
+  "nan": 0,
+  "renderMs": 1375
+ },
+ {
+  "key": "suite:阿根托科克斯:battle",
+  "family": "north",
+  "sec": 20,
+  "peak": 0.548,
+  "rmsDb": -19.7,
+  "nan": 0,
+  "renderMs": 1577
+ },
+ {
+  "key": "suite:阿根托科克斯:battle-defend",
+  "family": "north",
+  "sec": 20,
+  "peak": 0.519,
+  "rmsDb": -18.7,
+  "nan": 0,
+  "renderMs": 1269
+ },
+ {
+  "key": "suite:阿根托科克斯:council",
+  "family": "north",
+  "sec": 20,
+  "peak": 0.331,
+  "rmsDb": -25.5,
+  "nan": 0,
+  "renderMs": 1193
+ },
+ {
+  "key": "suite:阿根托科克斯:victory",
+  "family": "north",
+  "sec": 22,
+  "peak": 0.566,
+  "rmsDb": -18.6,
+  "nan": 0,
+  "renderMs": 1472
+ },
+ {
+  "key": "suite:阿根托科克斯:defeat",
+  "family": "north",
+  "sec": 22,
+  "peak": 0.237,
+  "rmsDb": -26.1,
+  "nan": 0,
+  "renderMs": 1138
+ },
+ {
+  "key": "suite:阿根托科克斯:fanfare",
+  "family": "north",
+  "sec": 5,
+  "peak": 0.536,
+  "rmsDb": -19.7,
+  "nan": 0,
+  "renderMs": 320
+ },
+ {
+  "key": "suite:阿根托科克斯:clash",
+  "family": "north",
+  "sec": 5,
+  "peak": 0.539,
+  "rmsDb": -18.7,
+  "nan": 0,
+  "renderMs": 281
+ },
+ {
+  "key": "suite:阿根托科克斯:clash-short",
+  "family": "north",
+  "sec": 5,
+  "peak": 0.549,
+  "rmsDb": -22.7,
+  "nan": 0,
+  "renderMs": 234
+ },
+ {
+  "key": "suite:阿根托科克斯:clash-crit",
+  "family": "north",
+  "sec": 5,
+  "peak": 0.522,
+  "rmsDb": -20.2,
+  "nan": 0,
+  "renderMs": 300
+ },
+ {
+  "key": "suite:巴洛马尔:map",
+  "family": "north",
+  "sec": 20,
+  "peak": 0.516,
+  "rmsDb": -21.6,
+  "nan": 0,
+  "renderMs": 1566
+ },
+ {
+  "key": "suite:巴洛马尔:battle",
+  "family": "north",
+  "sec": 20,
+  "peak": 0.546,
+  "rmsDb": -18.7,
+  "nan": 0,
+  "renderMs": 1423
+ },
+ {
+  "key": "suite:巴洛马尔:battle-defend",
+  "family": "north",
+  "sec": 20,
+  "peak": 0.533,
+  "rmsDb": -19.1,
+  "nan": 0,
+  "renderMs": 1156
+ },
+ {
+  "key": "suite:巴洛马尔:council",
+  "family": "north",
+  "sec": 20,
+  "peak": 0.335,
+  "rmsDb": -23.7,
+  "nan": 0,
+  "renderMs": 1151
+ },
+ {
+  "key": "suite:巴洛马尔:victory",
+  "family": "north",
+  "sec": 22,
+  "peak": 0.567,
+  "rmsDb": -17.7,
+  "nan": 0,
+  "renderMs": 1345
+ },
+ {
+  "key": "suite:巴洛马尔:defeat",
+  "family": "north",
+  "sec": 22,
+  "peak": 0.244,
+  "rmsDb": -25,
+  "nan": 0,
+  "renderMs": 1042
+ },
+ {
+  "key": "suite:巴洛马尔:fanfare",
+  "family": "north",
+  "sec": 5,
+  "peak": 0.545,
+  "rmsDb": -19.3,
+  "nan": 0,
+  "renderMs": 296
+ },
+ {
+  "key": "suite:巴洛马尔:clash",
+  "family": "north",
+  "sec": 5,
+  "peak": 0.564,
+  "rmsDb": -18.6,
+  "nan": 0,
+  "renderMs": 275
+ },
+ {
+  "key": "suite:巴洛马尔:clash-short",
+  "family": "north",
+  "sec": 5,
+  "peak": 0.548,
+  "rmsDb": -22.8,
+  "nan": 0,
+  "renderMs": 240
+ },
+ {
+  "key": "suite:巴洛马尔:clash-crit",
+  "family": "north",
+  "sec": 5,
+  "peak": 0.562,
+  "rmsDb": -19.9,
+  "nan": 0,
+  "renderMs": 319
+ },
+ {
+  "key": "suite:菲利默:map",
+  "family": "north",
+  "sec": 20,
+  "peak": 0.504,
+  "rmsDb": -24.5,
+  "nan": 0,
+  "renderMs": 1099
+ },
+ {
+  "key": "suite:菲利默:battle",
+  "family": "north",
+  "sec": 20,
+  "peak": 0.549,
+  "rmsDb": -19.8,
+  "nan": 0,
+  "renderMs": 1305
+ },
+ {
+  "key": "suite:菲利默:battle-defend",
+  "family": "north",
+  "sec": 20,
+  "peak": 0.517,
+  "rmsDb": -19.4,
+  "nan": 0,
+  "renderMs": 1258
+ },
+ {
+  "key": "suite:菲利默:council",
+  "family": "north",
+  "sec": 20,
+  "peak": 0.306,
+  "rmsDb": -26.6,
+  "nan": 0,
+  "renderMs": 1299
+ },
+ {
+  "key": "suite:菲利默:victory",
+  "family": "north",
+  "sec": 22,
+  "peak": 0.564,
+  "rmsDb": -18.6,
+  "nan": 0,
+  "renderMs": 1349
+ },
+ {
+  "key": "suite:菲利默:defeat",
+  "family": "north",
+  "sec": 22,
+  "peak": 0.273,
+  "rmsDb": -25.9,
+  "nan": 0,
+  "renderMs": 1080
+ },
+ {
+  "key": "suite:菲利默:fanfare",
+  "family": "north",
+  "sec": 5,
+  "peak": 0.542,
+  "rmsDb": -19.4,
+  "nan": 0,
+  "renderMs": 265
+ },
+ {
+  "key": "suite:菲利默:clash",
+  "family": "north",
+  "sec": 5,
+  "peak": 0.558,
+  "rmsDb": -18.7,
+  "nan": 0,
+  "renderMs": 355
+ },
+ {
+  "key": "suite:菲利默:clash-short",
+  "family": "north",
+  "sec": 5,
+  "peak": 0.542,
+  "rmsDb": -22.7,
+  "nan": 0,
+  "renderMs": 210
+ },
+ {
+  "key": "suite:菲利默:clash-crit",
+  "family": "north",
+  "sec": 5,
+  "peak": 0.565,
+  "rmsDb": -19.8,
+  "nan": 0,
+  "renderMs": 319
+ },
+ {
+  "key": "suite:区连:map",
+  "family": "nanhai",
+  "sec": 20,
+  "peak": 0.516,
+  "rmsDb": -22.5,
+  "nan": 0,
+  "renderMs": 1105
+ },
+ {
+  "key": "suite:区连:battle",
+  "family": "nanhai",
+  "sec": 20,
+  "peak": 0.555,
+  "rmsDb": -18.2,
+  "nan": 0,
+  "renderMs": 1574
+ },
+ {
+  "key": "suite:区连:battle-defend",
+  "family": "nanhai",
+  "sec": 20,
+  "peak": 0.545,
+  "rmsDb": -19.1,
+  "nan": 0,
+  "renderMs": 1105
+ },
+ {
+  "key": "suite:区连:council",
+  "family": "nanhai",
+  "sec": 20,
+  "peak": 0.376,
+  "rmsDb": -25.4,
+  "nan": 0,
+  "renderMs": 1159
+ },
+ {
+  "key": "suite:区连:victory",
+  "family": "nanhai",
+  "sec": 22,
+  "peak": 0.61,
+  "rmsDb": -18.9,
+  "nan": 0,
+  "renderMs": 1248
+ },
+ {
+  "key": "suite:区连:defeat",
+  "family": "nanhai",
+  "sec": 22,
+  "peak": 0.303,
+  "rmsDb": -25.7,
+  "nan": 0,
+  "renderMs": 1476
+ },
+ {
+  "key": "suite:区连:fanfare",
+  "family": "nanhai",
+  "sec": 5,
+  "peak": 0.566,
+  "rmsDb": -20.3,
+  "nan": 0,
+  "renderMs": 286
+ },
+ {
+  "key": "suite:区连:clash",
+  "family": "nanhai",
+  "sec": 5,
+  "peak": 0.552,
+  "rmsDb": -18.4,
+  "nan": 0,
+  "renderMs": 296
+ },
+ {
+  "key": "suite:区连:clash-short",
+  "family": "nanhai",
+  "sec": 5,
+  "peak": 0.554,
+  "rmsDb": -20.6,
+  "nan": 0,
+  "renderMs": 215
+ },
+ {
+  "key": "suite:区连:clash-crit",
+  "family": "nanhai",
+  "sec": 5,
+  "peak": 0.563,
+  "rmsDb": -20.1,
+  "nan": 0,
+  "renderMs": 291
+ }
+]

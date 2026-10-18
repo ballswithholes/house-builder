@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>UI-V4 · 09 官制（授官）</title>
+<link rel="stylesheet" href="kit.css">
+<style>
+  .win { position: absolute; inset: 8px; display: flex; flex-direction: column; padding: 6px; }
+  .hd { display: flex; align-items: center; gap: 12px; padding: 4px 8px 8px 6px; }
+  .hd .ttl { font-family: var(--f-display); font-size: 1.9rem; letter-spacing: .14em; }
+  .hd .rk { display: flex; flex-direction: column; gap: 3px; min-width: 300px; font-size: .82rem; color: #cdbb9f; }
+  .hd .rk b { font-family: var(--f-display); color: var(--gold-hi); font-size: 1.05rem; font-weight: 400; }
+  .hd .rk .v4-bar { --c: var(--gold); height: 10px; }
+  .hd .sp { flex: 1; }
+  .board { flex: 1; min-height: 0; display: grid; grid-template-columns: 112px 1fr 1fr 1fr; grid-template-rows: 40px repeat(5, 1fr); gap: 0; border-radius: 6px; overflow: hidden; border: 2px solid var(--ink); }
+  .fam { display: flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--f-display); font-size: 1.2rem; letter-spacing: .3em; color: #fff3e2; border-left: 2px solid var(--ink); border-bottom: 2px solid var(--ink); }
+  .fam svg { width: 26px; height: 26px; }
+  .corner { border-bottom: 2px solid var(--ink); background: var(--lq-2); }
+  .tier { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 4px 10px; border-bottom: 1.5px dashed rgba(36, 26, 33, .3); background: rgba(36, 26, 33, .06); }
+  .tier b { font-family: var(--f-display); font-size: 1.35rem; font-weight: 400; color: var(--ink); line-height: 1; }
+  .tier span { font: .72rem var(--f-num); color: var(--ink-3); }
+  .tier .cap { font: 700 .82rem var(--f-num); color: var(--ink-2); }
+  .cell { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-left: 2px solid var(--ink); border-bottom: 1.5px dashed rgba(36, 26, 33, .3); }
+  .cell.war { background: linear-gradient(90deg, rgba(200, 69, 47, .12), rgba(200, 69, 47, .04)); }
+  .cell.int { background: linear-gradient(90deg, rgba(62, 106, 168, .12), rgba(62, 106, 168, .04)); }
+  .cell.pol { background: linear-gradient(90deg, rgba(63, 143, 95, .12), rgba(63, 143, 95, .04)); }
+  .post { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+  .post .pn { font-family: var(--f-display); font-size: .92rem; color: var(--ink-2); white-space: nowrap; display: flex; align-items: center; gap: 4px; }
+  .post .pn svg { width: 18px; height: 18px; }
+  .chips { display: flex; gap: 5px; }
+  .seat { position: relative; width: 52px; height: 58px; border-radius: 7px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 1px; padding-top: 3px; background: rgba(255, 255, 255, .55); box-shadow: inset 0 0 0 1.5px var(--paper-edge), 0 2px 0 rgba(36, 26, 33, .35); font-family: var(--f-display); font-size: .7rem; color: var(--ink); }
+  .seat .v4-face { --s: 34px !important; box-shadow: 0 0 0 1.5px var(--ink); border-width: 1px; }
+  .seat.free { background: radial-gradient(closest-side, rgba(255, 210, 140, .7), rgba(255, 210, 140, .15)); box-shadow: inset 0 0 0 2px var(--amber); border: 2px dashed var(--ink); justify-content: center; font-size: 1.4rem; color: var(--zhu); animation: v4-free 2.2s ease-in-out infinite; }
+  @keyframes v4-free { 50% { box-shadow: inset 0 0 0 2px var(--amber), 0 0 14px rgba(255, 196, 110, .8); } }
+  .seat.full { background: rgba(36, 26, 33, .08); box-shadow: inset 0 0 0 1px rgba(36, 26, 33, .2); color: var(--ink-3); justify-content: center; font-size: .66rem; }
+  .seat.lock { background: repeating-linear-gradient(135deg, rgba(36, 26, 33, .08) 0 5px, transparent 5px 10px); box-shadow: inset 0 0 0 1px rgba(36, 26, 33, .25); justify-content: center; color: var(--ink-3); font-size: .64rem; text-align: center; line-height: 1.2; }
+  .seat.lock::before { content: ""; width: 14px; height: 14px; background: var(--lock-ico) center / contain no-repeat; margin-bottom: 2px; }
+  .seat.sus::after { content: "虚衔"; position: absolute; inset: 0; display: grid; place-items: center; font-size: .78rem; color: var(--ink-2); background: repeating-linear-gradient(135deg, rgba(243, 231, 204, .85) 0 4px, rgba(184, 154, 104, .5) 4px 8px); border-radius: 7px; }
+  /* 授官确认 */
+  .sheet { position: absolute; left: 24px; top: 96px; bottom: 24px; width: 360px; display: flex; flex-direction: column; padding: 10px 12px; color: var(--ink); }
+  .sheet .rw { display: flex; align-items: center; gap: 8px; min-height: 54px; padding: 4px 6px; border-radius: 6px; background: rgba(255, 255, 255, .35); margin-bottom: 4px; font-size: .78rem; }
+  .sheet .rw.on { background: rgba(255, 236, 190, .9); box-shadow: inset 0 0 0 2px var(--gold-lo); }
+  .sheet .rw.no { opacity: .6; }
+  .sheet .rw b { font-family: var(--f-display); font-size: 1.02rem; font-weight: 400; display: block; }
+  .sheet .st { margin-left: auto; font-family: var(--f-display); font-size: .74rem; padding: 1px 6px; border-radius: 4px; border: 1.5px solid var(--ink); white-space: nowrap; }
+  .edict { position: absolute; left: 50%; top: 50%; transform: translate(-28%, -50%); width: 470px; padding: 26px 26px 18px; color: var(--ink); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .edict .ins { width: 92px; height: 92px; }
+  .edict .pn { font-family: var(--f-display); font-size: 2.4rem; letter-spacing: .2em; filter: url(#brush-ink); color: var(--war-lo); line-height: 1; }
+  .edict .orig { font-size: .82rem; color: var(--ink-3); font-style: italic; }
+  .edict .names { display: flex; gap: 6px; }
+  .edict .names span { font-family: var(--f-display); font-size: .9rem; padding: 2px 8px; border: 1.5px solid var(--ink); border-radius: 12px; }
+  .edict .names span.on { background: var(--war); color: #fff3e2; }
+  .edict .fx { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 3px 16px; font-size: .86rem; }
+  .edict .fx .good b { font-family: var(--f-num); }
+  .edict .warn { width: 100%; display: flex; align-items: center; gap: 6px; font-size: .78rem; color: var(--bad); }
+  .edict .warn .v4-face { --s: 24px !important; }
+  .edict .btns { display: flex; gap: 10px; margin-top: 4px; }
+  .edict .stamp { position: absolute; right: 26px; bottom: 74px; font-size: 2rem; transform: rotate(-8deg); opacity: .85; }
+  .ph-tabs { display: none; }
+  html.is-phone .ph-tabs { display: inline-flex; }
+  html.is-phone .ph-tabs > span { min-height: 38px; font-size: .86rem; padding: 0 .5rem; }
+  html.is-phone .hd .rk { min-width: 150px; }
+  html.is-phone .win { inset: 0; border-radius: 0; padding: 3px; }
+  html.is-phone .hd { padding: 0 4px 4px; gap: 6px; }
+  html.is-phone .hd .ttl { font-size: 1.3rem; }
+  html.is-phone .hd .rk { min-width: 180px; }
+  html.is-phone .hd .rk span:nth-child(3), html.is-phone .hd .auto { display: none; }
+  html.is-phone .board { grid-template-columns: 70px 1fr; }
+  html.is-phone .fam.f2, html.is-phone .fam.f3, html.is-phone .cell.int, html.is-phone .cell.pol { display: none; }
+  html.is-phone .fam.f1 { justify-content: flex-start; padding-left: 10px; gap: 6px; letter-spacing: .1em; }
+  html.is-phone .tier b { font-size: 1.05rem; } html.is-phone .tier span { display: none; }
+  html.is-phone .seat { width: 46px; height: 50px; } html.is-phone .seat .v4-face { --s: 28px !important; }
+</style>
+</head>
+<body>
+<div class="v4-stage">
+  <canvas class="v4-mapbg" id="map"></canvas>
+  <div class="v4-scrim"></div>
+  <div class="win v4-lacquer">
+    <div class="hd" id="hd"></div>
+    <div class="board v4-paper" id="board"></div>
+  </div>
+  <div id="grant"></div>
+  <div id="notes"></div>
+</div>
+<script src="../../js/core.js"></script>
+<script src="../../js/portrait-data.js"></script>
+<script src="../../js/portrait.js"></script>
+<script src="kit.js"></script>
+<script>
+K.ready(() => {
+  const phone = document.documentElement.classList.contains('is-phone');
+  const grant = /view=grant/.test(location.search);
+  K.map(K.$('#map'), { seed: 12 });
+  const G = K.GENS;
+  const g = (n, w, i, p) => ({ name: n, war: w, intel: i, pol: p, culture: 'han' });
+  const P = { xhd: G.xiahoudun, cr: g('曹仁', 86, 62, 56), gj: G.guojia, yj: g('乐进', 84, 52, 50), ld: g('李典', 78, 72, 66), cy: g('程昱', 62, 88, 74), ch: g('曹洪', 80, 44, 46), dw: G.dianwei, mc: g('满宠', 64, 80, 82), xy: g('荀彧', 30, 95, 96), xu: g('徐晃', 90, 70, 64), xh: g('许褚', 96, 36, 28) };
+  K.$('#hd').innerHTML = `${K.face(G.caocao, 58, 'r3', 'win')}<span class="ttl goldleaf">官　制</span>
+    <div class="rk"><span><b>曹操 · 公</b>　国势 7.4 / 10.0 → 王（各品再增一席，开一品）</span><div class="v4-bar" style="--v:.74"><i></i></div><span>已授 9 / 10 · 本年礼金 450 金 · 本月可任免</span></div>
+    <div class="v4-seg ph-tabs"><span class="on">武官</span><span>谋臣</span><span>文官</span></div><span class="sp"></span><button class="v4-btn small auto">${K.icon('titles', 22)}按功绩授官</button><button class="v4-close">${K.icon('x')}</button>`;
+  const seat = (p, cls, nm) => p ? `<span class="seat ${cls || ''}">${K.face(p, 34, 'r3')}${nm || p.name}</span>` : cls === 'free' ? '<span class="seat free">＋</span>' : cls === 'lock' ? `<span class="seat lock">${nm}</span>` : '<span class="seat full">名额满</span>';
+  const T = [
+    ['一品', '0 / 0', '7 级 · 属性 > 90', [['大将军', [seat(null, 'lock', '需位阶 王')]]], [['军师将军', [seat(null, 'lock', '需位阶 王')]]], [['丞相', [seat(null, 'lock', '需位阶 王')]]]],
+    ['三品', '1 / 1', '5 级 · 属性 > 80', [['前将军', [seat(P.xhd)]], ['破虏将军', [seat(null)]]], [['军师中郎将', [seat(null)]], ['大鸿胪', [seat(null)]]], [['尚书令', [seat(null)]], ['大司农', [seat(null)]]]],
+    ['五品', '2 / 2', '3 级 · 属性 > 80', [['偏将军', [seat(P.cr)]], ['虎贲中郎将', [seat(null)]]], [['军师祭酒', [seat(P.gj)]]], [['刺史', [seat(null), seat(null)]], ['典农中郎将', [seat(null)]]]],
+    ['七品', '3 / 3', '2 级', [['越骑校尉', [seat(P.yj), seat(P.ld)]]], [['参军', [seat(P.cy)]]], [['别驾从事', [seat(null)]]]],
+    ['九品', '3 / 4', '1 级', [['军司马', [seat(P.ch, 'sus'), seat(P.dw)]]], [['主簿', [seat(P.mc)]]], [['从事', [seat(null, 'free')]]]],
+  ];
+  let b = `<div class="corner"></div><div class="fam f1" style="background:var(--war)">${K.icon('war')}武　官</div><div class="fam f2" style="background:var(--int)">${K.icon('intel')}谋　臣</div><div class="fam f3" style="background:var(--pol)">${K.icon('pol')}文　官</div>`;
+  for (const [gr, cap, req, w, i, p] of T) {
+    b += `<div class="tier"><b>${gr}</b><span class="cap">${cap}</span><span>${req}</span></div>`;
+    for (const [fam, posts] of [['war', w], ['int', i], ['pol', p]]) b += `<div class="cell ${fam}">${posts.map(([pn, ss]) => `<div class="post"><span class="pn">${K.icon('seal')}${pn}</span><div class="chips">${ss.join('')}</div></div>`).join('')}</div>`;
+  }
+  K.$('#board').innerHTML = b;
+  if (grant) {
+    const rw = (p, st, stc, line, cls) => `<div class="rw ${cls || ''}">${K.face(p, 40, 'r1')}<div><b>${p.name}</b>${line}</div><span class="st" style="background:${stc};color:${stc === 'transparent' ? 'var(--ink-3)' : '#fff3e2'}">${st}</span></div>`;
+    K.$('#grant').innerHTML = `<div class="v4-scrim"></div>
+      <div class="sheet v4-paper"><div class="v4-h3" style="margin-bottom:6px">候选 · 破虏将军（武官 三品）</div>
+        ${rw(P.xu, '可任', 'var(--good)', '武力 90 · Lv 6 · 现任 偏将军 · 忠 82', 'on')}
+        ${rw(P.xh, '可任', 'var(--good)', '武力 96 · Lv 5 · 无官 · 忠 95')}
+        ${rw(P.yj, '需 5 级（现 4）', 'transparent', '武力 84 · 校尉', 'no')}
+        ${rw(P.ld, '武力需 > 80', 'transparent', '武力 78 · 校尉', 'no')}
+        ${rw(P.cy, '最高属性为智力', 'transparent', '智力 88 · 参军', 'no')}
+        <div class="v4-small muted" style="margin-top:auto">不合格的人也列出，让人看见晋升的阶梯。</div></div>
+      <div class="edict v4-scroll v4-paper"><span class="rod-l" style="left:-18px;top:-4px"></span><span class="rod-r" style="right:-18px;top:-4px"></span>
+        <svg class="ins" viewBox="0 0 64 64">${K.ICONS.seal}<path d="M20 52 Q12 60 6 62 M44 52 Q52 60 58 62" stroke="#3e6aa8" stroke-width="4" fill="none" stroke-linecap="round"/></svg>
+        <div class="pn">破虏将军</div><div class="orig">pòlǔ jiāngjūn · 金印紫绶 · 孙坚曾任此职</div>
+        <div class="names"><span class="on">破虏将军</span><span>荡寇将军</span><span>征虏将军</span></div>
+        <div class="v4-brushline" style="width:100%"></div>
+        <div class="fx"><span class="good">攻击 <b>+11%</b>（+3%）</span><span class="good">单挑会心 <b>+3%</b></span><span class="good">士气 <b>+12</b></span><span class="good">统帅：全军攻 <b>+1%</b></span><span>礼金 <b>300</b> 金（自 许昌）</span><span class="good">忠诚 <b>+16</b></span></div>
+        <div class="warn">越级者不悦：${K.face(P.yj, 24, 'r1')}乐进 −4　${K.face(P.ld, 24, 'r1')}李典 −4</div>
+        <div class="btns"><button class="v4-btn ghost" style="color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink-3)">取消</button><button class="v4-btn seal big">授　官</button></div>
+        <span class="v4-seal stamp">魏公</span></div>`;
+  }
+  if (!phone && !/nonotes/.test(location.search)) K.$('#notes').innerHTML = grant
+    ? K.note(1, '4%', '9%', '候选纸条：合格者在前；不合格写明差在哪') + K.note(2, '56%', '7%', '诏书卷轴：印绶图标、职名（干笔）、原文读音、同品异名、效果（括号内为变化）、礼金与忠诚、越级者的不满；按「授官」盖印并播放仪式（TITLES §9.5）')
+    : K.note(1, '10%', '13%', '国势条：到下一位阶还差多少，升阶后多几个席位') + K.note(2, '82%', '84%', '空席且有合格人选：灯笼虚线框 + 呼吸光') + K.note(3, '42%', '84%', '虚衔：国势不足时斜纹覆盖') + K.note(4, '20%', '26%', '锁：位阶不足（悬停 / 长按看原因）');
+  document.body.dataset.ready = '1';
+});
+</script>
+</body>
+</html>

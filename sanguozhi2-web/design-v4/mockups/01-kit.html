@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UI-V4 · 01 组件样张（漆 · 纸 · 铜 · 灯）</title>
+<link rel="stylesheet" href="kit.css">
+<style>
+  html, body { overflow: auto; height: auto; }
+  body { background: #3a2c24 var(--tx-lacquer); padding: 24px 28px 60px; }
+  .sheet { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; max-width: 1240px; margin: 0 auto; }
+  .card { padding: 18px 20px 20px; }
+  .card.wide { grid-column: 1 / -1; }
+  .card h2 { margin: 0 0 12px; display: flex; align-items: center; gap: .5em; }
+  .row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin: 8px 0; }
+  .lab { font-size: .72rem; color: var(--ink-3); text-align: center; margin-top: 6px; letter-spacing: .06em; }
+  .v4-lacquer .lab { color: #b7a690; }
+  .cell { display: flex; flex-direction: column; align-items: center; }
+  .sw { width: 64px; height: 44px; border-radius: 6px; border: 2px solid var(--ink); }
+  .swl { font: 11px/1.25 var(--f-num); color: var(--ink-2); text-align: center; margin-top: 4px; }
+  .mat { width: 160px; height: 96px; display: grid; place-items: center; font-family: var(--f-display); font-size: 1.05rem; }
+  .tiles { display: grid; grid-template-columns: repeat(8, 76px); gap: 12px 14px; }
+  .icons { display: grid; grid-template-columns: repeat(12, 1fr); gap: 10px 8px; }
+  .icons .cell svg { width: 44px; height: 44px; }
+  .icons .lab { font-size: .66rem; }
+  .title-big { font-size: 3.2rem; letter-spacing: .14em; }
+  .hdr { display: flex; align-items: center; gap: 18px; color: var(--paper); margin: 0 auto 18px; max-width: 1240px; }
+  .hdr .v4-h1 { color: var(--gold-hi); }
+</style>
+</head>
+<body>
+<div class="hdr"><span class="v4-seal" style="font-size:2rem">漆</span><div><div class="v4-h1 goldleaf">第四版界面 · 组件样张</div><div class="v4-caption" style="color:#cdbb9f">漆木为框 · 宣纸为面 · 青铜为钮 · 灯笼为光 · 朱印为确认 · 墨线为轮廓（UI-V4 §3–§4）</div></div></div>
+<div class="sheet">
+  <section class="card v4-paper wide">
+    <h2 class="v4-h2"><span class="v4-seal">色</span>色板（CSS 变量；与 SG.LP 场景色同源）</h2>
+    <div class="row" id="swatches"></div>
+  </section>
+
+  <section class="card v4-paper">
+    <h2 class="v4-h2"><span class="v4-seal">材</span>材质</h2>
+    <div class="row">
+      <div class="cell"><div class="mat v4-lacquer">漆木框</div><div class="lab">.v4-lacquer · 铜包角</div></div>
+      <div class="cell"><div class="mat v4-paper" style="box-shadow: inset 0 0 0 1px var(--paper-edge), var(--sh-2)">宣纸面</div><div class="lab">.v4-paper</div></div>
+      <div class="cell"><div class="mat v4-lacquer v4-mount" style="padding:6px"><div class="v4-paper" style="width:100%;height:100%;display:grid;place-items:center">装裱</div></div><div class="lab">.v4-mount（漆框嵌纸）</div></div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <div class="cell"><div class="mat v4-silk" style="border:2px solid var(--ink);border-radius:4px;height:60px">朱绢</div><div class="lab">.v4-silk</div></div>
+      <div class="cell"><span class="v4-plaque" style="font-size:1.4rem">刘备军</span><div class="lab">.v4-plaque 黛匾金字</div></div>
+      <div class="cell"><div class="row" style="gap:8px"><span class="v4-seal" style="font-size:1.6rem">霸</span><span class="v4-seal yin" style="font-size:1.6rem">印</span><span class="v4-seal round" style="font-size:1.6rem">望</span></div><div class="lab">.v4-seal 阳文 / 阴文 / 圆印</div></div>
+    </div>
+  </section>
+
+  <section class="card v4-paper">
+    <h2 class="v4-h2"><span class="v4-seal">字</span>字体与层级</h2>
+    <div class="kai title-big brush" style="color:var(--ink)">霸王的世界</div>
+    <div class="v4-small muted">展示字 --f-display（系统楷体；样张截图用霞鹜文楷代替）+ 干笔滤镜 #brush-ink</div>
+    <div class="v4-brushline" style="margin:10px 0"></div>
+    <div class="v4-h1">一级标题 2.1rem 楷</div>
+    <div class="v4-h2">二级标题 1.45rem 楷</div>
+    <div class="v4-h3">三级标题 1.15rem 楷</div>
+    <div class="v4-body">正文 1rem 黑体：关羽开发了土地，土地 +24。</div>
+    <div class="v4-small">小字 .82rem：每升一级，战场上攻击、防御与计策威力 +4%</div>
+    <div class="row" style="gap:22px"><span class="num" style="font-size:1.6rem">190 · 12,400 · 98</span><span class="v4-caption">数字 --f-num 等宽旧体</span></div>
+  </section>
+
+  <section class="card v4-lacquer wide" style="padding:22px 26px">
+    <h2 class="v4-h2" style="color:var(--gold-hi)"><span class="v4-seal">钮</span>按钮：状态（常态 · 悬停灯光 · 键盘焦点 · 按下 · 不可用并说明原因）</h2>
+    <div class="row" style="gap:18px">
+      <div class="cell"><button class="v4-btn">漆牌</button><div class="lab">常态</div></div>
+      <div class="cell"><button class="v4-btn is-hover">漆牌</button><div class="lab">悬停：上浮 2px + 灯光池</div></div>
+      <div class="cell"><button class="v4-btn is-focus">漆牌</button><div class="lab">焦点：金环</div></div>
+      <div class="cell"><button class="v4-btn is-press">漆牌</button><div class="lab">按下：下沉 + 内阴影</div></div>
+      <div class="cell"><button class="v4-btn is-disabled">漆牌</button><div class="lab">不可用：锁印，点按说明</div></div>
+      <div class="cell"><button class="v4-btn seal">出　阵</button><div class="lab">印钮（主要）</div></div>
+      <div class="cell"><button class="v4-btn seal is-hover">出　阵</button><div class="lab">印钮悬停</div></div>
+      <div class="cell"><button class="v4-btn seal is-press">出　阵</button><div class="lab">盖印：压扁 1.04×0.9</div></div>
+      <div class="cell"><button class="v4-btn paper">纸签</button><div class="lab">纸签（次要）</div></div>
+      <div class="cell"><button class="v4-btn ghost">取消</button><div class="lab">空框</div></div>
+    </div>
+    <div class="row" style="gap:26px;margin-top:16px">
+      <div class="cell"><button class="v4-ibtn"><span class="face" id="ib1"></span></button><div class="lab" style="margin-top:22px">铜钮 常态</div></div>
+      <div class="cell"><button class="v4-ibtn is-hover"><span class="face" id="ib2"></span><span class="lbl">武将</span></button><div class="lab" style="margin-top:22px">悬停：转 −6° + 名签</div></div>
+      <div class="cell"><button class="v4-ibtn"><span class="face" id="ib3"></span><span class="v4-badge">2</span></button><div class="lab" style="margin-top:22px">红蜡角标</div></div>
+      <div class="cell"><button class="v4-close" id="cl"></button><div class="lab" style="margin-top:22px">收（关闭）</div></div>
+      <div class="cell" style="margin-left:20px"><div class="v4-seg"><span>关</span><span class="on">正常</span><span>快速</span><span>极速</span></div><div class="lab">分段：木牌一排</div></div>
+      <div class="cell"><div class="v4-toggle on"></div><div class="lab">印章开关（开）</div></div>
+      <div class="cell"><div class="v4-toggle"></div><div class="lab">（关）</div></div>
+      <div class="cell" style="width:240px"><div class="v4-slider" style="--v:.7;width:100%"><div class="groove"><div class="fill"></div><div class="ticks"></div><div class="knob"></div></div><div class="val">70%</div></div><div class="lab">滑杆：漆槽 · 金填 · 玉珠</div></div>
+    </div>
+  </section>
+
+  <section class="card v4-lacquer wide" style="padding:22px 26px">
+    <h2 class="v4-h2" style="color:var(--gold-hi)"><span class="v4-seal">令</span>指令印（DOMESTIC-FX §7；本文件定排布 §5.4）</h2>
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <section class="card v4-paper">
+    <h2 class="v4-h2"><span class="v4-seal">签</span>页签 · 进度 · 数值</h2>
+    <div class="v4-tabs" style="margin-bottom:-2px"><span class="v4-tab on" id="tab1"></span><span class="v4-tab" id="tab2"></span><span class="v4-tab" id="tab3"></span><span class="v4-tab" id="tab4"></span></div>
+    <div class="v4-paper" style="padding:14px 16px;border:2px solid var(--ink);border-radius:0 6px 6px 6px">
+      <div class="row" style="gap:10px;margin:2px 0"><span class="kai" style="width:3em;color:var(--war)">武力</span><span class="num" style="width:2.2em">98</span><div class="v4-bar" style="--v:.98;--c:var(--war);flex:1"><i></i></div></div>
+      <div class="row" style="gap:10px;margin:2px 0"><span class="kai" style="width:3em;color:var(--int)">智力</span><span class="num" style="width:2.2em">78</span><div class="v4-bar" style="--v:.72;--g:.06;--c:var(--int);flex:1"><i></i><b></b></div></div>
+      <div class="row" style="gap:10px;margin:2px 0"><span class="kai" style="width:3em;color:var(--pol)">政治</span><span class="num" style="width:2.2em">62</span><div class="v4-bar" style="--v:.62;--c:var(--pol);flex:1"><i></i></div></div>
+      <div class="v4-small muted" style="margin-top:4px">金色斜纹 = 装备加成（智力 72 + 6）</div>
+    </div>
+    <div class="row" style="margin-top:16px;gap:20px">
+      <div class="v4-lacquer thin" style="padding:8px 14px;border-radius:8px;position:relative;display:flex;gap:18px">
+        <span class="v4-res" id="res-gold"></span><span class="v4-res" id="res-food"></span>
+        <span class="v4-delta up" style="left:58px;top:-14px">+120</span><span class="v4-delta down" style="left:150px;top:-14px">−300</span>
+      </div>
+      <div class="v4-caption" style="max-width:15em">计数器：数字翻滚（§5.3），飘起增减签，图标轻跳</div>
+    </div>
+  </section>
+
+  <section class="card v4-paper">
+    <h2 class="v4-h2"><span class="v4-seal">像</span>立绘框（位阶 R1–R5）· 物品槽（五品级）</h2>
+    <div class="row" id="faces" style="gap:18px"></div>
+    <div class="row" id="slots" style="gap:18px;margin-top:20px"></div>
+    <div class="row" style="gap:14px;margin-top:22px;align-items:flex-start">
+      <div style="position:relative;width:250px;height:110px"><div class="v4-tip" style="left:0;top:8px"><b>青龙偃月刀</b> <span class="rar legend">传说</span>… <span class="rar epic">史诗</span><br><span class="v4-small">纸条提示：系绳 + 纸 + 墨线</span></div></div>
+      <div class="v4-toast" id="toast"></div>
+    </div>
+  </section>
+
+  <section class="card v4-paper wide">
+    <h2 class="v4-h2"><span class="v4-seal">图</span>图标（64 视窗 · 墨线 2.5 · 平涂分面 · 一主色一辅色；24px 剪影可辨）</h2>
+    <div class="icons" id="icons"></div>
+  </section>
+</div>
+<script src="../../js/core.js"></script>
+<script src="../../js/portrait-data.js"></script>
+<script src="../../js/portrait.js"></script>
+<script src="kit.js"></script>
+<script>
+K.ready(() => {
+  const sw = [['--lq-1','漆'],['--lq-3','漆·亮'],['--zhu','朱漆'],['--zhu-hi','朱·亮'],['--paper','宣纸'],['--paper-3','纸·旧'],['--ink','墨'],['--ink-3','淡墨'],['--gold','鎏金'],['--bronze','青铜'],['--patina','铜绿'],['--dai','黛（匾）'],['--tile','瓦'],['--lamp','灯'],['--amber','琥珀'],['--war','武'],['--int','智'],['--pol','政'],['--r-rare','稀有'],['--r-epic','史诗'],['--r-legend','传说']];
+  const cs = getComputedStyle(document.documentElement);
+  K.$('#swatches').innerHTML = sw.map(([v, n]) => `<div class="cell"><div class="sw" style="background:var(${v})"></div><div class="swl">${n}<br>${cs.getPropertyValue(v).trim()}</div></div>`).join('');
+  K.$('#ib1').innerHTML = K.icon('generals'); K.$('#ib2').innerHTML = K.icon('generals'); K.$('#ib3').innerHTML = K.icon('titles'); K.$('#cl').innerHTML = K.icon('x');
+  const T = [['develop','开发',''],['develop','开发','is-hover'],['develop','开发','is-press'],['recruit','征兵','is-disabled'],['attack','出征','primary'],['train','训练','is-great'],['search','搜索','is-busy'],['market','市场','notoken']];
+  const L = ['常态 · 呼吸','悬停：灯光 + 笔下划线 + 键帽','按下 0.94 + 墨晕','不可用：去色 + 锁印 + 空心令箭','主要：余烬脉动','大成：结果回响 4 秒','执行中：金环旋转','无需令箭（无小标）'];
+  K.$('#tiles').innerHTML = T.map(([id, n, c], i) => `<div class="cell"><button class="v4-tile ${c}">${c === 'notoken' ? '' : '<i class="pip"></i>'}${K.icon(id)}<span class="lb">${n}</span><span class="key">${i + 1}</span></button><div class="lab" style="max-width:84px">${L[i]}</div></div>`).join('');
+  const tab = (id, ic, t) => { K.$(id).innerHTML = K.icon(ic) + t; };
+  tab('#tab1', 'level', '总览'); tab('#tab2', 'armour', '装备'); tab('#tab3', 'combo', '武艺'); tab('#tab4', 'titles', '官爵');
+  K.$('#tab3').insertAdjacentHTML('beforeend', '<span class="v4-badge">新</span>');
+  K.$('#res-gold').innerHTML = K.icon('gold') + '<span>1,860</span>';
+  K.$('#res-food').innerHTML = K.icon('food') + '<span>6,000</span>';
+  const g = K.GENS;
+  K.$('#faces').innerHTML = [['liubei','r1'],['jianyong','r2'],['zhaoyun','r3'],['guanyu','r4'],['caocao','r5']].map(([k, r], i) => `<div class="cell">${K.face(g[k], 56, r)}<div class="lab">R${i + 1}</div></div>`).join('');
+  K.$('#slots').innerHTML = [['shield','common','凡品'],['helmet','uncommon','良品'],['bow','rare','珍品'],['horse','epic','神品'],['guandao','legend','天宝'],['book','empty','空槽']].map(([ic, r, n]) => `<div class="cell"><div class="v4-slot ${r}" style="--s:60px">${r === 'empty' ? '' : K.icon(ic)}</div><div class="lab" style="margin-top:12px">${n}</div></div>`).join('');
+  K.$('#toast').innerHTML = `<span class="v4-seal" style="font-size:1.1rem">记</span>进度已记录 · 一九〇年正月`;
+  const ids = Object.keys(K.ICONS).filter(k => !['x','check'].includes(k));
+  K.$('#icons').innerHTML = ids.map(k => `<div class="cell">${K.icon(k)}<div class="lab">${k}</div></div>`).join('');
+  document.body.dataset.ready = '1';
+});
+</script>
+</body>
+</html>

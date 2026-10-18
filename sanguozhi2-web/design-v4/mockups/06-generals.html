@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>UI-V4 · 06 武将录</title>
+<link rel="stylesheet" href="kit.css">
+<style>
+  .win { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(1240px, 97vw); height: min(690px, 96vh); display: flex; flex-direction: column; padding: 6px; }
+  .win .v4-modal-head .v4-h2 { color: var(--gold-hi); flex: none; }
+  .win .v4-modal-head .cnt { color: #cdbb9f; font-size: .9rem; flex: 1; }
+  .bar { display: flex; align-items: center; gap: 8px; padding: 0 10px 8px; flex-wrap: nowrap; }
+  .search { display: flex; align-items: center; gap: 6px; min-height: 40px; width: 170px; padding: 0 10px; border-radius: 20px; background: var(--paper) var(--tx-paper); background-size: 256px; border: 2px solid var(--ink); color: var(--ink-3); font-size: .9rem; }
+  .search svg { width: 20px; height: 20px; }
+  .bar .v4-seg > span { min-height: 38px; font-size: .9rem; padding: 0 .6rem; }
+  .bar .sp { flex: 1; }
+  .bar .v4-btn.small svg { width: 20px; height: 20px; }
+  .cols { flex: 1; min-height: 0; display: flex; gap: 8px; }
+  .list { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 6px 8px; }
+  .thead, .tr { display: grid; grid-template-columns: 50px 1.25fr .95fr 1.6fr .8fr 56px .8fr 1.1fr; gap: 8px; align-items: center; }
+  .thead { padding: 2px 8px 6px; font-family: var(--f-display); font-size: .86rem; color: var(--ink-3); border-bottom: 2px solid rgba(36, 26, 33, .2); }
+  .thead .on { color: var(--zhu); }
+  .thead .on::after { content: " ▾"; font-size: .7rem; }
+  .rows { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 3px; padding-top: 4px; }
+  .tr { position: relative; min-height: 52px; padding: 3px 8px; border-radius: 6px; background: rgba(255, 255, 255, .25); box-shadow: inset 0 0 0 1px rgba(195, 165, 116, .5); }
+  .tr.sel { background: rgba(255, 236, 190, .8); box-shadow: inset 0 0 0 2px var(--gold-lo), 0 0 12px rgba(255, 200, 120, .5); }
+  .tr.moved { opacity: .72; }
+  .nm b { font-family: var(--f-display); font-size: 1.1rem; font-weight: 400; display: flex; align-items: center; gap: 5px; }
+  .nm small { display: block; font-size: .72rem; }
+  .lvc { display: flex; flex-direction: column; gap: 3px; font: 600 .78rem/1 var(--f-num); color: var(--ink-2); }
+  .lvc .v4-bar { height: 6px; --c: var(--gold); }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .stats div { display: flex; flex-direction: column; gap: 2px; font: 600 .86rem/1 var(--f-num); }
+  .stats .v4-bar { height: 5px; }
+  .stats sup { font-size: .62rem; color: var(--gold-lo); }
+  .trp { font: 600 .86rem/1.2 var(--f-num); color: var(--ink); }
+  .trp small { display: block; font-weight: 400; font-size: .7rem; color: var(--ink-3); }
+  .loy { display: flex; align-items: center; gap: 3px; font: 600 .86rem/1 var(--f-num); }
+  .loy svg { width: 18px; height: 18px; }
+  .loy.low { color: var(--bad); }
+  .loc { font-family: var(--f-display); font-size: .95rem; color: var(--ink-2); }
+  .loc small { display: block; font-family: var(--f-body); font-size: .68rem; color: var(--ink-3); }
+  .gear { display: flex; gap: 3px; }
+  .gear .v4-slot { --s: 26px; border-radius: 5px; border-width: 1.5px; box-shadow: inset 0 0 0 1.5px var(--rc, #9aa3ad); }
+  .gear .v4-slot.empty { box-shadow: inset 0 0 0 1px rgba(36, 26, 33, .25); }
+  .gear .v4-slot::after { display: none; }
+  .tag { display: inline-grid; place-items: center; width: 18px; height: 18px; font-family: var(--f-display); font-size: .74rem; color: #fff3e2; background: var(--zhu); border-radius: 3px; }
+  .tag.gov { background: var(--patina); }
+  .lv { display: inline-grid; place-items: center; min-width: 20px; height: 18px; padding: 0 3px; font: 700 .7rem/1 var(--f-num); color: var(--ink); background: var(--gold-hi); border: 1.5px solid var(--ink); border-radius: 9px; }
+  .chip { font-family: var(--f-display); font-size: .7rem; padding: 0 4px; border-radius: 4px; border: 1.5px solid var(--ink); color: #fff3e2; }
+  .stamp { position: absolute; left: 30px; top: 50%; transform: translateY(-50%) rotate(-14deg); font-family: var(--f-display); font-size: .74rem; color: rgba(140, 40, 25, .8); border: 2px solid rgba(140, 40, 25, .6); background: rgba(243, 231, 204, .85); border-radius: 4px; padding: 0 3px; }
+  .side { width: 300px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 12px; color: var(--ink); }
+  .side .fig { position: relative; width: 100%; height: 250px; display: grid; place-items: end center; border-radius: 6px; overflow: hidden; background: radial-gradient(60% 40% at 50% 92%, rgba(120, 80, 40, .35), transparent 70%), radial-gradient(80% 70% at 50% 40%, #fff3d6, #ecd9b0 70%); box-shadow: inset 0 0 0 1px var(--paper-edge); }
+  .side .fig img { height: 240px; position: relative; }
+  .side .fig .lamp { position: absolute; left: 50%; top: 30%; width: 260px; height: 260px; transform: translate(-50%, -50%); background: radial-gradient(closest-side, rgba(255, 210, 140, .55), transparent); }
+  .side .nm2 { display: flex; align-items: baseline; gap: 8px; }
+  .side .nm2 b { font-family: var(--f-display); font-size: 1.7rem; font-weight: 400; }
+  .side .off { font-size: .82rem; color: var(--war); font-family: var(--f-display); }
+  .side .acts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%; margin-top: auto; }
+  .side .acts .v4-btn { min-height: 40px; font-size: .95rem; }
+  .side .acts .v4-btn svg { width: 22px; height: 22px; }
+  html.is-phone .win { width: 100vw; height: 100vh; border-radius: 0; }
+  html.is-phone .v4-modal-head { padding: 3px 8px 2px 12px; }
+  html.is-phone .side { display: none; }
+  html.is-phone .bar { padding: 0 6px 4px; gap: 5px; }
+  html.is-phone .bar .search { width: 110px; }
+  html.is-phone .bar .seg2, html.is-phone .bar .vw { display: none; }
+  html.is-phone .thead, html.is-phone .tr { grid-template-columns: 40px 1.4fr 1.6fr .9fr .7fr; gap: 6px; }
+  html.is-phone .thead > :nth-child(3), html.is-phone .tr > :nth-child(3), html.is-phone .thead > :nth-child(7), html.is-phone .tr > :nth-child(7), html.is-phone .thead > :nth-child(8), html.is-phone .tr > :nth-child(8) { display: none; }
+  html.is-phone .tr { min-height: 46px; }
+  html.is-phone .tr .v4-face { --s: 36px !important; }
+  html.is-phone .list { padding: 4px; }
+</style>
+</head>
+<body>
+<div class="v4-stage">
+  <canvas class="v4-mapbg" id="map"></canvas>
+  <div class="v4-scrim"></div>
+  <div class="win v4-lacquer">
+    <div class="v4-modal-head"><span class="v4-seal" style="font-size:1.3rem">将</span><div class="v4-h2">武将录</div><span class="cnt">麾下 21 人 · 本月可行动 14 · 可习得 2 · 无官 9</span><button class="v4-close" id="close"></button></div>
+    <div class="bar" id="bar"></div>
+    <div class="cols">
+      <div class="list v4-paper"><div class="thead"><span></span><span>姓名 · 官职</span><span>等级</span><span class="on">武 · 智 · 政</span><span>兵 · 训</span><span>忠</span><span>所在</span><span>装备</span></div><div class="rows" id="rows"></div></div>
+      <div class="side v4-paper" id="side"></div>
+    </div>
+  </div>
+  <div id="notes"></div>
+</div>
+<script src="../../js/core.js"></script>
+<script src="../../js/portrait-data.js"></script>
+<script src="../../js/portrait.js"></script>
+<script src="kit.js"></script>
+<script>
+K.ready(async () => {
+  const phone = document.documentElement.classList.contains('is-phone');
+  K.map(K.$('#map'), { seed: 7, cities: [{ x: 640, y: 360, color: '#2f9a55', lit: true }] });
+  K.$('#close').innerHTML = K.icon('x');
+  K.$('#bar').innerHTML = `<div class="search">${K.icon('help')}姓名 / 城名</div>
+    <div class="v4-seg"><span class="on">全部</span><span style="color:#ffb9a6">武</span><span style="color:#b9d0ff">谋</span><span style="color:#b9f0c8">文</span></div>
+    <div class="v4-seg seg2"><span>可行动</span><span>可习得</span><span>无官</span><span>低忠</span><span>外出</span></div>
+    <div class="sp"></div>
+    <button class="v4-btn small">${K.icon('city')}全部城 ▾</button><button class="v4-btn small">${K.icon('sort')}武力 ▾</button>
+    <div class="v4-seg vw"><span class="on">${K.icon('list', 20)}</span><span>${K.icon('grid', 20)}</span></div>`;
+  const G = K.GENS;
+  const extra = { name: '糜竺', war: 30, intel: 68, pol: 80, culture: 'han' }, sun = { name: '孙乾', war: 32, intel: 72, pol: 76, culture: 'han' }, chen = { name: '陈到', war: 81, intel: 52, pol: 48, culture: 'han' };
+  const R = [
+    [G.guanyu, '', '荡寇将军', 'var(--war)', 7, .62, [98, 6], [78, 0], [62, 0], '5,800', '训 92', 96, '平原', '太守', ['legend', 'guandao'], ['uncommon', 'shield'], ['rare', 'armour'], ['uncommon', 'helmet'], ['epic', 'horse'], ['common', 'book'], 'sel'],
+    [G.zhangfei, '', '军司马', 'var(--war)', 6, .3, [99, 3], [34, 0], [26, 0], '5,200', '训 85', 92, '平原', '', ['rare', 'guandao'], null, ['uncommon', 'armour'], ['common', 'helmet'], ['uncommon', 'horse'], null, 'moved'],
+    [G.zhaoyun, '', '偏将军', 'var(--war)', 6, .8, [96, 2], [74, 0], [64, 0], '5,000', '训 88', 88, '下邳', '', ['rare', 'guandao'], ['common', 'shield'], ['uncommon', 'armour'], ['uncommon', 'helmet'], ['rare', 'horse'], null],
+    [chen, '', '—', 'var(--ink-3)', 3, .4, [81, 0], [52, 0], [48, 0], '3,600', '训 70', 74, '小沛', '', ['common', 'guandao'], ['common', 'shield'], ['common', 'armour'], null, null, null],
+    [G.liubei, '<span class="tag">君</span>', '君主 · 德 82', 'var(--ink-3)', 4, .5, [76, 0], [76, 4], [78, 0], '3,500', '训 63', 100, '平原', '', ['rare', 'guandao'], null, ['uncommon', 'armour'], ['common', 'helmet'], ['common', 'horse'], ['rare', 'seal']],
+    [G.jianyong, '<span class="tag gov">守</span>', '从事', 'var(--pol)', 2, .7, [34, 0], [68, 0], [72, 3], '1,000', '训 40', 81, '下邳', '太守', null, null, ['common', 'armour'], null, null, ['uncommon', 'book']],
+    [sun, '', '—', 'var(--ink-3)', 2, .2, [32, 0], [72, 0], [76, 0], '800', '训 35', 58, '北海', '外出 · 商队', null, null, ['common', 'armour'], null, null, ['common', 'book'], 'low'],
+    [extra, '', '别驾从事', 'var(--pol)', 3, .1, [30, 0], [68, 0], [80, 5], '900', '训 30', 85, '下邳', '', null, null, ['common', 'armour'], null, null, ['rare', 'seal']],
+  ];
+  const slot = s => s ? `<span class="v4-slot ${s[0]}">${K.icon(s[1])}</span>` : `<span class="v4-slot empty"></span>`;
+  K.$('#rows').innerHTML = R.map(r => {
+    const [g, tag, off, oc, lv, xp, w, i, p, tr, tn, loy, loc, locn, ...rest] = r;
+    const gear = rest.slice(0, 6), flag = rest[6] || '';
+    const bar = (v, c) => `<div>${v[0]}${v[1] ? `<sup>+${v[1]}</sup>` : ''}<div class="v4-bar" style="--v:${v[0] / 100};--g:${v[1] / 100};--c:${c}"><i></i>${v[1] ? '<b></b>' : ''}</div></div>`;
+    return `<div class="tr ${flag === 'sel' ? 'sel' : ''} ${flag === 'moved' ? 'moved' : ''}">${K.face(g, phone ? 36 : 42, lv >= 6 ? 'r3' : 'r1')}
+      <div class="nm"><b>${tag}${g.name}${g.name === '关羽' ? '<span class="chip" style="background:var(--jade)">新</span>' : ''}</b><small style="color:${oc}">${off}</small></div>
+      <div class="lvc"><span>Lv ${lv}</span><div class="v4-bar" style="--v:${xp}"><i></i></div></div>
+      <div class="stats">${bar(w, 'var(--war)')}${bar(i, 'var(--int)')}${bar(p, 'var(--pol)')}</div>
+      <div class="trp">${tr}<small>${tn}</small></div>
+      <div class="loy ${flag === 'low' ? 'low' : ''}">${K.icon('loyalty')}${loy}</div>
+      <div class="loc">${loc}<small>${locn}</small></div>
+      <div class="gear">${gear.map(slot).join('')}</div>${flag === 'moved' ? '<span class="stamp">已行动</span>' : ''}</div>`;
+  }).join('');
+  const fig = await K.cutout('assets/ours_guanyu_full.png');
+  K.$('#side').innerHTML = `<div class="fig"><div class="lamp"></div><img src="${fig}" alt=""></div>
+    <div class="nm2"><b>关羽</b><span class="v4-small muted">字 云长 · 河东解良</span></div>
+    <div class="off">武官 · 四品 · 荡寇将军</div>
+    <div class="v4-small" style="text-align:center;color:var(--ink-2)">青龙偃月刀 · 赤兔（未得）· 必杀 3 · 计策 2 · 连段 ★★</div>
+    <div class="acts"><button class="v4-btn seal">${K.icon('generals')}详 情</button><button class="v4-btn">${K.icon('reward')}赏 赐</button><button class="v4-btn">${K.icon('armour')}装 备</button><button class="v4-btn">${K.icon('move')}移 动</button></div>`;
+  if (!phone && !/nonotes/.test(location.search)) K.$('#notes').innerHTML = K.note(1, '18%', '13.5%', '筛选：最高属性（武 / 谋 / 文）+ 状态；排序点表头') + K.note(2, '42%', '32%', '金色斜纹 = 装备加成；数字上标 +6') + K.note(3, '58%', '90%', '六格装备小图标，边框即品级') + K.note(4, '76%', '24%', '右栏：选中武将的立绘台（3D 模型）与常用操作；双击行进入武将菜单');
+  document.body.dataset.ready = '1';
+});
+</script>
+</body>
+</html>

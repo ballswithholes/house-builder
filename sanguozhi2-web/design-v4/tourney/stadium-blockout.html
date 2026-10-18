@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>万国擂台白模</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #e8dcc4; overflow: hidden; }
+  #gl { display: block; width: 100%; height: 100%; }
+  #hud { position: fixed; left: 8px; bottom: 8px; font: 12px/1.4 "PingFang SC", "Noto Sans SC", system-ui, sans-serif; color: #241a21; background: rgba(248,239,220,.82); padding: 4px 8px; border-radius: 6px; }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="hud"></div>
+<script src="../../vendor/three.min.js"></script>
+<script src="../../js/core.js"></script>
+<script src="../../js/data.js"></script>
+<script src="../../js/world-data.js"></script>
+<script src="../../js/portrait-data.js"></script>
+<script src="../../js/portrait.js"></script>
+<script src="../../js/figure.js"></script>
+<script src="../../js/lowpoly.js"></script>
+<script src="../../js/lp-pilot.js"></script>
+<script src="stadium-blockout.js"></script>
+<script>
+'use strict';
+/* 万国擂台白模（TOURNAMENT §8）
+   ?shot=aerial | duel | night | walkon | ceremony   &face=roman（单挑背景朝向的方位 id）&w=1600&h=900&mood=golden|noon|dusk|night&phone=1
+   不带 shot：可交互（拖动旋转、滚轮缩放），按 1–9 / 0 切换背景方位 */
+(function () {
+  if (THREE.ColorManagement) THREE.ColorManagement.enabled = false;
+  const Q = new URLSearchParams(location.search), qv = (k, d) => (Q.has(k) ? Q.get(k) : d);
+  const SHOT = qv('shot', ''), LP = SG.LP, Pilot = SG.LPPilot, SB = SG.StadiumBlockout;
+  window.__st = { ready: false, error: null, info: {} };
+  window.addEventListener('error', e => { window.__st.error = String(e.message); });
+  const W = +qv('w', SHOT ? 1600 : innerWidth), Hh = +qv('h', SHOT ? 900 : innerHeight);
+  const gl = document.getElementById('gl');
+  const renderer = new THREE.WebGLRenderer({ canvas: gl, antialias: true, preserveDrawingBuffer: true });
+  renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+  renderer.toneMapping = THREE.NoToneMapping;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.setPixelRatio(1);
+  renderer.setSize(W, Hh, false);
+  gl.style.width = W + 'px'; gl.style.height = Hh + 'px';
+  LP.setViewport(W, Hh);
+  try {
+    const moodName = qv('mood', SHOT === 'night' || SHOT === 'ceremony' ? 'night' : 'golden');
+    const night = moodName === 'night';
+    const scene = new THREE.Scene();
+    const fogCol = night ? new THREE.Color(0.17, 0.2, 0.36) : moodName === 'golden' ? new THREE.Color(0.93, 0.82, 0.7) : new THREE.Color(0.8, 0.86, 0.92);
+    scene.background = fogCol.clone();
+    scene.fog = new THREE.Fog(fogCol, 90, 260);
+    LP.globals.lpFog.value.x = 0.8;
+    const mood = new LP.Mood(scene, SHOT === 'duel' ? { center: [0, 0, -4], extent: 16, shadowSize: 2048 } : { center: [0, 0, 0], extent: 70, shadowSize: 2048 });
+    const S = SB.build({ night, phone: qv('phone', '0') === '1' });
+    scene.add(S.root);
+    const faceId = qv('face', SHOT === 'duel' ? 'roman' : 'judges');
+    SB.face(S.group, faceId);
+    S.root.updateMatrixWorld(true);
+    // 夜：离单挑中心最近的 12 盏灯笼为点光源（其余只亮灯罩），法罗斯之火一盏
+    const lampsWorld = S.lamps.map(p => new THREE.Vector3(...p).applyAxisAngle(new THREE.Vector3(0, 1, 0), S.group.rotation.y));
+    const camT = SHOT === 'walkon' ? new THREE.Vector3(-20, 2, 0) : new THREE.Vector3(0, 1, -10);
+    lampsWorld.sort((a, b) => a.distanceTo(camT) - b.distanceTo(camT));
+    for (const v of lampsWorld.slice(0, 12)) mood.addLamp([v.x, v.y, v.z], { color: '#ffb46c', intensity: 1.0, range: 9, haloSize: 1.4 });
+    mood.set(moodName);
+    // 两名选手（美术试点的关羽与汉军枪兵作替身）
+    const fa = Pilot.guanYu(), fb = Pilot.soldier({ color: '#7a2a3a' });
+    fa.root.position.set(-1.7, 0, 0); fa.root.rotation.y = Math.PI / 2; fa.setPose('idle', 0.6);
+    fb.root.position.set(1.7, 0, 0); fb.root.rotation.y = -Math.PI / 2; fb.setPose('idle', 1.1);
+    scene.add(fa.root, fb.root);
+    for (const f of [fa, fb]) { const sh = LP.blobShadow(0.5, 0.5, 0.35); sh.position.set(f.root.position.x, 0.02, 0); scene.add(sh); }
+    // 镜头
+    let cam = new THREE.PerspectiveCamera(38, W / Hh, 0.3, 900);
+    const look = (pos, tgt, fov) => { cam.fov = fov || cam.fov; cam.position.set(...pos); cam.lookAt(new THREE.Vector3(...tgt)); cam.updateProjectionMatrix(); };
+    if (SHOT === 'duel') {
+      // 与 duel-game.js updateCamera 相同的取景（FOV 30，两人相距 3.4 m：dist ≈ 9.7 m、hc ≈ 1.99、地平线在 NDC −0.46）
+      const tanV = Math.tan(15 * Math.PI / 180), tanH = tanV * W / Hh;
+      const dist = Math.max(5.8, Math.min(15, (3.4 + 2.2) / 0.76 / (2 * tanH)));
+      const hc = 1.55 + dist * 0.045, alpha = Math.atan2(hc, dist), theta = alpha - Math.atan(0.46 * tanV);
+      cam.fov = 30;
+      cam.position.set(0, hc, dist);
+      cam.lookAt(new THREE.Vector3(0, hc - Math.tan(theta) * dist, 0));
+      cam.updateProjectionMatrix();
+      window.__st.info.duelCam = { dist: +dist.toFixed(2), hc: +hc.toFixed(2), pitchDeg: +(theta * 180 / Math.PI).toFixed(2) };
+    } else if (SHOT === 'walkon') look([-6, 1.7, 5], [-21, 6, 0], 44);
+    else if (SHOT === 'ceremony') look([0, 9, 30], [0, 4, -22], 42);
+    else if (SHOT === 'night') look([70, 48, -86], [0, 2, 4], 38);
+    else look([0, 78, 112], [0, 0, -14], 38);
+    // 交互
+    if (!SHOT) {
+      let yaw = 200, pitch = 30, dist = 120;
+      const place = () => { const y = yaw * Math.PI / 180, p = pitch * Math.PI / 180; look([Math.sin(y) * Math.cos(p) * dist, Math.sin(p) * dist, Math.cos(y) * Math.cos(p) * dist], [0, 3, 0], 38); };
+      place();
+      let drag = null;
+      gl.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, yaw, pitch }; });
+      addEventListener('pointerup', () => { drag = null; });
+      gl.addEventListener('pointermove', e => { if (!drag) return; yaw = drag.yaw - (e.clientX - drag.x) * 0.25; pitch = Math.max(3, Math.min(85, drag.pitch + (e.clientY - drag.y) * 0.2)); place(); });
+      gl.addEventListener('wheel', e => { dist = Math.max(6, Math.min(260, dist * (e.deltaY > 0 ? 1.08 : 0.93))); place(); e.preventDefault(); }, { passive: false });
+      addEventListener('keydown', e => { const i = '1234567890'.indexOf(e.key); if (i >= 0) { const fam = SB.SLOTS.filter(s => s.family); if (fam[i]) SB.face(S.group, fam[i].id); } });
+      const loop = () => { LP.setTime(performance.now() / 1000); renderer.render(scene, cam); requestAnimationFrame(loop); };
+      loop();
+    } else {
+      LP.setTime(1.2);
+      renderer.info.autoReset = false; renderer.info.reset();
+      renderer.render(scene, cam);
+      window.__st.info.calls = renderer.info.render.calls;
+      window.__st.info.drawnTris = renderer.info.render.triangles;
+    }
+    window.__st.info.static = S.tris; window.__st.info.crowd = S.crowdTris;
+    document.getElementById('hud').textContent = `万国擂台白模 · ${SHOT || '交互'} · 背景 ${faceId} · 静态 ${S.tris} 三角形 + 观众 ${S.crowdTris}` + (window.__st.info.calls ? ` · 本帧 ${window.__st.info.calls} 次绘制 / ${window.__st.info.drawnTris} 三角形` : '');
+    window.__st.ready = true;
+  } catch (e) { window.__st.error = e.stack || String(e); console.error(e); }
+})();
+</script>
+</body>
+</html>

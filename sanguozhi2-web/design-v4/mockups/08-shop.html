@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>UI-V4 · 08 市场</title>
+<link rel="stylesheet" href="kit.css">
+<style>
+  .win { position: absolute; inset: 8px; display: flex; flex-direction: column; padding: 6px; }
+  .hd { display: flex; align-items: center; gap: 12px; padding: 2px 8px 0 6px; }
+  .awning { position: relative; height: 26px; margin: 0 6px 4px; border: 2px solid var(--ink); border-radius: 0 0 10px 10px; background: repeating-linear-gradient(90deg, #f3e7cc 0 34px, #3aa5a0 34px 68px); }
+  .awning::after { content: ""; position: absolute; left: -2px; right: -2px; bottom: -10px; height: 10px; background: radial-gradient(circle at 17px -2px, #f3e7cc 12px, transparent 13px) 0 0 / 68px 10px repeat-x, radial-gradient(circle at 51px -2px, #3aa5a0 12px, transparent 13px) 0 0 / 68px 10px repeat-x; }
+  .hd .ttl { font-family: var(--f-display); font-size: 1.8rem; letter-spacing: .1em; }
+  .hd .tier { font-family: var(--f-display); font-size: .9rem; padding: 2px 8px; border: 1.5px solid var(--ink); border-radius: 4px; background: var(--patina); color: #fff3e2; }
+  .hd .v4-tabs { margin-left: 14px; }
+  .hd .v4-tab { min-height: 40px; }
+  .hd .money { margin-left: auto; display: flex; gap: 12px; align-items: center; }
+  .main { flex: 1; min-height: 0; display: flex; gap: 8px; margin-top: 10px; }
+  .keeper { width: 210px; flex: none; display: flex; flex-direction: column; gap: 8px; padding: 10px; color: var(--ink); }
+  .keeper .bub { position: relative; padding: 8px 10px; border-radius: 10px; background: #fff8e6; border: 2px solid var(--ink); font-size: .86rem; line-height: 1.45; }
+  .keeper .bub::after { content: ""; position: absolute; left: 30px; bottom: -10px; width: 14px; height: 14px; background: #fff8e6; border-right: 2px solid var(--ink); border-bottom: 2px solid var(--ink); transform: rotate(45deg); }
+  .keeper .info { font-size: .78rem; color: var(--ink-2); line-height: 1.5; }
+  .keeper .info b { font-family: var(--f-display); font-weight: 400; color: var(--ink); }
+  .keeper .car { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 8px; background: rgba(201, 154, 46, .18); box-shadow: inset 0 0 0 1.5px var(--ochre); font-size: .78rem; }
+  .keeper .car svg { width: 34px; height: 34px; flex: none; }
+  .grid { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 128px; gap: 8px; padding: 10px; align-content: start; }
+  .card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 6px 6px; border-radius: 8px; background: rgba(255, 255, 255, .4); box-shadow: inset 0 0 0 1.5px var(--paper-edge); text-align: center; }
+  .card.sel { background: rgba(255, 236, 190, .95); box-shadow: inset 0 0 0 2px var(--r-rare), 0 0 14px rgba(74, 143, 220, .5); }
+  .card .v4-slot { --s: 56px; }
+  .card .n { font-family: var(--f-display); font-size: .98rem; line-height: 1.1; }
+  .card .p { display: flex; align-items: center; gap: 3px; font: 700 .86rem/1 var(--f-num); color: var(--ink); }
+  .card .p svg { width: 18px; height: 18px; }
+  .card .p s { color: var(--ink-3); font-weight: 400; font-size: .72rem; }
+  .card .tg { position: absolute; top: 5px; left: 5px; font-family: var(--f-display); font-size: .66rem; padding: 0 4px; border-radius: 3px; border: 1.5px solid var(--ink); color: #fff3e2; }
+  .card .qty { position: absolute; top: 6px; right: 7px; font: 600 .72rem var(--f-num); color: var(--ink-3); }
+  .card.cant { opacity: .55; }
+  .detail { width: 350px; flex: none; display: flex; flex-direction: column; gap: 7px; padding: 12px 14px; color: var(--ink); }
+  .detail .top { display: flex; gap: 12px; align-items: center; }
+  .detail .top .v4-slot { --s: 86px; flex: none; }
+  .detail .nm { font-family: var(--f-display); font-size: 1.55rem; line-height: 1.05; }
+  .detail .ty { font-size: .78rem; color: var(--ink-3); }
+  .detail .st { display: grid; grid-template-columns: 1fr auto auto; gap: 2px 10px; font-size: .86rem; }
+  .detail .st b { font: 700 .9rem var(--f-num); text-align: right; }
+  .detail .ab { padding: 6px 8px; border-radius: 8px; background: linear-gradient(90deg, rgba(74, 143, 220, .16), rgba(255, 255, 255, .2)); box-shadow: inset 0 0 0 1.5px rgba(74, 143, 220, .55); font-size: .8rem; line-height: 1.45; }
+  .detail .ab b { font-family: var(--f-display); font-size: 1rem; color: #2f6db5; font-weight: 400; }
+  .detail .lore { font-size: .76rem; line-height: 1.5; color: var(--ink-2); border-left: 3px solid var(--zhu); padding-left: 8px; }
+  .detail .who { display: flex; align-items: center; gap: 8px; font-size: .82rem; }
+  .detail .buy { display: flex; gap: 8px; margin-top: auto; }
+  .detail .buy .v4-btn { flex: 1; }
+  .detail .buy .v4-btn svg { width: 22px; height: 22px; }
+  html.is-phone .win { inset: 0; border-radius: 0; padding: 3px; }
+  html.is-phone .awning { height: 14px; }
+  html.is-phone .awning::after { display: none; }
+  html.is-phone .hd .ttl { font-size: 1.3rem; }
+  html.is-phone .hd .tier, html.is-phone .hd .money .v4-res:nth-child(2) { display: none; }
+  html.is-phone .hd .v4-tab { min-height: 36px; font-size: .86rem; padding: .3rem .5rem .2rem; }
+  html.is-phone .hd .v4-tab svg { display: none; }
+  html.is-phone .keeper { display: none; }
+  html.is-phone .main { margin-top: 4px; }
+  html.is-phone .grid { grid-template-columns: repeat(3, 1fr); grid-auto-rows: 96px; gap: 5px; padding: 5px; }
+  html.is-phone .card .v4-slot { --s: 42px; }
+  html.is-phone .card .n { font-size: .82rem; }
+  html.is-phone .detail { width: 300px; padding: 6px 8px; gap: 4px; }
+  html.is-phone .detail .top .v4-slot { --s: 56px; }
+  html.is-phone .detail .nm { font-size: 1.2rem; }
+  html.is-phone .detail .lore, html.is-phone .detail .ty2 { display: none; }
+  html.is-phone .detail .st { font-size: .76rem; }
+  html.is-phone .detail .ab { font-size: .72rem; padding: 4px 6px; }
+</style>
+</head>
+<body>
+<div class="v4-stage">
+  <canvas class="v4-mapbg" id="map"></canvas>
+  <div class="v4-scrim"></div>
+  <div class="win v4-lacquer">
+    <div class="awning"></div>
+    <div class="hd" id="hd"></div>
+    <div class="main">
+      <div class="keeper v4-paper" id="keeper"></div>
+      <div class="grid v4-paper" id="grid"></div>
+      <div class="detail v4-paper" id="detail"></div>
+    </div>
+  </div>
+  <div id="notes"></div>
+</div>
+<script src="../../js/core.js"></script>
+<script src="../../js/portrait-data.js"></script>
+<script src="../../js/portrait.js"></script>
+<script src="kit.js"></script>
+<script>
+K.ready(() => {
+  const phone = document.documentElement.classList.contains('is-phone');
+  K.map(K.$('#map'), { seed: 9 });
+  K.$('#hd').innerHTML = `${K.icon('market', 40)}<span class="ttl goldleaf">洛阳 · 市</span><span class="tier">都会 · 四级</span>
+    <div class="v4-tabs"><span class="v4-tab on">${K.icon('gold')}购买</span><span class="v4-tab">${K.icon('trade')}出售</span><span class="v4-tab">${K.icon('chronicle')}府库 <small class="num">27/40</small></span><span class="v4-tab">${K.icon('book')}图鉴</span></div>
+    <div class="money"><span class="v4-res">${K.icon('gold')}<span>2,140</span><small>洛阳府库</small></span><span class="v4-res"><small>全军</small><span>9,860</span></span></div>
+    <button class="v4-close">${K.icon('x')}</button>`;
+  const merchant = { name: '洛阳贾人', war: 22, intel: 66, pol: 70, culture: 'han' };
+  K.$('#keeper').innerHTML = `<div class="bub">客官好眼力！尚方作坊流出的斩马剑，十年难遇一回。</div>
+    <div style="display:flex;gap:8px;align-items:center">${K.face(merchant, 62, 'r1')}<div><div class="kai" style="font-size:1.1rem">洛阳贾人</div><div class="v4-small muted">市令 · 本城折扣 −8%（关羽 交易）</div></div></div>
+    <div class="info"><b>本月货品</b> 10 / 10 格<br>下月初补货 · 稀有品约 6–10 个月一现<br>庙会（三月）：多 2 格、价 −10%</div>
+    <div class="car">${K.icon('caravan')}<div><b class="kai">胡商在此</b> 还有 2 个月<br>舶来货 ×1.5 价</div></div>
+    <div class="info" style="margin-top:auto"><b>图鉴</b> 已见 212 / 567 · 汉 页 34 / 40</div>`;
+  const it = [
+    ['rare', 'guandao', '尚方斩马剑', 1190, '', 1, 'sel'],
+    ['uncommon', 'guandao', '卅湅环首刀', 270, '', 2], ['uncommon', 'war', '玉具剑', 270, '', 1], ['uncommon', 'guandao', '棨戟', 270, '', 1],
+    ['uncommon', 'bow', '蹶张弩', 230, '', 1], ['uncommon', 'armour', '鱼鳞甲', 310, '', 1], ['uncommon', 'titles', '三梁进贤冠', 160, '', 1],
+    ['common', 'armour', '铁札甲', 80, '', 3], ['common', 'helmet', '铁兜鍪', 40, '', 2], ['common', 'shield', '藤牌', 80, '舶来', 2],
+    ['rare', 'horse', '大宛良驹', 2100, '胡商', 1, 'cant'], ['common', 'book', '六韬竹简', 70, '', 2],
+  ];
+  K.$('#grid').innerHTML = it.slice(0, phone ? 9 : 12).map(([r, ic, n, p, tg, q, c]) => `<div class="card ${c || ''}">${tg ? `<span class="tg" style="background:${tg === '胡商' ? 'var(--ochre)' : 'var(--teal)'}">${tg}</span>` : ''}<span class="qty">×${q}</span><span class="v4-slot ${r}">${K.icon(ic)}</span><span class="n rar ${r}">${n}</span><span class="p">${K.icon('gold')}${p.toLocaleString()}${c === 'cant' ? ' <s>金不足</s>' : ''}</span></div>`).join('');
+  K.$('#detail').innerHTML = `<div class="top"><span class="v4-slot rare">${K.icon('guandao')}</span><div><div class="nm rar rare">尚方斩马剑</div><div class="ty">珍品 · 兵器 · 斩马刀 · 汉</div><div class="ty ty2">武力需 60 · 关羽 98 ✓</div><span class="v4-seal" style="font-size:.9rem;margin-top:4px">珍</span></div></div>
+    <div class="who">比较：${K.face(K.GENS.guanyu, 30, 'r4')}<b class="kai">关羽</b> 的 <span class="rar legend kai">青龙偃月刀</span> ▾</div>
+    <div class="st"><span>武力</span><b>+5</b><b class="bad">−1</b><span>攻击</span><b>+10%</b><b class="bad">−4%</b><span>会心伤害</span><b>+15%</b><b class="good">+15%</b><span>单挑伤害</span><b>+3%</b><b class="good">+1%</b><span>出招速度</span><b>−2%</b><b>±0</b></div>
+    <div class="ab"><b>「断佞臣」</b> 断佞臣一人以厉其余：攻击敌军主将时伤害 +20%；会心伤害 +15%。<br><span class="muted">斩向敌主将时刀光化作朱红一线。</span></div>
+    <div class="lore">朱云上书求见成帝，「愿赐尚方斩马剑，断佞臣一人以厉其余」；尚方为汉代宫廷作坊。<br><span class="muted">——《汉书·杨胡朱梅云传》</span></div>
+    <div class="buy"><button class="v4-btn paper small">试装</button><button class="v4-btn seal">${K.icon('gold')}购买 1,190</button></div>`;
+  if (!phone && !/nonotes/.test(location.search)) K.$('#notes').innerHTML = K.note(1, '2%', '64%', '掌柜立绘 + 一句应景的话；补货、庙会、胡商与图鉴进度') + K.note(2, '30%', '93%', '货架：品级框、价格、数量、「舶来 / 胡商」签；买不起的灰显并写明') + K.note(3, '73%', '93%', '详情：数值、与选中武将现有装备的差（右列）、神兵之能、出处');
+  document.body.dataset.ready = '1';
+});
+</script>
+</body>
+</html>

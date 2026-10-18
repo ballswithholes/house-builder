@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>UI-V4 · 05 设置</title>
+<link rel="stylesheet" href="kit.css">
+<style>
+  .win { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(980px, 94vw); height: min(610px, 94vh); display: flex; flex-direction: column; padding: 6px; }
+  .win .v4-modal-head .v4-h2 { color: var(--gold-hi); }
+  .cols { flex: 1; min-height: 0; display: flex; gap: 0; }
+  .slips { width: 128px; flex: none; display: flex; flex-direction: column; gap: 6px; padding: 4px 0 6px 8px; }
+  .slips .s { position: relative; display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 4px 10px; font-family: var(--f-display); font-size: 1.12rem; letter-spacing: .12em; color: #e9dcc4; cursor: pointer;
+    background: linear-gradient(90deg, #6e4b2a, #8c6238 40%, #7a5530); border: 2px solid var(--ink); border-radius: 6px 0 0 6px; border-right: 0; box-shadow: inset 0 0 0 1px rgba(255, 220, 160, .2); }
+  .slips .s::before { content: ""; position: absolute; left: 14px; top: 4px; bottom: 4px; width: 2px; background: rgba(36, 26, 33, .35); }
+  .slips .s svg { width: 26px; height: 26px; position: relative; }
+  .slips .s.on { color: var(--ink); background: var(--paper) var(--tx-paper); background-size: 256px; margin-right: -2px; z-index: 1; }
+  .page { flex: 1; min-width: 0; padding: 12px 18px; overflow: hidden; display: flex; flex-direction: column; border: 2px solid var(--ink); border-radius: 0 6px 6px 6px; }
+  .page .v4-h2 { margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+  .rows { display: flex; flex-direction: column; }
+  .r { display: flex; align-items: center; gap: 14px; min-height: 50px; padding: 3px 4px; border-bottom: 1px dashed rgba(184, 154, 104, .7); }
+  .r:last-child { border-bottom: 0; }
+  .r .k { width: 8.5em; flex: none; font-family: var(--f-display); font-size: 1.08rem; color: var(--ink); }
+  .r .k small { display: block; font-family: var(--f-body); font-size: .72rem; color: var(--ink-3); }
+  .r .c { flex: 1; display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .r .v4-slider { flex: 1; max-width: 420px; }
+  .r .v4-slider .val { color: var(--ink); }
+  .r .v4-slider .groove { background: #3a2c26; }
+  .r .tst { min-height: 36px; font-size: .9rem; padding: 0 .7rem; }
+  .r.hov { background: rgba(255, 236, 190, .55); border-radius: 6px; }
+  .foot { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 8px 6px 2px; }
+  .foot .muted { margin-right: auto; color: #b7a690; font-size: .8rem; }
+  html.is-phone .win { width: 100vw; height: 100vh; border-radius: 0; }
+  html.is-phone .v4-modal-head { padding: 3px 8px 2px 12px; }
+  html.is-phone .slips { width: 96px; gap: 3px; }
+  html.is-phone .slips .s { min-height: 44px; font-size: .95rem; padding: 2px 6px; letter-spacing: .04em; }
+  html.is-phone .slips .s svg { width: 20px; height: 20px; }
+  html.is-phone .page { padding: 6px 10px; }
+  html.is-phone .page > .v4-h2 { display: none; }
+  html.is-phone .r { min-height: 46px; gap: 8px; }
+  html.is-phone .r .k { width: 6.4em; font-size: .95rem; }
+  html.is-phone .r .k small { display: none; }
+  html.is-phone .v4-seg > span { padding: 0 .5rem; font-size: .86rem; min-height: 38px; }
+  html.is-phone .foot { padding: 2px 6px; }
+  html.is-phone .foot .muted { display: none; }
+  html.is-phone .r .tst { display: none; }
+  .r .v4-slider .val { width: 3.8em; }
+</style>
+</head>
+<body>
+<div class="v4-stage">
+  <canvas class="v4-mapbg" id="map"></canvas>
+  <div class="v4-scrim"></div>
+  <div class="win v4-lacquer">
+    <div class="v4-modal-head"><span class="v4-seal" style="font-size:1.3rem">设</span><div class="v4-h2">设　置</div><span class="v4-caption" style="color:#b7a690">立即生效 · 自动保存</span><button class="v4-close" id="close"></button></div>
+    <div class="cols"><div class="slips" id="slips"></div><div class="page v4-paper" id="page"></div></div>
+    <div class="foot"><span class="muted">设置存于本机（sanguozhi2_settings_v4），不随存档</span><button class="v4-btn ghost small">恢复本页默认</button><button class="v4-btn seal small">完成</button></div>
+  </div>
+  <div id="notes"></div>
+</div>
+<script src="kit.js"></script>
+<script>
+K.ready(() => {
+  const phone = document.documentElement.classList.contains('is-phone');
+  K.map(K.$('#map'), { seed: 7, cities: [{ x: 640, y: 360, color: '#2f9a55', lit: true }] });
+  K.$('#close').innerHTML = K.icon('x');
+  K.$('#slips').innerHTML = [['music', '音频', 'on'], ['eye', '画面'], ['play', '游戏'], ['camera', '镜头'], ['hand', '操作'], ['access', '辅助']].map(([i, t, c]) => `<div class="s ${c || ''}">${K.icon(i)}${t}</div>`).join('');
+  const sl = (v) => `<div class="v4-slider" style="--v:${v}"><div class="groove"><div class="fill"></div><div class="ticks"></div><div class="knob"></div></div><div class="val num">${Math.round(v * 100)}%</div></div>`;
+  const seg = (opts, on) => `<div class="v4-seg">${opts.map((o, i) => `<span class="${i === on ? 'on' : ''}">${o}</span>`).join('')}</div>`;
+  const row = (k, sub, c, cls) => `<div class="r ${cls || ''}"><div class="k">${k}${sub ? `<small>${sub}</small>` : ''}</div><div class="c">${c}</div></div>`;
+  K.$('#page').innerHTML = `<div class="v4-h2">${K.icon('music', 30)}音　频</div><div class="rows">
+    ${row('主音量', '', sl(.9))}
+    ${row('音乐', '君主乐章 · 地图 · 战斗', sl(.7) + `<button class="v4-btn paper tst">试听</button>`)}
+    ${row('音效', '指令 · 战斗 · 界面', sl(.85) + `<button class="v4-btn paper tst">试听</button>`, 'hov')}
+    ${row('语音', '武将与君主的呼喊', sl(1) + `<button class="v4-btn paper tst">试听</button>`)}
+    ${row('音乐风格', '', seg(['君主乐章', '地域'], 0))}
+    ${row('语音语言', '各说其语：拉丁语、帕提亚语……', seg(['原声', '一律汉语', '关'], 0))}
+    ${row('语音频率', '', seg(['全部', '精简', '关键'], 0))}
+    ${row('字幕', '', seg(['原文＋中文', '仅中文', '关'], 0))}
+    ${row('后台静音', '切到其他窗口时', `<div class="v4-toggle on"></div>`)}
+  </div>`;
+  if (!phone && !/nonotes/.test(location.search)) K.$('#notes').innerHTML = K.note(1, '3%', '22%', '左侧竹牌页签：音频 · 画面 · 游戏 · 镜头 · 操作 · 辅助（全部行见 UI-V4 §7）') + K.note(2, '60%', '92%', '拖动滑杆时每 10% 一声玉珠轻响，松手播放该通道的试听');
+  document.body.dataset.ready = '1';
+});
+</script>
+</body>
+</html>

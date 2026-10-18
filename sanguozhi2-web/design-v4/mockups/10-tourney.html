@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>UI-V4 · 10 武林大会</title>
+<link rel="stylesheet" href="kit.css">
+<style>
+  .arena { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .win { position: absolute; inset: 8px; display: flex; flex-direction: column; padding: 6px; }
+  .hd { display: flex; align-items: center; gap: 12px; padding: 2px 8px 6px 6px; }
+  .hd .ttl { font-family: var(--f-display); font-size: 1.8rem; letter-spacing: .12em; white-space: nowrap; }
+  .hd .sub { font-size: .82rem; color: #cdbb9f; white-space: nowrap; }
+  .hd .v4-seg > span { min-height: 38px; font-size: .9rem; padding: 0 .65rem; }
+  .hd .sp { flex: 1; }
+  .main { flex: 1; min-height: 0; display: flex; gap: 8px; }
+  .brk { position: relative; flex: 1; min-width: 0; overflow: hidden; }
+  .brk svg.lines { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .m { position: absolute; width: 150px; display: flex; flex-direction: column; gap: 2px; }
+  .m .p { display: flex; align-items: center; gap: 5px; height: 28px; padding: 0 6px 0 2px; border-radius: 5px; background: rgba(255, 255, 255, .55); box-shadow: inset 0 0 0 1px var(--paper-edge); font-family: var(--f-display); font-size: .9rem; color: var(--ink); white-space: nowrap; }
+  .m .p .v4-face { --s: 22px !important; border-width: 1px; box-shadow: 0 0 0 1px var(--ink); }
+  .m .p i { width: 4px; height: 18px; border-radius: 2px; background: var(--fc); flex: none; }
+  .m .p b { margin-left: auto; font: 700 .76rem var(--f-num); color: var(--ink-3); }
+  .m .p.won b { color: var(--zhu); }
+  .m .p.lose { opacity: .45; text-decoration: line-through rgba(36, 26, 33, .5); }
+  .m .p.mine { box-shadow: inset 0 0 0 2px #2f9a55; background: rgba(220, 245, 220, .8); }
+  .m.now .p { box-shadow: inset 0 0 0 2px var(--amber), 0 0 12px rgba(255, 196, 110, .7); background: rgba(255, 236, 190, .95); }
+  .m .p.tbd { color: var(--ink-3); font-family: var(--f-body); font-size: .76rem; justify-content: center; background: rgba(36, 26, 33, .05); }
+  .final { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 190px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+  .final .cup { width: 70px; height: 70px; }
+  .final .lbl { font-family: var(--f-display); font-size: 1.3rem; letter-spacing: .3em; color: var(--zhu-lo); }
+  .final .v4-small { color: var(--ink-2); }
+  .ped { display: flex; gap: 6px; align-items: center; padding: 6px 8px; border-radius: 8px; background: rgba(255, 255, 255, .5); box-shadow: inset 0 0 0 1.5px var(--r-rare); }
+  .ped .v4-slot { --s: 40px; }
+  .mini { position: absolute; left: 8px; top: 8px; width: 120px; height: 150px; border-radius: 6px; background: rgba(36, 26, 33, .06); box-shadow: inset 0 0 0 1px rgba(36, 26, 33, .25); }
+  .mini .vp { position: absolute; left: 20px; right: 20px; top: 32px; height: 86px; border: 2px solid var(--zhu); border-radius: 4px; }
+  .mini span { position: absolute; bottom: -18px; left: 0; right: 0; text-align: center; font-size: .66rem; color: var(--ink-3); }
+  .next { width: 300px; flex: none; display: flex; flex-direction: column; gap: 8px; padding: 12px; color: var(--ink); }
+  .next .vs { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  .next .vs .side { display: flex; flex-direction: column; align-items: center; gap: 3px; font-family: var(--f-display); font-size: 1.05rem; }
+  .next .vs .side small { font: .72rem var(--f-num); color: var(--ink-3); }
+  .next .vs .x { font-family: var(--f-display); font-size: 1.8rem; color: var(--zhu); }
+  .next .odds { height: 12px; border-radius: 6px; overflow: hidden; display: flex; border: 1.5px solid var(--ink); }
+  .next .odds i { background: #2f9a55; } .next .odds b { flex: 1; background: #2b4b9a; }
+  .next .glyphs { font-size: .9rem; letter-spacing: .1em; text-align: center; color: var(--ink-2); }
+  .next .row { display: flex; gap: 6px; }
+  .next .row .v4-btn { flex: 1; font-size: .95rem; padding: 0 .5rem; }
+  .next .log { font-size: .76rem; color: var(--ink-2); line-height: 1.6; border-top: 1px dashed var(--paper-shade); padding-top: 6px; }
+  /* 报名 */
+  .entry { display: flex; gap: 10px; height: 100%; }
+  .cands { flex: 1; padding: 10px; display: flex; flex-direction: column; gap: 4px; overflow: hidden; color: var(--ink); }
+  .cr { display: grid; grid-template-columns: 46px 1fr 70px 150px 120px 70px; gap: 8px; align-items: center; min-height: 52px; padding: 3px 8px; border-radius: 6px; background: rgba(255, 255, 255, .35); box-shadow: inset 0 0 0 1px var(--paper-edge); font-size: .8rem; }
+  .cr.on { background: rgba(220, 245, 220, .85); box-shadow: inset 0 0 0 2px #2f9a55; }
+  .cr b.n { font-family: var(--f-display); font-size: 1.1rem; font-weight: 400; display: block; }
+  .cr .dw { font: 700 1.1rem var(--f-num); color: var(--war); }
+  .cr .gl { letter-spacing: .06em; color: var(--ink-2); }
+  .cr .star { color: var(--gold-lo); font-size: .9rem; }
+  .banners { width: 330px; display: flex; flex-direction: column; gap: 8px; padding: 10px; color: var(--ink); }
+  .bn { display: flex; gap: 6px; }
+  .flagslot { width: 56px; height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 8px; gap: 4px; clip-path: polygon(0 0, 100% 0, 100% 86%, 50% 100%, 0 86%); background: #2f9a55; border: 2px solid var(--ink); color: #fff3e2; font-family: var(--f-display); font-size: .82rem; writing-mode: horizontal-tb; }
+  .flagslot .v4-face { --s: 38px !important; }
+  .flagslot.empty { background: repeating-linear-gradient(135deg, rgba(36, 26, 33, .08) 0 6px, transparent 6px 12px); color: var(--ink-3); justify-content: center; font-size: 1.4rem; }
+  /* 对阵 */
+  .vsbig { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 5%; }
+  .vsbig .card { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .vsbig .card .v4-face { --s: 210px !important; border-width: 3px; }
+  .vsbig .card .nm { font-family: var(--f-display); font-size: 3rem; letter-spacing: .2em; color: var(--paper); text-shadow: 0 3px 0 var(--ink), 0 0 20px rgba(0, 0, 0, .6); filter: url(#brush-ink); }
+  .vsbig .card .info { display: flex; gap: 10px; align-items: center; padding: 6px 12px; border-radius: 8px; font-size: .9rem; }
+  .vsbig .card .gl { font-size: 1.1rem; letter-spacing: .1em; }
+  .vsbig .mid { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .vsbig .mid .vs { font-family: var(--f-display); font-size: 6rem; color: var(--zhu); text-shadow: 0 4px 0 var(--ink), 0 0 30px rgba(255, 150, 80, .6); filter: url(#brush-ink); line-height: 1; }
+  .vsbig .mid .rd { font-family: var(--f-display); font-size: 1.2rem; color: var(--gold-hi); letter-spacing: .3em; text-shadow: 0 2px 0 var(--ink); padding: 2px 14px; border-radius: 14px; background: rgba(36,24,22,.85); border: 2px solid var(--ink); }
+  .vsbig .mid .row { display: flex; gap: 8px; }
+  /* 颁奖 */
+  .pod { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); display: flex; align-items: flex-end; gap: 14px; }
+  .tierp { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .tierp .v4-face { border-width: 3px; }
+  .tierp .nm { font-family: var(--f-display); font-size: 1.5rem; color: var(--paper); text-shadow: 0 2px 0 var(--ink); }
+  .tierp .blk { display: grid; place-items: center; border: 2px solid var(--ink); border-bottom: 0; border-radius: 8px 8px 0 0; font-family: var(--f-display); font-size: 2.4rem; color: #fff3e2; text-shadow: 0 2px 0 var(--ink); box-shadow: inset 0 0 0 3px rgba(255, 230, 180, .35); }
+  .prize { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 8px; color: var(--ink); font-size: .78rem; }
+  .prize .v4-slot { --s: 46px; }
+  .prize b { font-family: var(--f-display); font-size: 1rem; font-weight: 400; display: block; }
+  .tianxia { position: absolute; left: 50%; top: 9%; transform: translateX(-50%) rotate(-4deg); font-size: 3.2rem; padding: .1em .3em; }
+  html.is-phone .win { inset: 0; border-radius: 0; padding: 3px; }
+  html.is-phone .hd { padding: 0 4px 3px; gap: 6px; }
+  html.is-phone .hd .ttl { font-size: 1.2rem; }
+  html.is-phone .hd .sub { display: none; }
+  html.is-phone .hd .v4-seg > span { min-height: 34px; font-size: .78rem; padding: 0 .4rem; }
+  html.is-phone .next { width: 236px; padding: 6px 8px; gap: 5px; }
+  html.is-phone .next .log, html.is-phone .next .glyphs { display: none; }
+  html.is-phone .mini { display: none; }
+  html.is-phone .m { width: 120px; }
+  html.is-phone .m .p { height: 24px; font-size: .78rem; }
+  html.is-phone .final { width: 130px; } html.is-phone .final .cup { width: 44px; height: 44px; } html.is-phone .final .v4-small, html.is-phone .final .ped { display: none; }
+  html.is-phone .tierp .nm { font-size: 1.1rem; }
+  html.is-phone .prize { padding: 3px 6px; font-size: .66rem; } html.is-phone .prize .v4-slot { --s: 34px; }
+  html.is-phone .tianxia { font-size: 2rem; top: 4%; }
+</style>
+</head>
+<body>
+<div class="v4-stage">
+  <canvas class="arena" id="arena"></canvas>
+  <div id="root"></div>
+  <div id="notes"></div>
+</div>
+<script src="../../js/core.js"></script>
+<script src="../../js/portrait-data.js"></script>
+<script src="../../js/portrait.js"></script>
+<script src="kit.js"></script>
+<script>
+// 赛场背景（样张用）：环形看台 + 平乐观大坛与「十二重五采华盖」+ 各地地标的立面剪影 + 彩旗 + 灯笼
+function arena(cv, opts) {
+  const W = innerWidth, H = innerHeight, dpr = Math.min(2, devicePixelRatio || 1); cv.width = W * dpr; cv.height = H * dpr;
+  const g = cv.getContext('2d'); g.scale(dpr, dpr); const r = K.rng(4);
+  const sky = g.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, opts.night ? '#2a3366' : '#f4c98a'); sky.addColorStop(.55, opts.night ? '#4a3a5a' : '#f7dfb2'); sky.addColorStop(1, '#c9a874');
+  g.fillStyle = sky; g.fillRect(0, 0, W, H);
+  // 远处地标立面（简化剪影：罗马拱、万国之门、佛塔、门阙）
+  const fac = (x, w, h, kind, col) => { g.fillStyle = col; g.strokeStyle = '#241a21'; g.lineWidth = 2; const y = H * .5;
+    if (kind === 'arch') { g.fillRect(x, y - h, w, h); g.strokeRect(x, y - h, w, h); g.fillStyle = 'rgba(36,26,33,.55)'; for (let i = 0; i < 4; i++) { g.beginPath(); g.arc(x + w * (i + .5) / 4, y - h * .35, w / 11, Math.PI, 0); g.lineTo(x + w * (i + .5) / 4 + w / 11, y); g.lineTo(x + w * (i + .5) / 4 - w / 11, y); g.fill(); } }
+    if (kind === 'stupa') { g.beginPath(); g.arc(x + w / 2, y - h * .3, w / 2, Math.PI, 0); g.fill(); g.stroke(); g.fillRect(x + w * .44, y - h, w * .12, h * .4); g.strokeRect(x + w * .44, y - h, w * .12, h * .4); }
+    if (kind === 'que') { g.fillRect(x, y - h, w * .35, h); g.strokeRect(x, y - h, w * .35, h); g.fillRect(x + w * .65, y - h, w * .35, h); g.strokeRect(x + w * .65, y - h, w * .35, h); g.fillStyle = '#808da6'; g.fillRect(x - 4, y - h - 10, w * .35 + 8, 10); g.fillRect(x + w * .65 - 4, y - h - 10, w * .35 + 8, 10); }
+    if (kind === 'gate') { g.fillRect(x, y - h, w, h); g.strokeRect(x, y - h, w, h); g.fillStyle = '#241a21'; g.fillRect(x + w * .35, y - h * .7, w * .3, h * .7); } };
+  fac(W * .04, W * .14, H * .17, 'arch', '#d9c7a4'); fac(W * .2, W * .07, H * .2, 'stupa', '#e6d2a6'); fac(W * .72, W * .1, H * .2, 'gate', '#c9b28a'); fac(W * .86, W * .1, H * .16, 'que', '#d6c09a');
+  // 平乐观大坛 + 十二重五采华盖
+  const cx = W / 2, by = H * .5; g.fillStyle = '#b8402e'; g.strokeStyle = '#241a21'; g.lineWidth = 2;
+  for (let i = 0; i < 3; i++) { const w = W * (.2 - i * .04), y = by - i * 14; g.fillStyle = ['#c9b28a', '#d9c39a', '#e6d3ad'][i]; g.fillRect(cx - w / 2, y - 14, w, 14); g.strokeRect(cx - w / 2, y - 14, w, 14); }
+  g.beginPath(); g.moveTo(cx, by - 42); g.lineTo(cx, by - H * .42); g.lineWidth = 4; g.stroke(); g.lineWidth = 2;
+  const cols = ['#c8382c', '#e8b54a', '#3f8f5f', '#3e6aa8', '#f3e7cc'];
+  for (let i = 0; i < 12; i++) { const y = by - H * .42 + i * H * .028, w = W * (.03 + i * .006); g.fillStyle = cols[i % 5]; g.beginPath(); g.moveTo(cx - w, y + H * .022); g.quadraticCurveTo(cx, y - H * .012, cx + w, y + H * .022); g.lineTo(cx + w * .9, y + H * .028); g.lineTo(cx - w * .9, y + H * .028); g.closePath(); g.fill(); g.stroke(); }
+  // 看台（弧形，人群点）
+  g.fillStyle = '#8c6a48'; g.beginPath(); g.ellipse(cx, H * 1.05, W * .75, H * .55, 0, Math.PI, 0); g.fill(); g.stroke();
+  g.fillStyle = '#a6825a'; g.beginPath(); g.ellipse(cx, H * 1.05, W * .66, H * .46, 0, Math.PI, 0); g.fill();
+  for (let i = 0; i < 900; i++) { const a = Math.PI + r() * Math.PI, rr = .66 + r() * .09; const x = cx + Math.cos(a) * W * .75 * rr / .75 * .75, y = H * 1.05 + Math.sin(a) * H * .55 * rr / .75 * .75; if (y > H * .62) { g.fillStyle = ['#c8382c', '#3e6aa8', '#3f8f5f', '#e8b54a', '#f3e7cc', '#5a3e2c'][(r() * 6) | 0]; g.fillRect(x, y, 3, 4); } }
+  // 场地
+  g.fillStyle = '#d6b783'; g.beginPath(); g.ellipse(cx, H * 1.02, W * .52, H * .3, 0, Math.PI, 0); g.fill(); g.stroke();
+  g.strokeStyle = 'rgba(36,26,33,.25)'; g.beginPath(); g.ellipse(cx, H * 1.02, W * .3, H * .17, 0, Math.PI, 0); g.stroke();
+  // 彩旗
+  for (let i = 0; i < 14; i++) { const x = W * (.06 + i * .067), y = H * .52; g.strokeStyle = '#241a21'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - 60); g.stroke(); g.fillStyle = cols[i % 5]; g.beginPath(); g.moveTo(x, y - 60); g.lineTo(x + 26, y - 54); g.lineTo(x, y - 40); g.closePath(); g.fill(); g.stroke(); }
+  if (opts.dim) { g.fillStyle = 'rgba(30,18,10,.35)'; g.fillRect(0, 0, W, H); }
+}
+K.ready(() => {
+  const phone = document.documentElement.classList.contains('is-phone');
+  const view = (location.search.match(/view=(\w+)/) || [])[1] || 'bracket';
+  const notes = !phone && !/nonotes/.test(location.search);
+  arena(K.$('#arena'), { dim: view === 'bracket' || view === 'entry' });
+  const G = K.GENS;
+  const g = (n, w, c) => ({ name: n, war: w, intel: 50, pol: 40, culture: 'han', fc: c });
+  const LB = '#2f9a55', CC = '#2b4b9a', YS = '#2a6fd1', SJ = '#c0392b', DZ = '#7a1e2c', MT = '#d08a2a', YH = '#b0702a';
+  const hdr = (tabs) => `<div class="hd"><span class="v4-seal" style="font-size:1.4rem">武</span><span class="ttl goldleaf">第四届 武林大会</span><span class="sub">洛阳 · 平乐观 · 193年正月 · 六十四人</span>${tabs || ''}<span class="sp"></span><button class="v4-close">${K.icon('x')}</button></div>`;
+  const root = K.$('#root');
+  if (view === 'bracket') {
+    const tabs = `<div class="v4-seg"><span>首轮</span><span>三十二强</span><span class="on">十六强</span><span>八强</span><span>四强</span><span>决赛</span><span>我方</span></div>`;
+    root.innerHTML = `<div class="win v4-lacquer">${hdr(tabs)}<div class="main"><div class="brk v4-paper" id="brk"><svg class="lines" id="lines"></svg><div class="mini"><div class="vp"></div><span>全图 64 · 拖动 / 缩放</span></div></div><div class="next v4-paper" id="next"></div></div></div>`;
+    const L = [[g('吕布', 100, DZ), g('甘宁', 88, '#8a6a3a')], [G.zhangfei && g('张飞', 99, LB), g('纪灵', 82, '#8a8a3a')], [g('关羽', 98, LB), g('典韦', 95, CC)], [g('孙坚', 92, SJ), g('华雄', 89, DZ)]];
+    const R = [[g('马超', 97, MT), g('许褚', 96, CC)], [g('赵云', 96, LB), g('颜良', 93, YS)], [g('黄忠', 93, YH), g('太史慈', 92, '#6a4a9a')], [g('文丑', 92, YS), g('张辽', 91, DZ)]];
+    const res = { '吕布': 'won', '甘宁': 'lose', '张飞': 'won', '纪灵': 'lose', '马超': 'won', '许褚': 'lose' };
+    const brk = K.$('#brk'), W = brk.clientWidth, H = brk.clientHeight;
+    const colX = phone ? [8, 136] : [140, 312], top = phone ? 10 : 24, gap = (H - top * 2) / 4;
+    let html = '', lines = '';
+    const box = (x, y, a, b, now) => {
+      const pl = p => p ? `<div class="p ${res[p.name] || ''} ${p.fc === LB ? 'mine' : ''}" style="--fc:${p.fc}"><i></i>${K.face(p, 22, 'r1')}${p.name}<b>${p.war}</b></div>` : '<div class="p tbd">待定</div>';
+      return `<div class="m ${now ? 'now' : ''}" style="left:${x}px;top:${y}px">${pl(a)}${pl(b)}</div>`;
+    };
+    const side = (arr, mirror) => {
+      arr.forEach(([a, b], i) => { const y = top + i * gap; const x = mirror ? W - colX[0] - (phone ? 120 : 150) : colX[0]; html += box(x, y, a, b, a.name === '关羽');
+        const bx = mirror ? x : x + (phone ? 120 : 150), by = y + 30; const nx = mirror ? W - colX[1] : colX[1]; lines += `<path d="M${bx} ${by} H${(bx + nx) / 2}" />`; });
+      for (let i = 0; i < 2; i++) { const y = top + (i * 2 + .5) * gap; const x = mirror ? W - colX[1] - (phone ? 120 : 150) : colX[1];
+        const w0 = arr[i * 2][0].name in res ? arr[i * 2].find(p => res[p.name] === 'won') : null; const w1 = arr[i * 2 + 1].find(p => res[p.name] === 'won') || null;
+        html += box(x, y, w0, w1, false);
+        const mx = mirror ? W - colX[1] + ((colX[1] - colX[0]) - (phone ? 120 : 150)) / 2 : (colX[0] + (phone ? 120 : 150) + colX[1]) / 2;
+        lines += `<path d="M${mx} ${top + i * 2 * gap + 30} V${top + (i * 2 + 1) * gap + 30} M${mx} ${y + 30} H${mirror ? x + (phone ? 120 : 150) : x}"/>`; }
+    };
+    side(L, false); side(R, true);
+    html += `<div class="final"><svg class="cup" viewBox="0 0 64 64">${K.ICONS.trophy}</svg><div class="lbl">决　赛</div><div class="v4-small">三局两胜 · 另有季军战</div><div class="ped"><span class="v4-slot rare">${K.icon('war')}</span><div style="text-align:left;font-size:.74rem"><b class="kai rar rare" style="font-size:.95rem">越女剑</b><br>冠军奖品（揭晓于颁奖）</div></div><div class="v4-small">金刚杵 · 三冠者得</div></div>`;
+    brk.insertAdjacentHTML('beforeend', html);
+    K.$('#lines').innerHTML = `<g fill="none" stroke="#7a685d" stroke-width="2" stroke-dasharray="0">${lines}</g>`;
+    K.$('#next').innerHTML = `<div class="v4-h3">下一场 · 十六强</div>
+      <div class="vs"><div class="side">${K.face(G.guanyu, 64, 'r4')}关羽<small>武 98 · Lv 7</small></div><div class="x">对</div><div class="side">${K.face(G.dianwei, 64, 'r3')}典韦<small>武 95 · Lv 6</small></div></div>
+      <div class="odds"><i style="width:58%"></i><b></b></div><div class="v4-small" style="display:flex;justify-content:space-between"><span>胜率约 58%</span><span>已见典韦招式 5 / 8</span></div>
+      <div class="glyphs">◆◆●▲◆●▲·▲　｜　▲◆▲●？？？？</div>
+      <div class="row"><button class="v4-btn seal">亲自出战</button></div>
+      <div class="row"><button class="v4-btn small">观战</button><button class="v4-btn small">只看结果</button></div>
+      <div class="log">· 吕布 胜 甘宁（第 2 合 · 终结技「人中吕布」）<br>· 张飞 胜 纪灵（看破 3 次）<br>· 马超 胜 许褚（会心决胜）<br>· 我方：关羽、张飞、赵云 晋级；简雍 首轮负</div>`;
+    if (notes) K.$('#notes').innerHTML = K.note(1, '2%', '27%', '全图缩略：64（世界 128）人签表太大，按轮次分页；「我方」只看本势力的路线') + K.note(2, '28%', '90%', '本势力绿框；当前场灯笼光；败者划去') + K.note(3, '77%', '86%', '下一场：胜率、已见招式（COMBAT-V4 §12.2）、亲自出战 / 观战 / 只看结果');
+  } else if (view === 'entry') {
+    root.innerHTML = `<div class="win v4-lacquer">${hdr()}<div class="main"><div class="entry" style="flex:1"><div class="cands v4-paper" id="cands"></div><div class="banners v4-paper" id="bans"></div></div></div></div>`;
+    const C = [[G.guanyu, 98, 7, '◆◆●▲◆●▲·▲', '青龙偃月刀', '★★★', 'on'], [g('张飞', 99, LB), 99, 6, '●●◆▲◆◆▲·▲', '丈八蛇矛', '★★★', 'on'], [G.zhaoyun, 96, 6, '●●◆●◆●▲·◆', '涯角枪', '★★★', 'on'], [g('陈到', 81, LB), 81, 3, '●◆●◆▲●◆·▲', '铁矛', '★', ''], [G.liubei, 76, 4, '◆●◆●▲●◆·◆', '双股剑', '', ''], [g('糜芳', 64, LB), 64, 2, '●◆●●◆●▲·◆', '环首铁刀', '', '']];
+    K.$('#cands').innerHTML = `<div class="v4-h3" style="margin-bottom:4px">选派出战者（至多 5 人）<span class="v4-small muted" style="margin-left:10px">单挑按武力（装备武力计一半）；同势力首轮不相遇</span></div>` + C.map(([p, dw, lv, gl, wp, st, on]) => `<div class="cr ${on}">${K.face(p, 44, lv >= 6 ? 'r3' : 'r1')}<div><b class="n">${p.name}</b>Lv ${lv} · 忠 ${on ? 96 : 80}</div><span class="dw">${dw}</span><span class="gl">${gl}</span><span>${wp}</span><span class="star">${st || '—'}</span></div>`).join('') + `<div class="v4-small muted" style="margin-top:auto">「★」为推荐；君主可亲自出战（败则声望 −5）。出战者本月不能执行指令，归来带伤者休养 1 个月。</div>`;
+    K.$('#bans').innerHTML = `<div class="v4-h3">我方旗位</div><div class="bn">${[G.guanyu, g('张飞', 99, LB), G.zhaoyun].map(p => `<div class="flagslot">${K.face(p, 38, 'r3')}${p.name}</div>`).join('')}<div class="flagslot empty">＋</div><div class="flagslot empty">＋</div></div>
+      <div class="v4-small">预计种子：关羽 2 号 · 张飞 3 号 · 赵云 6 号</div><div class="v4-small">奖：冠军 稀有兵器 / 甲 / 宝物或招式 + 400 金 + 声望 50；亚军 精良品 + 200 金；季军 凡品 + 100 金</div>
+      <div class="v4-small muted">上届冠军：吕布（二冠）· 三冠者得「金刚杵」</div><div style="margin-top:auto;display:flex;gap:8px"><button class="v4-btn ghost" style="color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink-3)">不参加</button><button class="v4-btn seal" style="flex:1">报　名</button></div>`;
+    if (notes) K.$('#notes').innerHTML = K.note(1, '30%', '6%', '正月：大会诏令后打开；案头有提醒') + K.note(2, '74%', '30%', '五面势力旗：拖入武将；空旗可点按');
+  } else if (view === 'vs') {
+    root.innerHTML = `<div class="vsbig"><div class="card">${K.face(G.guanyu, 210, 'r4', 'angry')}<div class="nm">关羽</div><div class="info v4-paper"><span class="kai" style="color:#2f9a55">刘备军</span><span class="num">武 98 · Lv 7</span><span class="gl">◆◆●▲◆●▲·▲</span></div></div>
+      <div class="mid"><div class="rd">十六强 · 第三场</div><div class="vs">对</div><div class="row"><button class="v4-btn seal big">亲自出战</button></div><div class="row"><button class="v4-btn">观战</button><button class="v4-btn">只看结果</button></div></div>
+      <div class="card">${K.face(G.dianwei, 210, 'r3', 'angry')}<div class="nm">典韦</div><div class="info v4-paper"><span class="kai" style="color:#2b4b9a">曹操军</span><span class="num">武 95 · Lv 6</span><span class="gl">▲◆▲●？？？？</span></div></div></div>`;
+    if (notes) K.$('#notes').innerHTML = K.note(1, '40%', '84%', '背景：赛场（平乐观大坛 + 十二重五采华盖，四周各地地标立面）；双方立绘带怒容；招式谱未见的写「？」');
+  } else if (view === 'podium') {
+    const big = phone ? .62 : 1;
+    root.innerHTML = `<span class="v4-seal tianxia">天下第一</span><div class="pod">
+      <div class="tierp">${K.face(G.zhaoyun, 104 * big, 'r3', 'win')}<div class="nm">赵云</div><div class="prize v4-paper"><span class="v4-slot uncommon">${K.icon('armour')}</span><div><b class="rar uncommon">鱼鳞甲</b>+200 金 · 声望 +25</div></div><div class="blk" style="width:${170 * big}px;height:${110 * big}px;background:#8a8f99">二</div></div>
+      <div class="tierp">${K.face(G.guanyu, 140 * big, 'r4', 'win')}<div class="nm" style="font-size:${2 * big}rem">关羽</div><div class="prize v4-paper"><span class="v4-slot rare">${K.icon('war')}</span><div><b class="rar rare">越女剑</b>+400 金 · 声望 +50 · 冠 ×1</div></div><div class="blk" style="width:${200 * big}px;height:${160 * big}px;background:radial-gradient(circle at 35% 30%, #f0c060, #c8932a 60%, #8a6018)">一</div></div>
+      <div class="tierp">${K.face(G.machao, 96 * big, 'r3', 'win')}<div class="nm">马超</div><div class="prize v4-paper"><span class="v4-slot common">${K.icon('helmet')}</span><div><b class="rar common">西凉毡盔</b>+100 金 · 声望 +12</div></div><div class="blk" style="width:${160 * big}px;height:${80 * big}px;background:#a0703f">三</div></div></div>`;
+    if (notes) K.$('#notes').innerHTML = K.note(1, '6%', '20%', '颁奖：三级奖台从地面升起；冠军奖品按 ITEMS §5.5 揭晓（稀有：光柱旋转 1.2 秒）；「天下第一」朱印砸下') + K.note(2, '70%', '20%', '奖金与声望逐项飞入顶栏计数器');
+  }
+  document.body.dataset.ready = '1';
+});
+</script>
+</body>
+</html>
