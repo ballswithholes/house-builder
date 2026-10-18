@@ -163,7 +163,7 @@ function makeDraw(entrants, rng) {
 }
 
 // ------------------------------------------------------------------ 比赛 --
-const stats = { duels: 0, ms: 0, time: [], timeouts: 0, ko: 0, upsets: 0, gapWins: {} };
+const stats = { duels: 0, ms: 0, time: [], timeouts: 0, ko: 0, upsets: 0, gapWins: {}, byF: {} };
 function playMatch(g, a, b, mid) {
   // a = 名次较高者（平局判 a 胜，与 BattleModel.duel / DuelGame 的「挑战者胜」一致）
   if (a.rank > b.rank) [a, b] = [b, a];
@@ -174,6 +174,7 @@ function playMatch(g, a, b, mid) {
   const r = D.simulate(ga, gb);
   stats.ms += Number(process.hrtime.bigint() - t0) / 1e6;
   stats.duels++;
+  for (const e of [a, b]) stats.byF[e.f] = (stats.byF[e.f] || 0) + 1;
   stats.time.push(r.time);
   if (r.kind === 'time') stats.timeouts++; else stats.ko++;
   const w = r.winner === 0 ? a : b, l = r.winner === 0 ? b : a;
@@ -387,4 +388,16 @@ if (mode === 'entrants') modeEntrants();
 else if (mode === 'single') modeSingle(+process.argv[3] || 200, process.argv[4]);
 else if (mode === 'campaign') modeCampaign(+process.argv[3] || 24, +process.argv[4] || 15, process.argv[5] || 'classic');
 else if (mode === 'bracket') process.exitCode = modeBracket(+process.argv[3] || 300);
+else if (mode === 'player') {
+  // 某势力的全部出赛者都由玩家操作时，一届要打几场（含决赛三局两胜的每一局）
+  const N = +process.argv[3] || 100, sc = process.argv[4] || 'classic', keys = (process.argv[5] || 'dong,liubei,cao').split(',');
+  const out = {};
+  for (let i = 0; i < N; i++) {
+    const g = newGame(sc, 4000 + i); g.year = 191; g.month = 1;
+    stats.byF = {};
+    const r = runTournament(g, newState(), { prizes: false, away: false });
+    for (const k of keys) { const f = g.factionByKey(k); if (!f) continue; (out[k] = out[k] || { m: [], top3: 0, win: 0, n: 0 }); out[k].m.push(stats.byF[f.id] || 0); out[k].n = r.entrants.filter(e => e.f === f.id).length; if (r.podium.some(e => e && e.f === f.id)) out[k].top3++; if (r.podium[0].f === f.id) out[k].win++; }
+  }
+  for (const k of Object.keys(out)) console.log(`${sc} ${k}: entrants ${out[k].n}, duels per tournament median ${median(out[k].m)} (max ${Math.max(...out[k].m)}), a top-3 place ${pct(out[k].top3, N)}, title ${pct(out[k].win, N)} (AI skill)`);
+}
 else console.log('modes: entrants | single [N] [scen] | campaign [seeds] [years] [scen] | bracket [N]');

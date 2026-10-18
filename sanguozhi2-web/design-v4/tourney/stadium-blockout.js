@@ -23,7 +23,7 @@
   const L = {
     stageW: 18, stageD: 9, stageH: 1.2,      // 擂台：顶面 y = 0（单挑的地面）
     floorY: -1.2, floorR: 23,                // 沙地（场心）
-    faceR: 22, podiumR: 24.5, podiumH: 1.6,  // 扇区门面立在沙地上 r ≈ 21.5–23.5（宽 ≤ 7 m、高 ≤ 9 m：单挑镜头的上沿在此约 7–8 m），其后看台前墙顶 y = 1.6
+    faceR: 22, podiumR: 24.5, podiumH: 1.6,  // 扇区门面立在沙地上 r ≈ 21.5–23.5（宽 ≤ 7 m、高 ≤ 9 m；单挑镜头的上沿在此约高出沙地 7.4 m（桌面）/ 6 m（手机）），其后看台前墙顶 y = 1.6
     standR0: 25, standR1: 41, standY0: 1.6, standY1: 13.5, rows: 14,
     wallR: 42, wallH: 16,                    // 外圈拱廊
     slot: 22.5,

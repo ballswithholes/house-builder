@@ -155,8 +155,10 @@
   html.is-phone .gh { margin: 3px 0 2px; font-size: .86rem; }
   html.is-phone .dock { flex: 1; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 0 2px 0 6px; align-content: start; }
   html.is-phone .dock .grp { display: none; }
-  html.is-phone .dock .v4-tile { height: 56px; font-size: .78rem; border-radius: 10px; }
+  html.is-phone .dock .v4-tile { height: 56px; font-size: max(13px, .78rem); letter-spacing: .04em; border-radius: 10px; }
   html.is-phone .dock .v4-tile svg { width: 26px; height: 26px; }
+  html.is-phone .dock .v4-tile::before { content: ""; position: absolute; left: 3px; top: 8px; bottom: 8px; width: 3px; border-radius: 2px; background: var(--gc); }
+  html.is-phone .dock .v4-tile.is-great::before { content: ""; transform: none; padding: 0; border: 0; font-size: 0; left: 3px; top: 8px; bottom: 8px; width: 3px; background: var(--gc); }
   html.is-phone .dock .v4-tile .pip { top: 4px; right: 4px; width: 6px; height: 6px; }
   html.is-phone .endm { right: auto; left: 8px; bottom: 8px; }
   html.is-phone .endm .disc { width: 62px; height: 62px; }
@@ -285,7 +287,7 @@ K.ready(() => {
     for (const [ic, l, f] of cmds) {
       k++;
       const cls = [f === 'dis' ? 'is-disabled' : '', f === 'pri' ? 'primary' : '', (!phone && ic === 'develop') ? 'is-great' : '', (!phone && ic === 'search') ? 'is-hover' : ''].join(' ');
-      dock += `<button class="v4-tile ${cls}">${f === 'free' ? '' : '<i class="pip"></i>'}${K.icon(ic)}<span class="lb">${l}</span><span class="key">${'1234567890-=QWER'[k - 1]}</span></button>`;
+      dock += `<button class="v4-tile ${cls}" style="--gc:${gc}">${f === 'free' ? '' : '<i class="pip"></i>'}${K.icon(ic)}<span class="lb">${l}</span><span class="key">${'1234567890-=ZXCV'[k - 1]}</span></button>`;
     }
   }
   K.$('#dock').innerHTML = dock;

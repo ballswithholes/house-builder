@@ -5,7 +5,7 @@
   "peak": 0.57,
   "rmsDb": -19.9,
   "nan": 0,
-  "renderMs": 4326
+  "renderMs": 4920
  },
  {
   "key": "tourney-final",
@@ -13,7 +13,7 @@
   "peak": 0.521,
   "rmsDb": -22.4,
   "nan": 0,
-  "renderMs": 1961
+  "renderMs": 2018
  },
  {
   "key": "tourney-ko",
@@ -21,6 +21,6 @@
   "peak": 0.546,
   "rmsDb": -17.9,
   "nan": 0,
-  "renderMs": 248
+  "renderMs": 313
  }
 ]

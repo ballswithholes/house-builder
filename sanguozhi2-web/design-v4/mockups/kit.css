@@ -14,7 +14,7 @@
   /* 纸 paper */
   --paper: #f3e7cc;  --paper-2: #eadbb8;  --paper-3: #dcc79c;  --paper-edge: #c3a574;  --paper-shade: #b89a68;
   /* 墨 ink */
-  --ink: #241a21;  --ink-2: #4b3b38;  --ink-3: #7a685d;  --ink-wash: rgba(36, 26, 33, .08);
+  --ink: #241a21;  --ink-2: #4b3b38;  --ink-3: #6e5d53;  --ink-wash: rgba(36, 26, 33, .08);
   /* 金 · 铜 · 青 */
   --gold: #e8b54a;  --gold-hi: #f8dc8e;  --gold-lo: #a8742e;
   --bronze: #a0703f;  --bronze-hi: #d2a06a;  --bronze-lo: #5e3f22;
@@ -28,10 +28,13 @@
   --plum: #8a5fc0;  --ember: #e07a3a;
   /* 三系（武 / 智 / 政 = TITLES 武官 / 谋臣 / 文官） */
   --war: #c8452f;  --war-lo: #9c2f1f;  --int: #3e6aa8;  --int-lo: #2b4e82;  --pol: #3f8f5f;  --pol-lo: #2c6b45;
+  /* 文字用的加深色（纸上 ≥ 5:1） */
+  --war-t: #a8331f;  --int-t: #335d96;  --pol-t: #2c6b45;
+  --rt-common: #555c64;  --rt-uncommon: #2f6e3e;  --rt-rare: #2a62a3;  --rt-epic: #7a3bb0;  --rt-legend: #8f5208;
   /* 品级（ITEMS §4.1） */
   --r-common: #9aa3ad;  --r-uncommon: #5fae6e;  --r-rare: #4a8fdc;  --r-epic: #a464d8;  --r-legend: #f0a52a;
   /* 状态 */
-  --good: #3c8a4c;  --good-hi: #8ddc93;  --bad: #b8402e;  --bad-hi: #ff8f73;
+  --good: #2e6e3a;  --good-hi: #8ddc93;  --bad: #a8371f;  --bad-hi: #ff8f73;
   /* 字体 */
   --f-display: "STKaiti", "Kaiti SC", "KaiTi", "BiauKai", "LXGW WenKai", "Noto Serif SC", "Source Han Serif SC", "Songti SC", serif;
   --f-body: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "WenQuanYi Zen Hei", system-ui, sans-serif;
@@ -57,11 +60,11 @@ body { font-family: var(--f-body); color: var(--paper); -webkit-font-smoothing: 
 .v4-mapbg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .kai { font-family: var(--f-display); }
 .num { font-family: var(--f-num); font-variant-numeric: tabular-nums lining-nums; letter-spacing: .01em; }
-.muted { color: var(--ink-3); }
-.on-lq .muted, .v4-lacquer .muted { color: #b7a690; }
-.good { color: var(--good); }  .bad { color: var(--bad); }
-.v4-lacquer .good, .on-lq .good { color: var(--good-hi); }
-.v4-lacquer .bad, .on-lq .bad { color: var(--bad-hi); }
+/* 语义文字色随最近的「面」切换：漆面上用亮色，纸面上用深色（自定义属性按 DOM 继承，最近的面胜出） */
+.v4-lacquer, .on-lq { --c-muted: #b7a690; --c-good: var(--good-hi); --c-bad: var(--bad-hi); }
+.v4-paper, body { --c-muted: var(--ink-3); --c-good: var(--good); --c-bad: var(--bad); }
+.muted { color: var(--c-muted); }
+.good { color: var(--c-good); }  .bad { color: var(--c-bad); }
 .hidden { display: none !important; }
 
 /* ------------------------------------------------------------ 材质 -- */
@@ -123,6 +126,7 @@ body { font-family: var(--f-body); color: var(--paper); -webkit-font-smoothing: 
 .v4-small { font-size: .82rem; line-height: 1.35; }
 .v4-caption { font-size: .78rem; letter-spacing: .08em; color: var(--ink-3); }
 .v4-lacquer .v4-caption { color: #b7a690; }
+.v4-lacquer .v4-paper .v4-caption { color: var(--ink-3); }
 .brush { filter: url(#brush-ink); }
 .goldleaf { color: var(--gold-hi); text-shadow: 0 1px 0 var(--gold-lo), 0 2px 0 rgba(60, 30, 10, .6), 0 0 14px rgba(255, 200, 110, .25); }
 
@@ -279,7 +283,7 @@ body { font-family: var(--f-body); color: var(--paper); -webkit-font-smoothing: 
 .v4-slot.empty { background: rgba(36, 26, 33, .06); box-shadow: inset 0 0 0 2px rgba(36, 26, 33, .25); border-style: dashed; }
 .v4-slot .sl { position: absolute; bottom: -2px; left: 50%; transform: translate(-50%, 50%); font: .7rem/1 var(--f-display); padding: 2px 6px; border-radius: 6px; color: var(--paper); background: var(--lq-2); border: 1.5px solid var(--ink); white-space: nowrap; letter-spacing: .08em; }
 .rar { font-family: var(--f-display); letter-spacing: .08em; }
-.rar.common { color: #6b737c; } .rar.uncommon { color: #3f8a50; } .rar.rare { color: #2f6db5; } .rar.epic { color: #8443bb; } .rar.legend { color: #c47a10; }
+.rar.common { color: var(--rt-common); } .rar.uncommon { color: var(--rt-uncommon); } .rar.rare { color: var(--rt-rare); } .rar.epic { color: var(--rt-epic); } .rar.legend { color: var(--rt-legend); }
 
 /* 纸条提示（悬停 / 长按） */
 .v4-tip { position: absolute; z-index: 30; max-width: 22rem; padding: .6rem .8rem .7rem; color: var(--ink); font-size: .9rem; line-height: 1.45;

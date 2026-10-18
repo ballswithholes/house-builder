@@ -183,7 +183,7 @@ K.ready(async () => {
   K.map(K.$('#map'), { seed: 7 });
   const G = K.GENS, gy = G.guanyu;
   K.$('#hd').innerHTML = `<span class="arrow">‹</span><div class="who">${K.face(gy, 52, 'r4', 'win')}<span class="nm goldleaf">关羽</span>
-    <div class="meta"><span><i class="flag" style="display:inline-block;width:10px;height:13px;background:#2f9a55;clip-path:polygon(0 0,100% 0,70% 50%,100% 100%,0 100%);margin-right:4px"></i>刘备军 · 平原太守 · <b style="color:#ffb9a6">荡寇将军</b></span><span>字 云长 · 河东解良 · 161 年生（30 岁）</span></div>
+    <div class="meta"><span><i class="flag" style="display:inline-block;width:10px;height:13px;background:#2f9a55;clip-path:polygon(0 0,100% 0,70% 50%,100% 100%,0 100%);margin-right:4px"></i>刘备军 · 平原太守 · <b style="color:#ffb9a6">荡寇将军</b></span><span>字 云长 · 河东解 · 生年不详</span></div>
     <div class="lvbox"><div class="lvseal"><small>等级</small>7</div><div class="xp"><span>经验 1,240 / 2,000</span><div class="v4-bar" style="--v:.62"><i></i></div><span>老练 +24%</span></div></div></div>
     <span class="arrow">›</span><button class="v4-close">${K.icon('x')}</button>`;
   const fig = await K.cutout('assets/ours_guanyu_full.png');
@@ -208,7 +208,7 @@ K.ready(async () => {
       <div class="sec" style="margin-top:10px">装备<div class="v4-brushline"></div><span class="v4-small muted">点按进入「装备」</span></div>
       <div class="gearstrip"><span class="v4-slot legend">${K.icon('guandao')}</span><span class="v4-slot uncommon">${K.icon('shield')}</span><span class="v4-slot rare">${K.icon('armour')}</span><span class="v4-slot uncommon">${K.icon('helmet')}</span><span class="v4-slot empty"></span><span class="v4-slot common">${K.icon('book')}</span></div>
       <div class="sec" style="margin-top:10px">生平<div class="v4-brushline"></div><span class="v4-seal" style="font-size:.8rem">史</span></div>
-      <div class="bio"><b>关羽</b>，字云长，本字长生，河东解良人。亡命奔涿郡，与张飞为先主御侮。先主于乡里合徒众，羽与飞为之左右；寝则同床，恩若兄弟。<span class="muted">——《三国志·蜀书·关羽传》</span></div>
+      <div class="bio">「<b>关羽</b>字云长，本字长生，河东解人也。亡命奔涿郡。先主于乡里合徒众，而羽与张飞为之御侮……先主与二人寝则同床，恩若兄弟。」<span class="muted">——《三国志·蜀书·关羽传》</span></div>
       <div class="sec" style="margin-top:10px">忠诚 · 羁绊<div class="v4-brushline"></div></div>
       <div style="display:flex;gap:14px;align-items:center;font-size:.86rem"><span style="display:flex;align-items:center;gap:4px">${K.icon('loyalty', 22)}<b class="num" style="font-size:1.1rem">96</b></span><span style="display:inline-flex;align-items:center;gap:6px">${K.face(G.liubei, 30, 'r1')}刘备 · <b style="color:var(--zhu)">结义</b></span><span style="display:inline-flex;align-items:center;gap:6px">${K.face(G.zhangfei, 30, 'r1')}张飞 · <b style="color:var(--zhu)">结义</b></span></div>
     </div></div>`;

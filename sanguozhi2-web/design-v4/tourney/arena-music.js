@@ -26,8 +26,8 @@
   const R_PAD = `1+5+1':4 | 5,+2+5:4 |`;
   const R_BASS = `1,:4 | 5,,:4 |`;
   const rest2 = `0:4 | 0:4 |`;
-  // 十二个家族（CITY-VIEW §3.1）按擂台一圈的顺序：华夏 草原 绿洲 安息 罗马 北方 尼罗 阿拉伯 天竺 南海 倭 三韩
-  const ROUND = ['hua', 'steppe', 'oasis', 'persia', 'roman', 'north', 'nile', 'arabia', 'indic', 'nanhai', 'wa', 'han3'];
+  // 十二个家族（CITY-VIEW §3.1）按擂台一圈的顺序（方位角递减）：华夏 草原 绿洲 安息 北方 罗马 尼罗 阿拉伯 天竺 南海 倭 三韩
+  const ROUND = ['hua', 'steppe', 'oasis', 'persia', 'north', 'roman', 'nile', 'arabia', 'indic', 'nanhai', 'wa', 'han3'];
   function roundLine(fam) {
     let s = '';
     ROUND.forEach((f, i) => { s += (f === fam ? (i % 2 === 0 ? HEAD : ANS) : rest2) + ' '; });
