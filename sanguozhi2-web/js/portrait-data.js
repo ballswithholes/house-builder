@@ -729,7 +729,7 @@
     '耶斯博赫': { role: 'ruler', age: 36, skin: '#5a3420', eyes: 'sharp', brows: 'straight', nose: 'broad', hair: { style: 'tightcurl', color: '#0c0a0a', vol: 0.8 }, beard: 'none', mustache: 'none',
       hat: { type: 'kushcrown', color: '#d8b050', color2: '#2a2422' }, outfit: { type: 'meroitic', color: '#a01818' }, acc: ['hoops', 'armlets'], marks: ['cheekscars'], weapon: 'bow', expr: 'stern' },
     '阿曼哈利卡': { sex: 'f', age: 52, skin: '#5e3822', fat: 0.55, eyes: { shape: 'narrow', size: 1.02 }, brows: 'thin', nose: 'broad', hair: { style: 'tightcurl', color: '#0c0a0a' },
-      hat: { type: 'kushcrown', color: '#d8b050', color2: '#d8b050', ribbon: '#d8a030' }, outfit: { type: 'meroitic', color: '#d8a030' }, acc: ['goldcollar', 'hoops'], expr: 'calm' },
+      hat: { type: 'kushcrown', color: '#d8b050', color2: '#2a2422', ribbon: '#d8a030' }, outfit: { type: 'meroitic', color: '#d8a030' }, acc: ['goldcollar', 'hoops'], expr: 'calm' },
     '马洛顿': { age: 45, skin: '#5a3420', eyes: 'normal', brows: 'straight', nose: 'broad', hair: { style: 'tightcurl', color: '#0c0a0a', vol: 0.8 }, beard: 'none', mustache: 'none',
       hat: { type: 'headband', color: '#d8b050' }, outfit: { type: 'meroitic', color: '#8a4a2a' }, acc: ['hoops'], marks: ['cheekscars'], weapon: 'bow', expr: 'calm' },
     '塔基达马尼': { age: 30, skin: '#5a3420', eyes: 'normal', brows: 'straight', nose: 'broad', hair: { style: 'tightcurl', color: '#0c0a0a', vol: 0.8 }, beard: 'none', mustache: 'none',

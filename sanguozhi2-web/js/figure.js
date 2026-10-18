@@ -2076,7 +2076,7 @@
     const y0 = R[0].y, y1 = R[R.length - 1].y + 0.01 * pr.k;
     const n = lod.torK, secs = [];
     // 赤膊外罩长袍 / 纱笼：腰下（裙内）的身体画成衬布色——两片裙在前中线分开时露出的是衬布，不是肤色（与 buildLeg 的衬布同色）
-    const lowIn = bare && robeOverBare(L) ? col(shade(C.cloth, -0.44)) : null;
+    const lowIn = bare && robeOverBare(L) ? col(shade(C.cloth, -0.1)) : null;
     for (let k = 0; k <= n; k++) {
       const y = lerp(y0, y1, Math.pow(k / n, 0.95));
       const r = ringAt(R, y);
@@ -2374,7 +2374,7 @@
       // 纱笼（锦纹）用同一锦纹贴图，袍 / 长衣用素布。颜色取袍面实际显出的那一面：skirtPanel 朝外的是 colB 面（shade −0.4），
       // 衬布再略暗（−0.44）。原来只压暗 −0.12，白袍（埃塞俄比亚披袍、库施王袍、托加）的腿前摆时比袍面亮得多，像一条白腿穿出袍子
       const ir = L.skirt === 'sarong' ? 'brocade' : 'cloth';
-      const inner = shade(C.cloth, -0.44);
+      const inner = shade(C.cloth, -0.1);
       // 两段的环数之和 = 原来整条腿的环数（三角形不变；低精度士兵的预算只剩几个三角形）
       const nT = Math.max(2, Math.round(lod.legK * 1.05)), n1 = clamp(Math.round(nT * (sH + 0.05) / 1.05), 1, nT - 1);
       if (sH > 0.9) segs.push([ir, -0.05, 1, 0.97, inner]);
@@ -2450,7 +2450,7 @@
       const n = torsoNormal(R, o.yTop * k, th);
       const wav = o.wave ? o.wave * Math.sin(s * PI * (o.waves || 3)) * t : 0;
       return [top[0] + n[0] * (fl + wav), y, top[2] + n[2] * (fl + wav)];
-    }, { nu: o.nu || Math.max(2, lod.pn), nv: o.nv || Math.max(2, lod.pv - 2), th: o.th || 0.007, reg: o.reg, col: col(o.col), colB: shade(o.col, -0.4), w: o.w, uv: o.uv, mirrorS: o.mirrorS, edge: o.edge });
+    }, { nu: o.nu || Math.max(2, lod.pn), nv: o.nv || Math.max(2, lod.pv - 2), th: o.th || 0.007, reg: o.reg, col: shade(o.col, -0.4), colB: col(o.col), w: o.w, uv: o.uv, mirrorS: o.mirrorS, edge: o.edge });   // 裙片外侧（玩家看到的一面）画 colB：外亮内暗
   }
   function legSideW(S, top, bot) {
     return (p, s, t) => { const T = clamp01(t); return [[B.pelvis, 1 - T * bot], [B['thigh' + S], T * bot]]; };

@@ -227,7 +227,7 @@ section('(3) AI vs AI: war decides, mirror is even; strong AI parries, weak AI d
   ok(mirror >= 25 && mirror <= 75, 'mirror match should be roughly even');
   // 电脑对电脑（无画面模拟 / 观战）不该耗到时间：同将对打平均时长与超时比例（原先 刘备 约 31 秒 / 0%、孙乾 约 54 秒 / 15–27%）
   const dur = (a, b, m) => { let t = 0, to = 0; for (let i = 0; i < m; i++) { const r = D.simulate(gens[a], gens[b]); t += r.time; if (r.kind === 'time') to++; } return { t: t / m, to: 100 * to / m }; };
-  const dMid = dur('刘备', '刘备', Math.max(40, n)), dWeak = dur('孙乾', '孙乾', Math.max(60, n));
+  const dMid = dur('刘备', '刘备', Math.max(40, n)), dWeak = dur('孙乾', '孙乾', Math.max(80, n));
   console.log(`  AI mirror duration: 刘备 ${dMid.t.toFixed(1)}s (time-outs ${dMid.to.toFixed(0)}%), 孙乾 ${dWeak.t.toFixed(1)}s (time-outs ${dWeak.to.toFixed(0)}%)`);
   ok(dMid.t <= 42 && dMid.to <= 10, `AI mid mirrors should not drag (刘备 mirror ${dMid.t.toFixed(1)}s, ${dMid.to.toFixed(0)}% time-outs; want <= 42s, <= 10%)`);
   ok(dWeak.to <= 45, `weak AI mirrors should mostly end before the clock (孙乾 mirror ${dWeak.to.toFixed(0)}% time-outs; want <= 45%)`);

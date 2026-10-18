@@ -1100,10 +1100,10 @@
         else if (tm.end ? sim.clock > tm.end + 0.35 : tm.seq < 0 && sim.clock > tm.t + 0.3) this.ttMine = null;
       }
       this.ttBack *= 1 - DT * 0.01;
-      // 自己松开的蓄力重击（六成以上，看得出他的格开已就绪；佯攻也算）：他按没按格开
+      // 自己松开的蓄力重击（六成以上，他的格开当时已就绪——事后看冷却圈就知道；佯攻也算）：他按没按格开
       if (me.state === 'heavy' && me.seq !== this.hvRel) {
         this.hvRel = me.seq;
-        this.hvWatch = me.charge >= 0.6 && this.foeCd(sim) === 0 ? { until: sim.clock + heavySU(me.charge, me.spd) / me.spd + 0.12, tries: foe.stats.parryTries } : null;
+        this.hvWatch = me.charge >= 0.6 && sim.parryReady(foe) ? { until: sim.clock + heavySU(me.charge, me.spd) / me.spd + 0.12, tries: foe.stats.parryTries } : null;
       }
       const hw = this.hvWatch;
       if (hw) {
@@ -1570,7 +1570,7 @@
       const foeTurtles = (st.hits >= 4 && st.guarded / st.hits > 0.45) || (seen && seen.state === 'guard' && foe.state === 'guard');
       // 近身蓄满破防：对手爱试探（蓄力会被打断）、惯于格开（格开已就绪）就少用——临场判断差的弱将想不到
       const jk = Math.min(1, this.gs / 0.6);
-      if (foeTurtles && rnd() < (0.25 + 0.4 * s) * (1 - (0.8 * this.hvBad + shell) * jk) * (this.pokeRate() < 0.5 ? 1 : 1 - this.gs) * (this.cdWin(sim) ? 1 : 1 - 0.9 * this.hvPar * jk)) { this.heavy(CHARGE_MAX + 0.05); return; }
+      if (foeTurtles && rnd() < (0.25 + 0.4 * s) * (1 - 0.8 * this.hvBad * jk) * (1 - shell * jk) * (this.pokeRate() < 0.5 ? 1 : 1 - this.gs) * (this.cdWin(sim) ? 1 : 1 - 0.9 * this.hvPar * jk)) { this.heavy(CHARGE_MAX + 0.05); return; }
       const r = rnd();
       if (r < this.aggr) {
         if (this.holdOff(sim, seen, rd) || this.wary(sim, seen)) return;
