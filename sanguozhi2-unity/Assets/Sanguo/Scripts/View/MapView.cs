@@ -108,7 +108,7 @@ namespace Sanguo
         Plane[] frustum = new Plane[6];
 
         static int SeaKey(int a, int b) { return Math.Min(a, b) * 4096 + Math.Max(a, b); }
-        static double Hyp(double x, double y) { return Math.Sqrt(x * x + y * y); }
+        static double Hyp(double x, double y) { x = Math.Abs(x); y = Math.Abs(y); double m = Math.Max(x, y); if (m == 0) return 0; double a = x / m, b = y / m; return Math.Sqrt(a * a + b * b) * m; }   // 与 V8 的 Math.hypot 逐位一致（两个参数）
         static double Now(Stopwatch sw) { return sw.Elapsed.TotalMilliseconds; }
         static readonly Stopwatch clock = Stopwatch.StartNew();
         static double NowMs() { return clock.Elapsed.TotalMilliseconds; }

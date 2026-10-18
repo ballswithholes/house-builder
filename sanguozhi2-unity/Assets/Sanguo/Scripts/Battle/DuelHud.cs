@@ -1,5 +1,5 @@
 // ==========================================================================
-// 三国志II 霸王的大陆 · 单挑格斗 · 界面与操作（网页版 js/duel-game.js「HUD / 输入 / 触摸按键」与样式表 .sgd-* 的移植）
+// 三国志-霸王的世界 · 单挑格斗 · 界面与操作（网页版 js/duel-game.js「HUD / 输入 / 触摸按键」与样式表 .sgd-* 的移植）
 //
 // 尺寸按网页版的 CSS 计算：--u = clamp(10px, min(1.2vw, 2.15vh), 18px)、--b（触摸按键）= clamp(54px, min(15.5vh, 18vw), 86px)，
 // 以「CSS 像素」（移动设备 = dpi / 160，桌面 = dpi / 96）换算成画布单位；安全区由 Screen.safeArea 得出。
@@ -91,7 +91,7 @@ namespace Sanguo
             new KeyValuePair<KeyCode, string>(KeyCode.UpArrow, "up"), new KeyValuePair<KeyCode, string>(KeyCode.W, "up"), new KeyValuePair<KeyCode, string>(KeyCode.Space, "up"),
             new KeyValuePair<KeyCode, string>(KeyCode.J, "light"), new KeyValuePair<KeyCode, string>(KeyCode.K, "heavy"),
             new KeyValuePair<KeyCode, string>(KeyCode.L, "guard"), new KeyValuePair<KeyCode, string>(KeyCode.DownArrow, "guard"), new KeyValuePair<KeyCode, string>(KeyCode.S, "guard"),
-            new KeyValuePair<KeyCode, string>(KeyCode.I, "special"),
+            new KeyValuePair<KeyCode, string>(KeyCode.I, "special"), new KeyValuePair<KeyCode, string>(KeyCode.U, "parry"),
         };
         readonly HashSet<KeyCode> down = new HashSet<KeyCode>();
 
@@ -120,6 +120,7 @@ namespace Sanguo
                 case "up": taps.up++; break;
                 case "special": taps.special++; break;
                 case "heavy": taps.heavy++; break;
+                case "parry": taps.parry++; break;
             }
         }
         public void SetTouch(string k, bool on)
@@ -140,13 +141,14 @@ namespace Sanguo
             held.heavy = enabled && (keys.Contains("heavy") || T("heavy"));
             held.guard = enabled && (keys.Contains("guard") || T("guard"));
             held.special = enabled && (keys.Contains("special") || T("special"));
+            held.parry = enabled && (keys.Contains("parry") || T("parry"));
         }
         // 启用 / 停用：停用期间的按键与触摸一律丢弃，启用时清空残留的点击与按住状态
         public void SetEnabled(bool on)
         {
             enabled = on;
             keys.Clear(); down.Clear(); touch.Clear();
-            taps.light = taps.up = taps.special = taps.heavy = taps.dir = 0;
+            taps.Clear();
             Recompute();
         }
     }
@@ -168,6 +170,9 @@ namespace Sanguo
         {
             public RectTransform s, port, portInner; public DuelBar hpFill, hpTrail, hpHi, rageFill, rageBorder; public Text lbl;
             public float trail = 1, trailDelay, shakeT = 9; public bool full, low; public float v = -1, tv = -1, rv = -1; public string lblText;
+            // 格开冷却环 / 反击窗口（第三版：怒气条前的「格」字小圆）
+            public RectTransform pchip; public Image pBg, pTrack, pRing; public RawImage pHalo; public Text pT; public float pp = -1; public string pst = null;
+            public RectTransform rage; public float rowY, rowH, rageX, iw, rageH;
         }
         readonly Side[] side = { new Side(), new Side() };
         CanvasGroup topGroup; RectTransform topRt; float hudShow, hudShowTarget;
@@ -187,7 +192,12 @@ namespace Sanguo
         sealed class Anim { public float t, dur, delay; public Action<float> f; public Action done; public UnityEngine.Object owner; public bool hasOwner; }
         readonly List<Anim> anims = new List<Anim>();
         // 飘字
-        sealed class Dmg { public RectTransform rt; public CanvasGroup g; public Vector3 p; public float t, vx; }
+        sealed class Dmg { public RectTransform rt; public CanvasGroup g; public Vector3 p; public float t, vx, life = 0.9f; public bool pop; }
+        // 画面四周的金光（格开得手）
+        RawImage edgeImg; float edgeT = 9;
+        // 触摸「格开」按钮的冷却环与得手闪光、键盘图例的 U 键
+        Image paTrack, paRing; RawImage paHalo; float paFlashT = 9, paP = -1; bool paReady = true;
+        CanvasGroup legendU; RectTransform legendRt;
         readonly List<Dmg> dmgs = new List<Dmg>();
         readonly List<UnityEngine.Object> owned = new List<UnityEngine.Object>();
         readonly Dictionary<string, Texture> portraitCache = new Dictionary<string, Texture>();
@@ -279,6 +289,8 @@ namespace Sanguo
             annLayer = R("Announce", root); UIKit.Stretch(annLayer);
             pauseLayer = R("Pause", root); UIKit.Stretch(pauseLayer);
             flashImg = Img(root, null, new Color(1, 1, 1, 0), "Flash"); UIKit.Stretch(flashImg.rectTransform, -20, -20, -20, -20);
+            var eg = UIKit.NewRect("Edge", root); UIKit.Stretch(eg);
+            edgeImg = eg.gameObject.AddComponent<RawImage>(); edgeImg.texture = EdgeTexture(); edgeImg.raycastTarget = false; edgeImg.color = new Color(1, 1, 1, 0);
             fadeRoot = R("DuelFade", UIKit.Root); UIKit.Stretch(fadeRoot); fadeRoot.SetAsLastSibling();
             fadeImg = Img(fadeRoot, null, new Color(0.027f, 0.024f, 0.04f, 0), "Fade"); UIKit.Stretch(fadeImg.rectTransform);
         }
@@ -336,8 +348,8 @@ namespace Sanguo
                 BuildTouch();
                 if (!S.hybrid && !portrait)
                 {
-                    var hint = Txt(staticLayer, "双击 ◀ ▶ 冲刺 · 按住「重击」蓄力", F(0.9f * u), new Color(0.96f, 0.93f, 0.86f, 0.75f), TextAnchor.LowerCenter, false, FontStyle.Bold, "TouchHint");
-                    At(hint.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), 0, sab + 0.5f * u, 30 * u, F(0.9f * u) * 1.3f);
+                    var hint = Txt(staticLayer, "双击 ◀ ▶ 冲刺 / 后撤 · 按住「重击」蓄力 · 看准来招轻触「格开」", F(0.9f * u), new Color(0.96f, 0.93f, 0.86f, 0.75f), TextAnchor.LowerCenter, false, FontStyle.Bold, "TouchHint");
+                    At(hint.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), 0, sab + 0.5f * u, 48 * u, F(0.9f * u) * 1.3f);
                     Fx<Shadow>(hint, Color.black, 0, -k);
                     hintG = hint.gameObject.AddComponent<CanvasGroup>();
                 }
@@ -380,7 +392,9 @@ namespace Sanguo
             // 信息栏
             float ix = P + 0.8f * u, iw = sw - ix;
             float nameH = 1.7f * u * 1.05f, hpH = 1.55f * u, rageH = Mathf.Max(0.62f * u, F(0.85f * u));
-            float infoH = nameH + 0.32f * u + hpH + 0.32f * u + rageH, y0 = Mathf.Max(0, (P - infoH) / 2);
+            float chipD = compact ? Mathf.Max(24 * k, 2.3f * u) : 1.75f * u;     // 格开冷却小圆（.sgd-pchip）
+            float rowH = Mathf.Max(rageH, chipD);
+            float infoH = nameH + 0.32f * u + hpH + 0.32f * u + rowH, y0 = Mathf.Max(0, (P - infoH) / 2);
             var info = R("Info", sd.s); At(info, new Vector2(B ? 1 : 0, 1), new Vector2(B ? 1 : 0, 1), B ? -ix : ix, -y0, iw, infoH);
             // 姓名 · 武力 · 玩家
             var name = Txt(info, gen.name ?? "", 1.7f * u, C("#fff4dc"), B ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft, true, FontStyle.Bold, "Name");
@@ -398,7 +412,7 @@ namespace Sanguo
             fx += bw + 0.6f * u;
             if (S.player == i)
             {
-                var tag = Txt(info, DuelGame.Auto ? "自动" : "玩家", F(0.85f * u), CA("#ffd98a", 0.9f), B ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft, false, FontStyle.Bold, "Tag");
+                var tag = Txt(info, DuelGame.Auto || S.scripted ? "自动" : "玩家", F(0.85f * u), CA("#ffd98a", 0.9f), B ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft, false, FontStyle.Bold, "Tag");
                 At(tag.rectTransform, new Vector2(B ? 1 : 0, 1), new Vector2(B ? 1 : 0, 0.5f), B ? -fx : fx, -nameH * 0.55f, TextW(tag) + 2, nameH);
                 if (portrait) tag.gameObject.SetActive(false);
             }
@@ -420,9 +434,13 @@ namespace Sanguo
                 tick.from = f0; tick.to = f0 + dw;
             }
             sd.v = sd.tv = -1; sd.low = false;
-            // 怒气条 + 标签
+            // 格开冷却 · 怒气条 · 标签（一行居中对齐；b 侧从右往左排）
             float rw = iw * 0.78f, ry = nameH + 0.32f * u + hpH + 0.32f * u;
-            var rage = R("Rage", info); At(rage, new Vector2(B ? 1 : 0, 1), new Vector2(B ? 1 : 0, 1), 0, -(ry + (rageH - 0.62f * u) / 2), rw, 0.62f * u);
+            BuildChip(sd, info, B, ry + (rowH - chipD) / 2, chipD);
+            float rx0 = chipD + 0.5f * u;
+            sd.rowY = ry; sd.rowH = rowH; sd.rageX = rx0; sd.iw = iw; sd.rageH = rageH;
+            var rage = R("Rage", info); At(rage, new Vector2(B ? 1 : 0, 1), new Vector2(B ? 1 : 0, 1), B ? -rx0 : rx0, -(ry + (rowH - 0.62f * u) / 2), rw, 0.62f * u);
+            sd.rage = rage;
             sd.rageBorder = Bar(rage, "Border", skewV, new[] { new Color(1, 1, 1, 0.2f) });
             var rin = R("Inner", rage); UIKit.Stretch(rin, k, k, k, k);
             Bar(rin, "Bg", skewV, new[] { new Color(0, 0, 0, 0.6f) });
@@ -430,11 +448,101 @@ namespace Sanguo
             sd.rageFill.fromRight = B;
             sd.rv = -1; sd.full = false;
             sd.lbl = Txt(info, "怒", F(0.85f * u), C("#d8a8ff"), B ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft, true, FontStyle.Bold, "RageLabel");
-            At(sd.lbl.rectTransform, new Vector2(B ? 1 : 0, 1), new Vector2(B ? 1 : 0, 1), B ? -(rw + 0.5f * u) : rw + 0.5f * u, -ry, iw - rw - 0.5f * u, rageH);
+            At(sd.lbl.rectTransform, new Vector2(B ? 1 : 0, 1), new Vector2(B ? 1 : 0, 1), B ? -(rx0 + rw + 0.5f * u) : rx0 + rw + 0.5f * u, -(ry + (rowH - rageH) / 2), Mathf.Max(1, iw - rx0 - rw - 0.5f * u), rageH);
             sd.lbl.supportRichText = true;
             Fx<Shadow>(sd.lbl, Color.black, 0, -k);
             sd.lblText = null;
         }
+        // 怒气条宽 78%，放不下标签时收窄（= CSS flex 的 shrink；小圆 flex:none，标签 nowrap）
+        void LayoutRage(int i)
+        {
+            var sd = side[i]; bool B = i == 1;
+            if (sd.rage == null || sd.lbl == null) return;
+            float lw = TextW(sd.lbl);
+            float rw = Mathf.Max(0, Mathf.Min(sd.iw * 0.78f, sd.iw - sd.rageX - 0.5f * u - lw));
+            sd.rage.sizeDelta = new Vector2(rw, sd.rage.sizeDelta.y);
+            float lx = sd.rageX + rw + 0.5f * u;
+            At(sd.lbl.rectTransform, new Vector2(B ? 1 : 0, 1), new Vector2(B ? 1 : 0, 1), B ? -lx : lx, -(sd.rowY + (sd.rowH - sd.rageH) / 2), Mathf.Max(lw + 2, sd.iw - lx), sd.rageH);
+        }
+        // 「格」字小圆：深色底 + 外圈冷却环（圆锥渐变 = 自顶起顺时针填充）+ 就绪 / 反击时的光晕
+        void BuildChip(Side sd, RectTransform info, bool B, float y, float d)
+        {
+            var c = R("ParryChip", info); At(c, new Vector2(B ? 1 : 0, 1), new Vector2(B ? 1 : 0, 1), 0, -y, d, d);
+            sd.pchip = c;
+            var halo = UIKit.NewRect("Halo", c); halo.anchorMin = halo.anchorMax = new Vector2(0.5f, 0.5f); halo.sizeDelta = Vector2.one * d * 2.2f;
+            sd.pHalo = halo.gameObject.AddComponent<RawImage>(); sd.pHalo.texture = Art.SoftDot; sd.pHalo.raycastTarget = false; sd.pHalo.color = new Color(0, 0, 0, 0);
+            float ins = (compact ? 3 : 2) * k, th = (compact ? 3.5f : 2.5f) * k;
+            sd.pBg = Img(c, UIKit.Circle, compact ? new Color(8 / 255f, 14 / 255f, 28 / 255f, 0.85f) : new Color(10 / 255f, 16 / 255f, 30 / 255f, 0.7f), "Bg"); UIKit.Stretch(sd.pBg.rectTransform);
+            float R0 = d / 2 + ins;
+            sd.pTrack = Img(c, RingSprite(th / R0), new Color(1, 1, 1, compact ? 0.22f : 0.14f), "Track"); UIKit.Stretch(sd.pTrack.rectTransform, -ins, -ins, -ins, -ins);
+            Radial(sd.pTrack, false);
+            sd.pRing = Img(c, RingSprite(th / R0), C(compact ? "#c4e8ff" : "#9fd8ff"), "Ring"); UIKit.Stretch(sd.pRing.rectTransform, -ins, -ins, -ins, -ins);
+            Radial(sd.pRing, true);
+            sd.pT = Txt(c, "格", compact ? Mathf.Max(12 * k, 1.15f * u) : Mathf.Max(10 * k, 0.95f * u), new Color(230 / 255f, 244 / 255f, 1, 0.5f), TextAnchor.MiddleCenter, true, FontStyle.Bold, "Glyph");
+            UIKit.Stretch(sd.pT.rectTransform);
+            sd.pp = -1; sd.pst = null;
+        }
+        static void Radial(Image im, bool cw)
+        {
+            im.type = Image.Type.Filled; im.fillMethod = Image.FillMethod.Radial360;
+            im.fillOrigin = (int)Image.Origin360.Top; im.fillClockwise = cw; im.fillAmount = cw ? 1 : 0;
+        }
+        // 小圆的三种状态：冷却中（环按进度）/ 就绪（实心亮环 + 冷光晕）/ 反击窗口（金底、金环、金光，快速明灭）
+        void StyleChip(Side sd, float pp, string pst, float realT)
+        {
+            if (sd.pchip == null) return;
+            bool ctr = pst == "ctr", ready = pst == "ready";
+            sd.pRing.fillAmount = ctr || ready ? 1 : pp; sd.pTrack.fillAmount = ctr || ready ? 0 : 1 - pp;
+            sd.pRing.color = ctr ? C("#ffd860") : ready ? C(compact ? "#dff3ff" : "#bfe6ff") : C(compact ? "#c4e8ff" : "#9fd8ff");
+            sd.pBg.color = ctr ? C("#ffd168") : compact ? new Color(8 / 255f, 14 / 255f, 28 / 255f, 0.85f) : new Color(10 / 255f, 16 / 255f, 30 / 255f, 0.7f);
+            sd.pT.color = ctr ? C("#2a1600") : ready ? C("#e6f4ff") : new Color(230 / 255f, 244 / 255f, 1, 0.5f);
+            float d = sd.pchip.sizeDelta.x;
+            sd.pHalo.rectTransform.sizeDelta = Vector2.one * (d + 2 * (ctr ? 0.8f : 0.45f) * sd.pT.fontSize * 1.6f);
+            sd.pHalo.color = ctr ? new Color(1, 200 / 255f, 80 / 255f, 0.9f) : ready ? new Color(160 / 255f, 215 / 255f, 1, 0.6f) : new Color(0, 0, 0, 0);
+        }
+        readonly Dictionary<int, Sprite> rings = new Dictionary<int, Sprite>();
+        // 圆环精灵（外径 = 整张，环宽 = 外半径 × frac；1 像素抗锯齿）
+        Sprite RingSprite(float frac)
+        {
+            int key = Mathf.Clamp(Mathf.RoundToInt(frac * 200), 1, 200);
+            Sprite sp; if (rings.TryGetValue(key, out sp) && sp != null) return sp;
+            const int N = 128; float f = key / 200f;
+            var tex = new Texture2D(N, N, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, name = "DuelRing" };
+            var px = new Color32[N * N]; float rr = N / 2f;
+            for (int y = 0; y < N; y++) for (int x = 0; x < N; x++)
+                {
+                    float dx = x + 0.5f - rr, dy = y + 0.5f - rr, dd = Mathf.Sqrt(dx * dx + dy * dy) / rr;
+                    float a = Mathf.Clamp01((dd - (1 - f)) * rr + 0.5f) * Mathf.Clamp01((1 - dd) * rr + 0.5f);
+                    px[y * N + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(a * 255));
+                }
+            tex.SetPixels32(px); tex.Apply();
+            sp = Sprite.Create(tex, new Rect(0, 0, N, N), new Vector2(0.5f, 0.5f), 100);
+            owned.Add(tex); owned.Add(sp);
+            rings[key] = sp;
+            return sp;
+        }
+        // 画面四周的金光：椭圆径向渐变（到角为 1）：55% 以内透明 → 85% (255,214,120,.55) → 100% (255,250,230,.9)
+        Texture2D EdgeTexture()
+        {
+            const int N = 128;
+            var tex = new Texture2D(N, N, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, name = "DuelEdge" };
+            var px = new Color[N * N];
+            Color c0 = new Color(1, 230 / 255f, 160 / 255f, 0), c1 = new Color(1, 214 / 255f, 120 / 255f, 0.55f), c2 = new Color(1, 250 / 255f, 230 / 255f, 0.9f);
+            for (int y = 0; y < N; y++) for (int x = 0; x < N; x++)
+                {
+                    float nx = (x + 0.5f) / N * 2 - 1, ny = (y + 0.5f) / N * 2 - 1, r = Mathf.Sqrt(nx * nx + ny * ny) / Mathf.Sqrt(2);
+                    px[y * N + x] = r < 0.55f ? c0 : r < 0.85f ? Color.Lerp(c0, c1, (r - 0.55f) / 0.3f) : Color.Lerp(c1, c2, Mathf.Clamp01((r - 0.85f) / 0.15f));
+                }
+            tex.SetPixels(px); tex.Apply();
+            owned.Add(tex);
+            return tex;
+        }
+        // 格开得手：四周一圈金光（约 0.08 秒亮起后 0.3 秒淡去）
+        public void EdgeFlash() { edgeT = 0; }
+        // 格开得手：触摸「格开」按钮放大闪一下（.45 秒）
+        public void ParryButtonFlash() { paFlashT = 0; }
+        // 格开得手：格开者的小圆立即进入反击状态
+        public void CounterChip(int idx) { var sd = side[idx]; sd.pst = "ctr"; StyleChip(sd, 1, "ctr", 0); }
         static Color[] HpStops(bool low)
         {
             return low ? new[] { C("#ffb0a0"), C("#ff4a3a"), C("#b8180e"), C("#b8180e") } : new[] { C("#fff1a8"), C("#f2b33a"), C("#d9741c"), C("#a8460e") };
@@ -465,23 +573,25 @@ namespace Sanguo
         }
 
         // ------------------------------------------------------------ 图例与触摸 --
-        RectTransform KeyCap(Transform p, string s, float fs, bool red)
+        RectTransform KeyCap(Transform p, string s, float fs, string sty)
         {
-            var cap = Img(p, UIKit.RR, red ? C("#e8604a") : C("#e8dfc8"), "Key");
+            bool red = sty == "r", pk = sty == "pk";
+            var cap = Img(p, UIKit.RR, red ? C("#e8604a") : pk ? C("#b2daf8") : C("#e8dfc8"), "Key");
             var t = Txt(cap.transform, s, fs * 0.9f, red ? Color.white : C("#1a1410"), TextAnchor.MiddleCenter, false, FontStyle.Bold);
             UIKit.Stretch(t.rectTransform);
             float w = Mathf.Max(1.7f * fs, TextW(t) + 0.7f * fs);
             cap.rectTransform.sizeDelta = new Vector2(w, 1.7f * fs);
-            Fx<Shadow>(cap, red ? C("#7a1a10") : C("#6a5a40"), 0, -2 * k);
+            Fx<Shadow>(cap, red ? C("#7a1a10") : pk ? C("#2a5a80") : C("#6a5a40"), 0, -2 * k);
             return cap.rectTransform;
         }
         // 一行「键帽 + 说明」的排版：返回宽度（元素按顺序放在 parent 内 x 起）
-        float Row(Transform parent, float x, float yMid, float fs, string[] keys, bool[] reds, string text, Color col, string small = null)
+        float Row(Transform parent, float x, float yMid, float fs, string[] keys, string[] stys, string text, Color col, string small = null)
         {
             for (int i = 0; i < keys.Length; i++)
             {
                 if (keys[i] == "/") { var sl = Txt(parent, "/", fs, new Color(1, 1, 1, 0.6f), TextAnchor.MiddleLeft); At(sl.rectTransform, new Vector2(0, 1), new Vector2(0, 0.5f), x, -yMid, TextW(sl) + 2, fs * 1.4f); x += TextW(sl) + 0.3f * fs; continue; }
-                var cap = KeyCap(parent, keys[i], fs, reds != null && reds[i]);
+                var cap = KeyCap(parent, keys[i], fs, stys != null ? stys[i] : null);
+                if (stys != null && stys[i] == "pk" && parent == legendRt) legendU = UIKit.Ensure<CanvasGroup>(cap.gameObject);
                 cap.anchorMin = cap.anchorMax = new Vector2(0, 1); cap.pivot = new Vector2(0, 0.5f); cap.anchoredPosition = new Vector2(x, -yMid);
                 x += cap.sizeDelta.x + 0.3f * fs;
             }
@@ -499,12 +609,14 @@ namespace Sanguo
         {
             float fs = compact ? F(0.85f * u) : 0.95f * u;
             var lg = Img(staticLayer, UIKit.RR, new Color(0.05f, 0.04f, 0.06f, 0.55f), "Legend").rectTransform;
+            legendRt = lg; legendU = null;
             var o = Img(lg, UIKit.RROutline, CA("#f3c969", 0.25f), "Outline"); UIKit.Stretch(o.rectTransform);
             var items = new[]
             {
                 new object[] { new[] { "←", "→" }, "移动" }, new object[] { new[] { "↑" }, "跳" }, new object[] { new[] { "J" }, "轻击" },
-                new object[] { new[] { "K" }, "重击·按住蓄力" }, new object[] { new[] { "L" }, "格挡" }, new object[] { new[] { "I" }, "绝技" },
+                new object[] { new[] { "K" }, "重击·按住蓄力" }, new object[] { new[] { "L" }, "格挡" }, new object[] { new[] { "U" }, "格开" }, new object[] { new[] { "I" }, "绝技" },
             };
+            Func<object[], string[]> sty = it => (string)it[1] == "绝技" ? new[] { "r" } : (string)it[1] == "格开" ? new[] { "pk" } : null;
             float padX = (compact ? 0.7f : 0.9f) * fs, padY = (compact ? 0.3f : 0.45f) * fs, gapX = (compact ? 0.6f : 0.9f) * u, rowH = 1.8f * fs, gapY = (compact ? 0.25f : 0.35f) * u;
             float maxW = W * 0.96f - 2 * padX;
             // 先量宽度，按行折排（flex-wrap），每行居中
@@ -512,7 +624,7 @@ namespace Sanguo
             foreach (var it in items)
             {
                 var tmp = R("Tmp", lg);
-                widths.Add(Row(tmp, 0, 0, fs, (string[])it[0], ((string[])it[0]).Length == 1 && (string)it[1] == "绝技" ? new[] { true } : null, (string)it[1], C("#e8dfca")));
+                widths.Add(Row(tmp, 0, 0, fs, (string[])it[0], sty(it), (string)it[1], C("#e8dfca")));
                 UnityEngine.Object.DestroyImmediate(tmp.gameObject);
             }
             var rows = new List<List<int>> { new List<int>() }; float cw = 0;
@@ -533,7 +645,7 @@ namespace Sanguo
                 foreach (var i in rows[ri])
                 {
                     var it = items[i];
-                    Row(lg, x, y, fs, (string[])it[0], (string)it[1] == "绝技" ? new[] { true } : null, (string)it[1], C("#e8dfca"));
+                    Row(lg, x, y, fs, (string[])it[0], sty(it), (string)it[1], C("#e8dfca"));
                     x += widths[i] + gapX;
                 }
             }
@@ -550,39 +662,64 @@ namespace Sanguo
             TouchBtn(padRt, "right", "▶", false, 1.22f * b, 0, b, true, false);
             TouchBtn(padRt, "up", "▲", false, 0.61f * b, 1.04f * b, b, true, false);
             var btns = R("Buttons", layer);
-            At(btns, new Vector2(1, 0), new Vector2(1, 0), -(sar + 1.3f * u), sab + 0.9f * u, b * 2.45f, b * 2.2f);
+            At(btns, new Vector2(1, 0), new Vector2(1, 0), -(sar + 1.3f * u), sab + 0.9f * u, b * 3.5f, b * 2.3f);
             TouchBtn(btns, "light", "轻击", true, 0, 0, b * 1.18f, false, true, "big");
             TouchBtn(btns, "heavy", "重击", true, 1.32f * b, 0.02f * b, b, false, true);
             TouchBtn(btns, "guard", "格挡", true, 0.1f * b, 1.3f * b, b, false, true);
-            TouchBtn(btns, "special", "绝技", true, 1.36f * b, 1.16f * b, b, false, true, "sp");
+            TouchBtn(btns, "parry", "格开", true, 1.3f * b, 1.2f * b, b, false, true, "pa");
+            TouchBtn(btns, "special", "绝技", true, 2.5f * b, 0.62f * b, b, false, true, "sp");
         }
         // left / bottom（pad）或 right / bottom（按钮）定位的圆形按键
         void TouchBtn(RectTransform parent, string key, string label, bool kai, float x, float y, float size, bool leftAnchored, bool rightAnchored, string cls = "")
         {
-            var ring = Img(parent, UIKit.Circle, cls == "big" ? new Color(1, 0.55f, 0.43f, 0.85f) : cls == "sp" ? new Color(0.78f, 0.63f, 1, 0.5f) : CA("#f3c969", 0.6f), "Btn_" + key);
+            var ring = Img(parent, UIKit.Circle, cls == "big" ? new Color(1, 0.55f, 0.43f, 0.85f) : cls == "sp" ? new Color(0.78f, 0.63f, 1, 0.5f) : cls == "pa" ? new Color(150 / 255f, 210 / 255f, 1, 0.8f) : CA("#f3c969", 0.6f), "Btn_" + key);
             var rt = ring.rectTransform;
             if (rightAnchored) At(rt, new Vector2(1, 0), new Vector2(1, 0), -x, y, size, size);
             else At(rt, new Vector2(0, 0), new Vector2(0, 0), x, y, size, size);
             Fx<Shadow>(ring, new Color(0, 0, 0, 0.45f), 0, -0.2f * u);
-            var face = Img(rt, UIKit.Circle, cls == "big" ? new Color(0.55f, 0.13f, 0.1f, 0.7f) : new Color(0.12f, 0.1f, 0.16f, 0.55f), "Face");
+            var face = Img(rt, UIKit.Circle, cls == "big" ? new Color(0.55f, 0.13f, 0.1f, 0.7f) : cls == "pa" ? PaFace : new Color(0.12f, 0.1f, 0.16f, 0.55f), "Face");
             UIKit.Stretch(face.rectTransform, 2 * k, 2 * k, 2 * k, 2 * k);
-            var t = Txt(rt, label, b * (cls == "big" ? 0.34f : kai ? 0.3f : 0.36f), cls == "sp" ? new Color(1, 1, 1, 0.55f) : C("#fff4dc"), TextAnchor.MiddleCenter, kai, FontStyle.Bold);
+            if (cls == "pa")
+            {
+                // 冷却环（.cd：外扩 6 像素、环宽约 4.5 像素；圆锥渐变 = 自顶起顺时针）与就绪时的冷光晕
+                float ins = 6 * k, R0 = size / 2 + ins;
+                var halo = UIKit.NewRect("Halo", rt); halo.anchorMin = halo.anchorMax = new Vector2(0.5f, 0.5f); halo.sizeDelta = Vector2.one * (size + 2 * ins + 1.2f * b * 0.3f * 1.6f);
+                halo.SetAsFirstSibling();
+                paHalo = halo.gameObject.AddComponent<RawImage>(); paHalo.texture = Art.SoftDot; paHalo.raycastTarget = false; paHalo.color = new Color(160 / 255f, 215 / 255f, 1, 0.65f);
+                paTrack = Img(rt, RingSprite(4.5f * k / R0), new Color(1, 1, 1, 0.12f), "CdTrack"); UIKit.Stretch(paTrack.rectTransform, -ins, -ins, -ins, -ins); Radial(paTrack, false);
+                paRing = Img(rt, RingSprite(4.5f * k / R0), C("#bfe6ff"), "Cd"); UIKit.Stretch(paRing.rectTransform, -ins, -ins, -ins, -ins); Radial(paRing, true);
+                paTrack.fillAmount = 0; paP = -1; paReady = true;
+            }
+            var t = Txt(rt, label, b * (cls == "big" ? 0.34f : kai ? 0.3f : 0.36f), cls == "sp" ? new Color(1, 1, 1, 0.55f) : cls == "pa" ? C("#e6f4ff") : C("#fff4dc"), TextAnchor.MiddleCenter, kai, FontStyle.Bold);
             UIKit.Stretch(t.rectTransform); Fx<Shadow>(t, Color.black, 0, -k);
             btn[key] = rt; btnFace[key] = face; btnRing[key] = ring; btnText[key] = t;
         }
-        // 触摸按键的视觉：按下缩小变金；绝技在怒气满时发光
+        // 触摸按键的视觉：按下缩小（普通键同时变金）；绝技在怒气满时发光
+        static readonly Color PaFace = new Color(40 / 255f, 64 / 255f, 97 / 255f, 0.61f);   // radial-gradient(rgba(70,110,160,.6), rgba(10,18,34,.62)) 的中间色
         void StyleBtn(string key, bool on, bool ready, float time)
         {
             RectTransform rt; if (!btn.TryGetValue(key, out rt) || rt == null) return;
-            rt.localScale = Vector3.one * (on ? 0.92f : 1);
-            bool big = key == "light", sp = key == "special";
-            Color face = on ? new Color(0.85f, 0.65f, 0.3f, 0.72f) : big ? new Color(0.55f, 0.13f, 0.1f, 0.7f) : new Color(0.12f, 0.1f, 0.16f, 0.55f);
-            if (sp && ready && !on) face = Color.Lerp(new Color(0.9f, 0.6f, 0.25f, 0.8f), new Color(1, 0.78f, 0.4f, 0.85f), 0.5f + 0.5f * Mathf.Sin(time * Mathf.PI / 0.6f));
+            float sc = on ? 0.92f : 1;
+            bool big = key == "light", sp = key == "special", pa = key == "parry";
+            if (pa && paFlashT < 0.45f) { float q = Out(paFlashT / 0.45f); sc = Mathf.Lerp(1.25f, 1, q); }
+            rt.localScale = Vector3.one * sc;
+            // 层叠次序同网页版 CSS：.on（缩小、金底）写在 .big / .pa 之前、选择器权重相同，所以按下的轻击（红）与格开（蓝）
+            // 只缩小、底色不变；.sp.ready 权重更高，按下时仍是就绪的金橙底
+            Color face = big ? new Color(0.55f, 0.13f, 0.1f, 0.7f) : pa ? PaFace : on ? new Color(0.85f, 0.65f, 0.3f, 0.72f) : new Color(0.12f, 0.1f, 0.16f, 0.55f);
+            if (sp && ready) face = Color.Lerp(new Color(0.9f, 0.6f, 0.25f, 0.8f), new Color(1, 0.78f, 0.4f, 0.85f), 0.5f + 0.5f * Mathf.Sin(time * Mathf.PI / 0.6f));
             btnFace[key].color = face;
             if (sp)
             {
                 btnRing[key].color = ready ? C("#ffe08a") : new Color(0.78f, 0.63f, 1, 0.5f);
                 btnText[key].color = ready ? Color.white : new Color(1, 1, 1, 0.55f);
+            }
+            if (pa && paRing != null)
+            {
+                btnRing[key].color = new Color(150 / 255f, 210 / 255f, 1, paReady ? 0.8f : 0.3f);
+                btnText[key].color = paReady ? C("#e6f4ff") : new Color(230 / 255f, 244 / 255f, 1, 0.45f);
+                paRing.color = paReady ? C("#bfe6ff") : C("#9fd8ff");
+                float fl = paFlashT < 0.45f ? 1 - Out(paFlashT / 0.45f) : 0;
+                paHalo.color = new Color(160 / 255f, paReady || fl > 0 ? 220 / 255f : 215 / 255f, 1, Mathf.Max(paReady ? 0.65f : 0, fl));
             }
         }
 
@@ -591,7 +728,7 @@ namespace Sanguo
         readonly Dictionary<int, string> owner = new Dictionary<int, string>();
         readonly HashSet<string> btnOn = new HashSet<string>();
         // 每帧复用的临时容器（PollTouch 每帧都跑：不产生垃圾，免得 iPhone 上 GC 停顿卡住音乐线程）
-        static readonly string[] ActBtns = { "light", "heavy", "guard", "special" };
+        static readonly string[] ActBtns = { "light", "heavy", "guard", "parry", "special" };
         readonly HashSet<int> seen = new HashSet<int>();
         readonly List<int> idScratch = new List<int>();
         readonly Vector3[] corners = new Vector3[4];
@@ -642,6 +779,20 @@ namespace Sanguo
                 return;
             }
             if (zones.ContainsKey(id)) zones[id] = ZoneAt(pos);
+            // 格挡与格开之间拇指一滑即换手（按住格挡滑到格开 = 松开格挡、轻触格开；滑回来又按住格挡），其余按钮按下后滑出仍算按住
+            string cur;
+            if (owner.TryGetValue(id, out cur) && (cur == "guard" || cur == "parry"))
+            {
+                string to = cur == "guard" ? "parry" : "guard";
+                if (InsideBtn(to, pos) && !InsideBtn(cur, pos)) owner[id] = to;
+            }
+        }
+        // 按钮的包围盒（= getBoundingClientRect）
+        bool InsideBtn(string key, Vector2 p)
+        {
+            RectTransform rt; if (!btn.TryGetValue(key, out rt) || rt == null) return false;
+            rt.GetWorldCorners(corners);
+            return p.x >= corners[0].x && p.x <= corners[2].x && p.y >= corners[0].y && p.y <= corners[2].y;
         }
         string ZoneAt(Vector2 p)
         {
@@ -706,19 +857,32 @@ namespace Sanguo
             }, 0, () => Kill(box));
         }
 
+        // vx：横向漂移（DuelScreen.FloatVx：「格开」类为 0，其余从装饰随机数取，= 网页版 floatDmg）
         public void FloatDmg(Vector3 threePos, string text, string cls, float vx)
         {
             var rt = R("Dmg", dmgLayer);
-            float fs = cls == "g" ? 1.2f * u : cls == "big" ? 2.1f * u : cls == "lbl" ? 1.4f * u : 1.6f * u;
-            Color col = cls == "g" ? C("#9cc8ff") : cls == "big" ? C("#ffd040") : cls == "lbl" ? C("#ff9a6a") : Color.white;
-            var t = Txt(rt, text, fs, col, TextAnchor.MiddleCenter, cls == "lbl", cls == "lbl" ? FontStyle.Bold : FontStyle.BoldAndItalic);
+            var cl = (cls ?? "").Split(' ');
+            Func<string, bool> has = c => Array.IndexOf(cl, c) >= 0;
+            bool lbl = has("lbl"), parry = lbl && has("parry"), ctr = lbl && has("ctr"), miss = lbl && has("miss");
+            float fs = parry ? 3.4f * u : ctr ? 2.1f * u : miss ? 1.25f * u : has("g") ? 1.2f * u : has("big") ? 2.1f * u : lbl ? 1.4f * u : 1.6f * u;
+            Color col = parry ? C("#fff2c8") : ctr ? C("#ffd860") : miss ? C("#c8c0d8") : has("g") ? C("#9cc8ff") : has("big") ? C("#ffd040") : lbl ? C("#ff9a6a") : Color.white;
+            var t = Txt(rt, parry ? Spaced(text) : text, fs, col, TextAnchor.MiddleCenter, lbl, lbl ? FontStyle.Bold : FontStyle.BoldAndItalic);
             UIKit.Stretch(t.rectTransform);
-            Fx<Shadow>(t, Color.black, 0, -2 * k); Fx<Outline>(t, new Color(0, 0, 0, 0.5f), k, k);
+            if (parry)
+            {
+                // text-shadow：0 .06em 0 #6a1a0a、0 0 .35em 橙色辉光、0 .1em .3em 黑影
+                Fx<Outline>(t, new Color(1, 150 / 255f, 40 / 255f, 0.55f), 0.12f * fs, 0.12f * fs);
+                Fx<Shadow>(t, C("#6a1a0a"), 0, -0.06f * fs); Fx<Shadow>(t, new Color(0, 0, 0, 0.85f), 0, -0.1f * fs);
+            }
+            else if (ctr) { Fx<Outline>(t, new Color(1, 170 / 255f, 40 / 255f, 0.6f), 0.12f * fs, 0.12f * fs); Fx<Shadow>(t, C("#4a1a00"), 0, -2 * k); }
+            else { Fx<Shadow>(t, Color.black, 0, -2 * k); Fx<Outline>(t, new Color(0, 0, 0, 0.5f), k, k); }
             At(rt, new Vector2(0, 0), new Vector2(0.5f, 0.5f), -9999, -9999, TextW(t) + 4, fs * 1.3f);
             var g = rt.gameObject.AddComponent<CanvasGroup>(); g.blocksRaycasts = false;
-            dmgs.Add(new Dmg { rt = rt, g = g, p = new Vector3(threePos.x, threePos.y, 0.3f), vx = vx });
+            dmgs.Add(new Dmg { rt = rt, g = g, p = new Vector3(threePos.x, threePos.y, 0.3f), vx = parry ? 0 : vx, life = parry ? 1.25f : 0.9f, pop = parry });
             if (dmgs.Count > 10) { Kill(dmgs[0].rt); dmgs.RemoveAt(0); }
         }
+        // letter-spacing .14em 的近似：字间加细空格
+        static string Spaced(string s) { var sb = new System.Text.StringBuilder(); for (int i = 0; i < s.Length; i++) { if (i > 0) sb.Append('\u2009'); sb.Append(s[i]); } return sb.ToString(); }
 
         public void ScreenFlash(float a) { flashA = a; }
         public void SetFade(float a) { fadeTarget = a; }
@@ -843,40 +1007,49 @@ namespace Sanguo
             {
                 // 触摸版：左列方向键，右列四个按钮
                 float colW = (iw - uu) / 2, ry = y, chip = 2.6f * fs * 0.95f;
-                System.Func<float, float, string[], bool[], string, float> chipRow = (x0, yy, chips, bigs, desc) =>
+                // 每行：圆形按键示意 + 说明（说明可折行；行高取两者较高，垂直居中）
+                System.Func<float, float, string[], string, string, float> chipRow = (x0, yy, chips, cls, desc) =>
                 {
                     float x = x0;
+                    float dw = Mathf.Max(4 * fs, x0 + colW - (x0 + chips.Length * (chip + 0.6f * fs)));
+                    var d = Txt(card, desc, fs * 0.95f, C("#f5eddb"), TextAnchor.MiddleLeft, false, FontStyle.Bold); d.horizontalOverflow = HorizontalWrapMode.Wrap;
+                    d.lineSpacing = 1.05f;
+                    TL(d.rectTransform, x0 + chips.Length * (chip + 0.6f * fs), yy, dw, chip);
+                    float rh = Mathf.Max(chip, d.preferredHeight);
+                    d.rectTransform.sizeDelta = new Vector2(dw, rh);
                     for (int i = 0; i < chips.Length; i++)
                     {
-                        var c = Img(card, UIKit.Circle, bigs[i] ? new Color(1, 0.55f, 0.43f, 0.85f) : CA("#f3c969", 0.7f), "Chip").rectTransform;
-                        TL(c, x, yy, chip, chip);
-                        var cf = Img(c, UIKit.Circle, bigs[i] ? new Color(0.63f, 0.16f, 0.12f, 0.85f) : new Color(0.16f, 0.13f, 0.19f, 0.8f), "Face"); UIKit.Stretch(cf.rectTransform, 2 * k, 2 * k, 2 * k, 2 * k);
+                        bool big = cls == "big", pa = cls == "pa";
+                        var c = Img(card, UIKit.Circle, big ? new Color(1, 0.55f, 0.43f, 0.85f) : pa ? new Color(150 / 255f, 210 / 255f, 1, 0.85f) : CA("#f3c969", 0.7f), "Chip").rectTransform;
+                        TL(c, x, yy + (rh - chip) / 2, chip, chip);
+                        var cf = Img(c, UIKit.Circle, big ? new Color(0.63f, 0.16f, 0.12f, 0.85f) : pa ? new Color(40 / 255f, 70 / 255f, 110 / 255f, 0.85f) : new Color(0.16f, 0.13f, 0.19f, 0.8f), "Face"); UIKit.Stretch(cf.rectTransform, 2 * k, 2 * k, 2 * k, 2 * k);
                         var ct = Txt(c, chips[i], fs * 0.9f, C("#fff4dc"), TextAnchor.MiddleCenter, true, FontStyle.Bold); UIKit.Stretch(ct.rectTransform);
                         x += chip + 0.6f * fs;
                     }
-                    var d = Txt(card, desc, fs * 0.95f, C("#f5eddb"), TextAnchor.MiddleLeft, false, FontStyle.Bold); d.horizontalOverflow = HorizontalWrapMode.Wrap;
-                    TL(d.rectTransform, x, yy, Mathf.Max(4 * fs, x0 + colW - x), chip);
-                    return chip + 0.5f * fs;
+                    return rh + 0.5f * fs;
                 };
                 float ly = ry;
-                ly += chipRow(padX, ly, new[] { "◀", "▶" }, new[] { false, false }, "移动（双击冲刺）");
-                ly += chipRow(padX, ly, new[] { "▲" }, new[] { false }, "跳跃（空中可轻击）");
+                ly += chipRow(padX, ly, new[] { "◀", "▶" }, "", "移动（双击冲刺 / 后撤步）");
+                ly += chipRow(padX, ly, new[] { "▲" }, "", "跳跃（空中可轻击）");
                 float rx = padX + colW + uu, ry2 = ry;
-                ry2 += chipRow(rx, ry2, new[] { "轻击" }, new[] { true }, "连按三连击");
-                ry2 += chipRow(rx, ry2, new[] { "重击" }, new[] { false }, "按住蓄力，满蓄破防");
-                ry2 += chipRow(rx, ry2, new[] { "格挡" }, new[] { false }, "按住减伤八成，武力远胜可格开");
-                ry2 += chipRow(rx, ry2, new[] { "绝技" }, new[] { false }, "怒气满时「" + sp.name + "」");
+                ry2 += chipRow(rx, ry2, new[] { "轻击" }, "big", "连按三连击");
+                ry2 += chipRow(rx, ry2, new[] { "重击" }, "", "按住蓄力，满蓄破防");
+                ry2 += chipRow(rx, ry2, new[] { "格挡" }, "", "按住减伤八成");
+                ry2 += chipRow(rx, ry2, new[] { "格开" }, "pa", "来招打到前一瞬轻触：弹开对手，反击 ×1.5 不可挡。落空有破绽，冷却 2.5 秒；挨了第二击后踩准第三击再触可格开（早了无效）；满蓄重击见闪光即触；按住格挡滑过来亦可");
+                ry2 += chipRow(rx, ry2, new[] { "绝技" }, "", "怒气满时「" + sp.name + "」");
                 y = Mathf.Max(ly, ry2);
             }
             else
             {
+                string pw = (DuelSim.JsRound(DuelSim.ParryWindow(DuelLooks.WarOf(me)) * 100) / 100).ToString(System.Globalization.CultureInfo.InvariantCulture);
                 var rows = new[]
                 {
-                    new object[] { new[] { "←", "→", "/", "A", "D" }, "移动", "双击冲刺" },
+                    new object[] { new[] { "←", "→", "/", "A", "D" }, "移动", "向前双击冲刺，向后双击后撤步" },
                     new object[] { new[] { "↑", "W", "空格" }, "跳跃", "空中可轻击" },
                     new object[] { new[] { "J" }, "轻击", "连按三连击" },
                     new object[] { new[] { "K" }, "重击", "按住蓄力，满蓄破防" },
-                    new object[] { new[] { "L", "/", "↓" }, "格挡", "按住减伤八成；武力远胜时可格开连段" },
+                    new object[] { new[] { "L", "/", "↓" }, "格挡", "按住减伤八成；满蓄重击与绝技终结会破防" },
+                    new object[] { new[] { "U" }, "格开", "来招打到前一瞬轻按（约 " + pw + " 秒）：弹开对手，反击一击 ×1.5 不可挡；落空有破绽，冷却 2.5 秒。挨了连段第二击，踩准第三击的节奏再按可格开（按早无效）；满蓄重击见刃口闪光即按" },
                     new object[] { new[] { "I" }, "绝技「" + sp.name + "」", "怒气满时" },
                 };
                 // 左列（键帽，右对齐）宽度
@@ -887,9 +1060,15 @@ namespace Sanguo
                 {
                     var tmp = R("Tmp", card); float kw = Row(tmp, 0, 0, fs, (string[])r[0], null, null, Color.white); UnityEngine.Object.DestroyImmediate(tmp.gameObject);
                     var keys = (string[])r[0];
-                    Row(card, padX + (keyW - kw), y + rowH / 2, fs, keys, keys.Length == 1 && keys[0] == "I" ? new[] { true } : null, null, Color.white);
-                    Row(card, padX + keyW + uu, y + rowH / 2, fs, new string[0], null, (string)r[1], C("#f5eddb"), (string)r[2]);
-                    y += rowH + gapY;
+                    // 说明列（grid 1fr）：主说明 + 灰色小字，放不下时折行；行高取键帽与说明较高者，垂直居中
+                    float dx = padX + keyW + uu, dw = Mathf.Max(4 * fs, iw - keyW - uu);
+                    var d = Txt(card, (string)r[1] + "<size=" + Fs(fs * 0.88f) + "><color=#ada392>  " + (string)r[2] + "</color></size>", fs, C("#f5eddb"), TextAnchor.MiddleLeft, false, FontStyle.Bold, "Desc");
+                    d.supportRichText = true; d.horizontalOverflow = HorizontalWrapMode.Wrap; d.lineSpacing = 1.05f;
+                    TL(d.rectTransform, dx, y, dw, rowH);
+                    float rh = Mathf.Max(rowH, d.preferredHeight);
+                    d.rectTransform.sizeDelta = new Vector2(dw, rh);
+                    Row(card, padX + (keyW - kw), y + rh / 2, fs, keys, keys.Length == 1 && keys[0] == "I" ? new[] { "r" } : keys.Length == 1 && keys[0] == "U" ? new[] { "pk" } : null, null, Color.white);
+                    y += rh + gapY;
                 }
                 if (S.hybrid)
                 {
@@ -1033,7 +1212,7 @@ namespace Sanguo
                     if (full != H0.full)
                     {
                         H0.full = full;
-                        if (full && sim.running && !sim.hasResult) FloatDmg(new Vector3((float)f.x, 2.5f, 0), "怒气满", "lbl", 0);
+                        if (full && sim.running && !sim.hasResult) FloatDmg(new Vector3((float)f.x, 2.5f, 0), "怒气满", "lbl", S.FloatVx("lbl"));
                         H0.rageBorder.SetStops(new[] { full ? C("#ffe08a") : new Color(1, 1, 1, 0.2f) });
                         if (!full) H0.rageFill.SetStops(new[] { C("#5a1a9a"), C("#d8389a"), C("#ff6a3a") }, new[] { 0, 0.6f, 1 });
                     }
@@ -1046,7 +1225,7 @@ namespace Sanguo
                         H0.rageFill.SetStops(cs, ps);
                     }
                     string lt = full ? (compact ? "绝技" : "绝技「" + spx.name + "」") + (isP && !S.isTouch ? " <color=#ff8a70>[I]</color>" : "") : "怒";
-                    if (lt != H0.lblText) { H0.lblText = lt; H0.lbl.text = lt; }
+                    if (lt != H0.lblText) { H0.lblText = lt; H0.lbl.text = lt; LayoutRage(i); }
                     H0.lbl.color = full ? new Color(1, 0.88f, 0.54f, Mathf.Lerp(0.55f, 1, 0.5f + 0.5f * Mathf.Sin(realT * Mathf.PI / 0.6f))) : C("#d8a8ff");
                     // 受击时头像抖动（.28 秒）
                     if (H0.shakeT < 0.28f)
@@ -1054,6 +1233,28 @@ namespace Sanguo
                         H0.shakeT += dt; float q = Mathf.Clamp01(H0.shakeT / 0.28f);
                         float sx = q < 0.2f ? Mathf.Lerp(0, -5, q / 0.2f) : q < 0.4f ? Mathf.Lerp(-5, 5, (q - 0.2f) / 0.2f) : q < 0.6f ? Mathf.Lerp(5, -3, (q - 0.4f) / 0.2f) : q < 0.8f ? Mathf.Lerp(-3, 2, (q - 0.6f) / 0.2f) : Mathf.Lerp(2, 0, (q - 0.8f) / 0.2f);
                         H0.port.anchoredPosition = new Vector2(sx * k, 0);
+                    }
+                }
+                // 格开冷却环 / 反击窗口（进度按 1/50 量化，变化时才改样式）
+                {
+                    float pp = Mathf.Floor((float)(1 - sim.ParryCd(f) / DuelSim.PARRY_CD) * 50 + 0.5f) / 50;   // JS Math.round（四舍五入，非银行家舍入）
+                    string pst = sim.Countering(f) ? "ctr" : pp >= 1 ? "ready" : "";
+                    if (pp != H0.pp || pst != H0.pst)
+                    {
+                        H0.pp = pp; H0.pst = pst;
+                        StyleChip(H0, pp, pst, realT);
+                        if (S.player == i)
+                        {
+                            paP = pp; paReady = pp >= 1;
+                            if (paRing != null) { paRing.fillAmount = pp; paTrack.fillAmount = 1 - pp; }
+                            if (legendU != null) legendU.alpha = pp < 1 ? 0.4f : 1;
+                        }
+                    }
+                    // 反击窗口：快速明灭（opacity .55 ↔ 1，.18 秒往返）
+                    if (H0.pchip != null)
+                    {
+                        var cg = UIKit.Ensure<CanvasGroup>(H0.pchip.gameObject);
+                        cg.alpha = pst == "ctr" ? Mathf.Lerp(0.55f, 1, 0.5f - 0.5f * Mathf.Cos(realT * Mathf.PI / 0.18f)) : 1;
                     }
                 }
                 var cb = combo[i];
@@ -1065,6 +1266,14 @@ namespace Sanguo
                     if (cb.popT < 0.22f) { cb.popT += dt; cb.num.rectTransform.localScale = Vector3.one * Mathf.LerpUnclamped(1.6f, 1, Pop(Mathf.Clamp01(cb.popT / 0.22f))); }
                 }
             }
+            // 格开得手：四周金光（立即亮起，停 0.08 秒后 0.3 秒 ease-out 淡去）、触摸按钮闪光
+            if (edgeImg != null)
+            {
+                float ea = 0;
+                if (edgeT < 0.38f) { edgeT += dt; ea = edgeT < 0.08f ? 1 : 1 - Out(Mathf.Clamp01((edgeT - 0.08f) / 0.3f)); }
+                edgeImg.color = new Color(1, 1, 1, ea);
+            }
+            if (paFlashT < 0.45f) paFlashT += dt;
             // 计时
             int left = Mathf.Max(0, (int)Math.Ceiling(sim.limit - sim.time));
             if (left != lastLeft && timerT != null) { lastLeft = left; timerT.text = left.ToString(); timerLow = left <= 10; }
@@ -1078,15 +1287,15 @@ namespace Sanguo
             {
                 var d = dmgs[i];
                 d.t += dt;
-                if (d.t > 0.9f || d.rt == null) { Kill(d.rt); dmgs.RemoveAt(i); continue; }
-                var w = new Vector3(d.p.x + d.vx * d.t, d.p.y + d.t * 0.9f, -d.p.z);
+                if (d.t > d.life || d.rt == null) { Kill(d.rt); dmgs.RemoveAt(i); continue; }
+                var w = new Vector3(d.p.x + d.vx * d.t, d.p.y + d.t * (d.pop ? 0.35f : 0.9f), -d.p.z);
                 var sp = cam != null ? cam.WorldToScreenPoint(w) : Vector3.zero;
                 float x = sp.x / Mathf.Max(1, Screen.width) * W, yTop = H - sp.y / Mathf.Max(1, Screen.height) * H;
                 yTop = Mathf.Max(hudBot, yTop);
                 d.rt.anchoredPosition = new Vector2(x, H - yTop);
-                float sc = d.t < 0.12f ? 1.5f - d.t * 4 : 1;
+                float sc = d.pop ? (d.t < 0.14f ? 2.1f - d.t * 7.86f : 1 + 0.04f * Mathf.Sin(d.t * 9)) : d.t < 0.12f ? 1.5f - d.t * 4 : 1;
                 d.rt.localScale = Vector3.one * sc;
-                d.g.alpha = Mathf.Clamp01((0.9f - d.t) * 3);
+                d.g.alpha = Mathf.Clamp01((d.life - d.t) * 3);
             }
         }
 

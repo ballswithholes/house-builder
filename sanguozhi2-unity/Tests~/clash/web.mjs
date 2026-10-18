@@ -1,11 +1,12 @@
 // 攻击画面（第三版，js/clash.js）的网页版参考：headless Chromium（SwiftShader WebGL）逐个打开
-// tests/clash.html?embed=1&board=0&case=…&cult=…&scene=…&coast=1&freeze=1.66（用例见 cases.json），等场景建好、动画停在接敌时刻后：
+// tests/clash.html?embed=1&board=0&case=…&cult=…&scene=…&coast=1&freeze=1.66（用例见 cases.json），等场景建好、动画依次停在
+// 用例的各个时刻（cases.json 的 times，缺省接敌 contact 与混战 melee；时刻表见下方 TIME）后：
 //   web-<名>.json  布景（文化 / 群落 / 城墙 / 房屋 / 登陆与群落参数）、双方（姓名、颜色、识别色、文化、兵力、阵型）、随机种子、
 //                  地形高度采样、地面网格（顶点 / 三角形数、位置 / 顶点色 / aGnd 的和）、道具网格（近 / 远：顶点数、位置与顶点色的和、
 //                  aKind 直方图）、水面（河 / 海）、草丛与野花（实例数、位置 / 缩放 / 颜色的和）、两军（人数、阵列、每名士兵的兵种 /
-//                  角色 / 阵位 / 倒地时刻）、武将、箭与兵力碎块、事件数、士兵群统计；两个时刻（接敌 1.66 s、混战 2.2 s）的镜头
-//                  （位置、四元数、视角、宽高比）与每名士兵 / 旗手 / 武将的位置、朝向、动作片段——全部为 three 坐标
-//   web-<名>-<时刻>.png   截图（960 × 540，HUD 隐藏）
+//                  角色 / 阵位 / 倒地时刻）、武将、箭与兵力碎块、事件数、士兵群统计；各时刻的镜头（位置、四元数、视角、宽高比）、雾、
+//                  HUD 顶栏下沿与每名士兵 / 旗手 / 武将的位置、朝向、动作片段——全部为 three 坐标
+//   web-<名>-<时刻>.png   截图（缺省 960 × 540，用例可用 screen: [宽, 高] 改，如竖屏 [540, 960]；HUD 隐藏）
 // 用法：node web.mjs refs <输出目录> [名…]        （由 Tests~/clash/run.sh 调用）
 //       node web.mjs compose <输出目录> [名…]     把 web-<名>-<时刻>.png 与 unity-<名>-<时刻>.png 左右拼成 side-<名>-<时刻>.png
 import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
@@ -20,14 +21,18 @@ const outDir = path.resolve(process.argv[3] || path.join(here, '../out/clash'));
 const only = process.argv.slice(4);
 fs.mkdirSync(outDir, { recursive: true });
 const CASES = JSON.parse(fs.readFileSync(path.join(here, 'cases.json'), 'utf8')).filter(c => !only.length || only.includes(c.name));
-const W = 960, H = 540;
-const TIMES = [['contact', 1.66], ['melee', 2.2]];
+// 时刻表（秒；与 ClashHarness.cs 的 TIME 相同）：行进、冲锋、接敌、必杀特效、混战、整队、收尾
+const TIME = { march: 0.35, charge: 1.3, contact: 1.66, fx: 1.8, melee: 2.2, regroup: 2.9, end: 3.3 };
+const timesOf = c => (c.times || ['contact', 'melee']).map(n => [n, TIME[n]]).sort((a, b) => a[1] - b[1]);
+const sizeOf = c => (c.screen && c.screen.length === 2 ? { W: c.screen[0], H: c.screen[1] } : { W: 960, H: 540 });
+for (const c of CASES) for (const [n, v] of timesOf(c)) if (v === undefined) { console.log('未知时刻 ' + n + '（' + c.name + '）'); process.exit(99); }
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--allow-file-access-from-files'] });
-const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
+const page = await browser.newPage({ viewport: { width: 960, height: 540 }, deviceScaleFactor: 1 });
 page.on('pageerror', e => console.log('页面错误', e.message));
 
 if (mode === 'compose') {
-  for (const c of CASES) for (const [tn] of TIMES) {
+  for (const c of CASES) for (const [tn] of timesOf(c)) {
+    const { W, H } = sizeOf(c);
     const a = path.join(outDir, `web-${c.name}-${tn}.png`), b = path.join(outDir, `unity-${c.name}-${tn}.png`);
     if (!fs.existsSync(a) || !fs.existsSync(b)) { console.log('  缺 ' + c.name + ' ' + tn); continue; }
     const url = f => 'data:image/png;base64,' + fs.readFileSync(f).toString('base64');
@@ -125,6 +130,8 @@ function dumpTime() {
 
 for (const c of CASES) {
   const t0 = Date.now();
+  const TIMES = timesOf(c), { W, H } = sizeOf(c);
+  await page.setViewportSize({ width: W, height: H });
   const q = new URLSearchParams({ embed: '1', board: '0', case: c.case, freeze: String(TIMES[0][1]) });
   if (c.cult) q.set('cult', c.cult);
   if (c.special) q.set('special', c.special);

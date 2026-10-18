@@ -35,6 +35,8 @@ namespace Sanguo
     //   战斗动画默认开启：启动时一次性清除旧存的攻击画面设定（PlayerPrefs「sanguozhi2_clash」，「快」保留），标记键「sanguozhi2_v3_clash_reset」。
     //   头像预生成尺寸按 Portrait.FaceSizes()；选择君主的列表行带头像（FaceItem），确认框为头像名片；剧本简介中提到的武将带行内小头像。
     //   读入第二版存档（GameState.migratedFrom == 2）后提示一次「存档已升级」。
+    //   主场景灯光按网页版 art.js 换算（太阳 0.8625、三色环境光 × 0.56，见 SetupWorld）；战场地形取自地图的地形模型（BattleTerrain.ModelSource）。
+    //   人物模型的启动预热（图集、环境贴图、汉军士兵）由 Clash.WarmUp 在战略画面就绪后（标题画面背后）分片进行，同网页版 clash.js 的 warm。
     public class Game : MonoBehaviour
     {
         public static Game I;
@@ -118,17 +120,21 @@ namespace Sanguo
             sun = new GameObject("Sun").AddComponent<Light>();
             sun.type = LightType.Directional;
             sun.transform.rotation = Quaternion.Euler(48, -35, 0);
+            // 第三版：着色器照抄网页版的光照公式，灯光按「Unity 强度 = 网页版强度 / π」换算（js/art.js：
+            // 太阳 SUN_INTENSITY 1.15 × π × EXPOSURE_SUN 0.75 → 0.8625；半球光 π × EXPOSURE_AMB 0.56 → 三色环境光各色 × 0.56，
+            // 地平线色 = AMB_EQUATOR × 0.56，与地形、道具、城墙的着色器补丁相同）。攻击画面与单挑画面各有自己的灯光。
             sun.color = new Color(1f, 0.94f, 0.84f);
-            sun.intensity = 1.15f;
+            sun.intensity = SunIntensity;
             sun.shadows = LightShadows.Soft;
             sun.shadowStrength = 0.55f;
             sun.shadowBias = 0.04f; sun.shadowNormalBias = 0.3f;
             RenderSettings.sun = sun;
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.62f, 0.68f, 0.8f);
-            RenderSettings.ambientEquatorColor = new Color(0.58f, 0.56f, 0.5f);
-            RenderSettings.ambientGroundColor = new Color(0.32f, 0.3f, 0.26f);
+            RenderSettings.ambientSkyColor = Amb(0.62f, 0.68f, 0.8f);          // (0.3472, 0.3808, 0.448)
+            RenderSettings.ambientEquatorColor = Amb(0.58f, 0.56f, 0.5f);      // (0.3248, 0.3136, 0.28)
+            RenderSettings.ambientGroundColor = Amb(0.32f, 0.3f, 0.26f);       // (0.1792, 0.168, 0.1456)
             RenderSettings.skybox = Art.Sky;
+            try { DynamicGI.UpdateEnvironment(); } catch (System.Exception) { /* 忽略 */ }
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
             RenderSettings.fogColor = new Color(0.86f, 0.84f, 0.78f);
@@ -138,6 +144,11 @@ namespace Sanguo
             // 战场地形取自战略地图的地形模型（第三版 §2；没有时 BattleTerrain 退回无头重建）
             BattleTerrain.ModelSource = () => Map != null ? Map.Model : null;
         }
+
+        // 主场景（地图、战场）的灯光：网页版 art.js 的 SUN_INTENSITY × EXPOSURE_SUN 与 EXPOSURE_AMB（three 的 π 已约去）
+        public const float SunIntensity = 1.15f * 0.75f;      // 0.8625
+        public const float AmbientK = 0.56f;
+        static Color Amb(float r, float g, float b) { return new Color(r * AmbientK, g * AmbientK, b * AmbientK, 1); }
 
         static CameraRig CreateRig()
         {

@@ -953,6 +953,13 @@ namespace Sanguo
             foreach (var g in spUi) if (g != null) Destroy(g);
             spUi.Clear();
             emitters.Clear(); burnFx.Clear();
+            // 火计借用的点光源若仍未熄灭（战斗在火势中结束），地面火光与它的材质在这里释放（网页版 dispose 遍历整组释放非共享材质）
+            foreach (var s in spLights)
+            {
+                if (s.glow != null) Destroy(s.glow);
+                if (s.glowMat != null) Destroy(s.glowMat);
+                s.glow = null; s.glowMat = null; s.busy = false; s.cur = 0;
+            }
             if (glow != null) { glow.Dispose(); flame.Dispose(); heat.Dispose(); dust.Dispose(); glow = flame = heat = dust = null; }
             if (petals != null) { petals.Dispose(); petals = null; }
             if (flashImg != null) Destroy(flashImg.gameObject);

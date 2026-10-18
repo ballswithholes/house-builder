@@ -4,7 +4,8 @@
 //   _Brick = 1：竖直面为错缝砖（0.44 × 0.21 米，每块明暗略异、灰缝压暗、风化起伏、下暗上亮、墙根青苔），平顶为 0.8 米方砖；
 //              只作用于低饱和度的石色（stone 权重），按世界坐标（three：z 取反）程序化——与 JS 的 color_fragment 补丁逐行相同；
 //   _HL = 1：LowPoly 的半兰伯特 ndl = (n·l·0.5 + 0.5)² × 1.15；_HL = 0：Lambert ndl = max(n·l, 0)（three MeshLambertMaterial）；
-//   _Cull：剔除方式（帅旗双面：背面按 VFACE 翻转法线）。环境光：球谐（场景 Trilight），按同一法线在自发光里加。
+//   _Cull：剔除方式（帅旗双面：背面按 VFACE 翻转法线）。环境光按同一法线在自发光里加：_HL = 1 为 LowPoly 补丁的三色环境光
+//   （地平线 = 主场景的地平线色 × 0.56），_HL = 0 为 three 的半球光（地面 → 天空按 n.y·0.5 + 0.5）；颜色为全局 _DuelAmb*。
 Shader "Sanguo/DuelProp"
 {
     Properties
@@ -26,6 +27,12 @@ Shader "Sanguo/DuelProp"
         sampler2D _MainTex;
         fixed4 _Color;
         half _Brick, _HL;
+        float4 _DuelAmbSky, _DuelAmbEq, _DuelAmbGnd;    // 全局（Shader.SetGlobalColor）
+        float3 sgAmb (float ny)
+        {
+            if (_HL < 0.5) return lerp(_DuelAmbGnd.rgb, _DuelAmbSky.rgb, ny * 0.5 + 0.5);
+            return ny >= 0.0 ? lerp(_DuelAmbEq.rgb, _DuelAmbSky.rgb, ny) : lerp(_DuelAmbEq.rgb, _DuelAmbGnd.rgb, -ny);
+        }
         struct Input
         {
             float2 uv_MainTex;
@@ -88,7 +95,7 @@ Shader "Sanguo/DuelProp"
             }
             o.Albedo = c;
             o.WN = IN.facing < 0 ? -wn : wn;
-            o.Emission = c * ShadeSH9(float4(o.WN, 1.0));
+            o.Emission = c * sgAmb(o.WN.y);
             o.Alpha = 1;
         }
         ENDCG

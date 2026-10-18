@@ -1,7 +1,8 @@
 // 单挑画面的地面（第三版）← 网页版 js/duel-game.js 的 groundMaterial：SG.Gfx.terrainMaterial()（js/art.js 的 TERRAIN_FS_ALBEDO）
 // 的顶点版，只改一处——高度换算为「海拔」：sgH = 1.2 + y × 0.32（场地 y = 0 不当作海滩，远山山顶才见岩石）。
 // 其余与 Sanguo/Terrain 的顶点版逐行相同：顶点色 = 底色，uv2（TEXCOORD1）= aMat（沙, 岩石倾向, 雪, 1 − 农田）；
-// LowPoly 的半兰伯特光照（ndl = (n·l·0.5 + 0.5)² × 1.15，主光与轮廓光都按此）+ 球谐环境光（场景 Trilight）；最终颜色经高光肩部。
+// LowPoly 的半兰伯特光照（ndl = (n·l·0.5 + 0.5)² × 1.15，主光与轮廓光都按此）+ LowPoly 补丁的三色环境光（天空 / 地面 = 本场的
+// 半球光，地平线 = 主场景的地平线色 × 0.56，全局 _DuelAmbSky / _DuelAmbEq / _DuelAmbGnd，由 DuelScreen 设定）；最终颜色经高光肩部。
 // 坐标：着色计算沿用网页版的 three 坐标（世界坐标 z 取反），单挑场地的根在世界原点。
 Shader "Sanguo/DuelGround"
 {
@@ -18,6 +19,9 @@ Shader "Sanguo/DuelGround"
         #pragma surface surf DuelGroundHL vertex:vert finalcolor:shoulder fullforwardshadows addshadow noambient
         #pragma target 3.0
         sampler2D _DetA, _DetB;
+        float4 _DuelAmbSky, _DuelAmbEq, _DuelAmbGnd;    // 全局（Shader.SetGlobalColor）
+        // 网页版 LowPoly 补丁的三色环境光：n.y ≥ 0 时地平线 → 天空，否则地平线 → 地面
+        float3 sgAmb (float ny) { return ny >= 0.0 ? lerp(_DuelAmbEq.rgb, _DuelAmbSky.rgb, ny) : lerp(_DuelAmbEq.rgb, _DuelAmbGnd.rgb, -ny); }
         struct Input
         {
             float3 worldPos;
@@ -141,8 +145,8 @@ Shader "Sanguo/DuelGround"
             sgCol *= 0.74 + 0.52 * clamp(sgAO, 0.0, 1.0);
             o.Albedo = sgCol;
             o.WN = float3(sgN.x, sgN.y, -sgN.z);
-            // 环境光（天空 / 地平 / 地面三色，Unity 换算成球谐）按同一法线取；自发光在肩部曲线之前加入，顺序与网页版一致
-            o.Emission = sgCol * ShadeSH9(float4(o.WN, 1.0));
+            // 三色环境光按同一法线取（自发光在肩部曲线之前加入，顺序与网页版一致）
+            o.Emission = sgCol * sgAmb(sgN.y);
             o.Alpha = 1;
         }
         ENDCG

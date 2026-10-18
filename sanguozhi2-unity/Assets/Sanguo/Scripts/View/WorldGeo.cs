@@ -980,7 +980,7 @@ namespace Sanguo
             if (list != null) foreach (int i in list) d = Math.Min(d, Hyp(CityX[i] - x, CityZ[i] - z));
             return d;
         }
-        static double Hyp(double x, double y) { return Math.Sqrt(x * x + y * y); }
+        static double Hyp(double x, double y) { x = Math.Abs(x); y = Math.Abs(y); double m = Math.Max(x, y); if (m == 0) return 0; double a = x / m, b = y / m; return Math.Sqrt(a * a + b * b) * m; }   // 与 V8 的 Math.hypot 逐位一致（两个参数）
         // GLSL 式 smoothstep（a > b 时反向）
         public static double SS(double a, double b, double x) { double t = (x - a) / (b - a); t = t < 0 ? 0 : t > 1 ? 1 : t; return t * t * (3 - 2 * t); }
         static double Perlin(double x, double y) { return WorldGeo.Perlin(x, y); }

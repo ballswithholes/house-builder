@@ -18,7 +18,7 @@ Shader "Sanguo/ClashProp"
         CGPROGRAM
         #pragma surface surf ClashHL vertex:vert fullforwardshadows addshadow noambient
         #pragma target 3.0
-        fixed4 _Color;
+        half4 _Color;                   // 必杀箭雨的染色可达 2.2（fixed 在移动端只保证 ±2），故用 half
         float4 _SgClashOrigin;
         half4 _SgClashSky, _SgClashEq, _SgClashGnd;
         struct Input
@@ -30,7 +30,7 @@ Shader "Sanguo/ClashProp"
         };
         struct SurfaceOutputClash
         {
-            fixed3 Albedo; fixed3 Normal; fixed3 Emission; half Specular; fixed Gloss; fixed Alpha;
+            half3 Albedo; fixed3 Normal; half3 Emission; half Specular; fixed Gloss; fixed Alpha;
             float3 WN;
         };
         void vert (inout appdata_full v, out Input o)

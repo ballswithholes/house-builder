@@ -1,12 +1,23 @@
 [
-  { "name": "han-plain", "title": "汉 平原（关羽→曹仁）", "case": "plain-even" },
+  { "name": "han-plain", "title": "汉 平原（关羽→曹仁）", "case": "plain-even", "times": ["march", "charge", "contact", "melee", "regroup", "end"] },
   { "name": "roman-gate", "title": "罗马石城 城门（塞维鲁→阿根托克）", "case": "gate-even", "cult": "roman-celt", "scene": "roman" },
   { "name": "africa-castle", "title": "非洲泥砖 本城（曹操→吕布）", "case": "castle-even", "scene": "africa" },
   { "name": "celt-coast", "title": "凯尔特海岸 登陆（塞维鲁→阿根托克）", "case": "plain-even", "cult": "roman-celt", "scene": "celt", "coast": true },
-  { "name": "river-storm", "title": "河川 借东风（诸葛亮→曹操）", "case": "river-big", "special": "storm" },
-  { "name": "forest-blaze", "title": "森林 火烧连营（陆逊→黄祖）", "case": "forest-even", "special": "blaze" },
+  { "name": "river-storm", "title": "河川 借东风（诸葛亮→曹操）", "case": "river-big", "special": "storm", "times": ["contact", "fx", "melee"] },
+  { "name": "forest-blaze", "title": "森林 火烧连营（陆逊→黄祖）", "case": "forest-even", "special": "blaze", "times": ["contact", "fx", "melee"] },
   { "name": "hill-big", "title": "山丘 以众击寡（张飞→吕布）", "case": "hill-big" },
   { "name": "mountain-small", "title": "山岳 以寡击众（赵云→颜良）", "case": "mountain-small" },
   { "name": "wall-rout", "title": "南蛮木寨 城墙 击溃（孟获→诸葛亮）", "case": "wall-rout" },
-  { "name": "plain-smite", "title": "平原 青龙偃月斩（关羽→曹仁）", "case": "plain-even", "special": "smite" }
+  { "name": "plain-smite", "title": "平原 青龙偃月斩（关羽→曹仁）", "case": "plain-even", "special": "smite", "times": ["contact", "fx", "melee"] },
+  { "name": "steppe-yurt", "title": "草原 毡帐（轲比能→卫温）", "case": "plain-even", "cult": "steppe-han", "scene": "steppe" },
+  { "name": "nanman-stilt", "title": "南蛮 干栏 城墙（区连→孟获）", "case": "wall-even", "cult": "seasia-nanman" },
+  { "name": "german-gate", "title": "日耳曼 木栅 城门 以寡击众（巴洛马尔→赞提克）", "case": "gate-small", "cult": "german-sarmatian", "scene": "german" },
+  { "name": "kushan-castle", "title": "贵霜 红砖 本城（白霸→波调）", "case": "castle-typ", "cult": "tarim-kushan" },
+  { "name": "persia-gate", "title": "安息 土坯 城门 击溃（沃洛吉斯→阿卜加尔）", "case": "gate-rout", "cult": "persia-arab", "times": ["contact", "melee", "end"] },
+  { "name": "india-tiny", "title": "天竺 茅屋 残兵（关羽→曹仁）", "case": "plain-tiny", "scene": "india" },
+  { "name": "boreal-mtn", "title": "北方针叶林 山岳（赵云→颜良）", "case": "mountain-even", "biome": "boreal" },
+  { "name": "alpine-hill", "title": "高山 山丘 反被击溃（张飞→吕布）", "case": "hill-fail", "biome": "alpine", "times": ["contact", "melee", "regroup"] },
+  { "name": "wa-coast", "title": "倭 海岸 以寡击众（难升米→乙巴素）", "case": "plain-small", "cult": "wa-korea", "scene": "korea", "coast": true },
+  { "name": "volley-med", "title": "地中海 百步穿杨（黄忠→曹仁）", "case": "plain-even", "special": "volley", "biome": "med", "times": ["contact", "fx", "melee"] },
+  { "name": "roman-gate-tall", "title": "竖屏 罗马石城 城门（塞维鲁→阿根托克）", "case": "gate-even", "cult": "roman-celt", "scene": "roman", "screen": [540, 960], "times": ["charge", "contact", "melee", "regroup"] }
 ]

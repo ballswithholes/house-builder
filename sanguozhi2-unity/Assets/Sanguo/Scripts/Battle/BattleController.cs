@@ -19,6 +19,7 @@ namespace Sanguo
     //   竖屏开场镜头；电脑行动后镜头回到我军；部队情报卡显示头像与必杀
     // 第三版（← battle-controller.js v3，DESIGN-V3 §2、§4；规则见 BattleModel / Specials / Tactics / Progress）：
     //   战场 18×13：开场镜头距离 38（触屏 40），最远 72。
+    //   开战时预热攻击画面里双方文化的士兵（Clash.Prepare）；开场横幅之后等战场人物模型就绪（BattleView.Ready，最多再等 4 秒）再开始第一回合。
     //   行动菜单「必杀」→ 列出该部队会的全部必杀（专属在前，每招每战一次；已施展 / 无目标的灰显并注明原因）→ 选目标 →
     //     特写（所选招式）+ 结算与特效（PerformSpecial，special = 所选招式）；只会一招时直接选目标。
     //   「策略」→ 列出已会的计策（原四计按智力 + 习得的新计策，Tactics.MenuItems）；新计策经 Tactics.Perform 结算，
@@ -57,8 +58,9 @@ namespace Sanguo
             // 布置战场也放进 try：其中任何一步抛出异常时，finally 照样恢复地图、镜头与音乐
             try
             {
-                // INTEGRATION（攻击画面移植后启用）：预热本战双方文化的士兵模板与动作（网页版 SG.Clash.prepare）
-                //   if (Clash.Enabled) Clash.Prepare(M.units.Select(u => u.gen != null && !string.IsNullOrEmpty(u.gen.culture) ? u.gen.culture : "han"));
+                // 攻击画面预热本战双方文化的士兵模板与动作（网页版 SG.Clash.prepare；汉军已在启动后预热，其余文化在开场横幅期间后台分片生成）
+                try { if (Clash.Enabled) Clash.Prepare(M.units.Select(u => u.gen != null && !string.IsNullOrEmpty(u.gen.culture) ? u.gen.culture : "han")); }
+                catch (Exception e) { Debug.LogWarning(e); }
                 Game.I.Map.Root.gameObject.SetActive(false);
                 rig.Bounds = new Rect(BattleView.Origin.x, BattleView.Origin.z, M.W * BattleView.T, M.H * BattleView.T);
                 rig.MinDist = 12; rig.MaxDist = 72;        // 第三版战场 18×13：可拉得更远
@@ -82,8 +84,8 @@ namespace Sanguo
                 UIKit.Banner(s.target.name + "之战", an + "军 进攻 " + dn + "军", 2.2f);
                 Sfx.Play("horn");
                 yield return new WaitForSeconds(1.6f);
-                // INTEGRATION（战场人物模型移植后启用）：人物模型分片就绪后再开始第一回合（最多再等 4 秒；网页版 V.ready）
-                //   for (float w = 0; !V.Ready && w < 4f; w += Time.unscaledDeltaTime) yield return null;
+                // 人物模型分片就绪后再开始第一回合（最多再等 4 秒；网页版 Promise.race([V.ready, SG.wait(4)])）
+                for (float w = 0; !V.Ready && w < 4f; w += Time.unscaledDeltaTime) yield return null;
 
                 while (M.result == 0)
                 {
@@ -859,14 +861,15 @@ namespace Sanguo
                 V.Hit(h.unit, h.dmg, true);
             };
             yield return V.SpecialFx(u, FxTargets(res, u), sp.fx, Art.Hex(sp.color ?? "#ffd36b"), new SpecialFxInfo { sp = sp, res = res, target = target, onHit = onHit });
-            // 突击 / 击退后的位置（特效未处理时直接归位）
+            // 突击 / 击退后的位置（特效未处理时直接归位）。写逻辑位置 v.pos（= specials.js v.pos.copy(t)）：
+            // UnitVisual 每帧按 pos 重设变换，直接改 transform 会被覆盖
             var movedUnits = new List<BUnit>();
             if (res.moved != null) movedUnits.Add(u);
             foreach (var p in res.pushed) movedUnits.Add(p.unit);
             foreach (var x in movedUnits)
             {
                 var v = V.VisOf(x);
-                if (v != null) { var t = V.Tile(x.x, x.y); if (Vector3.Distance(v.transform.position, t) > 0.05f) v.transform.position = t; }
+                if (v != null) { var t = V.Tile(x.x, x.y); if (Vector3.Distance(v.pos, t) > 0.05f) v.pos = t; }
             }
             // 飘字
             Action<BUnit, string, string, int, float> text = (x, s, col, size, k) => { try { V.FloatText(V.Tile(x.x, x.y) + Vector3.up * k, s, Art.Hex(col), size); } catch (Exception e) { Debug.LogException(e); } };

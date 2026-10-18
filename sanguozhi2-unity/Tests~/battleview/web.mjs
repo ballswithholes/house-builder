@@ -4,7 +4,8 @@
 // 等人物模型就绪（view.ready）后：
 //   web-<名>.json  棋盘与部队（地图、部队的武将 / 位置 / 兵力）、view.stats（三角形数、树石草与点缀的数量、水面、船）、
 //                  各实例批次（名称、数量、位置与缩放的和、实例色的和）、地形网格高度的和、各格站立高度、部队的贴地位置与朝向、
-//                  士兵（兵种、骑乘、实例矩阵）、主将与战马的世界矩阵、镜头（位置、四元数、视角、宽高比）——three 坐标
+//                  士兵（兵种、骑乘、实例矩阵）、主将与战马的世界矩阵、镜头（位置、四元数、视角、宽高比）、
+//                  地形 / 裙边 / 水面 / 城池 / 船各网格的三角形数与按三角形展开的属性之和（位置、法线、颜色、aMat、aBt）——three 坐标
 //   web-<名>.png   截图（960 × 540）
 // 用法：node web.mjs <输出目录> [名…]          （由 Tests~/battleview/run.sh 调用；cases.json 为用例表）
 //       node web.mjs compose <输出目录>        把 web-<名>.png 与 unity-<名>.png 左右拼成 side-<名>.png
@@ -99,6 +100,21 @@ for (const c of CASES) {
       cam: { pos: cam.position.toArray(), quat: cam.quaternion.toArray(), fov: cam.fov, aspect: cam.aspect, near: cam.near, far: cam.far },
       sunDir: SG.Gfx.sunDir ? SG.Gfx.sunDir.toArray() : null,
       viewMs: window.__viewMs, mapMs: window.__mapMs,
+      // 各网格（地形、裙边、水面、城池、船）：三角形数、顶点数、按三角形展开（每个索引计一次）的各属性分量之和
+      meshes: Object.fromEntries(['Board', 'Skirt', 'Water', 'Fort', 'Boats'].map(nm => {
+        const ob = V.group.children.find(o => o.name === nm);
+        if (!ob || !ob.geometry) return [nm, null];
+        const g = ob.geometry, A = g.attributes, I = g.index ? g.index.array : null;
+        const n = I ? I.length : A.position.count;
+        const r = { tris: n / 3, verts: A.position.count };
+        for (const an of ['position', 'normal', 'color', 'aMat', 'aBt']) {
+          const at = A[an]; if (!at) continue;
+          const k = at.itemSize, a = at.array, sum = new Array(k).fill(0);
+          for (let i = 0; i < n; i++) { const v = I ? I[i] : i; for (let c = 0; c < k; c++) sum[c] += a[v * k + c]; }
+          r[an] = sum;
+        }
+        return [nm, r];
+      })),
     };
   });
   fs.writeFileSync(path.join(outDir, 'web-' + c.name + '.json'), JSON.stringify(ref));

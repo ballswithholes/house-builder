@@ -1,43 +1,23 @@
 [
- {
-  "name": "jiangling",
-  "city": "江陵",
-  "from": "襄阳"
- },
- {
-  "name": "hanzhong",
-  "city": "汉中",
-  "from": "长安"
- },
- {
-  "name": "roma",
-  "city": "罗马",
-  "from": "迦太基"
- },
- {
-  "name": "ctesiphon",
-  "city": "泰西封",
-  "from": "苏萨"
- },
- {
-  "name": "pataliputra",
-  "city": "华氏城",
-  "from": "憍赏弥"
- },
- {
-  "name": "loulan",
-  "city": "楼兰",
-  "from": "敦煌"
- },
- {
-  "name": "landing",
-  "city": "乐浪",
-  "from": "北海"
- },
- {
-  "name": "synth",
-  "city": "泰西封",
-  "from": "苏萨",
-  "terrain": false
- }
+ { "name": "jiangling", "city": "江陵", "from": "襄阳" },
+ { "name": "hanzhong", "city": "汉中", "from": "长安" },
+ { "name": "roma", "city": "罗马", "from": "迦太基" },
+ { "name": "ctesiphon", "city": "泰西封", "from": "苏萨" },
+ { "name": "pataliputra", "city": "华氏城", "from": "憍赏弥" },
+ { "name": "loulan", "city": "楼兰", "from": "敦煌" },
+ { "name": "landing", "city": "乐浪", "from": "北海" },
+ { "name": "synth", "city": "泰西封", "from": "苏萨", "terrain": false },
+ { "name": "guonei", "city": "国内城", "from": "玄菟" },
+ { "name": "ito", "city": "伊都", "from": "徐罗伐" },
+ { "name": "danhan", "city": "弹汗山", "from": "宁城" },
+ { "name": "xianglin", "city": "象林", "from": "日南" },
+ { "name": "yunnan", "city": "云南", "from": "建宁" },
+ { "name": "hatra", "city": "哈特拉", "from": "泰西封" },
+ { "name": "aksum", "city": "阿克苏姆", "from": "阿杜利斯" },
+ { "name": "caledonia", "city": "喀里多尼亚", "from": "埃博拉库姆" },
+ { "name": "marco", "city": "马科曼尼", "from": "卡农图姆" },
+ { "name": "iazyges", "city": "雅济吉斯", "from": "夸迪" },
+ { "name": "ujjain", "city": "乌贾因", "from": "秣菟罗" },
+ { "name": "baquates", "city": "巴夸特", "from": "廷吉斯" },
+ { "name": "taiwan", "city": "夷洲", "from": "会稽" }
 ]

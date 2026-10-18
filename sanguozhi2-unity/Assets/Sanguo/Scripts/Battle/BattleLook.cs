@@ -589,7 +589,7 @@ namespace Sanguo
         Seg[] segX, segY;
         // 裙边
         public bool seaSkirt; public float skirtY; public Color edgeTint;
-        public Vector3[] sPos; public Color[] sCol; public int[] sTri;
+        public Vector3[] sPos, sNrm; public Color[] sCol; public Vector4[] sMat, sBt; public int[] sTri;   // sMat / sBt 只在陆地裙边有（海面为 null）
         // 水面
         public readonly List<Vector3> wPos = new List<Vector3>(); public readonly List<Color> wCol = new List<Color>(); public readonly List<int> wTri = new List<int>();
         // 各格站立高度
@@ -1027,8 +1027,15 @@ namespace Sanguo
                 double X0 = Origin.x + (uMin + 0.5) * T, X1 = Origin.x + (uMax + 0.5) * T, Z0 = Origin.z + (vMin + 0.5) * T, Z1 = Origin.z + (vMax + 0.5) * T, R = 260;
                 float y = (float)(seaSkirt ? WATER_Y : skY);
                 var pts = new[] { new[] { X0, Z0 }, new[] { X1, Z0 }, new[] { X1, Z1 }, new[] { X0, Z1 }, new[] { X0 - R, Z0 - R }, new[] { X1 + R, Z0 - R }, new[] { X1 + R, Z1 + R }, new[] { X0 - R, Z1 + R } };
-                sPos = new Vector3[8]; sCol = new Color[8];
-                for (int k = 0; k < 8; k++) { sPos[k] = new Vector3((float)pts[k][0], y, (float)pts[k][1]); sCol[k] = seaSkirt ? new Color(0, 0, 0, 1) : edgeTint; }
+                sPos = new Vector3[8]; sCol = new Color[8]; sNrm = new Vector3[8];
+                for (int k = 0; k < 8; k++) { sPos[k] = new Vector3((float)pts[k][0], y, (float)pts[k][1]); sCol[k] = seaSkirt ? new Color(0, 0, 0, 1) : edgeTint; sNrm[k] = Vector3.up; }
+                // 陆地裙边用地形材质：aMat = (0, 0, 0, 1)（纯平原）、aBt = 0；海面裙边用水面材质，不带这两项
+                sMat = sBt = null;
+                if (!seaSkirt)
+                {
+                    sMat = new Vector4[8]; sBt = new Vector4[8];
+                    for (int k = 0; k < 8; k++) { sMat[k] = new Vector4(0, 0, 0, 1); sBt[k] = Vector4.zero; }
+                }
                 var ix = new List<int>();
                 for (int k = 0; k < 4; k++) { int a = k, b = (k + 1) % 4, c = 4 + k, d = 4 + (k + 1) % 4; ix.Add(a); ix.Add(d); ix.Add(c); ix.Add(a); ix.Add(b); ix.Add(d); }
                 sTri = ix.ToArray();
@@ -1941,5 +1948,24 @@ namespace Sanguo
         // 兵力 → 士兵数（第三版：每 900 一人，至多 6；草原骑兵按 4/6 折算）
         public static int SoldierBucket(int troops, bool alive) { return (int)Clamp(Math.Ceiling(troops / 900.0), alive ? 1 : 0, 6); }
         public static int SoldierCount(int bucket, string culture) { return MountedCult(culture) ? (int)Math.Ceiling(bucket * 4 / 6.0) : bucket; }
+        // 部队的初始朝向（度，Unity 绕 Y）：攻方朝东（+x）、守方朝西
+        public static float UnitYaw(int side) { return side == 0 ? 90 : -90; }
+        // 主将战马的根在部队局部坐标里的位置：网页版 h.root.position = (0, 0, −0.36)（前方为 −z）→ Unity (0, 0, 0.36)；
+        // 人物根（figRoot）缩放 FIG_S，战马根的局部位置因此为 0.36 / FIG_S（网页版 h.root.position.multiplyScalar(1 / FIG_S)）
+        public const float HORSE_Z = 0.36f;
+        public static Vector3 HorseLocal { get { return new Vector3(0, 0, HORSE_Z / FIG_S); } }
+        // 主将战马的根在世界坐标里的矩阵（部队位置 gp、朝向 yaw 度；= 部队 × figRoot × horse.Root，供无头对照）
+        public static Matrix4x4 HorseRootMatrix(Vector3 gp, float yaw)
+        {
+            return Matrix4x4.TRS(gp, Quaternion.Euler(0, yaw, 0), new Vector3(FIG_S, FIG_S, FIG_S)) * Matrix4x4.TRS(HorseLocal, Quaternion.identity, Vector3.one);
+        }
+        // 士兵的世界位置（网页版 UnitVisual._placeSoldiers）：部队位置 gp、朝向 yaw（度）、队形偏移 (x, z)（网页版局部，前方 −z → Unity 局部 (x, −z)）；
+        // 士兵贴在自己脚下的地表上，部队高出地表的部分（城墙上、桥上）一并抬高
+        public Vector3 SoldierPos(Vector3 gp, float yaw, double x, double z)
+        {
+            float lift = gp.y - (float)GroundY(gp.x, gp.z);
+            var w = gp + Quaternion.Euler(0, yaw, 0) * new Vector3((float)x, 0, (float)-z);
+            return new Vector3(w.x, (float)GroundY(w.x, w.z) + Math.Max(0, lift), w.z);
+        }
     }
 }

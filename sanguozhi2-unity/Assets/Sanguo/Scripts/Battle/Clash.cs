@@ -42,8 +42,8 @@ namespace Sanguo
                                                                                   士兵群烘焙；多次调用依次排队，Play 播放前先等它做完
          IEnumerator Clash.CutIn(gen, moveName, color, side, cry, speed)         必杀技 / 单挑用的全屏特写
            （1.1 秒 ÷（Clash.Speed × speed），最短 0.7 秒；轻点 / 空格 / 回车 / Esc 可跳过）
-         Clash.Mode（On / Fast / Off，读写，存 PlayerPrefs「sanguozhi2_clash_v3」，值同网页版 on / fast / off；缺省 On——第三版换了
-           新键，旧键「sanguozhi2_clash」里存下的「关」不再生效，旧的「快」沿用）
+         Clash.Mode（On / Fast / Off，读写，存 PlayerPrefs「sanguozhi2_clash_v3」= Clash.ModeKeyV3，值同网页版 on / fast / off；缺省 On——
+           第三版换了新键，旧键「sanguozhi2_clash」= Clash.ModeKey（Game.MigrateV3 清理的键）里存下的「关」不再生效，旧的「快」沿用）
          Clash.Enabled / Clash.Speed / Clash.CycleMode() / Clash.ModeLabel()
        坐标：场景逻辑全部沿用网页版的 three 坐标（x, y, z），建网格与摆放时换成 Unity 坐标 (x, y, -z)（P()）；
        人物 / 士兵群用 Figure.PosFromJs / YawFromJs；人物挂件（旗面、帅旗杆）用人物局部的换算（JS 局部 (x, y, z) → Unity (−x, y, z)）；
@@ -112,8 +112,11 @@ namespace Sanguo
 
     public static class Clash
     {
-        public const string ModeKey = "sanguozhi2_clash_v3";                // 第三版的设定键（缺省「开」）
-        public const string OldModeKey = "sanguozhi2_clash";                // 第二版的旧键：只沿用「快」
+        // 设定键。ModeKey 保持第二版的值（= 网页版 game.js 的 CLASH_KEY）：Game.MigrateV3 读它、清掉旧的「关」，同网页版 migrateV3。
+        // 第三版的设定存在 ModeKeyV3（= 网页版 clash.js 的 MODE_KEY，缺省「开」）；旧键只沿用「快」。OldModeKey 与 ModeKey 同值（别名）。
+        public const string ModeKey = "sanguozhi2_clash";
+        public const string OldModeKey = ModeKey;
+        public const string ModeKeyV3 = "sanguozhi2_clash_v3";
         public const int Layer = 30;                                    // 攻击画面与特写所用的渲染层
         public static readonly Vector3 Origin = new Vector3(0, -2000, 0);   // 场景根的世界位置（远离战场与地图）
         // 调试：FreezeAt ≥ 0 时动画停在该秒；HoldCut 为 true 时特写不自动结束（截图用）
@@ -130,7 +133,7 @@ namespace Sanguo
         {
             try
             {
-                string v = PlayerPrefs.GetString(ModeKey, "");
+                string v = PlayerPrefs.GetString(ModeKeyV3, "");
                 if (v == "on" || v == "fast" || v == "off") return v;
                 // 旧键只沿用「快」（仍是开启动画）；旧的「关」不再生效
                 if (PlayerPrefs.GetString(OldModeKey, "") == "fast") return "fast";
@@ -157,7 +160,7 @@ namespace Sanguo
                 if (value == ClashMode.Off) { enabled = false; speed = 1; }
                 else if (value == ClashMode.Fast) { enabled = true; speed = 2; }
                 else { enabled = true; speed = 1; }
-                try { PlayerPrefs.SetString(ModeKey, ModeName(Mode)); PlayerPrefs.Save(); } catch (Exception) { /* 忽略 */ }
+                try { PlayerPrefs.SetString(ModeKeyV3, ModeName(Mode)); PlayerPrefs.Save(); } catch (Exception) { /* 忽略 */ }
             }
         }
         public static string ModeName(ClashMode m) { return m == ClashMode.Off ? "off" : m == ClashMode.Fast ? "fast" : "on"; }
@@ -2608,7 +2611,7 @@ namespace Sanguo
             ambMode0 = RenderSettings.ambientMode; ambSky0 = RenderSettings.ambientSkyColor; ambEq0 = RenderSettings.ambientEquatorColor; ambGnd0 = RenderSettings.ambientGroundColor;
             Color sky = AMB_SKY * AMB_K, gnd = AMB_GND * AMB_K;
             RenderSettings.ambientMode = AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = sky; RenderSettings.ambientGroundColor = gnd; RenderSettings.ambientEquatorColor = (sky + gnd) * 0.5f;
+            RenderSettings.ambientSkyColor = sky; RenderSettings.ambientGroundColor = gnd; RenderSettings.ambientEquatorColor = (sky + gnd) * 0.5f; try { DynamicGI.UpdateEnvironment(); } catch (Exception) { /* 忽略 */ }
             try { DynamicGI.UpdateEnvironment(); } catch (Exception) { /* 忽略 */ }
             SetGlobals();
         }
@@ -3676,7 +3679,8 @@ namespace Sanguo
             while (y > gy)
             {
                 float nx = bas.x + (Rn() - 0.5f) * 0.9f, ny = Mathf.Max(gy, y - 0.6f - Rn() * 0.5f), nz = z + (Rn() - 0.5f) * 0.3f;
-                // 折线按 three 坐标求出，建网格时换成 Unity 坐标（= 网页版第三版 beam(V(x, y, z), …)，雷落在落点上）
+                // 网页版这里误用了 Unity 坐标：beam(mb, V(x, y, z), …) 把 three 坐标交给 SG.MeshBuilder，后者再翻转 z，
+                // 雷落在镜像的 z 上（偏近镜头约 1.1，火花与扬尘却在落点）。此处有意不照抄：按 three 坐标求折线、换成 Unity 坐标，建在落点上
                 ClashGeo.Beam(mb, ClashUtil.P(x, y, z), ClashUtil.P(nx, ny, nz), 0.12f, 0.1f, Color.white);
                 x = nx; y = ny; z = nz;
                 if (ny <= gy + 0.01f) break;
@@ -4033,7 +4037,7 @@ namespace Sanguo
             lightMasks.Clear();
             if (ambSaved)
             {
-                RenderSettings.ambientMode = ambMode0; RenderSettings.ambientSkyColor = ambSky0; RenderSettings.ambientEquatorColor = ambEq0; RenderSettings.ambientGroundColor = ambGnd0;
+                RenderSettings.ambientMode = ambMode0; RenderSettings.ambientSkyColor = ambSky0; RenderSettings.ambientEquatorColor = ambEq0; RenderSettings.ambientGroundColor = ambGnd0; try { DynamicGI.UpdateEnvironment(); } catch (Exception) { /* 忽略 */ }
                 try { DynamicGI.UpdateEnvironment(); } catch (Exception) { /* 忽略 */ }
                 ambSaved = false;
             }
@@ -5051,7 +5055,7 @@ namespace Sanguo
                 {
                     float d = S.shown - S.target;
                     S.shown = Mathf.Max(S.target, S.shown - Mathf.Max(d * dt * 7, dt * 300));
-                    S.num.text = Mathf.RoundToInt(S.shown).ToString();
+                    S.num.text = ((int)Math.Floor(S.shown + 0.5)).ToString();   // JS Math.round
                 }
                 if (S.trailHold > 0) S.trailHold -= dt;
                 else if (S.trailV > S.shown) S.trailV = Mathf.Max(S.shown, S.trailV - Mathf.Max((S.trailV - S.shown) * dt * 4, dt * 120));

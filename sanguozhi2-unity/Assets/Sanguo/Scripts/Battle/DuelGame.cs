@@ -1,22 +1,24 @@
 // ==========================================================================
-// 三国志II 霸王的大陆 · 单挑格斗（第二版 DESIGN-V2 §4E；网页版 js/duel-game.js 的移植）
+// 三国志-霸王的世界 · 单挑格斗（DESIGN-V2 §4E、第三版格开与新模型 DESIGN-V3 §3；网页版 js/duel-game.js「单挑画面」的移植）
 //
-// 单挑 = 一场横版 2.5D 格斗：独立的三维场景（自己的相机，层 30），两名程序化建模的低多边形武将，
-// 程序化关键帧动画，键盘 / 多点触控操作，攻击力与伤害取决于 武力。
+// 单挑 = 一场横版 2.5D 格斗：独立的三维场景（自己的相机，层 30），两名人物模型库的高精度武将（View/Figure.cs），
+// 由单挑自己的状态机驱动的程序化动作，键盘 / 多点触控操作（第三版：U / 触摸「格开」），攻击力与伤害取决于 武力。
 //
 // 公开接口（UNITY-V2 §5）
 //   IEnumerator DuelGame.Play(General a, int sideA, Color colA, General b, int sideB, Color colB, int playerSide, Terrain terrain, Action<DuelGame.DuelResult> done)
 //     a = 挑战者（画面左侧），b = 应战者（画面右侧）；sideA / sideB 为两人在战场上的阵营（仅记录）。
 //     playerSide：玩家操作哪一方 —— 0 = a，1 = b（同网页版：a.side == 玩家阵营 ? 0 : 1）；−1 = 电脑对电脑（观战，可跳过）。
 //     done(DuelResult)：winner 0 = a 胜 / 1 = b 胜；kind "ko" | "time" | "skip"；hpA、hpB；
-//       log 为每次命中的 "who|dmg|hpA|hpB|move|guarded|t"；rounds 为同样内容的 DuelRound（可直接交给 BattleModel.DuelFinish）。
+//       log 为每次命中的 "who|dmg|hpA|hpB|move|guarded|t"；rounds 为同样内容的 DuelRound（可直接交给 BattleModel.DuelFinish）；
+//       stats 为双方的格斗细节（DuelStats：出招、命中、格开…；第三版，供成长系统按单挑表现给经验）。
 //   DuelGame.Auto     测试用：true 时玩家一方也由电脑操作（仍显示操作界面）
 //   DuelGame.Speed    测试用：时间倍率（缺省 1）
 //   DuelGame.Simulate(a, b) → DuelResult   不渲染、电脑对电脑快速模拟一整场（同一套规则；委任 / 出错时的兜底）
 //   DuelGame.MusicAfter  结束后切回的乐曲（null = 不切；由调用方设定，如 "battle" / "battle-defend"）
+//   DuelGame.Ctrl     测试钩子（= 网页版 opts.ctrl）：[a, b] 各为 (fighter, sim) → 操作者（如 DuelScriptBot），在真实画面里看脚本玩家打
 //
-// 结构：DuelSim.cs（纯逻辑，固定 60Hz 步长）+ DuelAI + DuelModels.cs / DuelAnim.cs（武将模型与动画）+
-//       DuelArena.cs（场地与特效）+ DuelHud.cs（界面与输入）+ 本文件（流程、镜头、事件表现、音效）。
+// 结构：DuelSim.cs（纯逻辑，固定 60Hz 步长）+ DuelAI + DuelFigure.cs（武将：模型库人物、动作映射、兵器长度校准）+
+//       DuelArena.cs（场地、两军、特效）+ DuelHud.cs（界面与输入）+ 本文件（流程、镜头、事件表现、音效）。
 // 规则相关的随机数走 UnityEngine.Random（DuelSim.Rnd）；纯装饰用 SeededRandom。
 // ==========================================================================
 using System;
@@ -36,11 +38,13 @@ namespace Sanguo
             public List<string> log;
             public List<DuelRound> rounds;    // 同 log（BattleModel.DuelFinish 的 rounds）
             public double time;
+            public DuelStats[] stats;         // 第三版：a、b 的格斗细节（成长系统用；现有 DuelFinish 不读）
         }
         public static bool Auto;
         public static float Speed = 1;
         public static bool Enabled = true;
         public static string MusicAfter;
+        public static Func<DuelFighter, DuelSim, IDuelCtrl>[] Ctrl;   // 测试钩子（见文件头）
         public static bool Active { get { return DuelScreen.current != null; } }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -48,7 +52,7 @@ namespace Sanguo
 
         public static DuelResult ToResult(DuelOutcome o)
         {
-            var r = new DuelResult { winner = o.winner, kind = o.kind, hpA = o.hpA, hpB = o.hpB, time = o.time, log = new List<string>(), rounds = new List<DuelRound>() };
+            var r = new DuelResult { winner = o.winner, kind = o.kind, hpA = o.hpA, hpB = o.hpB, time = o.time, log = new List<string>(), rounds = new List<DuelRound>(), stats = o.stats };
             foreach (var e in o.log) { r.log.Add(e.ToString()); r.rounds.Add(new DuelRound { who = e.who, dmg = e.dmg, hpA = e.hpA, hpB = e.hpB }); }
             return r;
         }
@@ -102,6 +106,7 @@ namespace Sanguo
         public DuelSpecialInfo spA, spB;
         public int player = -1;
         public bool isTouch, hybrid;
+        public bool scripted;     // 测试：玩家一方由脚本操作（DuelGame.Ctrl）
         public DuelInput input;
         public DuelSim sim;
         string kind;
@@ -110,7 +115,7 @@ namespace Sanguo
         GameObject world;
         Camera cam; Light keyL, rimL; Material skyMat, envMat;
         DuelArena arena;
-        DuelWarrior[] war;
+        DuelFigure[] war;
         DuelParticles sparks, dust, motes;
         readonly List<DuelTrail> trails = new List<DuelTrail>();
         sealed class Fx { public GameObject go; public Material mat; public float t = 1, life, size, rot; }
@@ -123,7 +128,7 @@ namespace Sanguo
         SeededRandom fxR, moteR;
         // ---- 状态
         float slow = 1, slowT, acc, realT, shake, introCam = 1;
-        sealed class Zoom { public int who; public float until; public bool ko; }
+        sealed class Zoom { public int who; public float until; public bool ko, parry; }
         Zoom zoom;
         bool snapCam, skipped, built;
         readonly float[] trailOn = new float[2];
@@ -168,7 +173,10 @@ namespace Sanguo
             // 操作者：玩家一方为键盘 / 触摸；自动测试（DuelGame.Auto）时仍显示操作界面，但交给电脑
             input = player >= 0 ? new DuelInput() : null;
             if (input != null) input.SetEnabled(false);      // 开场 / 操作说明期间不接受出招（开战时才启用）
-            foreach (var f in sim.f) f.ctrl = player == f.idx && !DuelGame.Auto ? (IDuelCtrl)input : new DuelAI(f);
+            // 测试钩子 DuelGame.Ctrl：[a, b] 各为 (fighter, sim) → 操作者（如 DuelScriptBot），用于在真实画面里看脚本玩家打
+            var cf = DuelGame.Ctrl ?? new Func<DuelFighter, DuelSim, IDuelCtrl>[0];
+            scripted = player >= 0 && player < cf.Length && cf[player] != null;
+            foreach (var f in sim.f) f.ctrl = f.idx < cf.Length && cf[f.idx] != null ? cf[f.idx](f, sim) : player == f.idx && !DuelGame.Auto ? (IDuelCtrl)input : new DuelAI(f);
             StartCoroutine(Guard(Flow()));
         }
 
@@ -242,6 +250,23 @@ namespace Sanguo
             hud.Preload();
             hud.BuildHud();
             yield return null;
+            // 模型库的共用贴图图集、双方文化的士兵群动作（背景两军）分片预生成（黑场渐入期间进行，不卡画面）
+            {
+                var cults = new List<string>();
+                foreach (var c in new[] { lookA.culture, lookB.culture }) if (c != null && !cults.Contains(c)) cults.Add(c);
+                IEnumerator pre = null;
+                try { pre = Figure.Preload(new FigPreload { cultures = cults.ToArray(), types = new string[0], lods = new string[0], crowd = DuelArena.CrowdSpecs(kind, lookA.culture, lookB.culture).ToArray() }); }
+                catch (Exception e) { Debug.LogWarning("figure preload " + e); }
+                while (pre != null)
+                {
+                    bool more;
+                    try { more = pre.MoveNext(); }
+                    catch (Exception e) { Debug.LogWarning("figure preload " + e); break; }
+                    if (!more) break;
+                    yield return pre.Current;
+                }
+            }
+            yield return null;
             BuildScene();
             yield return null;
             EnterScreen();
@@ -270,7 +295,7 @@ namespace Sanguo
             {
                 var me = player == 0 ? genA : genB; var foe = player == 0 ? genB : genA;
                 var closeCard = hud.ControlsCard(player == 0 ? spA : spB, me, foe);
-                float autoAt = DuelGame.Auto ? realT + 0.7f / Mathf.Max(0.1f, DuelGame.Speed) : float.MaxValue;
+                float autoAt = DuelGame.Auto || scripted ? realT + 0.7f / Mathf.Max(0.1f, DuelGame.Speed) : float.MaxValue;
                 yield return null;
                 while (!AnyPress() && realT < autoAt) yield return null;
                 closeCard();
@@ -324,28 +349,30 @@ namespace Sanguo
             var pal = DuelArena.Palettes[kind];
             envMat = Art.NewLowPoly();
             arena = new DuelArena(world.transform, Layer, kind, colA, colB, string.IsNullOrEmpty(genA.name) ? "甲" : genA.name.Substring(0, 1),
-                string.IsNullOrEmpty(genB.name) ? "乙" : genB.name.Substring(0, 1), DuelLooks.HashStr(genA.name + genB.name), envMat);
+                string.IsNullOrEmpty(genB.name) ? "乙" : genB.name.Substring(0, 1), DuelLooks.HashStr(genA.name + genB.name), lookA.culture, lookB.culture, envMat);
             // 相机（层 30），天空盒用 Sky 着色器的副本
             var cgo = new GameObject("DuelCamera"); cgo.layer = Layer; cgo.transform.SetParent(transform, false);
             cam = cgo.AddComponent<Camera>();
             cam.fieldOfView = 30; cam.nearClipPlane = 0.3f; cam.farClipPlane = 400;
             cam.cullingMask = 1 << Layer; cam.depth = 50;
             cam.clearFlags = CameraClearFlags.Skybox; cam.backgroundColor = C(pal.fog);
-            skyMat = new Material(Art.Sky);
-            skyMat.SetColor("_Top", C(pal.top)); skyMat.SetColor("_Horizon", C(pal.hor)); skyMat.SetColor("_Bottom", C(pal.low));
-            skyMat.SetColor("_SunColor", C(pal.sun));
-            var sd = DuelXf.P(pal.sunDir).normalized; skyMat.SetVector("_SunDir", new Vector4(sd.x, sd.y, sd.z, 0));
+            // 天空（Sanguo/DuelSky = 网页版 SKY_VS / SKY_FS：渐变、太阳三层光晕、云带；方向用 three 坐标）
+            skyMat = new Material(Art.LoadShader("DuelSky"));
+            skyMat.SetColor("_Top", C(pal.top)); skyMat.SetColor("_Hor", C(pal.hor)); skyMat.SetColor("_Low", C(pal.low));
+            skyMat.SetColor("_Sun", C(pal.sun));
+            var sd = pal.sunDir.normalized; skyMat.SetVector("_SunDir", new Vector4(sd.x, sd.y, sd.z, 0));
             cgo.AddComponent<Skybox>().material = skyMat;
-            // 灯光：主光（投影）+ 轮廓光；强度按网页版的曝光换算（三维 π·I ↔ Unity I / 0.75）
-            keyL = NewLight("DuelKey", C(pal.key), pal.keyI / 0.75f, new Vector3(6, -11, -8), true);
-            rimL = NewLight("DuelRim", C(pal.rim), pal.rimI / 0.75f, new Vector3(-5, -4, 9), false);
-            // 武将
-            war = new[] { new DuelWarrior(sim.f[0], colA, world.transform, Layer), new DuelWarrior(sim.f[1], colB, world.transform, Layer) };
+            // 灯光：主光（投影）+ 轮廓光；强度 = 网页版 π·I / π（人物模型库与场地着色器的约定：Unity 强度 = JS 强度 / π）
+            keyL = NewLight("DuelKey", C(pal.key), pal.keyI, new Vector3(6, -11, -8), true);
+            rimL = NewLight("DuelRim", C(pal.rim), pal.rimI, new Vector3(-5, -4, 9), false);
+            // 武将（第三版：人物模型库的高精度模型）
+            war = new[] { new DuelFigure(sim.f[0], colA, world.transform, Layer, envMat), new DuelFigure(sim.f[1], colB, world.transform, Layer, envMat) };
+            war[0].opp = sim.f[1]; war[1].opp = sim.f[0];
             // 特效
             sparks = new DuelParticles(420, true, 1.0f, 12, world.transform, Layer);
             dust = new DuelParticles(240, false, 1.6f, 11, world.transform, Layer);
             motes = new DuelParticles(110, true, 1.4f, 10, world.transform, Layer);
-            for (int i = 0; i < 4; i++) trails.Add(new DuelTrail(12, world.transform, Layer));
+            for (int i = 0; i < 4; i++) trails.Add(new DuelTrail(28, world.transform, Layer));
             quadMesh = DuelTextures.Quad("DuelQuad");
             starTex = DuelTextures.Star();
             for (int i = 0; i < 6; i++)
@@ -362,7 +389,7 @@ namespace Sanguo
                 rings.Add(new Fx { go = g, mat = m, life = 0.5f, size = 4 });
             }
             // 飞箭（弓将绝技）：小对象池，位置每帧取自 sim.shots
-            arrowMesh = new[] { DuelModels.BuildArrow(false).ToMesh("DuelArrow"), DuelModels.BuildArrow(true).ToMesh("DuelArrowFin") };
+            arrowMesh = new[] { DuelTextures.Arrow(false), DuelTextures.Arrow(true) };
             for (int i = 0; i < 6; i++)
             {
                 var g = Art.MakeObject("Arrow", arrowMesh[0], envMat, world.transform, true); g.layer = Layer; g.SetActive(false);
@@ -402,10 +429,16 @@ namespace Sanguo
             rsShadowDist = QualitySettings.shadowDistance; QualitySettings.shadowDistance = 30;   // 网页版的投影范围只覆盖场地（±7 米）
             RenderSettings.fog = true; RenderSettings.fogMode = FogMode.Linear; RenderSettings.fogColor = C(pal.fog);
             RenderSettings.fogStartDistance = pal.fogN; RenderSettings.fogEndDistance = pal.fogF;
-            float amb = pal.hemiI / 0.56f;
-            Color hs = C(pal.hemiS), hg = C(pal.hemiG);
+            // 环境光：Trilight，天空 / 地面 = 网页版半球光颜色 × 强度（π·I / π），地平线取两者平均（见 Figure.shader）
+            float amb = pal.hemiI;
+            Color hs = C(pal.hemiS) * amb, hg = C(pal.hemiG) * amb;
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = hs * amb; RenderSettings.ambientEquatorColor = Color.Lerp(hs, hg, 0.5f) * amb; RenderSettings.ambientGroundColor = hg * amb;
+            RenderSettings.ambientSkyColor = hs; RenderSettings.ambientEquatorColor = (hs + hg) * 0.5f; RenderSettings.ambientGroundColor = hg; try { DynamicGI.UpdateEnvironment(); } catch (Exception) { /* 忽略 */ }
+            try { DynamicGI.UpdateEnvironment(); } catch (Exception) { /* 忽略 */ }
+            // 场地着色器（DuelGround / DuelProp / DuelFoliage）的三色环境光 = 网页版 LowPoly 补丁：天空 / 地面取本场的半球光，
+            // 地平线取主场景的地平线色（js/art.js AMB_EQUATOR × EXPOSURE_AMB）
+            Shader.SetGlobalColor("_DuelAmbSky", hs); Shader.SetGlobalColor("_DuelAmbGnd", hg);
+            Shader.SetGlobalColor("_DuelAmbEq", new Color(0.58f, 0.56f, 0.5f) * 0.56f);
             // 单挑期间隐藏同层的其他画面界面（战场顶栏、部队卡、按钮、名牌等）
             foreach (var layer in new[] { UIKit.Screens, UIKit.LabelLayer })
             {
@@ -433,7 +466,8 @@ namespace Sanguo
             {
                 rsSaved = false;
                 RenderSettings.fog = rsFog; RenderSettings.fogMode = rsFogMode; RenderSettings.fogColor = rsFogColor; RenderSettings.fogStartDistance = rsFogStart; RenderSettings.fogEndDistance = rsFogEnd;
-                RenderSettings.ambientMode = rsAmbMode; RenderSettings.ambientSkyColor = rsSky; RenderSettings.ambientEquatorColor = rsEq; RenderSettings.ambientGroundColor = rsGround;
+                RenderSettings.ambientMode = rsAmbMode; RenderSettings.ambientSkyColor = rsSky; RenderSettings.ambientEquatorColor = rsEq; RenderSettings.ambientGroundColor = rsGround; try { DynamicGI.UpdateEnvironment(); } catch (Exception) { /* 忽略 */ }
+                try { DynamicGI.UpdateEnvironment(); } catch (Exception) { /* 忽略 */ }
                 QualitySettings.shadowDistance = rsShadowDist;
                 var rig = Game.I != null ? Game.I.Rig : null;
                 if (rig != null) rig.InputEnabled = rigWas;
@@ -520,6 +554,8 @@ namespace Sanguo
             if (g == null) g = rings[0];
             DuelXf.Pos(g.go.transform, x, 0.06f, 0); g.mat.color = col; g.t = 0; g.size = size; g.life = life; g.go.SetActive(true);
         }
+        // 飘字的横向漂移（= 网页版 floatDmg：「格开」类不漂移、也不取随机数）
+        internal float FloatVx(string cls) { return cls != null && cls.Contains("parry") ? 0 : (float)(fxR.NextDouble() - 0.5) * 0.6f; }
         Color SpColor(int idx) { var s = idx == 0 ? spA : spB; return s.color != null ? C(s.color) : (idx == 0 ? colA : colB); }
         Color SpColorOr(int idx, string fallback) { var s = idx == 0 ? spA : spB; return C(s.color ?? fallback); }
 
@@ -543,23 +579,32 @@ namespace Sanguo
                             Burst(x, y, 0.2f, col, n, e.guarded ? 3.5f : 5 + e.dmg * 0.25f, att.face, e.big ? 0.12f : 0.09f);
                             if (!e.guarded) Burst(x, y, 0.2f, Color.white, 6, 2.5f, att.face, 0.14f, 0.18f, 0);
                             Star(x, y, e.guarded ? C("#a8d0ff") : sp ? spc : e.big ? C("#ffd27a") : Color.white, (e.guarded ? 0.9f : 1.1f) + Mathf.Min(1.6f, e.dmg * 0.09f));
-                            shake = Mathf.Max(shake, e.guarded ? 0.04f : 0.05f + e.dmg * 0.012f + (e.big ? 0.06f : 0));
+                            shake = Mathf.Max(shake, e.guarded ? 0.04f : 0.05f + e.dmg * 0.012f + (e.big ? 0.06f : 0) + (e.riposte ? 0.06f : 0));
                             if (!e.guarded) war[def.idx].FlashHit(e.big ? C("#ffd0a0") : Color.white, e.big ? 0.95f : 0.8f);
-                            float fv = (float)(fxR.NextDouble() - 0.5) * 0.6f;
+                            float fv = FloatVx(e.guarded ? "g" : e.big ? "big" : "");
                             if (e.guarded)
                             {
                                 Sfx.Play("duel", 0.8f);
                                 hud.FloatDmg(new Vector3(x, y + 0.3f, 0), e.dmg > 0 ? e.dmg.ToString() : "格", "g", fv);
-                                if (e.parry) hud.FloatDmg(new Vector3((float)def.x, 2.4f, 0), "格开", "lbl", (float)(fxR.NextDouble() - 0.5) * 0.6f);
+                                if (e.deflect) hud.FloatDmg(new Vector3((float)def.x, 2.4f, 0), "硬挡", "lbl", FloatVx("lbl"));
                             }
                             else
                             {
                                 Sfx.Play("hit", Mathf.Min(1, 0.55f + e.dmg * 0.03f));
                                 if (e.big) audio.Play("thud", 0.5f);
                                 hud.FloatDmg(new Vector3(x, y + 0.3f, 0), e.dmg.ToString(), e.big ? "big" : "", fv);
-                                if (e.counter) hud.FloatDmg(new Vector3(x, y + 0.75f, 0), "破绽", "lbl", (float)(fxR.NextDouble() - 0.5) * 0.6f);
+                                if (e.counter) hud.FloatDmg(new Vector3(x, y + 0.75f, 0), "破绽", "lbl", FloatVx("lbl"));
+                                if (e.riposte)
+                                {
+                                    // 反击得手：金色爆散 + 闪白 + 重击闷响
+                                    hud.FloatDmg(new Vector3(x, y + 0.85f, 0), "反击", "lbl ctr", FloatVx("lbl ctr"));
+                                    Burst(x, y, 0.2f, C("#ffd860"), 34, 6.5f, att.face, 0.12f, 0.45f);
+                                    Ring((float)def.x, C("#ffd060"), 4, 0.5f);
+                                    hud.ScreenFlash(0.28f);
+                                    audio.Play("thud", 0.9f);
+                                }
                             }
-                            if (e.breaks) { hud.FloatDmg(new Vector3((float)def.x, 2.4f, 0), "破防", "lbl", (float)(fxR.NextDouble() - 0.5) * 0.6f); Sfx.Play("rock", 0.6f); }
+                            if (e.breaks) { hud.FloatDmg(new Vector3((float)def.x, 2.4f, 0), "破防", "lbl", FloatVx("lbl")); Sfx.Play("rock", 0.6f); }
                             if (e.big && !e.guarded) { Ring((float)def.x, col, 3.2f, 0.45f); Puff((float)def.x, 6, 0.8f, att.face); }
                             if (sp && e.finisher) { hud.ScreenFlash(0.5f); Ring((float)def.x, spc, 6, 0.7f); }
                             hud.HitShake(def.idx);
@@ -609,6 +654,51 @@ namespace Sanguo
                         Sfx.Play("rock", 0.8f);
                         break;
                     case "timeup": hud.Announce("时间到", "small", null, 1.4f); Sfx.Play("horn", 0.5f); break;
+                    case "parryStart":
+                        {
+                            // 格开架势：刃口一点冷光（受击硬直中按下时在胸前）
+                            var w = war[e.who];
+                            var pp = e.stunned ? w.chestW : w.tipW[0];
+                            Star(pp.x, pp.y, C("#cfeeff"), e.stunned ? 0.9f : 1.2f);
+                            if (!e.stunned) audio.Play("whoosh", 0.3f);
+                            break;
+                        }
+                    case "parry":
+                        {
+                            var att = sim.f[e.att]; var def = sim.f[e.def];
+                            float x = (float)e.x, y = (float)e.y;
+                            // 火花四溅（冷白 + 金）、大星芒、地面冲击环、闪白、震屏、慢镜头、镜头推近
+                            Burst(x, y, 0.25f, C("#e4f6ff"), 48, 7.5f, att.face, 0.11f, 0.5f, 6);
+                            Burst(x, y, 0.25f, C("#ffd27a"), 28, 5.5f, att.face, 0.08f, 0.45f);
+                            Burst(x, y, 0.25f, Color.white, 10, 2.5f, 0, 0.2f, 0.16f, 0);
+                            Star(x, y, C("#eaf7ff"), 4.2f);
+                            Star(x, y, C("#ffd27a"), 2.6f);
+                            Burst(x, y, 0.25f, C("#fff4d0"), 20, 9.5f, 0, 0.07f, 0.38f, 3);
+                            Ring((float)def.x, C("#a8d8ff"), 4.4f, 0.45f);
+                            hud.ScreenFlash(0.32f);
+                            hud.EdgeFlash();
+                            shake = Mathf.Max(shake, 0.17f);
+                            if (!sim.hasResult) { slow = Mathf.Min(slow, 0.28f); slowT = Mathf.Max(slowT, 0.34f); }
+                            zoom = new Zoom { who = def.idx, until = realT + 0.6f, parry = true };
+                            war[att.idx].FlashHit(C("#a8d8ff"), 0.55f);
+                            audio.Play("parry", 1);
+                            Sfx.Play("duel", 0.5f);
+                            hud.FloatDmg(new Vector3((float)def.x, (float)def.y + 2.35f, 0), "格开！", "lbl parry", FloatVx("lbl parry"));
+                            hud.CounterChip(def.idx);
+                            if (player == def.idx) hud.ParryButtonFlash();   // （网页版另有手机振动 [18, 30, 18] 毫秒；Unity 的 Handheld.Vibrate 只有固定的长振动，不用）
+                            break;
+                        }
+                    case "parryWhiff": { var f = sim.f[e.who]; hud.FloatDmg(new Vector3((float)f.x, (float)f.y + 2.2f, 0), "落空", "lbl miss", FloatVx("lbl miss")); audio.Play("whoosh", 0.25f); break; }
+                    case "parryEarly": { var f = sim.f[e.who]; hud.FloatDmg(new Vector3((float)f.x, (float)f.y + 2.5f, 0), "过早", "lbl miss", FloatVx("lbl miss")); break; }
+                    case "heavyGo":
+                        {
+                            // 重击起手预兆：刃口闪出一点红光并「铮」一声（满蓄更亮）
+                            var w = war[e.who];
+                            Star(w.tipW[0].x, w.tipW[0].y, C(e.charge >= 0.85 ? "#ff6a3a" : "#ffb070"), 1.2f + (float)e.charge * 1.0f);
+                            audio.Play("shing", 0.5f + (float)e.charge * 0.5f);
+                            break;
+                        }
+                    case "backstep": Puff((float)sim.f[e.who].x, 5, 0.6f, sim.f[e.who].face); audio.Play("whoosh", 0.35f); break;
                 }
             }
             E.Clear();
@@ -694,13 +784,14 @@ namespace Sanguo
             for (int i = 0; i < 2; i++)
             {
                 var w = war[i];
+                w.ctr = sim.Countering(sim.f[i]) ? sim.f[i].counterUntil - sim.clock : 0;
                 w.Update(frozen || sim.freeze[i] > 0 ? 0 : adt, frozen);
                 // 刀光
                 var f = sim.f[i];
                 bool on = realT < trailOn[i] || (f.state == "special" && f.t > DuelSim.SPECIAL_FREEZE && !f.bow);
                 var spInfo = i == 0 ? spA : spB;
                 Color tc = f.state == "special" ? C(spInfo.color ?? "#ffd060") : f.state == "heavy" ? (f.charge > 0.8 ? C("#ffb040") : C("#ffe0a0")) : C("#dfe8ff");
-                for (int k2 = 0; k2 < (w.wpn2 != null ? 2 : 1); k2++)
+                for (int k2 = 0; k2 < (w.wpn2 ? 2 : 1); k2++)
                 {
                     var tr = trails[i * 2 + k2];
                     tr.on = on; tr.color = tc;
@@ -723,7 +814,8 @@ namespace Sanguo
                 }
             }
             UpdateArrows(adt);
-            // 环境（城头火把）
+            // 环境（帅旗、两军；城头火把）。胜负已分：胜方阵中欢呼
+            if (sim.hasResult && !arena.cheered && sim.endT > 0.6) arena.Cheer(sim.resultWinner, realT);
             arena.Update(realT);
             foreach (var p0 in arena.torches)
             {
@@ -804,23 +896,31 @@ namespace Sanguo
             float mid = (float)(a.x + b.x) / 2;
             float sep = Mathf.Abs((float)(a.x - b.x));
             bool touch = hud.hasTouch;
-            float frac = touch ? 0.54f : hud.compact ? 0.62f : 0.7f;
-            float dist = Mathf.Clamp((sep + 2.6f) / frac / (2 * tanH), 6.2f, 15);
-            dist = Mathf.Max(dist, (touch ? 3.0f : 2.9f) / (2 * tanV * (touch ? 0.64f : 0.72f)));
+            // 第三版修订：取景更紧（两人约占画面高度的一半），两人拉开时镜头随距离后退
+            float frac = touch ? 0.56f : hud.compact ? 0.66f : 0.76f;
+            float dist = Mathf.Clamp((sep + 2.2f) / frac / (2 * tanH), 5.8f, 15);
+            dist = Mathf.Max(dist, (touch ? 2.8f : 2.62f) / (2 * tanV * (touch ? 0.64f : 0.74f)));
             float hc = 1.55f + dist * 0.045f;
             float ground = touch ? 0.42f : 0.46f;     // 地平线（脚下）在屏幕中的位置：NDC −ground
             var z = zoom;
             if (z != null && realT < z.until)
             {
                 var f = sim.f[z.who];
-                mid = Mathf.Lerp(mid, (float)f.x, z.ko ? 0.55f : 0.75f);
-                if (z.ko)
+                if (z.parry)
                 {
+                    // 格开：镜头轻推近两人之间（偏向格开者），让弹开的一瞬看得清，随后缓缓拉回
+                    mid = Mathf.Lerp(mid, (float)f.x, 0.3f);
+                    float kz = Mathf.Clamp01((z.until - realT) / 0.6f);
+                    dist *= 1 - 0.2f * Mathf.Sin(Mathf.Min(1, kz * 1.6f) * Mathf.PI * 0.5f); hc -= 0.06f;
+                }
+                else if (z.ko)
+                {
+                    mid = Mathf.Lerp(mid, (float)f.x, 0.55f);
                     // KO 慢镜：轻推近，镜头不压低；被击飞者腾空时地平线下移，把他留在画面里
                     dist *= 0.84f; hc += 0.1f;
                     ground = (touch ? 0.48f : 0.5f) + Mathf.Min(0.28f, 0.14f * Mathf.Max(0, (float)f.y));
                 }
-                else { dist *= 0.62f; hc -= 0.1f; ground = 0.38f; }
+                else { mid = Mathf.Lerp(mid, (float)f.x, 0.75f); dist *= 0.62f; hc -= 0.1f; ground = 0.38f; }
             }
             else zoom = null;
             // 开场：从侧后方推近
@@ -845,16 +945,23 @@ namespace Sanguo
             var look = new Vector3(camLook.x + (R() - 0.5f) * s, camLook.y + (R() - 0.5f) * s, 0);
             cam.transform.position = DuelXf.P(pos);
             cam.transform.LookAt(DuelXf.P(look), Vector3.up);
+            // 格开得手：约 3° 的镜头侧倾，0.35 秒内回正（three 的 camera.rotateZ：绕视线轴，上方偏向画面左侧为正）
+            if (z != null && z.parry && realT < z.until)
+            {
+                float uz = Mathf.Clamp01(1 - (z.until - realT) / 0.6f);
+                int fc = sim.f[z.who].face; if (fc == 0) fc = 1;
+                if (uz < 0.6f) cam.transform.Rotate(0, 0, 0.055f * Mathf.Sin(uz / 0.6f * Mathf.PI) * fc * Mathf.Rad2Deg, Space.Self);
+            }
         }
     }
 
-    // 挥击风声、重击闷响、弓弦（网页版用 WebAudio 即时合成；这里离线合成成 AudioClip）
+    // 挥击风声、重击闷响、弓弦、格开的金铁交鸣、重击起手的「铮」（网页版用 WebAudio 即时合成；这里离线合成成 AudioClip）
     public sealed class DuelAudio
     {
         const int SR = 44100;
         readonly AudioSource src;
         readonly AudioClip[] whoosh = new AudioClip[3];
-        readonly AudioClip thud, twang;
+        readonly AudioClip thud, twang, parry, shing;
         int wi;
 
         public DuelAudio(GameObject host)
@@ -867,12 +974,14 @@ namespace Sanguo
             for (int k = 0; k < 3; k++) whoosh[k] = Make("whoosh" + k, Whoosh(noise, 0.07f + k * 0.15f));
             thud = Make("thud", Thud(noise));
             twang = Make("twang", Twang(noise));
+            parry = Make("parry", Parry(noise));
+            shing = Make("shing", Shing(noise));
         }
         static AudioClip Make(string name, float[] d) { var c = AudioClip.Create("Duel_" + name, d.Length, 1, SR, false); c.SetData(d, 0); return c; }
         public void Play(string kind, float vol)
         {
             if (!Sfx.SoundOn || src == null) return;
-            AudioClip c = kind == "thud" ? thud : kind == "twang" ? twang : whoosh[wi++ % 3];
+            AudioClip c = kind == "thud" ? thud : kind == "twang" ? twang : kind == "parry" ? parry : kind == "shing" ? shing : whoosh[wi++ % 3];
             src.PlayOneShot(c, Mathf.Clamp01(vol));
         }
         public void Dispose()
@@ -880,6 +989,8 @@ namespace Sanguo
             foreach (var c in whoosh) if (c != null) UnityEngine.Object.Destroy(c);
             if (thud != null) UnityEngine.Object.Destroy(thud);
             if (twang != null) UnityEngine.Object.Destroy(twang);
+            if (parry != null) UnityEngine.Object.Destroy(parry);
+            if (shing != null) UnityEngine.Object.Destroy(shing);
         }
 
         // WebAudio 的 exponentialRampToValueAtTime：分段指数插值
@@ -926,6 +1037,50 @@ namespace Sanguo
                 float s = bq.Run(noise[i % noise.Length]) * Ramp(t, new[] { 0, 0.01f, 0.45f }, new[] { 0.0001f, 0.7f, 0.0001f });
                 ph += 2 * Mathf.PI * Ramp(t, new[] { 0, 0.35f }, new[] { 110f, 38 }) / SR;
                 if (t < 0.42f) s += Mathf.Sin(ph) * Ramp(t, new[] { 0, 0.4f }, new[] { 0.5f, 0.0001f });
+                d[i] = Mathf.Clamp(s, -1, 1);
+            }
+            return d;
+        }
+        // 格开：金铁交鸣——几个不谐和的正弦泛音长长回响（低音为三角波，下滑），加一声高频刮擦（高通噪声）
+        static float[] Parry(float[] noise)
+        {
+            var parts = new[] { new[] { 1870f, 0.3f, 0.95f }, new[] { 2795f, 0.2f, 0.7f }, new[] { 4120f, 0.12f, 0.45f }, new[] { 1240f, 0.16f, 0.6f }, new[] { 210f, 0.35f, 0.18f } };
+            int n = (int)(0.98f * SR), o = (int)(0.2f * SR); var d = new float[n]; var bq = new Biquad(); bq.Set(1, 3200, 0.707f);
+            foreach (var pt in parts)
+            {
+                float fq = pt[0], a = pt[1], dur = pt[2], ph = 0; bool tri = fq < 400;
+                int m = Mathf.Min(n, (int)((dur + 0.02f) * SR));
+                for (int i = 0; i < m; i++)
+                {
+                    float t = (float)i / SR;
+                    ph += Ramp(t, new[] { 0, dur }, new[] { fq, fq * (tri ? 0.6f : 0.985f) }) / SR;
+                    float w = tri ? 1 - 4 * Mathf.Abs((ph % 1f) - 0.5f) : Mathf.Sin(ph * 2 * Mathf.PI);
+                    d[i] += w * Ramp(t, new[] { 0, 0.003f, dur }, new[] { 0.0001f, a, 0.0001f });
+                }
+            }
+            int nm = (int)(0.14f * SR);
+            for (int i = 0; i < nm; i++)
+            {
+                float t = (float)i / SR;
+                d[i] += bq.Run(noise[(o + i) % noise.Length]) * Ramp(t, new[] { 0, 0.002f, 0.12f }, new[] { 0.0001f, 0.32f, 0.0001f });
+            }
+            for (int i = 0; i < n; i++) d[i] = Mathf.Clamp(d[i], -1, 1);
+            return d;
+        }
+        // 重击起手的预兆：刃口一声尖锐的「铮」（正弦上滑 + 带通噪声扫频）
+        static float[] Shing(float[] noise)
+        {
+            int n = (int)(0.32f * SR), o = (int)(0.4f * SR); var d = new float[n]; var bq = new Biquad(); float ph = 0;
+            for (int i = 0; i < n; i++)
+            {
+                float t = (float)i / SR;
+                ph += Ramp(t, new[] { 0, 0.12f }, new[] { 2400f, 3300 }) / SR;
+                float s = Mathf.Sin(ph * 2 * Mathf.PI) * Ramp(t, new[] { 0, 0.01f, 0.3f }, new[] { 0.0001f, 0.12f, 0.0001f });
+                if (t < 0.2f)
+                {
+                    if (i % 32 == 0) bq.Set(2, Ramp(t, new[] { 0, 0.15f }, new[] { 3500f, 8000 }), 3);
+                    s += bq.Run(noise[(o + i) % noise.Length]) * Ramp(t, new[] { 0, 0.02f, 0.18f }, new[] { 0.0001f, 0.25f, 0.0001f });
+                }
                 d[i] = Mathf.Clamp(s, -1, 1);
             }
             return d;

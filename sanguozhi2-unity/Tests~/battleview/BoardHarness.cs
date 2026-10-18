@@ -4,7 +4,10 @@
 //   地图（BattleTerrain 生成，应与网页版逐格相同）、种子与 notes、外观（文化 / 城墙样式 / 地表）、
 //   view.stats 的各项（地形 / 水面 / 城池 / 实例三角形数，树、石、草、点缀、船的数量，裙边）、
 //   地形网格高度的和、各格站立高度、每个实例批次（种类 × 近 / 远）的数量、模板三角形、位置 / 缩放 / 实例色的和、
-//   各部队的贴地位置与阵营光环的高度、士兵的兵种与队形。
+//   各部队的贴地位置与阵营光环的高度、士兵的兵种与队形；
+//   主将战马根的世界矩阵（BattleBoard.HorseRootMatrix）与每个士兵的实例矩阵（BattleBoard.SoldierPos + 朝向 + FIG_S，
+//   即 BattleView 摆放士兵的同一公式）；
+//   地形 / 裙边 / 水面 / 城池 / 船各网格的三角形数，以及按三角形展开（每个索引计一次）的位置、法线、颜色、aMat、aBt 各分量之和。
 // 部队的武将与位置取自网页版的导出（网页版按 Conquest.prepare + BattleModel 布阵；这里只比对画面）。
 // "terrain": false 的用例（网页版不带取样栅格）：地图与城池照网页版，比对由地块类型合成的取样场（SynthGrid）建出的棋盘。
 // 输出：<输出目录>/board-<名>.txt（逐项结果），汇总打印；退出码 = 不一致的项数。
@@ -197,6 +200,80 @@ static class BoardHarness
             }
             Check("部队 " + u["name"], dx < 0.04 && dz < 1e-3 && dyv < 1e-3 && Math.Abs(D(u["ringY"]) - ringY) < 1e-3 && (string)u["culture"] == cul && soldOk,
                 "位置差 " + F(dx) + "," + F(dyv) + "," + F(dz) + " 光环 " + F(D(u["ringY"])) + "/" + F(ringY) + " 文化 " + u["culture"] + "/" + cul + " 士兵 " + ws.Count + "/" + slots.Count + (soldOk ? "" : " 队形不同"));
+            // 朝向、主将战马根与士兵的实例矩阵：用 BattleView 的同一组公式（BattleBoard.UnitYaw / HorseRootMatrix / SoldierPos）
+            float yaw = BattleBoard.UnitYaw(bu.side);
+            var gp = new Vector3(t.x, (float)y, t.z);
+            double dRot = Math.Abs(Mathf.DeltaAngle((float)(-D(u["rotY"]) * 180 / Math.PI), yaw));
+            var wf = O(u["fig"]);
+            double dHorse = -1;
+            if (wf != null) dHorse = MatDiff(L(wf["horse"]), BattleBoard.HorseRootMatrix(gp, yaw));
+            double dSold = 0; int nm = 0;
+            for (int i = 0; i < slots.Count && i < ws.Count; i++)
+            {
+                var wm = L(O(ws[i])["m"]);
+                if (wm == null) continue;
+                var um = Matrix4x4.TRS(B.SoldierPos(gp, yaw, slots[i].x, slots[i].z), Quaternion.Euler(0, yaw, 0), new Vector3(BattleBoard.FIG_S, BattleBoard.FIG_S, BattleBoard.FIG_S));
+                dSold = Math.Max(dSold, MatDiff(wm, um)); nm++;
+            }
+            Check("部队 " + u["name"] + " 的朝向 / 战马 / 士兵矩阵", dRot < 1e-3 && wf != null && dHorse < 2e-3 && dSold < 2e-3 && nm == slots.Count,
+                "朝向差 " + F(dRot) + "° 战马根 " + (wf == null ? "网页没有" : F(dHorse)) + " 士兵 " + nm + " 个，最大差 " + F(dSold));
         }
+        // 各网格：三角形数与按三角形展开的属性之和
+        var wms = O(web.ContainsKey("meshes") ? web["meshes"] : null);
+        if (wms == null) { Check("网格属性", false, "网页版参考没有 meshes（请重新运行 web.mjs）"); return; }
+        MeshSums("Board", O(wms["Board"]), B.tPos, B.tNrm, B.tCol, B.tMat, B.tBt, B.tTri);
+        MeshSums("Skirt", O(wms["Skirt"]), B.sPos, B.sNrm, B.sCol, B.sMat, B.sBt, B.sTri);
+        MeshSums("Water", O(wms["Water"]), B.wPos, null, B.wCol, null, null, B.wTri);
+        MeshSums("Fort", O(wms["Fort"]), B.Fort.v, B.Fort.n, B.Fort.c, null, null, B.Fort.t);
+        if (B.Boats != null) MeshSums("Boats", O(wms["Boats"]), B.Boats.v, B.Boats.n, B.Boats.c, null, null, B.Boats.t);
+        else MeshSums("Boats", O(wms["Boats"]), null, null, null, null, null, null);
+    }
+
+    // 网页版 three 的世界矩阵（elements，列主序）↔ Unity 矩阵：人物局部 (x, y, z)_JS = (−x, y, z)_Unity（Figure.cs FigConv），
+    // 世界 z 取反，故 Unity 的列 0 = −(e0, e1, −e2)、列 1 = (e4, e5, −e6)、列 2 = (e8, e9, −e10)、平移 = (e12, e13, −e14)。返回逐元素最大差
+    static double MatDiff(List<object> e, Matrix4x4 m)
+    {
+        if (e == null || e.Count < 16) return 1e9;
+        double[,] w =
+        {
+            { -D(e[0]), D(e[4]), D(e[8]), D(e[12]) },
+            { -D(e[1]), D(e[5]), D(e[9]), D(e[13]) },
+            { D(e[2]), -D(e[6]), -D(e[10]), -D(e[14]) },
+        };
+        double d = 0;
+        for (int r = 0; r < 3; r++) for (int c = 0; c < 4; c++) d = Math.Max(d, Math.Abs(w[r, c] - m[r, c]));
+        return d;
+    }
+
+    // 按三角形展开（每个索引计一次）的属性之和：位置与法线的 z 取反（three ↔ Unity），颜色取 RGB；
+    // 位置 x 先减去 400（棋盘原点）再求和，容差 = max(0.02, |和| × 2e-6)（float32 累加误差）
+    static void MeshSums(string nm, Dictionary<string, object> w, IList<Vector3> pos, IList<Vector3> nrm, IList<Color> col, IList<Vector4> mat, IList<Vector4> bt, IList<int> tri)
+    {
+        int ct = tri != null ? tri.Count / 3 : 0;
+        if (w == null || ct == 0) { Check("网格 " + nm, w == null && ct == 0, "网页 " + (w == null ? "没有" : D(w["tris"]) + " 个三角形") + " / C# " + ct + " 个三角形"); return; }
+        int wt = (int)D(w["tris"]);
+        bool ok = wt == ct;
+        var sb = new StringBuilder("三角形 " + wt + "/" + ct);
+        Action<string, int, Func<int, int, double>, bool> one = (an, k, get, have) =>
+        {
+            var ws = L(w.ContainsKey(an) ? w[an] : null);
+            if (ws == null && !have) return;
+            if (ws == null || !have) { ok = false; sb.Append(" " + an + "：" + (ws == null ? "网页没有" : "C# 没有")); return; }
+            for (int c = 0; c < k; c++)
+            {
+                double sum = 0; foreach (var i in tri) sum += get(i, c);
+                double wv = D(ws[c]);
+                if (an == "position" && c == 0) { sum -= 400.0 * tri.Count; wv -= 400.0 * tri.Count; }
+                double tol = Math.Max(0.02, Math.Abs(wv) * 2e-6);
+                if (Math.Abs(sum - wv) > tol) { ok = false; sb.Append(" " + an + "[" + c + "] " + F(wv) + "/" + F(sum)); }
+            }
+            sb.Append(" " + an);
+        };
+        one("position", 3, (i, c) => c == 0 ? pos[i].x : c == 1 ? pos[i].y : -pos[i].z, pos != null);
+        one("normal", 3, (i, c) => c == 0 ? nrm[i].x : c == 1 ? nrm[i].y : -nrm[i].z, nrm != null && nrm.Count > 0);
+        one("color", 3, (i, c) => c == 0 ? col[i].r : c == 1 ? col[i].g : col[i].b, col != null && col.Count > 0);
+        one("aMat", 4, (i, c) => c == 0 ? mat[i].x : c == 1 ? mat[i].y : c == 2 ? mat[i].z : mat[i].w, mat != null);
+        one("aBt", 4, (i, c) => c == 0 ? bt[i].x : c == 1 ? bt[i].y : c == 2 ? bt[i].z : bt[i].w, bt != null);
+        Check("网格 " + nm, ok, sb.ToString());
     }
 }

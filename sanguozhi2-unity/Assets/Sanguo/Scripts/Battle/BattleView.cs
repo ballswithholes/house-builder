@@ -165,15 +165,8 @@ namespace Sanguo
             // 裙边：网格外的一圈大平面（陆地用同一地形材质、外缘平均色；海面用水面材质）
             {
                 var sm = new Mesh { name = "Skirt" };
-                sm.vertices = B.sPos; sm.colors = B.sCol;
-                var nrm = new Vector3[8]; for (int i = 0; i < 8; i++) nrm[i] = Vector3.up;
-                sm.normals = nrm;
-                if (!B.seaSkirt)
-                {
-                    var am = new List<Vector4>(); var bt = new List<Vector4>();
-                    for (int i = 0; i < 8; i++) { am.Add(new Vector4(0, 0, 0, 1)); bt.Add(Vector4.zero); }
-                    sm.SetUVs(1, am); sm.SetUVs(2, bt);
-                }
+                sm.vertices = B.sPos; sm.colors = B.sCol; sm.normals = B.sNrm;
+                if (B.sMat != null) { sm.SetUVs(1, new List<Vector4>(B.sMat)); sm.SetUVs(2, new List<Vector4>(B.sBt)); }   // 陆地裙边：地形材质的 aMat / aBt
                 sm.triangles = B.sTri;
                 sm.RecalculateBounds();
                 fieldMeshes.Add(sm);
@@ -917,7 +910,7 @@ namespace Sanguo
             heatSeed = R() * 10;
             anim.t = R() * 4;
             pos = v.Tile(u.x, u.y);
-            facing = u.side == 0 ? 90 : -90;
+            facing = BattleBoard.UnitYaw(u.side);
             yaw = facing;
             transform.position = pos;
             transform.rotation = Quaternion.Euler(0, yaw, 0);
@@ -977,7 +970,7 @@ namespace Sanguo
             // 网页版：root.rotation.y = π（模型朝 +Z、部队前方为局部 −Z）、位置 (0, 0, −0.36) → Unity 朝 +Z、位置 (0, 0, 0.36)
             horse.Root.SetParent(figRoot, false);
             horse.Root.localRotation = Quaternion.identity;
-            horse.Root.localPosition = new Vector3(0, 0, 0.36f / BattleBoard.FIG_S);
+            horse.Root.localPosition = BattleBoard.HorseLocal;
             if (hidden) figRoot.gameObject.SetActive(false);
         }
         // 士兵的兵种与队形，同步到士兵群
@@ -1009,13 +1002,8 @@ namespace Sanguo
             var gp = transform.position;
             if (!force && gp == placeP && yaw == placeYaw) return;
             placeP = gp; placeYaw = yaw;
-            float lift = gp.y - view.GroundY(gp.x, gp.z);
-            var rot = Quaternion.Euler(0, yaw, 0);
-            foreach (var q in sold)
-            {
-                var w = gp + rot * new Vector3((float)q.x, 0, (float)-q.z);   // 网页版局部 (x, z)，前方 −z → Unity 局部 (x, −z)
-                cr.SetTransform(q.id, new Vector3(w.x, view.GroundY(w.x, w.z) + Mathf.Max(0, lift), w.z), yaw, BattleBoard.FIG_S);
-            }
+            // 位置公式在 BattleBoard.SoldierPos（无头测试与网页版的士兵矩阵逐个比对）
+            foreach (var q in sold) cr.SetTransform(q.id, view.Board.SoldierPos(gp, yaw, q.x, q.z), yaw, BattleBoard.FIG_S);
         }
         // 动作：kind ∈ attack | hit | special | rout；dur 秒（≤ 0 用缺省）
         public void Act(string kind, float dur = 0)
@@ -1283,7 +1271,8 @@ namespace Sanguo
         void Animate(float dt, float sp, Color fc, float fk)
         {
             var A = anim; var cr = view.Crowd;
-            if (hidden) { if (sold.Count > 0) RemoveSoldiers(); return; }
+            // 网页版 if (!this.group.visible)：暗影隐身中、或溃散后已隐去（Hide → SetActive(false)）的部队不再摆姿势
+            if (hidden || !gameObject.activeSelf) { if (sold.Count > 0) RemoveSoldiers(); return; }
             bool moving = A.moving > 0 && !A.routing;
             string gait = sp > 7 ? "gallop" : sp > 3.2f ? "trot" : "walk";
             if (moving) A.gait = gait;

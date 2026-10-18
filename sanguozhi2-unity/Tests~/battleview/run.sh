@@ -1,8 +1,8 @@
 #!/bin/bash
 # 战场画面（第三版，Battle/BattleLook.cs 的 BattleBoard）的无头测试：
 #   1. web.mjs：headless Chromium 打开网页版 tests/battle-view.html（世界剧本、真实地形），按 cases.json 的各个用例
-#      导出 web-<名>.json（棋盘统计、实例批次、站立高度、部队、镜头）与截图 web-<名>.png；
-#   2. BoardHarness.cs：C# 移植为同一组（城池, 来向, 部队）建棋盘，逐项比对（见文件头）；
+#      导出 web-<名>.json（棋盘统计、实例批次、站立高度、部队与士兵 / 战马的矩阵、各网格的属性之和、镜头）与截图 web-<名>.png；
+#   2. BoardHarness.cs：C# 移植为同一组（城池, 来向, 部队）建棋盘，逐项比对（见文件头）；21 个用例覆盖全部 12 种城墙样式与草原骑兵文化；
 #   3. BoardRender.cs：软件光栅器把 C# 的棋盘（地形着色器、水面、实例、城池、船、主将与士兵的人物模型）按网页版的镜头画成
 #      unity-<名>.png，web.mjs compose 左右拼成 side-<名>.png（左 网页版、右 C#）。
 # 编译：规则文件 + View/WorldGeo / Art / Raster / CultureArt / Portrait / Figure*（-define:SANGUO_HEADLESS）+ Battle/BattleLook.cs，

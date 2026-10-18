@@ -729,8 +729,8 @@ static class BoardRender
         string culture = BoardHarness.CultureOf(m, look, bu.side);
         var t = B.Tile(bu.x, bu.y);
         var gp = new Vector3(t.x, (float)Math.Max(t.y, B.GroundY(t.x, t.z)), t.z);
-        float yaw = bu.side == 0 ? 90 : -90;
-        // 主将与战马：figRoot 缩放 0.7，战马根在 (0, 0, 0.36 / 0.7)
+        float yaw = BattleBoard.UnitYaw(bu.side);
+        // 主将与战马：figRoot 缩放 FIG_S，战马根在 BattleBoard.HorseLocal
         var gen = bu.gen;
         var pg = new PortraitGen { name = gen.name, war = gen.war, intel = gen.intel, pol = gen.pol, culture = gen.culture, sex = gen.sex };
         if (gen.born.HasValue && gen.born.Value > 0) pg.born = gen.born.Value;
@@ -742,8 +742,7 @@ static class BoardRender
             color = hex, lod = "mid", seed = Math.Abs(gen.id) % 5, culture = culture, general = true,
             armor = culture == "persia" || culture == "sarmatian" ? "scale" : "cloth",
         };
-        var figRoot = TRS(gp, yaw, BattleBoard.FIG_S);
-        var horseRoot = M4d.Mul(figRoot, M4d.Translation(0, 0, 0.36 / BattleBoard.FIG_S));
+        var horseRoot = FromUnity(BattleBoard.HorseRootMatrix(gp, yaw));   // = BattleView：部队 × figRoot × horse.Root
         var idle = FigClips.Info("idle");
         double ut = (Math.Abs(gen.id) * 0.37) % 1 * (idle != null ? idle.dur : 1);
         AddFigure(look0, tpl, hex, horseRoot, ho, horseRoot, "idle", ut);
@@ -751,14 +750,10 @@ static class BoardRender
         int nb = BattleBoard.SoldierBucket(bu.Troops, bu.alive), ns = BattleBoard.SoldierCount(nb, culture);
         var slots = BattleBoard.SoldierSlots(culture, ns);
         string cul = BattleBoard.FigCult(culture);
-        float lift = gp.y - (float)B.GroundY(gp.x, gp.z);
-        var rot = Quaternion.Euler(0, yaw, 0);
         for (int i = 0; i < slots.Count; i++)
         {
             var q = slots[i];
-            var w = gp + rot * new Vector3((float)q.x, 0, (float)-q.z);
-            var sp = new Vector3(w.x, (float)B.GroundY(w.x, w.z) + Math.Max(0, lift), w.z);
-            var root = TRS(sp, yaw, BattleBoard.FIG_S);
+            var root = TRS(B.SoldierPos(gp, yaw, q.x, q.z), yaw, BattleBoard.FIG_S);   // = BattleView.PlaceSoldiers
             int seed = (Math.Abs(gen.id) + i) % 2;
             var so = new FigOpts { type = q.mounted ? "cavalry" : q.type, culture = cul, color = hex, seed = seed, lod = "low" };
             var lk = FigBuild.lookOfSoldier(so);
@@ -852,7 +847,7 @@ static class BoardRender
             {
                 var p = B.sPos[k]; var c = B.sCol[k];
                 if (B.seaSkirt) p.y += WaveH(p.x, p.z) * WAmp * (1 - c.g);
-                return new Vt { p = p, n = Vector3.up, c = V4(c), a = new Vector4(0, 0, 0, 1) };
+                return new Vt { p = p, n = B.sNrm[k], c = V4(c), a = B.sMat != null ? B.sMat[k] : new Vector4(0, 0, 0, 1), b = B.sBt != null ? B.sBt[k] : Vector4.zero };
             };
             if (B.seaSkirt) Add(waters, sv(B.sTri[i]), sv(B.sTri[i + 1]), sv(B.sTri[i + 2]), mWater, false, false);
             else Add(opaque, sv(B.sTri[i]), sv(B.sTri[i + 1]), sv(B.sTri[i + 2]), mTerrain, false, true);
