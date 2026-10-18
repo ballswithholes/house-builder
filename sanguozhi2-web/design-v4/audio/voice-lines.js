@@ -349,7 +349,7 @@ function check() {
   for (const [who] of Object.entries(PROFILES)) for (const [lg, L] of Object.entries(LINGUA)) if (L.conf === 'A' && !PROFILES[who].voice.some(v => L.voices[v])) fails.push(`profile ${who}: no voice in ${lg}`);
   for (const [id, c] of Object.entries(CUES)) if ((c.who === 'herald' || c.who === 'merchant') && !PROFILES[c.who]) fails.push('cue ' + id + ' needs profile ' + c.who);
   const fs = require('fs'), path = require('path');
-  const NOT_CUES = /\.js$|^tourney\.(crowd|roar|drum3|gong|lots|seal|petals)$|^crowd\.|^item\.<|^(build\.start|caravan\.depart|exped\.depart|exped\.return)$|<id>\.great$/;
+  const NOT_CUES = /\.js$|^tourney\.(crowd|roar|drum3|gong|lots|seal|petals)$|^crowd\.|^item\.<|^(build\.start|caravan\.depart|exped\.depart|exped\.return)$|<id>\.great$|^evt\.painting\./;  // evt.painting.<n> = art ids (ASSETS.md), not cues
   const EXPAND = { 'evt.card.<category>': ['nature', 'society', 'court', 'people', 'global'].map(k => 'evt.card.' + k), 'debate.stance.<id>': ['yinjing', 'sheyu', 'bonan'].map(k => 'debate.stance.' + k) };
   const docs = fs.readdirSync(path.join(__dirname, '..')).filter(f => f.endsWith('.md')).map(f => path.join(__dirname, '..', f));
   let refs = new Set();
