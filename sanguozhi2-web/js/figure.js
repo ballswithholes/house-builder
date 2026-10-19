@@ -2389,7 +2389,33 @@
     const len = clamp((look.beard && look.beard.len) || 1, 0.6, 1.6);
     const bc = X.beard, top = P.shade(bc, 1.25);
     kit.bone('head');
+    // 长髯（关羽等，试点原样）：椭球壳
     const shell = (th, ph0, ph1, c, puff) => { M.color = c; M.shell(kit.headAt(0, -0.33, 0.02), kit.hv(1.03 * (puff || 1), 0.86 * (puff || 1), 1.0 * (puff || 1)), -th, th, D.det >= 1 ? 8 : 5, ph0, ph1, D.det >= 1 ? 2 : 1); };
+    // 贴脸的胡须壳：在头面上按角度 th（0 = 正前）与高度 y 取点、向外抬 lift，前缘停在下唇之下（嘴露出来），
+    // 两侧沿腮升到鬓角；最底一行收进下巴下面（被脖子挡住）。lift 自上而下变厚 → 胡子有体积而不是一张面具。
+    const hug = (o) => {
+      // 低模分段少、弦会切进脸里：抬得更高
+      const thM = o.th || 84, nt = D.det >= 2 ? 10 : D.det >= 1 ? 8 : 6, nr = D.det >= 2 ? 3 : D.det >= 1 ? 2 : 1, lk = D.det >= 1 ? 1 : 1.7;
+      const yTop = th => lerp(o.front != null ? o.front : -0.8, o.side != null ? o.side : -0.08, clamp01((Math.abs(th) - 14) / 64));
+      // 一行（低模）时底边停在下巴上（再往下会收到脖子轴心、整片藏进下巴里）
+      const yBot = th => lerp(o.bot != null ? o.bot : nr > 1 ? -1.13 : -1.03, nr > 1 ? -0.95 : -0.9, clamp01((Math.abs(th) - 40) / 50));
+      const rows = [];
+      for (let i = 0; i <= nr; i++) {
+        const u = i / nr, row = [];
+        for (let j = 0; j <= nt; j++) {
+          const th = lerp(-thM, thM, j / nt), edge = Math.min(j, nt - j) === 0 ? 0.35 : 1;
+          row.push(kit.sidePoint(th, lerp(yTop(th), yBot(th), Math.pow(u, 0.85)), lk * lerp(o.l0, o.l1, u) * (i === 0 ? 1 : edge)));
+        }
+        rows.push(row);
+      }
+      const c0 = [0, kit.headCY - 0.5 * kit.Ry, kit.headC[2] - 0.2 * kit.Rz];
+      for (let i = 0; i < nr; i++) for (let j = 0; j < nt; j++) {
+        const a = rows[i][j], b = rows[i][j + 1], cc = rows[i + 1][j + 1], d = rows[i + 1][j];
+        const m = V.mul(V.add(V.add(a, b), V.add(cc, d)), 0.25);
+        M.quad(a, b, cc, d, V.sub(m, c0), P.shade(o.c, lerp(1.12, 0.86, (i + 0.5) / nr)));
+      }
+      return rows;
+    };
     const chestFront = kit.chestR * kit.depthK + 0.045 * k;
     // 一绺须：五边的锥形放样，尖端前卷，上三分之一随头、其余随胸
     const lock = (root, tip, w0, seed, curl) => {
@@ -2413,26 +2439,28 @@
       const split = root[1] - (root[1] - tip[1]) / 3;
       M.boneBy(start, p => (p[1] > split || tip[1] > J.neck[1] ? B.head : B.chest));
     };
-    if (st === 'stubble') shell(80, 108, 162, P.mix(X.skin, bc, 0.4), 1.005);
-    else if (st === 'short') shell(92, 104, 165, bc, 1.02);
+    if (st === 'stubble') hug({ c: P.mix(X.skin, bc, 0.4), l0: 0.006, l1: 0.012, th: 78, front: -0.78, side: -0.3 });
+    else if (st === 'short') hug({ c: bc, l0: 0.03, l1: 0.075, th: 82, front: -0.8, side: -0.12 });
     else if (st === 'goatee') lock(kit.headAt(0, -0.95, 0.6), kit.headAt(0, -1.35 - 0.15 * len, 0.62), 0.22 * R, 2);
     else if (st === 'full' || st === 'bristle' || st === 'curled' || st === 'braided') {
-      shell(100, 100, 166, bc, 1.05);
-      const chin = kit.headAt(0, -1.05, 0.55);
-      M.color = bc; M.sphere(V.add(chin, [0, -0.03 * k * len, 0.01 * k]), kit.hv(0.5, 0.32 * len, 0.36), D.sph[0], D.sph[1]);
+      hug({ c: bc, l0: 0.04, l1: 0.15 + 0.04 * len, th: 86, front: -0.8, side: -0.06 });
+      // 下巴前垂下的一团（与壳重叠，不留缝）
+      const chin = kit.facePoint(0, -1.0, 0.1);
+      M.color = bc; M.sphere(V.add(chin, [0, -0.012 * k * len, 0.004 * k]), [0.5 * kit.Rx, (0.2 + 0.16 * len) * kit.Ry, 0.32 * kit.Rzu], D.sph[0], D.sph[1]);
       if (st === 'bristle') {
         // 虬髯（张飞）：自下颌向外下方伸出的尖簇
         const n = D.det >= 2 ? 9 : D.det >= 1 ? 6 : 3;
         for (let i = 0; i < n; i++) {
           const a = lerp(-80, 80, n > 1 ? i / (n - 1) : 0.5) * D2R;
-          const p = kit.headAt(Math.sin(a) * 0.9, -0.75 - 0.25 * Math.cos(a), Math.cos(a) * 0.8);
+          const p = kit.sidePoint(a / D2R, -0.72 - 0.3 * Math.cos(a), 0.12);
           const dir = V.norm([Math.sin(a) * 0.9, -0.8, Math.cos(a) * 0.6]);
           M.color = P.shade(bc, 0.9 + 0.2 * (i % 2));
           M.spike(p, dir, 0.035 * k, 0.07 * k * len, 4);
         }
       }
-      if (st === 'braided') lock(kit.headAt(0, -1.1, 0.6), V.add(kit.headAt(0, -1.1, 0.6), [0, -0.13 * k * len, 0.04 * k]), 0.2 * R, 4);
-      if (st === 'curled' && D.det >= 1) for (const s of [1, 0, -1]) { M.color = top; M.sphere(kit.headAt(s * 0.4, -1.25, 0.45), 0.03 * k, 4, 2); }
+      const chinLow = V.add(chin, [0, -(0.2 + 0.16 * len) * kit.Ry * 0.7, 0]);
+      if (st === 'braided') lock(chinLow, V.add(chinLow, [0, -0.11 * k * len, 0.03 * k]), 0.2 * R, 4);
+      if (st === 'curled' && D.det >= 1) for (const s of [1, 0, -1]) { M.color = top; M.sphere(V.add(chinLow, [s * 0.32 * kit.Rx, 0.1 * kit.Ry * Math.abs(s), 0.012 * k]), 0.03 * k, 4, 2); }
     } else if (st === 'long' || st === 'flowing' || st === 'forked') {
       shell(66, 112, 160, bc);
       const tipY = st === 'flowing' ? J.chest[1] - 0.02 * k - (len - 1) * 0.08 * k : kit.neckY - 0.05 * k * len;

@@ -11,7 +11,8 @@
    约定（与 v3 相同）：size ≈ 占地半径 r，底座约 2.3r × 2.3r，城墙在 ±r，城门朝南；旗帜由 map-view 画在东北角
    （Unity (0.9r, 0, 0.9r)），该角保持空旷；标签高度 size × 1.6 + 0.6 —— 模型最高处不超过约 1.5r。
    模型内部按米建模（1 个 size 单位 = 20 m），出图时缩到单位尺寸（size = 1），底座顶面在 y = 0.1。
-   三角形（含城墙与底座）：近景每城约 1.4k–4.9k（平均约 3.1k），最大的都城（洛阳 / 长安）约 6.1k；远景 ≤ 400。
+   三角形（含城墙与底座）：近景每城约 1.4k–5.1k（平均约 3.2k），最大的都城（洛阳 / 长安）约 5.8k；远景 ≤ 400（夜里有至多 3 块
+   暖色窗光 / 一堆篝火，远处的城不至于整片发蓝）。
    几何体按（模型、档次、变体）缓存，同类城共用（战略地图上 196 座城只有约 70 份几何体）。
 
    文化 → 模型
@@ -46,7 +47,8 @@
      SG.CultureArt.cityInto(mb, size, culture, capital, city?) → mb
          写入一个 MeshBuilder：SG.LP.MeshBuilder（第四版：按它当前的变换写入，带墨线宽度、夜间自发光、风摆）或
          原有的 SG.MeshBuilder（Unity 坐标，可带 mb.M；只有形状与顶点色——要墨线与夜灯请改用下面的 LP 接口）
-     SG.CultureArt.cityFarInto(mb, size, culture, capital, city?) → mb   远景模型（≤ ~400 三角形，轮廓与配色一致）
+     SG.CultureArt.cityFarInto(mb, size, culture, capital, city?) → mb   远景模型（≤ ~400 三角形，轮廓与配色一致；没给 city 时
+         沿用紧挨着的上一次 cityInto 的城——同文化、同档、同尺寸——以便库施 / 希腊城的远景与近景一致）
      SG.CultureArt.city(size, culture, capital, city?) → BufferGeometry  近景的 LP 几何体（墨线部分 + 地面部分合一，测试用）
    第四版新增（战略地图建议用这些：实例化 / 合并、墨线、夜灯）
      SG.CultureArt.model(culture, capital, city?, { lod: 'near' | 'far', size }) → { ink, plain, lamps, tris, key, height }
@@ -2321,9 +2323,11 @@
     const k = o.cap ? 1.15 : 1;
     M.color = H('#D8D0BC'); M.box([0, 1.4, -5.5], [15 * k, 2.8, 10 * k], H('#E6DFCC'), 'tfkrl');
     M.color = PAL.hanRed; M.box([0, 2.8 + 2.3, -5.5], [10.4 * k, 4.6, 6 * k], null, 'fkrl');
+    fWin(K, 0, 5.0, -5.5 + 3 * k, 0, 1, 6.4 * k, 2.0, '#D8A868');
     farRoof(K, 0, 7.4, -5.5, 14 * k, 9.6 * k, 4.6, o.cap ? ROOF.gold : ROOF.slate, 'hip');
     for (const [x, z, w, d] of [[-11, 9.5, 6.4, 4.4], [11, 9.5, 6.4, 4.4], [-11.5, 2.5, 5.6, 4.2], [11.5, 2.5, 5.6, 4.2]]) {
       M.color = PAL.plaster; M.box([x, 1.7, z], [w, 3.4, d], null, 'fkrl');
+      fWin(K, x, 1.8, z + d / 2, 0, 1, 2.2, 1.4, '#D8A868');
       farRoof(K, x, 3.3, z, w + 1.4, d + 1.4, 1.9, ROOF.slate, 'gable');
     }
   };
@@ -2347,6 +2351,19 @@
   // ---------------------------------------------------------- 远景构件（每件几个到二十几个三角形）--
   function fPad(K, top, side, chamfer) { pad(K, octo(23.4, chamfer || 2.4), { top, side, bevel: 1.2 }); }
   function fBox(K, x, y, z, w, h, d, col, top) { const M = K.M; M.color = C(col); M.box([x, y + h / 2, z], [w, h, d], top ? C(top) : P.shade(C(col), 1.08), 'tfkrl'); }
+  /**
+   * 远景的夜窗（一块竖直的窗 / 门光，中心 (x, y, z)，朝水平方向 (nx, nz)，宽 w 高 h；白天是深色窗洞，夜里由 Mood 点亮）。
+   * 每个远景模型最多 K.glowLeft 块（build 里设为 3，约 6 个三角形）：远处的城在夜里有几点暖光，不至于整片发蓝。
+   */
+  function fWin(K, x, y, z, nx, nz, w, h, col) {
+    if (!(K.glowLeft > 0)) return;
+    K.glowLeft--;
+    const M = K.M, l = Math.hypot(nx, nz) || 1, ux = -nz / l, uz = nx / l, ink = M.ink;
+    M.ink = 0; M.nightEmission = 0.95;
+    const c = C(col || '#B88452'), ox = nx / l * 0.06, oz = nz / l * 0.06;
+    M.quad([x - ux * w / 2 + ox, y - h / 2, z - uz * w / 2 + oz], [x + ux * w / 2 + ox, y - h / 2, z + uz * w / 2 + oz], [x + ux * w / 2 + ox, y + h / 2, z + uz * w / 2 + oz], [x - ux * w / 2 + ox, y + h / 2, z - uz * w / 2 + oz], [nx / l, 0, nz / l], c);
+    M.nightEmission = 0; M.ink = ink;
+  }
   /** 圆塔（6 边）：塔身 + 圆锥顶（cone 色）或平顶 */
   function fTower(K, x, z, r, h, col, cone, y0) {
     const M = K.M, c = C(col), y = y0 || 0;
@@ -2358,8 +2375,13 @@
   /** 房：墙盒 + 顶（'hip' | 'gable' | 'flat' | 'cone'（圆屋）| 'loaf'） */
   function fHouse(K, x, z, w, d, h, wall, roof, style, y0) {
     const M = K.M, y = y0 || 0;
-    if (style === 'cone') { M.push().translate(x, y, z); M.color = C(wall); M.lathe([[w / 2, 0], [w / 2, h]], 6, false, false, false, null, 30); M.color = C(roof); M.lathe([[w * 0.62, h - 0.2], [0, h + w * 0.7]], 6, false, true, false, [sh(C(roof), 0.85), sh(C(roof), 1.1)], 30); M.pop(); return; }
+    if (style === 'cone') {
+      M.push().translate(x, y, z); M.color = C(wall); M.lathe([[w / 2, 0], [w / 2, h]], 6, false, false, false, null, 30); M.color = C(roof); M.lathe([[w * 0.62, h - 0.2], [0, h + w * 0.7]], 6, false, true, false, [sh(C(roof), 0.85), sh(C(roof), 1.1)], 30); M.pop();
+      if (h > 1.2) { const a = Math.PI / 3, ap = w / 2 * Math.cos(Math.PI / 6); fWin(K, x + Math.cos(a) * ap, y + Math.min(h * 0.42, 1.1), z + Math.sin(a) * ap, Math.cos(a), Math.sin(a), Math.min(1.8, w * 0.3), Math.min(h * 0.8, 2.0)); }
+      return;
+    }
     M.color = C(wall); M.box([x, y + h / 2, z], [w, h, d], null, 'fkrl');
+    if (h > 1.2) fWin(K, x, y + h * 0.5, z + d / 2, 0, 1, Math.min(2.4, w * 0.4), Math.min(1.8, h * 0.45));
     if (style === 'flat') { M.color = C(roof); M.box([x, y + h + 0.2, z], [w + 0.2, 0.4, d + 0.2], null, 'tfkrl'); return; }
     if (style === 'loaf') { const r = C(roof); M.quad([x - w / 2 - 0.4, y + h - 0.3, z + d / 2 + 0.6], [x + w / 2 + 0.4, y + h - 0.3, z + d / 2 + 0.6], [x + w / 2 + 0.2, y + h + d * 0.62, z], [x - w / 2 - 0.2, y + h + d * 0.62, z], [0, 1, 1], r); M.quad([x + w / 2 + 0.4, y + h - 0.3, z - d / 2 - 0.6], [x - w / 2 - 0.4, y + h - 0.3, z - d / 2 - 0.6], [x - w / 2 - 0.2, y + h + d * 0.62, z], [x + w / 2 + 0.2, y + h + d * 0.62, z], [0, 1, -1], sh(r, 0.86)); for (const s of [-1, 1]) M.triangleFacing([x + s * (w / 2 + 0.4), y + h - 0.3, z - d / 2 - 0.6], [x + s * (w / 2 + 0.2), y + h + d * 0.62, z], [x + s * (w / 2 + 0.4), y + h - 0.3, z + d / 2 + 0.6], [s, 0.6, 0], sh(r, 0.93)); return; }
     const pal = typeof roof === 'string' && ROOF[roof] ? ROOF[roof] : { tile: C(roof), tileAlt: sh(C(roof), 0.88), ridge: sh(C(roof), 0.7) };
@@ -2399,6 +2421,13 @@
     M.pop();
   }
   function fWater(K, pts, col) { water(K, pts, 0.07, col || '#5E9C94'); }
+  /** 远景的篝火（常亮的小火锥，4 个三角形）：车营 / 毡帐营地 */
+  function fFire(K, x, z, s) {
+    const M = K.M, ink = M.ink; s = s || 1;
+    M.ink = 0; M.emission = 0.9; M.color = H('#FFB040');
+    M.push().translate(x, 0, z); M.lathe([[0.9 * s, 0.1], [0, 2.4 * s]], 4, false, false, false, null, 45); M.pop();
+    M.emission = 0; M.ink = ink;
+  }
 
   F.roman = function (K, o) {
     fPad(K, '#C9BD9C', '#8C7A5C');
@@ -2495,8 +2524,8 @@
     fPad(K, '#B8A67C', '#76784E', 3.6);
     waterRing(K, 19.6, 18.8, 2.4, 0.04, '#5E9690', 0.22, 12, true);
     fRing(K, 16.6, 16.2, 3.4, 0.7, '#8A6844', { n: 12, gap: 0.22 });
-    for (const [x, z] of [[-9.5, 11.5], [9.5, 11.5]]) { fBox(K, x, 0, z, 2.8, 7.4, 2.8, '#8A6A48'); fHouse(K, x, z, 3.4, 3.4, 0.01, '#9A7A54', '#B49A62', 'cone', 7.4); }
-    if (o.cap) { fBox(K, 0, 0, -5.5, 10, 5.5, 6.6, '#A88660'); fHouse(K, 0, -5.5, 10, 6.6, 0.01, '#A88660', '#B49660', 'loaf', 5.6); }
+    for (const [x, z] of [[-9.5, 11.5], [9.5, 11.5]]) { fBox(K, x, 0, z, 2.8, 7.4, 2.8, '#8A6A48'); fWin(K, x, 6.5, z + 1.4, 0, 1, 1.6, 1.2); fHouse(K, x, z, 3.4, 3.4, 0.01, '#9A7A54', '#B49A62', 'cone', 7.4); }
+    if (o.cap) { fBox(K, 0, 0, -5.5, 10, 5.5, 6.6, '#A88660'); fWin(K, 0, 3.8, -2.2, 0, 1, 2.6, 1.6); fHouse(K, 0, -5.5, 10, 6.6, 0.01, '#A88660', '#B49660', 'loaf', 5.6); }
     for (const [x, z] of o.cap ? [[-9.5, -11], [9.5, -11]] : [[-5, -9.5], [3.5, -10.5]]) { fBox(K, x, 0, z, 4.6, 4.0, 3.8, '#B89A6A'); fHouse(K, x, z, 4.6, 3.8, 0.01, '#B89A6A', '#B89A62', 'loaf', 4.0); }
     for (const [x, z] of [[-10.5, 1], [10.5, 2], [-4.5, 5.5], [4.5, 7.5], [-11, -8.5]]) { const M = K.M; M.push().translate(x, 0, z); M.color = strawC('#B49A62'); M.lathe([[2.9, 0], [0, 3.2]], 6, false, false, false, [sh(strawC('#B49A62'), 0.8), sh(strawC('#B49A62'), 1.1)], 30); M.pop(); }
   };
@@ -2505,6 +2534,7 @@
     for (let i = 0; i < 7; i++) { const a = Math.PI / 2 + 0.55 + i * (Math.PI * 2 - 1.1) / 6, x = Math.cos(a) * 17.2, z = Math.sin(a) * 16.8; if (x > 11 && z < -11) continue; const M = K.M; M.push().translate(x, 0, z).rotate(0, -a / D2R + 90, 0); fBox(K, 0, 0.6, 0, 4.4, 2.2, 2.0, '#D8CCAE', '#E2D6BA'); M.pop(); }
     const ys = o.cap ? [[0, -4.5, 6.4], [-10, 5, 3], [10, 4.5, 3], [-8.5, -8, 3.4], [8.5, -8, 3.4]] : [[0, -5.5, 4.2], [-9.5, 3.5, 3], [9.5, 4, 2.8], [-11.5, -6, 2.8], [-3.5, 11, 2.6], [6, 11.5, 2.5]];
     ys.forEach(([x, z, r], i) => fHouse(K, x, z, r * 2, r * 2, r * 0.62, '#EEE4D0', i === 0 && o.cap ? '#D8A838' : '#E6D6B4', 'cone'));
+    fFire(K, 2.5, 4.2, 0.8);
   };
   F.tarim = function (K, o) {
     fPad(K, '#D6C29A', '#957A58', 2.6);
@@ -2523,7 +2553,7 @@
     const s = o.cap ? 1.25 : 1;
     fBox(K, 0, 0, -7.5, 13 * s, 2.6, 11 * s, '#C67858'); fBox(K, 0, 2.6, -7.5, 7 * s, 3.6, 5.6 * s, '#C67858');
     for (const [w, d, y] of [[9.4, 7.6, 6.2], [7, 5.6, 8.0], [4.6, 3.8, 9.8]]) farRoof(K, 0, y, -7.5, w * s, d * s, 1.6, ROOF.terracotta, 'hip');
-    for (const [x, z, w, d] of [[-9, 5, 6, 4.4], [8.5, 4.5, 6, 4.4], [-6.5, 15, 5, 4], [7, 15, 5, 4], [12.5, -4, 4.8, 4.2]]) { fBox(K, x, 1.6, z, w, 2.2, d, '#B89A6A'); fHouse(K, x, z, w, d, 0.01, '#B89A6A', '#B8975A', 'loaf', 3.8); }
+    for (const [x, z, w, d] of [[-9, 5, 6, 4.4], [8.5, 4.5, 6, 4.4], [-6.5, 15, 5, 4], [7, 15, 5, 4], [12.5, -4, 4.8, 4.2]]) { fBox(K, x, 1.6, z, w, 2.2, d, '#B89A6A'); fWin(K, x, 2.7, z + d / 2, 0, 1, 1.6, 1.2); fHouse(K, x, z, w, d, 0.01, '#B89A6A', '#B8975A', 'loaf', 3.8); }
     fPalm(K, 17, 13.5, 0.75); fPalm(K, -16.5, 6.5, 0.75);
   };
   F.village = function (K, o) {
@@ -2532,7 +2562,7 @@
     fRing(K, 16.8, 16.1, 2.6, 0.7, nan ? '#7E5E40' : '#B4A866', { n: 12, gap: 0.2, skip: (x, z) => x > 10 && z < -10 });
     const hs = [[-9.5, 4, 5, 4], [9, 4.5, 5, 4], [-6, 10.5, 4.6, 3.6], [6.5, 10.5, 4.6, 3.6], [-11, -5.5, 4.6, 3.8], [10.5, -5, 4.6, 3.8]];
     if (o.cap || o.tier) hs.push([0, -10.5, 8.5, 5.8]); else hs.push([-3.5, -10.5, 4.6, 3.6]);
-    for (const [x, z, w, d] of hs) { fBox(K, x, 1.4, z, w, 2.0, d, nan ? '#9A7A54' : '#B49C6A'); fHouse(K, x, z, w, d, 0.01, '#B49C6A', '#B8975A', 'loaf', 3.4); }
+    for (const [x, z, w, d] of hs) { fBox(K, x, 1.4, z, w, 2.0, d, nan ? '#9A7A54' : '#B49C6A'); fWin(K, x, 2.4, z + d / 2, 0, 1, 1.5, 1.1); fHouse(K, x, z, w, d, 0.01, '#B49C6A', '#B8975A', 'loaf', 3.4); }
     if (nan) fBox(K, 0, 0, -2, 5.4, 2.4, 5.4, '#9A9284', '#6E8A62');
     fPalm(K, 14, 10.5, 0.62); fPalm(K, -14, 9, 0.62);
   };
@@ -2543,7 +2573,7 @@
     fRing(K, 20.6, 20, 1.1, 2.2, '#86985A', { n: 12, gap: 0.2, bank: true, plain: true });
     fRing(K, 14.4, 13.8, 2.4, 0.6, '#8A6844', { n: 12, gap: 0.24, y0: 3.4 });
     const y = 2.6;
-    if (ger) for (const [x, z, len, w, yaw] of o.cap ? [[0, -5.5, 15, 6.2, 0], [-7.5, 4.5, 10, 4.4, 20], [7.5, 4, 10, 4.4, -15]] : [[0, -6.5, 12, 5, 0], [-7.5, 3.5, 10, 4.4, 25], [7.5, 3.5, 10, 4.4, -20]]) { const M = K.M; M.push().translate(x, 0, z).rotate(0, yaw, 0); fBox(K, 0, y, 0, len, 2.0, w, '#7E5E42'); fHouse(K, 0, 0, len, w + 1.6, 0.01, '#7E5E42', '#A88C58', 'loaf', y + 2.0); M.pop(); }
+    if (ger) for (const [x, z, len, w, yaw] of o.cap ? [[0, -5.5, 15, 6.2, 0], [-7.5, 4.5, 10, 4.4, 20], [7.5, 4, 10, 4.4, -15]] : [[0, -6.5, 12, 5, 0], [-7.5, 3.5, 10, 4.4, 25], [7.5, 3.5, 10, 4.4, -20]]) { const M = K.M; M.push().translate(x, 0, z).rotate(0, yaw, 0); fBox(K, 0, y, 0, len, 2.0, w, '#7E5E42'); fWin(K, 0, y + 1.0, w / 2, 0, 1, 1.6, 1.3); fHouse(K, 0, 0, len, w + 1.6, 0.01, '#7E5E42', '#A88C58', 'loaf', y + 2.0); M.pop(); }
     else for (const [x, z, r] of o.cap ? [[0, -4.5, 5.6], [-8, 4.5, 2.8], [8, 4.5, 2.8], [-8.5, -8, 2.6], [8.5, -7.5, 2.6]] : [[0, -5, 3.6], [-7.5, 3.5, 3], [7.5, 3.5, 3], [-8, -6.5, 2.7], [8, -6.5, 2.7], [0, 6.5, 2.6]]) fHouse(K, x, z, r * 2, r * 2, 1.9, '#C4AC86', '#B49A5E', 'cone', y);
     fTree(K, 17.5, 13.5, 0.7, 'oak');
   };
@@ -2551,6 +2581,7 @@
     fPad(K, '#BDB27C', '#7A7A50', 4);
     for (let i = 0; i < 6; i++) { const a = Math.PI / 2 + 0.6 + i * (Math.PI * 2 - 1.2) / 5, x = Math.cos(a) * 16.8, z = Math.sin(a) * 16.4; if (x > 10 && z < -10) continue; const M = K.M; M.push().translate(x, 0, z).rotate(0, -a / D2R + 90, 0); fBox(K, 0, 0.6, 0, 4.6, 2.2, 2.0, '#C8B490', '#D8C8A0'); M.pop(); }
     for (const [x, z, r, h] of [[0, -6, 4.2, 6.2], [-8.5, 2.5, 3, 4.6], [8.5, 2.5, 3, 4.6], [-9, -8.5, 2.8, 4.2], [7.5, -8.5, 2.8, 4.2], [-3.5, 9, 2.6, 4], [4.5, 9.5, 2.6, 4]]) { const M = K.M; M.push().translate(x, 0, z); M.color = H('#D8CCB0'); M.lathe([[r, 0], [0, h]], 6, false, false, false, [H('#B8A88A'), H('#E2D6BC')]); M.pop(); }
+    fFire(K, 0, 1.5, 0.8);
   };
   F.greek = function (K, o) {
     fPad(K, '#CEC4A2', '#8C7E5E');
@@ -2623,6 +2654,7 @@
   function build(mk, culture, tier, variant, lod, city) {
     const seed = (strHash(mk + ':' + tier + ':' + variant + ':' + lod) % 100000) + 1;
     const K = context(seed);
+    K.glowLeft = lod === 'far' ? 3 : 0;
     const o = { cap: tier === 2, tier, variant, culture, city, far: lod === 'far' };
     const fnName = mk.split(':')[0];
     const fn = lod === 'far' ? (F[fnName] || F.han) : (B[fnName] || B.han);
@@ -2741,12 +2773,17 @@
     const c = culture || cultureOfCity(city);
     return c !== 'han' && worldCapitals().has(city.key);
   }
+  // map-view 先调 cityInto（带 city）再调 cityFarInto（不带 city）：远景缺 city 时沿用紧挨着的那次近景调用的城（同文化、同档、同尺寸），
+  // 这样库施（麦罗埃）/ 阿克苏姆、博斯普鲁斯希腊城 / 车营的远景与近景一致
+  let lastNear = null;
   function cityInto(mb, size, culture, capital, city) {
     if (!ready()) return fallbackInto(mb, size);
+    lastNear = city ? { city, size, culture, capital: !!capital } : null;
     return writeInto(mb, model(culture, !!capital, city || null, { size }), size);
   }
   function cityFarInto(mb, size, culture, capital, city) {
     if (!ready()) return fallbackInto(mb, size);
+    if (!city && lastNear && lastNear.size === size && lastNear.culture === culture && lastNear.capital === !!capital) city = lastNear.city;
     return writeInto(mb, model(culture, !!capital, city || null, { size, lod: 'far' }), size);
   }
   function scaledLamps(m, size) {
