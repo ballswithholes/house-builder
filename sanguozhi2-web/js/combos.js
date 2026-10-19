@@ -265,15 +265,17 @@
     const st = G && G.combos && G.combos.known;
     return st ? (st[name] | 0) & 255 : 0;
   }
-  function markSeen(G, name, step, isMask) {
+  // 见识（§12.2）：本势力武将恒为全知、不入存档（§16.3「本势力武将不存」）；markAll（俘获 / 登用）照存，日后离去也仍记得
+  function markSeen(G, name, step, isMask, force) {
     G = G || SG.G;
+    if (!force) { const g = genByName(G, name); if (g && G && typeof G.player === 'number' && G.player >= 0 && g.faction === G.player) return 255; }
     const st = store(G); if (!st) return 0;
     const bit = isMask ? (step & 255) : (step >= 0 && step < 8 ? 1 << step : 0);
     if (!bit) return st.known[name] | 0;
     st.known[name] = ((st.known[name] | 0) | bit) & 255;
     return st.known[name];
   }
-  function markAll(G, name) { return markSeen(G || SG.G, name, 255, true); }
+  function markAll(G, name) { return markSeen(G || SG.G, name, 255, true, true); }
   function mastery(G, name) {
     G = G || SG.G;
     const m = G && G.combos && G.combos.mastery && G.combos.mastery[name];

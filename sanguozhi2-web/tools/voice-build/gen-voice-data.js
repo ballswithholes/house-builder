@@ -44,7 +44,8 @@ function packsOf(lg, L) {
 // player decisions (DESIGN-V4 §20, recommended defaults; the task fixed them) — the one place to change them
 const CONFIG = {
   frequency: 'essential',      // 语音频率：'all' 全部 · 'essential' 精简 · 'critical' 关键（Q13：default 精简）
-  essentialKeepsCommands: true, // 精简 still voices the player's own command (one line per command); drops chatter (bat.select / bat.move / shell / event cards)
+  essentialKeepsCommands: false, // 精简 = 「仅重要」 as labelled (AUDIO-V4 §B10.4): priority ≥ 2 only (great results, hire / ally / persuade answers,
+                                 // 出征, battle results, duels …); true would also keep the player's routine pri-1 command lines (cmd.*.start, miss)
   language: 'native',          // 语音语言：'native' 原声（各说其语）· 'zh' 一律汉语 · 'off'
   hiredKeepLanguage: true,     // Q9 / Q13: a hired or captured foreigner keeps his language (subtitles carry the meaning)
   subtitles: 'both',           // 字幕：'both' 原文 + 中文 · 'zh' 仅中文 · 'off'

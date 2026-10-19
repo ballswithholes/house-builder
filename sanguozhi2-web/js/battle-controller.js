@@ -512,7 +512,7 @@
         let done = true;
         switch (r) {
           case 0: {
-            const tgt = await this.pickEnemy(adj, '攻击目标');
+            const tgt = await this.pickEnemy(adj, '攻击目标', u);
             if (tgt) { await this.doAttack(u, tgt); Mdl.spend(u); } else done = false;
             break;
           }
@@ -531,10 +531,22 @@
       for (const x of Mdl.units) this.V.refresh(x);
     }
 
-    async pickEnemy(list, title) {
+    // attacker（可缺省）：攻击目标的预览「预计 1100–1500（会心 ×1.5 · 7%）」（COMBAT-V4 §2.5）
+    async pickEnemy(list, title, attacker) {
       if (list.length === 1) return list[0];
-      const r = await UI().choose(title, list.map(e => item(e.gen.name, '兵 ' + e.troops + '　武 ' + e.gen.war + '　智 ' + e.gen.intel)), null, 560);
+      const r = await UI().choose(title, list.map(e => item(e.gen.name, '兵 ' + e.troops + '　武 ' + e.gen.war + '　智 ' + e.gen.intel + (attacker ? this.attackPreview(attacker, e) : ''))), null, 560);
       return r >= 0 ? list[r] : null;
+    }
+    // 普通攻击的伤害预览：atkExpect × 0.85–1.15（不含会心），另注会心倍率与会心率
+    attackPreview(a, t) {
+      try {
+        const Mdl = this.M;
+        if (typeof Mdl.atkExpect !== 'function') return '';
+        const e = Mdl.atkExpect(a, t), lo = Math.max(10, Math.round(e * 0.85)), hi = Math.min(t.troops, Math.max(10, Math.round(e * 1.15)));
+        const Mo = SG.Mods, on = Mo && typeof Mo.critChance === 'function' && !(typeof Mo.critEnabled === 'function' && !Mo.critEnabled()) && SG.BattleModel.critEnabled !== false;
+        const p = on ? Mo.critChance(a) : 0, k = on && typeof Mo.critK === 'function' ? Mo.critK(a) : 1.5;
+        return '　预计 ' + Math.min(lo, hi) + '–' + hi + (p > 0 ? `<span style="color:#e8c25a">（会心 ×${k.toFixed(1)} · ${Math.round(p * 100)}%）</span>` : '');
+      } catch (e) { return ''; }
     }
 
     // 「必杀」：列出全部已会的必杀（专属在前），每招一行：名称、等阶、机制 / 不可用的原因、数值摘要。
@@ -627,9 +639,12 @@
     async formationMenu(u) {
       const Mdl = this.M, V = this.V;
       const sign = v => (v > 0 ? '+' + v : v < 0 ? '-' + Math.abs(v) : '0');
+      // 第四版（COMBAT-V4 §2.1）：阵型的会心增减「会心±n%」（军队会心关闭时不显示）
+      const Mo = SG.Mods, critOn = Mo && typeof Mo.critChance === 'function' && !(typeof Mo.critEnabled === 'function' && !Mo.critEnabled()) && SG.BattleModel.critEnabled !== false;
+      const critOf = f => (critOn && f.crit ? ` 会心${f.crit > 0 ? '+' : '−'}${Math.round(Math.abs(f.crit) * 100)}%` : '');
       const items = SG.Defs.formations.map((f, i) => item(
         f.name + (i === u.formation ? '（当前）' : ''),
-        Mdl.formationAllowed(u, i) ? `攻×${f.atk.toFixed(2)} 防×${f.def.toFixed(2)} 机动${sign(f.move)}` : (f.reqInt > 0 ? '需智力 ' + f.reqInt : '需武力 ' + f.reqWar),
+        Mdl.formationAllowed(u, i) ? `攻×${f.atk.toFixed(2)} 防×${f.def.toFixed(2)} 机动${sign(f.move)}${critOf(f)}` : (f.reqInt > 0 ? '需智力 ' + f.reqInt : '需武力 ' + f.reqWar),
         Mdl.formationAllowed(u, i), f.desc));
       const r = await UI().choose('变换阵型（消耗本回合行动）', items, null, 760);
       if (r < 0 || r === u.formation) return false;
@@ -680,7 +695,8 @@
       if (r.counter > 0) { await SG.wait(0.15); V.hit(a, r.counter); }
       V.refresh(a); V.refresh(t);
       await SG.wait(0.35);
-      if (!t.alive) { UI().toast(t.gen.name + '部溃散！'); await V.rout(t); }
+      // 第四版 ITEMS §8.2：会心击溃君主时可能阵斩（r.slain，BattleModel.attack 判定）
+      if (!t.alive) { UI().toast(t.gen.name + (r.slain ? '阵亡！' : '部溃散！'), r.slain ? 2.2 : undefined); await V.rout(t); }
       if (!a.alive) { UI().toast(a.gen.name + '部溃散！'); await V.rout(a); }
     }
 

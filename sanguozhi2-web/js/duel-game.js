@@ -101,6 +101,8 @@
   const COMBO = {
     WIN_EARLY: 0.06, WIN_LATE_K: 0.55, CP_K: 0.6, ONBEAT: 0.04, TOL: 0.08, TRAP: 0.10, BLOCK_PAD: 0.02,
     DELAY_MAX: 0.18, DELAY_TRUE: 0.08, FIN_BLOCKSTUN: 0.30, CRUSH_RUN: 5,
+    J_OPEN: true,      // J 起手（见 jEntry；关掉 = 规格原文：只有 s1 那一键起连段）
+    CANCEL_CAP: 0.5,   // 连段 + 取消的绝技合计至多守方体力上限的这一比例（§8.5；见 hit()）
     SCALE: [1.00, 1.00, 0.90, 0.80, 0.72, 0.65, 0.60], FIN_FLOOR: 0.75, SPECIAL_FLOOR: 0.60,
     HS_K_TYPE: { L: 0.55, M: 0.65, H: 0.80, F: 0.80 }, HS_CAP_PAD: 0.03, HS_WHIFF: PARRY_WHIFF * 0.6, MIN_STEP: 3,
     // 连段步的怒气（§8.6）：命中 攻 +2 + 0.6·伤害、守 +1.5 + 0.8·伤害；被挡 守 +1 + 伤害、攻 +1
@@ -114,7 +116,8 @@
   let MIXUPS = true;
   // 第四版调校（偏离第三版常数 1.6）：第四版单出的轻击被挡后就结束（不再自动接二、三段），连按 J 的人每一刀都是「被挡后立刻再出手」，
   // 第三版的格开读招对他百发百中，格开后又接整串（约 30 HP）——连按对同武力电脑的胜率从第三版的 26% 跌到 3%（(2) 要求 ≥ 5%）
-  const AI_REPOKE_K = 0.8;
+  const AI_REPOKE_K = 0.4;           // 复核：J 起每一串之后 0.8 时武力 90 以上的连按者只胜 0.3–0.7%（(2) 要求 1–30%）；0.4 → 约 2.3%
+  const AI_HABIT_DECAY = 0.02;     // 电脑对「他在我连段第 k 步看破」的习惯记忆（pBreak）每秒淡忘的比例（第三版 p3 为 0.05）
   const AI_LOW_BASE = 0.7;         // 电脑平时蹲挡的基础倾向（× gs；只对看得及跃劈的电脑，见 AI.habitLow）
   // 装备在单挑里的白名单（COMBAT-V4 §3、INTEGRATION §8.2）：duel-game.js 只认这些字段，其余一律不读（SG.Items.validate 加载即报错）
   // ITEMS 把几种词汇映射到这些行（js/items.js DUEL_ITEM_EFFECTS）：dCrit → crit / critDmg，dGuardBreak / dGuardBreakFull → 破防，
@@ -122,8 +125,9 @@
   const DUEL_ITEM_EFFECTS = Object.freeze(['duelWar', 'dHp', 'dDmg', 'dGuard', 'crit', 'critDmg', 'dParry', 'dArmor', 'dProc', 'dCombo', 'dProjectile',
     'dRegen', 'dLifesteal', 'dCounter', 'dRage', 'dLowHp', 'dDmgK', 'dSpd', 'dReach',
     'dCrit', 'dGuardBreak', 'dGuardBreakFull', 'dHpAdd', 'dEndure', 'dFear', 'dSpecial', 'dSuperKnock', 'dWeak']);
-  // 全合一单挑预算（INTEGRATION §8.3）：伤害 % + 0.4 × (装备体力 + 神兵之能折算体力 + 0.5 × 格挡点) ≤ 6；超出时先减体力、再减伤害
-  const DUEL_BUDGET = { TOTAL: 6, HP_CAP: 10, DMG_CAP: 3, DMG_ALL_CAP: 6, ABIL_HP_CAP: 4, GUARD_CAP: 6, PARRY_CAP: 0.01, REACH_CAP: 0.05, SPD_LO: -6, SPD_HI: 4, MOVE_CAP: 10, LIFESTEAL_CAP: 0.10, COUNTER_CAP: 1.7, LOWHP_CAP: 1.15, DMGK_CAP: 0.03 };
+  // 全合一单挑预算（INTEGRATION §8.3）：伤害 % + 0.4 × (装备体力 + 神兵之能折算体力 + 0.5 × 格挡点) ≤ 6；超出时先减体力、再减伤害。
+  // TOTAL / HP_CAP / ABIL_HP_CAP 只是缺省值：实际值读玩家决定（DESIGN-V4 §20 问题 3，SG.Balance.Decisions.duelBudget / duelBudgetLoose，见 budgetCaps）
+  const DUEL_BUDGET = { TOTAL: 6, HP_CAP: 10, DMG_CAP: 3, DMG_ALL_CAP: 6, ABIL_HP_CAP: 4, GUARD_CAP: 6, PARRY_CAP: 0.01, REACH_CAP: 0.05, SPD_LO: -6, SPD_HI: 4, MOVE_CAP: 10, LIFESTEAL_CAP: 0.10, COUNTER_CAP: 1.7, LOWHP_CAP: 1.15, DMGK_CAP: 0.03, ARMOR_CD: 4 };
 
   // 招式时序（基准秒；出招时钟按 spd 缩放）。reachK × 兵器长度 = 判定距离。line：mid 中段 / low 下段 / overhead 上段
   // type：L 轻 / M 中 / H 重（会心「刃尖」与连段的类型）；clip：画面暂用的已有动作片段（新动作片段落地前的映射，COMBAT-V4 §13.1）
@@ -162,10 +166,16 @@
   STEP.S1L = Object.assign({}, MOVES.L, { push: STEP.L.push, pushB: STEP.L.pushB, stepIn: STEP.L.stepIn, clip: 'light1', first: true });
   STEP.S1M = Object.assign({}, MOVES.M, { push: STEP.M.push, pushB: STEP.M.pushB, stepIn: STEP.M.stepIn, clip: 'light3', first: true });
   for (const k in STEP) Object.freeze(STEP[k]);
-  // 第 i 步（0 起）的招式数据：i = 0 起手、1–6 连段步、7 终结技
-  function stepMove(seq, i) { return i === 0 ? (seq[0] === 'M' ? STEP.S1M : STEP.S1L) : i === 7 ? STEP['F' + seq[7]] : STEP[seq[i]]; }
+  // 第 i 步（0 起）的招式数据：i = 0 起手、1–6 连段步、7 终结技。
+  // 起手那一步（ent，缺省 0）用单出招的数据：按 s1（实际起手键的类型，缺省 = 招式谱第 1 步）取 S1L / S1M（J 起手见 jEntry）
+  function stepMove(seq, i, s1, ent) { return i === (ent || 0) ? ((s1 || seq[0]) === 'M' ? STEP.S1M : STEP.S1L) : i === 7 ? STEP['F' + seq[7]] : STEP[seq[i]]; }
   // 一串的类型 → 第 i 步打到下一步打到的间隔（基准秒）：0.6·act_i + su_{i+1}（§8.4）
-  function stepGap(seq, i) { return COMBO.CP_K * stepMove(seq, i).active + stepMove(seq, i + 1).startup; }
+  function stepGap(seq, i, s1, ent) { return COMBO.CP_K * stepMove(seq, i, s1, ent).active + stepMove(seq, i + 1, s1, ent).startup; }
+  // J 起手（第四版调校，偏离 §8.2「只有 s1 那一键起连段」）：J 是最快的一键，若只有第 1 步是轻击的武将能用它起连段，
+  // 招式谱以中击开头的一半武将（256 / 499）抓破绽、抢回合、冲刺斩都只是一记 2.4 的轻击，同武力电脑对局只胜 36–43%（复核实测）。
+  // 于是：J 也能开始第 1 步是中击的招式谱——J 代替第 1 步（用单出轻击的起手、距离与伤害）；若第 2、3 步都是轻击
+  // （那样只按 J 就能连出三击，违背 C4），J 改从第 2 步开始。返回 J 起手的步序号，−1 = J 不起连段（第 1 步本是轻击时为 0）
+  function jEntry(seq) { return !COMBO.J_OPEN && seq[0] !== 'L' ? -1 : seq[0] === 'L' ? 0 : seq[1] === 'L' && seq[2] === 'L' ? 1 : 0; }
   const ATTACKS = new Set(['str', 'heavy', 'air', 'airM', 'airH', 'special', 'cL', 'cM', 'cH', 'ovh']);
   const STYLE_SPD = { pole: 1.0, one: 1.14, dual: 1.18 };
   // 招式的线（MIXUPS 关闭时一律中段）
@@ -196,31 +206,34 @@
 
   // ============================================================ 兵器与外观 --
   // style：pole 双手长兵 / one 单手兵 / dual 双持；reach 判定距离（米）；pow 兵器威力系数（缺省 1，重兵器略高，用以抵消出手较慢）
+  // 复核（夜间档每种 1000 场对长剑，武力 80）重调的威力：guandao 1.05 → 1.08（45–49%）、snake / spear 1 → 1.08（43–47%）、poleblade → 1.10（44–47%）、
+  // lance → 1.06、staff → 1.10、club → 1.03、shortji → 1.02（47%）、gladius 1.03 → 1.01、fan 1.04 → 1.02（54%）、mace 1.0 → 0.98（53%）；
+  // W1 的 items-data duelWeapons 须同步
   const WEAPONS = {
-    guandao: { name: '青龙偃月刀', style: 'pole', reach: 2.0, pow: 1.05 },
-    snake: { name: '丈八蛇矛', style: 'pole', reach: 2.05 },
+    guandao: { name: '青龙偃月刀', style: 'pole', reach: 2.0, pow: 1.08 },
+    snake: { name: '丈八蛇矛', style: 'pole', reach: 2.05, pow: 1.08 },
     ji: { name: '方天画戟', style: 'pole', reach: 2.0, pow: 1.06 },
-    spear: { name: '长枪', style: 'pole', reach: 2.05 },
-    poleblade: { name: '大刀', style: 'pole', reach: 1.95, pow: 1.05 },        // 第四版兵器平衡（§15.2 (15)）：1.07 → 1.05
+    spear: { name: '长枪', style: 'pole', reach: 2.05, pow: 1.08 },
+    poleblade: { name: '大刀', style: 'pole', reach: 1.95, pow: 1.10 },        // 第四版兵器平衡（§15.2 (15)）：1.07 → 1.05 → 1.10（复核）
     axe: { name: '大斧', style: 'pole', reach: 1.88, pow: 1.12 },
     bigblade: { name: '斩马刀', style: 'pole', reach: 1.88, pow: 1.14 },
     sword: { name: '长剑', style: 'one', reach: 1.78 },
     dao: { name: '环首刀', style: 'one', reach: 1.75 },
-    shortji: { name: '短戟', style: 'one', reach: 1.8 },
-    mace: { name: '骨朵', style: 'one', reach: 1.72, pow: 1.0 },              // 第四版兵器平衡：0.97 → 1.0
+    shortji: { name: '短戟', style: 'one', reach: 1.8, pow: 1.02 },
+    mace: { name: '骨朵', style: 'one', reach: 1.72, pow: 0.98 },             // 第四版兵器平衡：0.97 → 1.0 → 0.98（复核）
     twinsword: { name: '双股剑', style: 'dual', reach: 1.72, pow: 0.96 },
     twinji: { name: '双铁戟', style: 'dual', reach: 1.75, pow: 0.97 },
     twindao: { name: '双刀', style: 'dual', reach: 1.68 },
     // 异域兵器（DESIGN-V2 §6）
-    gladius: { name: '短剑', style: 'one', reach: 1.66, pow: 1.03 },        // 罗马
-    lance: { name: '长矛', style: 'pole', reach: 2.12 },                    // 萨尔马提亚 / 安息 / 贵霜的骑矛
+    gladius: { name: '短剑', style: 'one', reach: 1.66, pow: 1.01 },        // 罗马
+    lance: { name: '长矛', style: 'pole', reach: 2.12, pow: 1.06 },         // 萨尔马提亚 / 安息 / 贵霜的骑矛
     handaxe: { name: '战斧', style: 'one', reach: 1.7, pow: 1.03 },        // 日耳曼
     tachi: { name: '直刀', style: 'one', reach: 1.76 },                     // 倭
     // 装备带来的新兵器类型（ITEMS 的 duel.key 带 *：club* / staff* / fan* / vajra*）：规则按本表（兵器平衡由单挑统一调，§15.2 (15)），
     // 不读各件装备自带的 pow——伤害加成只经 dDmg 进全合一预算
-    club: { name: '棍棒', style: 'one', reach: 1.74, pow: 1.0, item: true },
-    staff: { name: '杖', style: 'pole', reach: 2.0, pow: 1.06, item: true },
-    fan: { name: '羽扇', style: 'one', reach: 1.58, pow: 1.04, item: true },
+    club: { name: '棍棒', style: 'one', reach: 1.74, pow: 1.03, item: true },
+    staff: { name: '杖', style: 'pole', reach: 2.0, pow: 1.10, item: true },     // 复核：1.06 时 46%，1.08 时 47%
+    fan: { name: '羽扇', style: 'one', reach: 1.58, pow: 1.02, item: true },
     vajra: { name: '金刚杵', style: 'one', reach: 1.62, pow: 1.04, item: true },
   };
 
@@ -381,6 +394,16 @@
   // 每名武将的单挑数值：SG.Gear.duelMods(gen)（ITEMS §3.3；未载入装备时为空）+ 官职 critDuel / dmgDuel（SG.Mods 提供者）
   // + 宿敌加伤（ENGAGEMENT），按全合一预算裁剪。返回 { war, hp, dmg, crit, critMul, reachK, parry, guard, spd, move, abil, src }
   // given：直接给一份 SG.Gear.duelMods 的结果（测试 / 武林大会预先算好的），不再向 SG.Gear 要
+  // 预算的三个数（与 js/items.js 同源：装备模块算好的 budget.limit 优先，否则读 Balance.Decisions；宽松方案 8 时体力 12、能力体力 6）
+  function budgetCaps(bud) {
+    const Dc = (SG.Balance && SG.Balance.Decisions) || {}, IC = SG.Items && SG.Items.CFG;
+    let total = bud && typeof bud.limit === 'number' && bud.limit > 0 ? bud.limit : IC && typeof IC.duelBudget === 'number' ? IC.duelBudget
+      : typeof Dc.duelBudget === 'number' && Dc.duelBudget > 0 ? Dc.duelBudget : DUEL_BUDGET.TOTAL;
+    const lo = Dc.duelBudgetLoose, loose = lo && typeof lo.budget === 'number' && total >= lo.budget - 1e-9 ? lo : null;
+    const hp = loose && typeof loose.gearHp === 'number' ? loose.gearHp : IC && IC.duel && typeof IC.duel.gearHp === 'number' ? IC.duel.gearHp : DUEL_BUDGET.HP_CAP;
+    const ab = loose && typeof loose.abilityHp === 'number' ? loose.abilityHp : IC && IC.duel && typeof IC.duel.abilityHp === 'number' ? IC.duel.abilityHp : DUEL_BUDGET.ABIL_HP_CAP;
+    return { total, hp, ab };
+  }
   function duelModsOf(gen, foeGen, given) {
     const out = { war: null, hp: 0, dmg: 0, crit: 0, critMul: 0, reachK: 0, parry: 0, guard: 0, guardBreak: 0, spd: 0, move: 0, abil: [], abilHp: 0, weapon: null, trimmed: false };
     let m = given || null;
@@ -388,13 +411,15 @@
     const Mo = SG.Mods;
     const z = (name, a, b) => { try { return Mo && typeof Mo.z === 'function' ? Mo.z(name, a, b) || 0 : 0; } catch (e) { return 0; } };
     const num = v => (typeof v === 'number' && isFinite(v) ? v : 0);
+    const bc = budgetCaps(m && m.budget);
+    out.budget = bc.total; out.abilCap = bc.ab;
     if (m) {
       // SG.Gear.duelMods（js/items.js）的格式：hp = 总体力（100 + 装备体力）、dmg / spd / move 为小数、guardPP 为格挡点（pp）、
       // critDuel / critMulDuel 为小数；伤害项已含官职与宿敌，预算也已按 INTEGRATION §8.3 裁过（此处再裁一次，结果相同）
       const bud = m.budget || null;
       if (typeof m.war === 'number') out.war = m.war;
       const gearHp = bud && typeof bud.gearHp === 'number' ? bud.gearHp : num(m.hp) >= 50 ? num(m.hp) - 100 : num(m.hp);
-      out.hp = M.clamp(gearHp, 0, DUEL_BUDGET.HP_CAP);
+      out.hp = M.clamp(gearHp, 0, bc.hp);
       const dmgPct = bud && typeof bud.dmg === 'number' ? bud.dmg : num(m.dmg) * 100;
       out.dmg = M.clamp(dmgPct, 0, DUEL_BUDGET.DMG_ALL_CAP);
       out.crit = Math.max(0, num(m.critDuel));
@@ -411,7 +436,7 @@
         if (!id || DUEL_ITEM_EFFECTS.indexOf(id) < 0) continue;     // 白名单之外的一律不读
         out.abil.push(a);
       }
-      out.abilHp = M.clamp(typeof m.abilityHp === 'number' ? m.abilityHp : 0, 0, DUEL_BUDGET.ABIL_HP_CAP);
+      out.abilHp = M.clamp(typeof m.abilityHp === 'number' ? m.abilityHp : 0, 0, bc.ab);
       // 会心之能（dCrit）：装备的会心率 / 会心伤害若未折进 critDuel / critMulDuel，则在此并入（仍受上限）
       for (const a of out.abil) if ((a.t || a.id || a.kind) === 'dCrit') {
         if (!out.crit && a.crit) out.crit = num(a.crit) / 100;
@@ -427,7 +452,7 @@
     }
     out.crit = Math.min(CRIT.ITEM_CAP, out.crit);
     // 预算：dmg + 0.4 × (hp + abilHp + 0.5 × guard) ≤ 6，先减体力、再减格挡、再减伤害（与 js/items.js 同序）
-    const over = () => out.dmg + 0.4 * (out.hp + out.abilHp + 0.5 * out.guard) - DUEL_BUDGET.TOTAL;
+    const over = () => out.dmg + 0.4 * (out.hp + out.abilHp + 0.5 * out.guard) - bc.total;
     let ex = over();
     if (ex > 1e-9) { out.trimmed = true; out.hp -= Math.min(out.hp, ex / 0.4); ex = over(); }
     if (ex > 1e-9) { out.guard -= Math.min(out.guard, ex / 0.2); ex = over(); }
@@ -619,8 +644,8 @@
       if (this.result) this.endT += dt;
       this.record();
     }
-    // 神兵之能的回复（吸血 + 回春）每场合计至多 ABIL_HP_CAP（4）点体力（COMBAT-V4 §3：能力体力 ≤ 4 / 场）
-    healLeft(f) { return Math.max(0, DUEL_BUDGET.ABIL_HP_CAP - f.healed); }
+    // 神兵之能的回复（吸血 + 回春）每场合计至多「能力体力」上限（缺省 4，宽松预算 6；budgetCaps）点体力（COMBAT-V4 §3：能力体力 ≤ 4 / 场）
+    healLeft(f) { return Math.max(0, (f.dm.abilCap || DUEL_BUDGET.ABIL_HP_CAP) - f.healed); }
     // 神兵之能的每步效果（dRegen：按条件回复体力）
     abilTick(f, dt) {
       const r = abilOf(f, 'dRegen');
@@ -672,8 +697,7 @@
       f.h = h;
       f.pq.length = 0;
       const edge = k => (h[k] && !p[k]) || (taps && taps[k] > 0);
-      // K / L 同按的等待到期：按原时刻生效
-      if (f.klPend && now - f.klPend.t >= KL_WAIT - 1e-9) { const kp = f.klPend; f.klPend = null; this.commitPress(f, kp.key, kp.t); }
+      if (f.klPend && now - f.klPend.t > KL_WAIT + 1e-9) f.klPend = null;
       for (const k of PRESS_KEYS) if (edge(k)) this.press(f, k, now);
       if (taps && taps.ovh > 0) { f.buf.ovh = now; f.pq.push({ type: 'O', first: 'M', t: now }); }
       if (edge('up')) f.buf.jump = now;
@@ -699,20 +723,31 @@
       p.x = h.x; p.up = h.up; p.down = !!h.down; p.light = h.light; p.medium = !!h.medium; p.heavy = h.heavy; p.special = h.special; p.guard = !!h.guard; p.parry = !!h.parry;
       return h;
     }
-    // 一次 L / M / H 按键（玩家的 K / L 先等 0.05 秒看另一键来不来：两键都到 = 跃劈）
+    // 一次 L / M / H 按键。玩家的 K / L（klHold）按下即生效——不再先等 0.05 秒（复核：那样人的中 / 重击比电脑同一招晚 50 ms）；
+    // 0.05 秒（3 个逻辑步）内另一键也到 = 跃劈（§5.1）：第一键还在缓冲里就换成跃劈；第一键已经起了招（单出中击、连段起手、蓄力）
+    // 且仍在起手中，就当场改成跃劈，时刻从第一键算（kToOvh）；都不是（连段窗口里已锁定、已在空中出招……）就只认先到的那一键
     press(f, k, t) {
-      if (f.ctrl && f.ctrl.klHold && (k === 'medium' || k === 'heavy')) {
-        const kp = f.klPend;
-        if (kp && kp.key !== k && t - kp.t <= KL_WAIT + 1e-9) {
-          f.klPend = null; f.buf.ovh = kp.t;
-          f.pq.push({ type: 'O', first: KEY_TYPE[kp.key], t: kp.t });
-          return;
-        }
-        if (kp) this.commitPress(f, kp.key, kp.t);
-        f.klPend = { key: k, t };
+      const kl = !!(f.ctrl && f.ctrl.klHold) && (k === 'medium' || k === 'heavy');
+      const kp = kl ? f.klPend : null;
+      if (kp && kp.key !== k && t - kp.t <= KL_WAIT + 1e-9) { f.klPend = null; this.kToOvh(f, kp); return; }
+      this.commitPress(f, k, t);
+      f.klPend = kl ? { key: k, t } : null;
+    }
+    kToOvh(f, kp) {
+      if (f.buf[kp.key] === kp.t) {                       // 第一键尚未用掉
+        this.use(f, kp.key); f.buf.ovh = kp.t;
+        for (const p of f.pq) if (p.t === kp.t && p.type === KEY_TYPE[kp.key]) { p.type = 'O'; p.first = KEY_TYPE[kp.key]; }
         return;
       }
-      this.commitPress(f, k, t);
+      const st = f.state, neutral = f.pressT === kp.t && f.grounded &&
+        (st === 'charge' || (st === 'str' && f.phase === 'startup' && !f.delaying && (!f.strOn || f.strIdx === (f.entry || 0))));
+      if (!neutral || !MIXUPS) return;
+      if (st === 'str' && f.strOn) f.stats.strings--;
+      f.stats.swings--;
+      const t0 = st === 'charge' ? f.t * f.spd : f.t;     // 第一键那一招已走过的招式时钟（蓄力的 t 是实际秒数）
+      this.startAttack(f, 'ovh'); f.charge = 0; f.tapHeavy = false; f.chargeFull = false;
+      f.t = t0;
+      f.stats.overheads++; this.emit({ type: 'ovhGo', who: f.idx, su: OVH_SU });
     }
     commitPress(f, k, t) { f.buf[k] = t; f.pq.push({ type: KEY_TYPE[k], t }); }
     fresh(f, k) { return this.clock - f.buf[k] <= BUFFER; }
@@ -917,6 +952,7 @@
       }
       for (const k of ['light', 'medium']) {
         if (!this.fresh(f, k)) continue;
+        f.pressT = f.buf[k];
         this.use(f, k);
         if (crouch) { this.startAttack(f, k === 'light' ? 'cL' : 'cM'); f.stats.lows++; }
         else this.startTyped(f, KEY_TYPE[k]);
@@ -924,6 +960,7 @@
         return true;
       }
       if (this.fresh(f, 'heavy') && (neutral || crouch)) {
+        f.pressT = f.buf.heavy;
         this.use(f, 'heavy');
         if (crouch) { this.startAttack(f, 'cH'); return true; }
         this.setState(f, 'charge'); f.charge = 0; f.tapHeavy = !h.heavy;
@@ -954,9 +991,10 @@
       f.stats.swings++;
       if (name !== 'air' && name !== 'airM' && name !== 'airH') f.vx *= 0.3;
     }
-    // L / M：与本人招式谱第 1 步同类 → 连段第 1 步；否则单出（同一个 'str' 状态，strOn = false）
+    // L / M：与本人招式谱第 1 步同类 → 连段第 1 步；J 也能起连段（jEntry：代替第 1 步，或从第 2 步起）；否则单出（同一个 'str' 状态，strOn = false）
     startTyped(f, type) {
-      if (type === f.seqStr[0]) { this.startStep(f, 0, 0); f.vx *= 0.3; return; }
+      const ent = type === f.seqStr[0] ? 0 : type === 'L' ? jEntry(f.seqStr) : -1;
+      if (ent >= 0) { f.s1Type = type; f.entry = ent; this.startStep(f, ent, 0); f.vx *= 0.3; return; }
       this.setState(f, 'str');
       f.mv = MOVES[type]; f.strOn = false; f.strIdx = -1;
       f.stats.swings++;
@@ -965,16 +1003,16 @@
     // 连段第 i 步（0 起；7 = 终结技）。carry：上一步越过接续点的时间（招式时钟），使节拍不受逻辑步长取整影响
     startStep(f, i, carry) {
       this.setState(f, 'str');
-      const mv = f.mv = stepMove(f.seqStr, i);
+      const mv = f.mv = stepMove(f.seqStr, i, f.s1Type, f.entry);
       f.strOn = true; f.strIdx = i; f.t = carry || 0;
       f.seenMask |= 1 << i;     // 见识：这一步出过了（打中、被挡、挥空都算，§12.2）
       f.lockType = ''; f.strEnded = false; f.delaying = false; f.delayed = false; f.delayT = 0;
-      if (i === 0) { f.stats.strings++; f.blockedRun = 0; f.strHits = 0; f.strAllBeat = true; f.deflectUsed = false; f.strBeat = []; }
+      if (i === (f.entry || 0)) { f.stats.strings++; f.blockedRun = 0; f.strHits = 0; f.strAllBeat = true; f.deflectUsed = false; f.strBeat = []; }
       f.winOpen = mv.startup - COMBO.WIN_EARLY;
       f.winClose = mv.startup + mv.active + COMBO.WIN_LATE_K * mv.recovery;
       f.cp = mv.startup + COMBO.CP_K * mv.active;
       f.stats.swings++;
-      this.emit({ type: 'strStep', who: f.idx, step: i, kind: f.seqStr[i], fin: i === 7, beat: i === 0 ? null : f.lastBeat });
+      this.emit({ type: 'strStep', who: f.idx, step: i, kind: mv.type || f.seqStr[i], fin: i === 7, beat: i === (f.entry || 0) ? null : f.lastBeat, entry: i === (f.entry || 0) });
     }
     // 'str' 状态：单出的 L / M 与连段的每一步（迟滞、前冲、按键锁定、绝技取消、接续、收招）
     updateStr(f, o, h) {
@@ -993,6 +1031,8 @@
         f.stepIn = dx > BODY * 2 + 0.3;
         f.vx = f.stepIn ? f.face * mv.stepIn * f.spd / su : 0;
       } else f.stepIn = false;
+      // 压制破防（§8.7）要「终结技前的 5 步都被挡」：中间有一步挥空就重新数（复核）
+      if (f.strOn && f.hitIdx === 0 && f.blockedRun && f.t >= su + mv.active) f.blockedRun = 0;
       // 按键（§8.2）：窗口 [winOpen, winClose] 内第一次 L / M / H 锁定；早于窗口 = 早（作废）；按错 = 本串到此为止，那一键转为缓冲的单出招
       if (f.strOn && f.strIdx < 7 && !f.strEnded) {
         for (const p of f.pq) {
@@ -1031,6 +1071,7 @@
     }
 
     startSpecial(f, o) {
+      f.spCancel = !!f.cancelled; f.cancelled = false;     // 这一记绝技是不是从连段取消来的
       this.setState(f, 'special');
       f.rage = 0; f.vx = 0;
       f.stats.swings++;
@@ -1150,7 +1191,7 @@
       const si = h.step;
       if (!(h.name === 'str' && f.strOn && si >= COMBO.MIN_STEP - 1)) return 0;
       const k = COMBO.HS_K_TYPE[si === 7 ? 'F' : f.seqStr[si]];
-      return Math.max(0, Math.min(o.parryW * k, stepGap(f.seqStr, si - 1) / f.spd - COMBO.HS_CAP_PAD));
+      return Math.max(0, Math.min(o.parryW * k, stepGap(f.seqStr, si - 1, f.s1Type, f.entry) / f.spd - COMBO.HS_CAP_PAD));
     }
     hsArmed(o) { return o.state === 'hitstun' && o.grounded && o.hsParrySeq === o.seq; }
     // 格开成功：攻方兵器被弹开、硬直；守方弹刀，获得反击窗口
@@ -1196,7 +1237,7 @@
     // 受击硬直（连段步：到下一步打到的间隔 + 0.08 × 守方硬直倍率 = 真连段；单出招：v3 公式，会心 × 1.1）
     hitstunOf(f, o, h, riposte, crit) {
       const mv = h.mv;
-      if (h.name === 'str' && f.strOn && f.strIdx < 7) return stepGap(f.seqStr, f.strIdx) / f.spd + COMBO.TOL * o.stunK + DT;   // + 1 个逻辑步：命中判定按步取整
+      if (h.name === 'str' && f.strOn && f.strIdx < 7) return stepGap(f.seqStr, f.strIdx, f.s1Type, f.entry) / f.spd + COMBO.TOL * o.stunK + DT;   // + 1 个逻辑步：命中判定按步取整
       return (mv.stun || 0.3) * o.stunK * (h.name === 'heavy' ? 1 + h.charge * 0.3 : 1) * (riposte ? 1.25 : 1) * (crit ? CRIT.STUN_K : 1);
     }
     // 防御硬直（连段步：下一步为 L / M → 间隔 + 0.02（真挡串）；为 H → 间隔 − 0.10（留出可插刀 / 格开的空隙）；终结技 0.30 × 硬直倍率；
@@ -1206,7 +1247,7 @@
       if (h.name === 'str' && f.strOn) {
         if (f.strIdx === 7) return COMBO.FIN_BLOCKSTUN * o.stunK;
         const nxt = f.seqStr[f.strIdx + 1];
-        return Math.max(0.05, stepGap(f.seqStr, f.strIdx) / f.spd + (nxt === 'H' ? -COMBO.TRAP : COMBO.BLOCK_PAD));
+        return Math.max(0.05, stepGap(f.seqStr, f.strIdx, f.s1Type, f.entry) / f.spd + (nxt === 'H' ? -COMBO.TRAP : COMBO.BLOCK_PAD));
       }
       if (typeof mv.adv === 'number') {
         const adv = h.name === 'heavy' ? mv.adv + (mv.advFull - mv.adv) * M.clamp((h.charge - 0.15) / 0.85, 0, 1) : mv.adv;
@@ -1262,13 +1303,16 @@
         dmg = damage(base, f.war, o.war) * sc * rf * (crit ? f.critK : 1);
         if (f.abil.length) { const d0 = dmg; dmg = this.abilDmg(f, o, h, dmg, isStr, isFin); f.stats.abilGain += dmg - d0; }
       }
-      // 金刚不坏（dArmor）：起手中的重击 / 挨轻击时不硬直，只受 dmgK 的伤害
+      // 金刚不坏（dArmor）：蓄力 / 重击起手中挨打不硬直，只受 dmgK 的伤害——每 ARMOR_CD（4）秒至多一次；
+      // 挨轻击（lightTaken）：一次连击的第一击若是轻击，伤害 × dmgK，硬直照旧（第四版调校，偏离 §3「不硬直」：J 起每一串、每串都有轻步，
+      // 轻击不硬直 = 连段打不动，(15) 配对实测折合 48 HP；连段里每个轻步都减伤时 4.0 HP；重击起手不设冷却时 5.9 HP——都不合「每种 ≤ 4」）
       let armored = false;
       if (!guarded && o.abil.length && o.hp > 0) {
         const ar = abilOf(o, 'dArmor');
-        if (ar && ((ar.on === 'heavyStart' && (o.state === 'charge' || (o.state === 'heavy' && o.phase === 'startup'))) || (ar.on === 'lightTaken' && mv.type === 'L' && name !== 'special'))) {
-          armored = true; const k = M.clamp(+ar.dmgK || 0.6, 0.5, 0.7); o.stats.abilGain += dmg * (1 - k); dmg *= k;
-        }
+        const k = ar ? M.clamp(+ar.dmgK || 0.6, 0.5, 0.7) : 1;
+        if (ar && ar.on === 'heavyStart' && (o.state === 'charge' || (o.state === 'heavy' && o.phase === 'startup')) && this.clock - (o.armorAt || -99) >= DUEL_BUDGET.ARMOR_CD) {
+          armored = true; o.armorAt = this.clock; o.stats.abilGain += dmg * (1 - k); dmg *= k;
+        } else if (ar && ar.on === 'lightTaken' && mv.type === 'L' && name !== 'special' && n === 1) { o.stats.abilGain += dmg * (1 - k); dmg *= k; }
       }
       // 取整：连击中把每击的小数余数带到下一击（整串的总伤害不因逐击四舍五入而偏离设计值；单击仍是整数）
       if (!guarded) {
@@ -1276,6 +1320,10 @@
         dmg = M.clamp(Math.round(ex), 1, 40);
         f.dmgCarry = M.clamp(ex - dmg, -0.5, 0.5);
         if (riposte && f.counterK > COUNTER_K) f.stats.abilGain += dmg * (1 - COUNTER_K / f.counterK);   // 反击之能（dCounter / dParry.counterK）多打出的部分
+        // 连段取消的绝技（§8.6）：这一次破绽（连段 + 绝技）合计至多守方体力上限的一半（§8.5「一次破绽不超过半条体力」；
+        // 规格的 49.1 HP 是兵器威力 1 时的数，重兵器（威力 1.05–1.14）的七步 + 绝技实测到 52 HP，故在此封顶）
+        if (name === 'special' && f.spCancel && n > 1) dmg = Math.min(dmg, Math.max(0, Math.round(COMBO.CANCEL_CAP * o.hpMax - (f.comboDmg || 0))));
+        f.comboDmg = (n > 1 ? f.comboDmg || 0 : 0) + dmg;
       } else dmg = M.clamp(Math.round(dmg), 0, 40);
       o.hp = Math.max(0, o.hp - dmg);
       const dir = f.face;
@@ -1429,12 +1477,16 @@
   class AI {
     constructor(me) {
       this.me = me;
+      // 技巧曲线按武将本人的武力（第四版调校）：装备加的单挑武力（duelWar，至多 +3）只加数值——伤害、出招速度、硬直、格开窗口——
+      // 不加电脑的临场判断与技巧（人也不会因为换了兵器就打得更好）；受伤降低的武力照样降低技巧。
+      // 复核：技巧也跟着装备涨时，武力 60 的传说全套对无装备同将 78%（门槛 ≤ 75%），改后 67%
+      const sw = this.sw = Math.min(me.war, warOf(me.gen));
       // 技巧：武力 20 → 0.4、武力 60 → 0.7、武力 100 → 1（下限较高：普通武将也会防守反击，强将近乎无隙可乘）
-      const s = 0.4 + 0.6 * M.clamp((me.war - 20) / 80, 0, 1);
+      const s = 0.4 + 0.6 * M.clamp((sw - 20) / 80, 0, 1);
       this.s = s;
       // 临场判断（抢回合、不撞对手的出手节奏、场外蓄力、看绝技举防）：武力 25 以下 0.2、50 → 0.47、76 → 0.75，90 以上封顶 0.9——
       // 弱将多半不懂，名将也会失手，不至于滴水不漏
-      this.gs = 0.2 + 0.7 * M.clamp((me.war - 25) / 65, 0, 1);
+      this.gs = 0.2 + 0.7 * M.clamp((sw - 25) / 65, 0, 1);
       this.react = 0.44 - 0.29 * s;      // 反应时间：武力 100 → 0.15 秒，武力 20 → 0.44 秒
       this.guardP = 0.10 + 0.70 * s;     // 看见来招时举防的概率
       this.comboP = 0.30 + 0.65 * s;     // 命中后接续连段
@@ -1443,6 +1495,10 @@
       this.whiffP = 0.32 * (1 - s);
       this.antiP = 0.06 + 0.86 * s;      // 识破跳入（对空 / 挡下后反击落地硬直）
       this.punishP = 0.12 + 0.78 * s;    // 抓对手收招的破绽
+      // 抓格开落空（第四版调校，偏离第三版的 punishP）：第四版的破绽一抓就是整串（约 20 HP，第三版的轻击三连约 8 HP），
+      // 临场判断（gs）不够的电脑常常犹豫——× gs²：武力 74 约 0.36、90 以上 0.73（复核：谨慎机器人一半时候赌格开，落空被整串惩罚，
+      // 胜率从第三版的 36% 跌到 19–29%，(7) 要求 ≥ 25%）
+      this.whiffPunP = this.punishP * this.gs * this.gs;
       this.pokeP = 0.08 + 0.52 * s;      // 对手走进攻击距离时迎击
       this.stunGuardP = 0.08 + 0.84 * s; // 受击 / 倒地后一恢复就举防
       this.held = { x: 0, up: false, down: false, light: false, medium: false, heavy: false, guard: false, special: false, parry: false, dash: 0 };
@@ -1451,7 +1507,7 @@
       // ±(0.18 + 0.25·(1−s)) 秒：对比整个有效窗口（±0.075–0.11 秒）武力 100 ≈ 85% 成功、75 ≈ 67%；受击硬直中看破第三段
       // 只认最后 0.6 × 窗口（±0.045–0.066 秒），但连段节奏固定、误差 × 0.65：武力 100 ≈ 80%、75 ≈ 65%（失手即被打中）。
       // 重击则是反应：与看见其他来招同样的反应时间（this.react），看清即按——只有满蓄重击来得及
-      this.parryP = 0.6 * M.clamp((me.war - 35) / 65, 0, 1);
+      this.parryP = 0.6 * M.clamp((sw - 35) / 65, 0, 1);
       this.parryErr = 0.18 + 0.25 * (1 - s);
       this.parryAt = -1; this.hvSeq = -1; this.pwSeq = -1; this.stanceSeq = -1;
       this.next = 0; this.planX = 0; this.guardUntil = 0; this.seenSeq = -1; this.comboSeq = -1; this.comboGo = false;
@@ -1459,7 +1515,7 @@
       this.stunSeq = -1; this.stunGuard = false; this.stunHold = 0;
       this.aa = null; this.punSeq = -1; this.pokeAt = 0; this.lastGuarded = 0; this.zone = false; this.caut = false; this.cautAt = 0; this.patSeq = -1; this.patient = false;
       // 读招：识破连按 / 不看命中的固定连段。武力 40 以下不会，越高越准
-      this.rk = M.clamp((me.war - 40) / 40, 0, 0.85);   // 武力 40 → 0、60 → 0.5、74 以上 → 0.85
+      this.rk = M.clamp((sw - 40) / 40, 0, 0.85);   // 武力 40 → 0、60 → 0.5、74 以上 → 0.85
       this.mash = 0.3;                   // 对手「没打中也照样连下去」的倾向（指数平均，0..1）
       this.oSeq = -1; this.oState = ''; this.oHit = false;
       this.ctrSeq = -1; this.mzAt = 0;
@@ -1487,7 +1543,7 @@
       // 按错键 0.06(1 − s)
       // 弱将记不全自己的招式谱（第四版调校，偏离 §14.1 的公式：武力 60 以下逐步降低，武力 30 约为一半）——
       // 否则武力 30 的电脑每次得手都打出 20 HP 以上的整串，第三版「弱将好打」的目标（(2)、(5)、(12) 弱将完成数 ≤ 0.15）无从谈起
-      this.strSkill = M.clamp(0.45 + (me.war - 25) / 70, 0.45, 1);
+      this.strSkill = M.clamp(0.45 + (sw - 25) / 70, 0.45, 1);
       this.cont = (1 - (1 - this.comboP) * 0.35) * this.strSkill;
       this.slip = 0.06 * (1 - s);
       this.beatJ = 0.03 + 0.06 * (1 - s);
@@ -1512,6 +1568,8 @@
     habitLow() { return MIXUPS && rnd() < this.gs * M.clamp(Math.max((this.lowP - 0.1) / 0.2, this.react + this.hand <= OVH_SU * 0.85 ? AI_LOW_BASE : 0), 0, 1); }
     // 自己的起手键：招式谱第 1 步是 L（J）还是 M（K）
     s1Key() { return this.me.seqStr[0] === 'M' ? 'medium' : 'light'; }
+    // 近身起连段用哪一键：J 能起连段（jEntry，J 起手）就按 J（最快），否则按起手键
+    jKey() { return jEntry(this.me.seqStr) >= 0 ? 'light' : this.s1Key(); }
     // 对手连段若按节拍接下一步，下一击打到的时刻（不知道下一步的类型就按 M 的节奏估计，§14.3）
     nextStepHit(sim, foe) {
       if (foe.state !== 'str' || !foe.strOn || foe.strIdx >= 7) return sim.clock + 0.2;
@@ -1654,7 +1712,9 @@
         this.pbSeq = foe.seq; const k = me.hitIdx === 0 && me.phase === 'startup' ? me.strIdx : me.strIdx + 1;
         if (k >= 0 && k < 8) this.pBreak[k] += (1 - this.pBreak[k]) * 0.6;
       }
-      for (let k = 0; k < 8; k++) this.pBreak[k] *= 1 - DT * 0.05;
+      // 淡忘：第三版的 p3 每秒 × (1 − 0.05)（三连每几秒一次）；第四版一串 8 步、约 16 秒一串，按第三版的速度 8 秒就跌破诱招门槛 0.4，
+      // 等不到下一串——改为 AI_HABIT_DECAY（0.02，约 20 秒）。复核：看破机器人对同武力电脑 70–72% → 64–66%（n 960–1600）
+      for (let k = 0; k < 8; k++) this.pBreak[k] *= 1 - DT * AI_HABIT_DECAY;
       // 他的招式谱：看见（有反应延迟）他出过的步就记下（§14.2）
       if (!this.knowInit) {
         this.knowInit = true;
@@ -1731,7 +1791,7 @@
       if (foe.mv && foe.hitIdx > 0 && (me.state === 'hitstun' || me.state === 'knockdown')) this.oHit = true;
       if (foe.seq === this.oSeq) return;
       const prev = this.oState, prevStep = this.oStep;
-      const starting = (foe.state === 'str' && foe.strIdx <= 0) || foe.state === 'charge' || foe.state === 'cL' || foe.state === 'cM' || foe.state === 'ovh';
+      const starting = (foe.state === 'str' && foe.strIdx <= (foe.entry || 0)) || foe.state === 'charge' || foe.state === 'cL' || foe.state === 'cM' || foe.state === 'ovh';
       // 他被挡仍接重步（推进型）
       if (foe.state === 'str' && foe.strOn && foe.strIdx >= 1 && foe.atype === 'H' && prev === 'str') this.pushy += (((me.state === 'guardstun' || me.state === 'guard') ? 1 : 0) - this.pushy) * 0.3;
       // 主动起手（轻击 / 中击 / 蓄力 / 下段 / 跃劈 / 冲刺斩）：计入试探频率；挡下后的观察期内起手 = 抢回合
@@ -1743,7 +1803,7 @@
         // 上一招挥空 / 被挡：接着出下一步（或又一记单出招）= 不看命中的连按；停手 = 有判断
         if (foe.state === 'str' && (foe.strIdx === prevStep + 1 || (!foe.strOn && prevStep < 0))) this.mash += (1 - this.mash) * 0.3; else this.mash -= this.mash * 0.12;
       }
-      if (foe.state === 'str' && foe.strIdx <= 0 && me.state !== 'hitstun' && Math.abs(foe.x - me.x) > foe.reach * MOVES.L.reachK + BODY * 0.5 + 0.08) this.mash += (1 - this.mash) * 0.12;   // 够不着也出手
+      if (foe.state === 'str' && foe.strIdx <= (foe.entry || 0) && me.state !== 'hitstun' && Math.abs(foe.x - me.x) > foe.reach * MOVES.L.reachK + BODY * 0.5 + 0.08) this.mash += (1 - this.mash) * 0.12;   // 够不着也出手
       this.oSeq = foe.seq; this.oState = foe.state; this.oStep = foe.strOn ? foe.strIdx : -1; this.oHit = false;
     }
     press(k) { this.taps[k] = (this.taps[k] || 0) + 1; }
@@ -1804,14 +1864,15 @@
       if (landed) {
         go = rnd() < this.cont;
         // 诱招（§14.1）：他惯于在下一步格开、这一步是轻步 → 停手，等他格开落空再抓
-        if (go && me.seqStr[i] === 'L' && ready && this.pBreak[i + 1] > 0.4 && rnd() < this.rk * this.pBreak[i + 1] * 1.5) { go = false; this.baitUntil = now + 0.9; }
+        // （× rkVs 而非 rk：读远强于己的对手更难；复核：关羽格开机器人对低 6–12 武力的电脑 69.5% → 71.9%，(7) 要求 ≥ 65%）
+        if (go && me.atype === 'L' && ready && this.pBreak[i + 1] > 0.4 && rnd() < this.rkVs(foe) * this.pBreak[i + 1] * 1.5) { go = false; this.baitUntil = now + 0.9; }
         // 绝技取消：怒气满、已连 3 击以上
         if (go && me.rage >= 100 && me.combo >= 3 && i <= 6 && rnd() < 0.6 + 0.3 * s) { this.strPlan = { seq: me.seq, at: now + toCp + 0.01, key: 'special' }; return; }
       } else if (blocked) {
         if (nt !== 'H') {
           // 被挡时只接轻 / 中步；接下来是重步、这一步是轻步而下一步是中步 → 停在轻步上（停在轻步后最安全，§8.4）
           const nn = me.seqStr[i + 2];
-          go = !(me.seqStr[i] === 'L' && nt === 'M' && (nn === 'H' || fin)) || rnd() < 0.25 * (1 - this.gs);
+          go = !(me.atype === 'L' && nt === 'M' && (nn === 'H' || fin)) || rnd() < 0.25 * (1 - this.gs);
         } else {
           // 重步：(a) 他的格开冷却比打到这一步还久；(b) 压制破防：已连挡 5 步、下一步是终结技
           if (cdF > tNext + 0.05 && rnd() < this.gs) go = true;
@@ -1824,7 +1885,11 @@
       // 按错键（弱将）
       let key = TYPE_KEY[nt];
       if (rnd() < this.slip) { const o = ['light', 'medium', 'heavy'].filter(k => k !== key); key = o[(rnd() * 2) | 0]; }
-      const at = now + toCp + rnd() * this.beatJ;
+      let jit = rnd() * this.beatJ;
+      // 迟按（§9.3「电脑三样都用」：迟按 ≤ 0.08 秒仍是真连段）：他惯于在下一步看破（pBreak > 0.35）→ 按 rkVs × pBreak 故意按晚 0.04–0.075 秒，
+      // 打乱他按节拍的格开（只对可被看破的第 3 步起；重步另有迟滞）
+      if (landed && nt !== 'H' && i + 1 >= COMBO.MIN_STEP - 1 && this.pBreak[i + 1] > 0.35 && rnd() < this.rkVs(foe) * this.pBreak[i + 1]) jit = Math.min(0.075, jit + 0.04 + rnd() * 0.035);
+      const at = now + toCp + jit;
       this.strPlan = { seq: me.seq, at, key };
       // 迟滞（§14.1）：下一步是重步、他惯于看破（pBreak > 0.35）→ 按 rk × pBreak 迟滞 U(0.06, 0.14) 秒；他的格开没好时不超过 0.08（保持真连段）
       this.delayUntil = 0;
@@ -2049,7 +2114,7 @@
         this.pwSeq = seen.seq;
         const left = foe.state === 'parrywhiff' && foe.seq === seen.seq ? PARRY_WHIFF - foe.t : 0;
         const need = MOVES.L.startup / me.spd + (dist <= reach ? 0 : 0.07 + (dist - reach) / 7.4);
-        if (left > need - 0.02 && dist <= reach + 1.2 && rnd() < this.punishP) {
+        if (left > need - 0.02 && dist <= reach + 1.2 && rnd() < this.whiffPunP) {
           this.guardUntil = 0; H.guard = false;
           if (dist <= reach) {
             if (left > (0.12 + heavySU(0.13 / CHARGE_MAX, me.spd)) / me.spd + 0.03 && rnd() < 0.5 * s) this.heavy(0.13); else this.press(this.pk(left));
@@ -2165,16 +2230,16 @@
       if (seen && sim.actionable(me) && now >= this.pokeAt && (seen.state === 'walk' || seen.state === 'dash' || seen.state === 'idle')) {
         const prev = sim.seen(foe.idx, this.react + 0.05);
         const vx = prev && seen.clock > prev.clock ? (seen.x - prev.x) / (seen.clock - prev.clock) : 0;
-        // 第四版：迎击以本人连段起手（招式谱第 1 步是 M 的，用 M 的起手与距离预判；打中即可接整串，§14.1）
-        const s1 = this.s1Key(), mv1 = s1 === 'medium' ? MOVES.M : MOVES.L;
+        // 第四版：迎击以连段起手——够得着 J 就按 J（J 起手，最快；打中即可接整串，§14.1）
+        const s1 = this.jKey(), mv1 = s1 === 'medium' ? MOVES.M : MOVES.L;
         const lead = mv1.startup / me.spd;
         const pd = Math.abs(seen.x + vx * (this.react + lead) - (me.x + me.vx * lead * 0.3));
         const reachM = me.reach * MOVES.M.reachK + BODY * 0.5 - 0.03, reach1 = s1 === 'medium' ? reachM : reach;
         if (pd <= reach1) {
           this.pokeAt = now + 0.3;
           if (rnd() < this.pokeP) { if (this.holdOff(sim, seen, rd) || this.wary(sim, seen)) return; this.press(s1); H.x = 0; this.planX = 0; return; }
-        } else if (s1 === 'light' && pd <= reachM && rnd() < 0.4 * this.gs * this.pokeP) {
-          // 第四版：L 够不着、M 够得着的距离——中击（刃尖会心）迎击（§14.1）
+        } else if (s1 === 'light' && pd <= reachM && rnd() < (this.me.seqStr[0] === 'M' ? 1 : 0.4 * this.gs) * this.pokeP) {
+          // 第四版：L 够不着、M 够得着的距离——中击（刃尖会心）迎击（§14.1）；第 1 步是中击的武将以此起整串（按 pokeP，不再 × 0.4 gs）
           this.pokeAt = now + 0.3;
           if (this.holdOff(sim, seen, rd) || this.wary(sim, seen)) return;
           this.press('medium'); H.x = 0; this.planX = 0; return;
@@ -2299,7 +2364,7 @@
           const standT = this.turtle * (1 - this.crouchT), reachM = me.reach * MOVES.cM.reachK + BODY * 0.5;
           if (MIXUPS && rnd() < this.gs * standT * 0.4) { H.down = true; this.press(dist > reach * 0.85 && dist <= reachM - 0.03 && rnd() < 0.5 ? 'medium' : 'light'); }
           else if (MIXUPS && rnd() < this.gs * this.crouchT * 0.3) this.press('ovh');
-          else this.press(this.s1Key());
+          else this.press(this.jKey());
         }
         else this.heavy(0.12 + rnd() * (0.25 + 0.45 * s));
       } else if (r < this.aggr + 0.3) {
@@ -2338,6 +2403,10 @@
     const HRT = 0.22, SD = 0.045;
     const v4 = { hbguard: 1, combo: 1, breaker: 1, delay: 1, mixup: 1 }[kind] === 1;
     const strings = kind === 'combo' || kind === 'breaker' || kind === 'delay' || kind === 'mixup';
+    // 起手键：第三版的几种（含 hbguard）同第三版按 J（J 起手：J 能起每个人的招式谱，jEntry）；第四版的连段机器人
+    // （combo / breaker / delay / mixup：§15.1「以本人的招式谱起手」）按招式谱第 1 步那一键。opts.open = 's1' / 'J' 可强制
+    const s1Open = opts.open === 's1' || (opts.open !== 'J' && strings);
+    const openKey = me => (!s1Open && jEntry(me.seqStr) >= 0 ? 'light' : TYPE_KEY[me.seqStr[0]]);
     const maxStep = 7;                            // 命中确认后打满整串（第三版的「命中才接连段」，第四版的连段即整串）
     // 对手连段的下一步按节拍打到的时刻：见过那一步就知道类型，没见过按中击的节奏估（同电脑，§14.3）
     const nextHitOf = (sim, o) => {
@@ -2357,7 +2426,7 @@
       if (strings && connected && !landed && (o.state === 'guardstun')) {
         // 被挡：只接轻 / 中步；停在最后一个轻步上
         const nn = me.seqStr[i + 2];
-        go = nxt !== 'H' && !(me.seqStr[i] === 'L' && nxt === 'M' && (nn === 'H' || i + 1 === 7));
+        go = nxt !== 'H' && !(me.atype === 'L' && nxt === 'M' && (nn === 'H' || i + 1 === 7));
       }
       if (!go) return;
       const sd = strings ? 0.03 : SD;
@@ -2421,7 +2490,7 @@
       // 被看破过（delay 用）
       if (me.stats.broken > lastBroken) { lastBroken = me.stats.broken; brokeAt = now; }
       H.x = 0;
-      if (me.state === 'parryok' || sim.countering(me)) { H.guard = false; if (d <= reach + 0.05) { if (now > nt) { T[TYPE_KEY[me.seqStr[0]]]++; nt = now + 0.08; } } else H.x = me.face; return; }
+      if (me.state === 'parryok' || sim.countering(me)) { H.guard = false; if (d <= reach + 0.05) { if (now > nt) { T[openKey(me)]++; nt = now + 0.08; } } else H.x = me.face; return; }
       // 看破对手的连段：挨了第 k ≥ 2 步，瞄准第 k + 1 步的节拍（parry 机器人：只看破第 3 步，同第三版）
       // 只看破见过的那一步（第三版的通用三连人人皆知；第四版的招式谱要先见识过）
       if (useParry && me.state === 'hitstun' && me.seq !== gsSeq && o.state === 'str' && o.strOn && sim.parryReady(me) &&
@@ -2449,7 +2518,7 @@
       const guardNow = () => { if (v4) { H.x = -me.face; H.guard = false; H.down = now - lowAt < 3 && !(seen && seen.line === 'overhead'); } else H.guard = true; };
       if (pAt >= 0) { if (me.state !== 'hitstun') guardNow(); return; }
       if (seen && seen.atk && d < o.reach + 0.8) { guardNow(); return; }
-      if (seen && o.seq === seen.seq && (seen.phase === 'recovery' || seen.state === 'parrywhiff' || seen.state === 'parried') && d <= reach + 0.1 && sim.actionable(me)) { H.guard = false; T[TYPE_KEY[me.seqStr[0]]]++; return; }
+      if (seen && o.seq === seen.seq && (seen.phase === 'recovery' || seen.state === 'parrywhiff' || seen.state === 'parried') && d <= reach + 0.1 && sim.actionable(me)) { H.guard = false; T[openKey(me)]++; return; }
       H.guard = false;
       if (me.rage >= 100 && d < reach + 1) { T.special++; return; }
       if (d > reach * 0.95) H.x = me.face;
@@ -2458,9 +2527,9 @@
         else if (kind === 'mixup' && (o.state === 'guard' || o.state === 'crouch' || (seen && seen.state === 'guard'))) {
           // 对方举防：在扫腿（下段）、跃劈（上段）与站立连段之间随机二择
           mixPick = (rnd() * 3) | 0;
-          if (mixPick === 0) { H.down = true; T.medium++; } else if (mixPick === 1) T.ovh++; else T[TYPE_KEY[me.seqStr[0]]]++;
+          if (mixPick === 0) { H.down = true; T.medium++; } else if (mixPick === 1) T.ovh++; else T[openKey(me)]++;
         }
-        else T[TYPE_KEY[me.seqStr[0]]]++;
+        else T[openKey(me)]++;
         nt = now + 0.45 + rnd() * 0.3;
       }
     };
@@ -6833,7 +6902,12 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       const gl = t => '<b style="color:' + GLYPH_COLOR[t] + '">' + GLYPH[t] + '</b>';
       const scroll = seq.slice(0, 7).split('').map(gl).join(' ') + ' · ' + gl(seq[7]) + (ce && ce.finisher ? ' ' + SG.esc(ce.finisher.name) : '');
       const keysOf = seq.split('').map(t => KL[t]).join(' ');
-      const banner = !st.bannerSeen ? '<div class="vs" style="color:#ffd27a">操作更新：格挡改为按住背向对手的方向；' + KL.H + ' 为重击，' + KL.M + ' 为中击；↓ 蹲下，↓+背向为下段格挡。</div>' : '';
+      // J 起手（jEntry）：第 1 步是中击的招式谱也能用轻击开始（代替第 1 步，或从第 2 步起）
+      const je = jEntry(seq), jNote = seq[0] === 'M' && je >= 0 ? '；' + KL.L + ' 也能起手（' + (je === 0 ? '代替第一式' : '从第二式起') + '，更快但稍轻）' : '';
+      const touchCard = SG.isTouch && !this.hybrid;
+      const banner = !st.bannerSeen ? '<div class="vs" style="color:#ffd27a">' + (touchCard
+        ? '操作更新：格挡改为按住背向对手的方向；新增「中」击，「中+重」为跃劈；▼ 蹲下，↙ / ↘ 背向为下段格挡。'
+        : '操作更新：格挡改为按住背向对手的方向；' + KL.H + ' 为重击，' + KL.M + ' 为中击；↓ 蹲下，↓+背向为下段格挡。') + '</div>' : '';
       if (!st.bannerSeen) { try { saveSettings({ bannerSeen: true }); } catch (e) { /* 忽略 */ } }
       if (SG.isTouch && !this.hybrid) {
         card.innerHTML = '<h2>操作方法</h2>' + banner + vs + '<div class="sgd-tl"><div>' +
@@ -6844,7 +6918,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
           '<div class="row"><span class="sgd-chip">中+重</span>跃劈（中段，蹲挡挡不住）</div>' +
           '<div class="row"><span class="sgd-chip pa">格开</span>来招打到前一瞬轻触：弹开对手，反击 ×1.5 不可挡；落空有破绽，冷却 2.5 秒。连段第三击起可看破</div>' +
           '<div class="row"><span class="sgd-chip">绝技</span>怒气满时「' + SG.esc(sp.name) + '」</div>' +
-          '<div class="row"><span class="sgd-chip">招式谱</span>' + scroll + '</div></div></div>' +
+          '<div class="row"><span class="sgd-chip">招式谱</span>' + scroll + (jNote ? '<small>' + jNote.slice(1).replace(KL.L, '轻') + '</small>' : '') + '</div></div></div>' +
           '<div class="go">轻触开始</div>';
       } else {
         card.innerHTML = '<h2>操作方法</h2>' + banner + vs + '<div class="sgd-rows">' +
@@ -6855,7 +6929,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
           '<div class="keys">' + k(KL.M) + '+' + k(KL.H) + '</div><div class="desc">跃劈<small>中段，蹲挡挡不住</small></div>' +
           '<div class="keys"><b class="sgd-k pk">U</b></div><div class="desc">格开<small>来招打到前一瞬轻按（约 ' + Math.round(parryWindow(warOf(me)) * 100) / 100 + ' 秒）：弹开对手，反击一击 ×1.5 不可挡；落空有破绽，冷却 2.5 秒。连段第三击起可看破；满蓄重击见刃口闪光即按</small></div>' +
           '<div class="keys"><b class="sgd-k r">I</b></div><div class="desc">绝技「' + SG.esc(sp.name) + '」<small>怒气满时</small></div>' +
-          '<div class="keys">招式谱</div><div class="desc">' + scroll + '<small>依次按 ' + keysOf + '（踩准节拍连成八式）</small></div>' +
+          '<div class="keys">招式谱</div><div class="desc">' + scroll + '<small>依次按 ' + keysOf + '（踩准节拍连成八式）' + jNote + '</small></div>' +
           '</div>' + (this.hybrid ? '<div class="vs">触摸屏：左下摇杆移动 / 蹲 / 跳，右下按钮出招</div>' : '') + '<div class="go">' + (this.hybrid ? '按任意键或轻触开始' : '按任意键开始') + '</div>';
       }
       this.root.appendChild(card);
@@ -7076,8 +7150,11 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
     }
     // 玩家见识过的招式谱步（§12.2：打过或看过的单挑；格斗画面出错改为模拟时不算）
     try { if (res.seenSteps && SG.Combos && typeof SG.Combos.markSeen === 'function' && SG.G) for (const n in res.seenSteps) SG.Combos.markSeen(SG.G, n, res.seenSteps[n], true); } catch (e) { console.error(e); }
-    // 第 5 个参数（第三版）：格斗细节，供成长系统（DESIGN-V3 §4）按单挑表现给经验；现有 duelFinish 忽略多余参数
-    const r = Mdl.duelFinish(a, b, res.winner === 0, res.log, { kind: res.kind, hpA: res.hpA, hpB: res.hpB, stats: res.stats || null });
+    // 第 5 个参数（第三版）：格斗细节，供成长系统（DESIGN-V3 §4）按单挑表现给经验；
+    // 第四版 big：击倒的那一击是会心、绝技或终结技（ITEMS §8.2 阵斩 35 %，否则 15 %；BattleModel.duelFinish 判定）
+    const ko = res.kind === 'ko' && res.log && res.log.length ? res.log[res.log.length - 1] : null;
+    const big = !!(ko && ko.who === res.winner && !ko.guarded && (ko.crit || ko.step === 8 || ko.move === 'special'));
+    const r = Mdl.duelFinish(a, b, res.winner === 0, res.log, { kind: res.kind, big, hpA: res.hpA, hpB: res.hpB, stats: res.stats || null });
     const loser = res.winner === 0 ? b : a;
     // 败者的名牌留到溃散动画时再消失（与旧流程一致）
     const lv = V && typeof V.vis === 'function' ? V.vis(loser) : null;
@@ -7085,7 +7162,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
     refresh();
     if (lv) lv.holdLabel = false;
     if (typeof bc.updateHud === 'function') bc.updateHud();
-    if (UI && UI.toast) UI.toast((res.winner === 0 ? a : b).gen.name + '于单挑中击败了' + loser.gen.name + '！', 2);
+    if (UI && UI.toast) UI.toast((res.winner === 0 ? a : b).gen.name + '于单挑中' + (r && r.slain ? '斩杀了' : '击败了') + loser.gen.name + '！', 2);
     if (V && typeof V.rout === 'function') await V.rout(loser);
     return Object.assign(r, { kind: res.kind, hpA: res.hpA, hpB: res.hpB });
   }
@@ -7120,7 +7197,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
     MOVES, STEP, WEAPONS, LOOKS,
     // 第四版（COMBAT-V4 §15：Node 可测的规则数据与开关）
     COMBO, GUARD, CRIT, KL_WAIT, OVH_SU, DUEL_ITEM_EFFECTS, DUEL_BUDGET,
-    stepMove, stepGap, critBase, duelModsOf, lineOf,
+    stepMove, stepGap, jEntry, critBase, duelModsOf, lineOf,
     // 单挑设置（§5.3，localStorage）、键位预设、触摸布局数据（§5.2）
     settings: loadSettings, saveSettings, SETTINGS_DEFAULT, KEY_PRESETS, keymapOf, keyLabels, TOUCH_LAYOUT, padDir, GLYPH, GLYPH_COLOR,
     critEnabled: true,                  // 单挑会心（测试开关；关掉时照样取随机数）

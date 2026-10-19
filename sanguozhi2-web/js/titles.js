@@ -538,7 +538,8 @@
     if (x.dead) out.push({ key: 'dead', ok: false, text: x.name + '已故' });
     if (!opts.asFaction && x.faction !== f) out.push({ key: 'faction', ok: false, text: '不是本势力的武将' });
     if (isRuler(x)) out.push({ key: 'ruler', ok: false, text: '君主不任官职' });
-    if (isCaptive(x)) out.push({ key: 'captive', ok: false, text: '被俘中' });
+    // 刚以许官登用的俘虏（opts.hired）：Conquest 在处置完全部俘虏后才把他移出待处置名单，许下的官照授（§6.7）
+    if (isCaptive(x) && !opts.hired) out.push({ key: 'captive', ok: false, text: '被俘中' });
     const fs = families(x);
     out.push({ key: 'family', ok: fs.indexOf(p.family) >= 0, text: fs.indexOf(p.family) >= 0 ? '最高属性：' + fs.map(q => STAT_ZH[q]).join(' / ') : `最高属性为${fs.map(q => STAT_ZH[q]).join(' / ')}，只能出任${fs.map(q => D().families[q].zh).join(' / ')}` });
     const tr = tierOf(p.tier);
@@ -772,7 +773,7 @@
     const hired = C.hire(target, recruiter, f, cityId, { promise: pr ? pr.add : 0, via: opts.via });
     let office = null;
     if (hired && pr) {
-      const r = grant(f, target, pr.postId, undefined, { ceremony: 'small' });
+      const r = grant(f, target, pr.postId, undefined, { ceremony: 'small', hired: true });
       if (r.ok) office = r;
     }
     return { ok: !!hired, hired: !!hired, office, promise: pr };
@@ -1174,7 +1175,7 @@
     isActive: x => active(x), isValid: x => valid(x),
     canGrant, grant, revoke, canRevoke, revokeCost, demote, demoteCost, setName, promiseBonus, hireWithPromise,
     validate, validateAll, refresh, enforce, monthStart, hints, takeNews, takeEvents, hookLive, giftsThisYear,
-    get lastHints() { return lastHints.slice(); },
+    hintRecords: () => lastHints.slice(),
     aiManage, aiManageAll, fillByMerit, prefBranch, pickPost,
     init, migrate, load,
     installHooks, installProviders, providers: PROVIDERS, stats: ST,
@@ -1182,6 +1183,8 @@
     // tests：清掉非存档的缓存（另起一局之前）
     reset() { lastFac.clear(); hintTier.clear(); refreshedAt.clear(); groups = null; NEWS.length = 0; EVENTS.length = 0; lastHints = []; dirty(); },
   });
+  // Object.assign 会把 getter 求值成定值：本月提示的记录用真正的 getter（SG.Titles.lastHints）
+  Object.defineProperty(Titles, 'lastHints', { get: () => lastHints.slice(), enumerable: true });
   SG.Titles = Titles;
   installHooks();   // strategy-ai.js 在本文件之后载入：这里通常装不上，init / migrate / load（新局与读档）时再装
 })();

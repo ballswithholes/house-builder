@@ -110,6 +110,8 @@ section('(5) glyphs, knowledge, describe, mastery, save', () => {
   const me = G.generals.find(x => x.name === '曹操'), foe = G.generals.find(x => x.name === '吕布');
   ok(C.known(G, '曹操') === 255, 'own-faction generals are fully known');
   ok(C.known(G, '吕布') === 0, 'other generals start unknown');
+  C.markSeen(G, '曹操', 3);
+  ok(!(G.combos && G.combos.known && '曹操' in G.combos.known), 'markSeen does not store own-faction generals (§16.3 本势力武将不存)');
   C.markSeen(G, '吕布', 0); C.markSeen(G, '吕布', 2);
   ok(C.known(G, '吕布') === 5, 'markSeen sets step bits');
   const d = C.describe(foe, G.player, G);

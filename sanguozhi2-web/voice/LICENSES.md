@@ -25,4 +25,4 @@ Licences marked non-commercial or "see URL" must be checked before distributing 
 
 Failed QA (no pack, runtime uses the lingua fallback chain): none.
 
-Totals: 1389 clips, 28.5 min of speech, Opus 3.63 MB, MP3 fallback 6.92 MB.
+Totals: 1389 clips, 28.5 min of speech, Opus 3.63 MB, MP3 fallback 7.16 MB.

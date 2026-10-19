@@ -647,12 +647,13 @@
   // 第四版：Lanternvale 的绘制地面配色（暖鼠尾草绿的草地、干草黄、沙、苔绿林下……，与试点的地面同一色系）。
   // 只影响底色（群落数据纹理的 RGB、草丛 / 灌丛的颜色），groundInfo 的林地 / 沙漠 / 荒芜 / 积雪 / 群落权重不变（terrainInfo 不受影响）
   const LUSH = [0.53, 0.67, 0.37], DRY = [0.67, 0.67, 0.42], STEPPE = [0.76, 0.68, 0.45];
-  const SEABED = [0.8, 0.76, 0.58], FOREST = [0.42, 0.56, 0.32];
+  const SEABED = [0.8, 0.76, 0.58], FOREST = [0.32, 0.52, 0.28];
   const UPLAND = [0.62, 0.64, 0.42];
-  const DESERT = [0.89, 0.77, 0.54], STRAW = [0.82, 0.74, 0.48], TROPIC = [0.47, 0.64, 0.32], SAVANNA = [0.76, 0.71, 0.42];
-  const MED_OLIVE = [0.66, 0.67, 0.42], TAIGA = [0.48, 0.6, 0.42];
+  // 修订：热带 / 林地 / 泰加 / 稀树草原拉开（世界全图上热带雨林、温带林、季风稀树草原、荒漠一眼分得出；Lanternvale 的配色只是一片温带草地）
+  const DESERT = [0.89, 0.77, 0.54], STRAW = [0.82, 0.74, 0.48], TROPIC = [0.36, 0.62, 0.3], SAVANNA = [0.7, 0.68, 0.38];
+  const MED_OLIVE = [0.66, 0.67, 0.42], TAIGA = [0.4, 0.56, 0.4];
   const ALPINE = [0.7, 0.66, 0.5];
-  const TROP_FOREST = [0.34, 0.52, 0.27], TAIGA_FOREST = [0.34, 0.46, 0.36];
+  const TROP_FOREST = [0.2, 0.46, 0.22], TAIGA_FOREST = [0.24, 0.4, 0.32];
   function lerpInto(c, b, t) { t = M.clamp01(t); c[0] += (b[0] - c[0]) * t; c[1] += (b[1] - c[1]) * t; c[2] += (b[2] - c[2]) * t; }
   const _grass = [0, 0, 0], _fc = [0, 0, 0];
   // 结果（共享对象，调用方立即使用）：r, g, b 群落底色；forest 林地 0–1；sand 沙漠；barren 荒芜（岩石倾向）；snow 积雪；
@@ -666,6 +667,8 @@
     const c = _grass;
     c[0] = LUSH[0]; c[1] = LUSH[1]; c[2] = LUSH[2];
     lerpInto(c, DRY, north * 0.85 * f[F_EAST]);
+    // 修订：长江以南的湿润亚热带偏青绿（与北方的干草色、热带的浓绿拉开；只是底色）
+    lerpInto(c, TROPIC, M.inverseLerp(42, 12, z) * 0.5 * f[F_EAST]);
     lerpInto(c, STEPPE, M.inverseLerp(30, 5, x) * 0.6 * f[F_OLD]);
     const med = f[F_MED], sav = f[F_SAV], st = f[F_STEPPE], bo = f[F_BOREAL], tr = f[F_TROP];
     let des = f[F_DESERT];
@@ -1062,7 +1065,8 @@ void main() {
     float fk = clamp( ( length( vW - cameraPosition ) - fogNear ) / max( fogFar - fogNear, 0.01 ), 0.0, 1.0 ) * lpFog.x;
     col = mix( col, lpFog.y > 0.5 ? fogColor * fogColor : fogColor, fk );
   #endif
-  float alpha = mix( 0.58, 0.93, smoothstep( 0.0, 1.6, depth ) );
+  // 修订：浅水（河、湖）不再透出大片奶油色的沙底（河湖读成灰白的青）
+  float alpha = mix( 0.72, 0.93, smoothstep( 0.0, 1.6, depth ) );
   alpha = max( alpha, foam * 0.92 );
   gl_FragColor = vec4( wEnc( col ), alpha );
 }`;
@@ -1096,8 +1100,8 @@ void main() {
     const w = SG.Gfx.water().uniforms;   // 共用时间与太阳方向（随氛围转动）
     const mat = new THREE.ShaderMaterial({
       uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
-        // 线性色（着色器不再逐像素换算；sRGB 原值 0.56,0.8,0.78 / 0.34,0.62,0.71 / 0.21,0.43,0.63 / 0.97,0.97,0.94）
-        uShallow: { value: srgbLin(0.56, 0.8, 0.78) },
+        // 线性色（着色器不再逐像素换算；sRGB 原值 0.50,0.78,0.80 / 0.34,0.62,0.71 / 0.21,0.43,0.63 / 0.97,0.97,0.94）
+        uShallow: { value: srgbLin(0.5, 0.78, 0.8) },
         uMid: { value: srgbLin(0.34, 0.62, 0.71) },
         uDeep: { value: srgbLin(0.21, 0.43, 0.63) },
         uFoam: { value: srgbLin(0.97, 0.97, 0.94) },
@@ -1734,19 +1738,29 @@ void main() {
   // 远近两级的外形与配色一致，不再是圆球或手绘的泡泡树。道具库不可用时退回第三版的模型。
   // 尺寸：地图上的树高约 1 单位（城池尺寸约 1–1.5），按道具库近景模型（种子 0）的高度缩放；墨线宽度不随缩放变化（屏幕像素）。
   const VEG = {
-    huai: { r: 'tree_huai', h: 1.24, v: 2 }, elm: { r: 'tree_elm', h: 1.32, v: 1 }, oak: { r: 'tree_oak', h: 1.16, v: 2 },
-    pine: { r: 'tree_pine', h: 1.36, v: 2 }, spruce: { r: 'tree_spruce', h: 1.36, v: 1 }, cedar: { r: 'tree_cedar', h: 1.3, v: 1 },
+    huai: { r: 'tree_huai', h: 1.24, v: 1 }, elm: { r: 'tree_elm', h: 1.32, v: 1 }, oak: { r: 'tree_oak', h: 1.16, v: 1 },
+    pine: { r: 'tree_pine', h: 1.36, v: 1 }, spruce: { r: 'tree_spruce', h: 1.36, v: 1 }, cedar: { r: 'tree_cedar', h: 1.3, v: 1 },
     cypress: { r: 'tree_cypress', h: 1.4, v: 1 }, poplar: { r: 'tree_poplar', h: 1.5, v: 1 }, birch: { r: 'tree_birch', h: 1.3, v: 1 },
-    willow: { r: 'tree_willow', h: 1.18, v: 1 }, olive: { r: 'tree_olive', h: 0.95, v: 1 }, umbrella: { r: 'tree_pine_cloud', h: 1.12, v: 1 },
-    acacia: { r: 'tree_acacia', h: 1.02, v: 1 }, bamboo: { r: 'bamboo', h: 1.15, v: 1 }, date: { r: 'palm_date', h: 1.15, v: 1 },
+    willow: { r: 'tree_willow', h: 1.18, v: 1 }, olive: { r: 'tree_olive', h: 0.95, v: 1 }, umbrella: { r: 'tree_pine', h: 1.36, v: 1, sx: 1.12, sy: 0.75 },
+    acacia: { r: 'tree_acacia', h: 1.02, v: 1 }, bamboo: { r: 'tree_poplar', h: 1.0, v: 1, sx: 1.4 }, date: { r: 'palm_date', h: 1.15, v: 1 },
     coconut: { r: 'palm_coconut', h: 1.15, v: 1 }, maple: { r: 'tree_autumn', o: { variant: 'maple' }, h: 1.2, v: 1 },
     blossom: { r: 'tree_blossom', o: { variant: 'peach' }, h: 0.98, v: 1 }, snowpine: { r: 'pine_snow', h: 1.32, v: 1 },
     baobab: { r: 'tree_baobab', h: 1.15, v: 1 }, mangrove: { r: 'tree_mangrove', h: 0.98, v: 1 }, bush: { r: 'bush', h: 0.36, v: 2 },
   };
+  // 修订：地图比例下，黄山松（云片）远看像苏铁、竹丛像竿上的棒棒糖——地中海的伞松改用压扁的松（sx / sy：宽、高的额外缩放），
+  // 竹丛改用加宽的杨树团（一簇浓密的竹林）
   const VEG_KINDS = Object.keys(VEG);
   const VEG_NEAR = 34;            // 镜头到树的距离 < VEG_NEAR：3D 模型；否则公告板
   const VEG_WIND = 0.3;           // 风摆（世界单位的摆幅随缩放变小）
   function LP_HASH(x, z) { const v = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453; return v - Math.floor(v); }
+  // 群落色 c 相对树种常用色 ref 的实例调色（乘在道具原色上）：只调亮度（−12% … +4%：北方的树不提亮成黄绿）外加一点冷暖（红、蓝反向，绿不动）——
+  // 蓝永远不会比绿抬得多（逐通道的比值会把北方阔叶的树冠洗成土黄 / 秋橙）
+  const _lum = v => 0.3 * v[0] + 0.59 * v[1] + 0.11 * v[2];
+  function lpTint(c, ref) {
+    const kk = M.clamp(_lum(c) / Math.max(1e-3, _lum(ref)), 0.88, 1.04);
+    const w = M.clamp(c[0] / Math.max(1e-3, c[1]) - ref[0] / Math.max(1e-3, ref[1]), -0.12, 0.12);
+    return [kk * (1 + 0.3 * w), kk, kk * (1 - 0.3 * w)];
+  }
   function vegReady() { return !!(SG.LP && SG.LP.instances && SG.LPProps && SG.LPProps.geometry && SG.LPProps.has && SG.LPProps.has('tree_huai')); }
   function vegScale(kind) {
     const d = VEG[kind];
@@ -1781,6 +1795,28 @@ void main() {
     _tintMats[key] = m;
     return m;
   }
+  // 修订：区块合并远景的材质（LP 光照；实例调色已烘进顶点色）。aHide = 1 的顶点（该实例此刻用近景实例化模型）挪出裁剪空间
+  const _farMats = {};
+  function lpFarMaterial(wind) {
+    const key = 'f' + wind;
+    if (_farMats[key] !== undefined) return _farMats[key];
+    const LP = SG.LP, base = LP.material({ windScale: wind });
+    const anchor = 'gl_Position = projectionMatrix * mvPosition;';
+    if (base.vertexShader.indexOf(anchor) < 0) return (_farMats[key] = null);
+    const u = THREE.UniformsUtils.merge([THREE.UniformsLib.lights, THREE.UniformsLib.fog, {
+      uTint: { value: new THREE.Vector3(1, 1, 1) }, uFlash: { value: new THREE.Vector4(1, 1, 1, 0) }, uRimBoost: { value: 0 }, uFogScale: { value: 1 },
+      uWindScale: { value: wind }, uFade: { value: 1 }, uLit: { value: -1 },
+    }]);
+    for (const k in LP.globals) u[k] = LP.globals[k];
+    const vs = 'attribute float aHide;\n' + base.vertexShader.replace(anchor, anchor + '\n  if ( aHide > 0.5 ) gl_Position = vec4( 0.0, 0.0, 2.0, 1.0 );');
+    const m = new THREE.ShaderMaterial({ uniforms: u, vertexShader: vs, fragmentShader: base.fragmentShader, lights: true, fog: true, vertexColors: true });
+    m.defines = Object.assign({}, base.defines || {});
+    m.name = 'LP LowPoly (merged far)';
+    m.userData.lpKind = 'lit';
+    return (_farMats[key] = m);
+  }
+  // LP.mergeGeometries 能合并的几何体（非索引、无 uv / 蒙皮、带 lpSmooth）
+  const lpMergeable = g => !!(g && g.attributes.position && g.attributes.lpSmooth && !g.attributes.uv && !g.attributes.skinIndex && !g.index);
   // LP 实例化网格（+ 实例化墨线）；count 由调用方设置（setInstCount 同步墨线）
   function lpInst(geo, n, o) {
     o = o || {};
@@ -1812,13 +1848,15 @@ void main() {
   let _imp = null;
   const IMP_C = 128, IMP_COLS = 8, IMP_ROWS = 4, IMP_PITCH = 32;
   function vegImpostors() {
-    if (_imp) return _imp;
-    const LP = SG.LP, r = SG.Gfx.renderer;
-    const rt = new THREE.WebGLRenderTarget(IMP_C * IMP_COLS, IMP_C * IMP_ROWS, { depthBuffer: true, stencilBuffer: false });
-    rt.texture.generateMipmaps = true;
-    rt.texture.minFilter = THREE.LinearMipmapLinearFilter;
-    rt.texture.magFilter = THREE.LinearFilter;
-    rt.texture.name = 'VegImpostors';
+    if (!_imp) { const it = vegImpostorsGen(); while (!it.next().done) { /* 同步跑完 */ } }
+    return _imp;
+  }
+  // 分步版（修订：每渲染一格让出一次，地图的分片构建不再因整张图集卡一两百毫秒）
+  // 烘焙图集用的场景（正午的太阳 + 天光、正交镜头）
+  let _impBake = null;
+  function impBake() {
+    if (_impBake) return _impBake;
+    const LP = SG.LP;
     const scene = new THREE.Scene();
     const noon = LP.moodAt(12.5), lin = LP.Paint.lin;
     const sl = lin(noon.sunCol), kl = lin(noon.sky), gl = lin(noon.ground);
@@ -1833,6 +1871,31 @@ void main() {
     cam.up.set(0, 1, 0);
     cam.lookAt(0, 0, 0);
     cam.updateMatrixWorld();
+    _impBake = { scene, cam, noon, sl, kl, pr };
+    return _impBake;
+  }
+  // 修订：烘焙场景的灯光组合与地图不同，第一次渲染要编译一份新的着色器程序（负载下一两百毫秒，卡在一个分片里）。
+  // 植被一开始就把它交给 GPU 进程编译（renderer.compile 不等结果），等到烘焙时早已编好
+  function vegImpostorPrecompile() {
+    if (_imp || !SG.Gfx || !SG.Gfx.renderer || !SG.LP) return;
+    const LP = SG.LP, b = impBake(), F = new LP.MeshBuilder(1);
+    F.color = [0.5, 0.6, 0.3];
+    F.box([0, 0.5, 0], [1, 1, 1]);
+    const mesh = LP.mesh(F.toGeometry(), { castShadow: false, receiveShadow: false, outline: true });
+    b.scene.add(mesh);
+    try { SG.Gfx.renderer.compile(b.scene, b.cam); } catch (e) { /* 编译失败时照常在烘焙时编 */ }
+    b.scene.remove(mesh);
+    mesh.geometry.dispose();
+  }
+  function* vegImpostorsGen() {
+    if (_imp) return _imp;
+    const LP = SG.LP, r = SG.Gfx.renderer;
+    const rt = new THREE.WebGLRenderTarget(IMP_C * IMP_COLS, IMP_C * IMP_ROWS, { depthBuffer: true, stencilBuffer: false });
+    rt.texture.generateMipmaps = true;
+    rt.texture.minFilter = THREE.LinearMipmapLinearFilter;
+    rt.texture.magFilter = THREE.LinearFilter;
+    rt.texture.name = 'VegImpostors';
+    const { scene, cam, noon, sl, kl, pr } = impBake();
     const R = new THREE.Vector3(1, 0, 0), U = new THREE.Vector3(0, Math.cos(pr), -Math.sin(pr));
     const prev = { rt: r.getRenderTarget(), auto: r.autoClear, col: r.getClearColor(new THREE.Color()), a: r.getClearAlpha(), shadow: r.shadowMap.enabled };
     r.setRenderTarget(rt);
@@ -1844,7 +1907,9 @@ void main() {
     // 图集里也描墨线（按 128 像素的格算线宽：公告板缩到四五十像素时只剩一圈淡淡的暗边，与近处 3D 树的墨线接得上）
     const vw = LP.globals.lpView.value, saveView = vw.clone();
     vw.set(IMP_C, IMP_C, 0.62, 0.9);
-    VEG_KINDS.forEach((kind, i) => {
+    const restore = () => { r.setRenderTarget(prev.rt); r.autoClear = prev.auto; r.setClearColor(prev.col, prev.a); };
+    for (let i = 0; i < VEG_KINDS.length; i++) {
+      const kind = VEG_KINDS[i];
       const g = vegGeo(kind, 0, 1);
       const b = g.boundingBox || (g.computeBoundingBox(), g.boundingBox);
       let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
@@ -1864,10 +1929,18 @@ void main() {
       r.setRenderTarget(rt);
       const mesh = LP.mesh(g, { castShadow: false, receiveShadow: false, outline: true });
       scene.add(mesh);
+      vw.set(IMP_C, IMP_C, 0.62, 0.9);
       r.render(scene, cam);
       scene.remove(mesh);
+      vw.copy(saveView);
       cells[kind] = { i, w: half * 2, h: half * 2, base: (0 - (cy - half)) / (half * 2), ox: (0 - (cx - half)) / (half * 2) - 0.5 };
-    });
+      // 让出（其间别的画面会渲染：先恢复渲染目标与清屏设置，回来再接着画）
+      rt.scissorTest = false;
+      restore();
+      yield;
+      if (_imp) return _imp;
+      r.autoClear = false;
+    }
     vw.copy(saveView);
     rt.scissorTest = false;
     rt.viewport.set(0, 0, rt.width, rt.height);
@@ -1928,7 +2001,8 @@ vec3 iEnc( vec3 c ) { c = max( c, vec3( 0.0 ) ); return lpOut > 0.5 ? mix( c * 1
 void main() {
   vec4 t = texture2D( uMap, vUv );
   if ( t.a < 0.5 ) discard;
-  vec3 col = iLin( t.rgb / t.a ) * iLin( vTint );
+  // ×0.86（线性）：代替 3D 树受到的环境遮蔽与自身投影（图集是在无影的正午光下烘的，远处的树原本比近处的亮一截）
+  vec3 col = iLin( t.rgb / t.a ) * iLin( vTint ) * 0.86;
   // 图集按正午光烘焙：按当前氛围的太阳 + 天光与正午之比调整（夜色调、黄金时刻同 LP）
   if ( lpSunC.w > 0.5 ) {
     vec3 now = lpSunC.rgb * 0.7 + lpSkyC.rgb, ref = uRefSun * 0.7 + uRefSky;
@@ -1982,6 +2056,16 @@ void main() {
     const info = SG.LPProps.info(name);
     const r = SG.LPProps.geometry(name, { seed: variant || 0, lod: lod && info && info.lod ? 'far' : 'near' });
     return r.ink || r.plain;
+  }
+  // 石块的合并远景：除雪石外一律用 rock_large 的远景细节（40 个三角形，按宽度换算到该种石块），远处一块石头只有几个像素；
+  // 合并网格按实例复制顶点，世界地图上千块石头省下约十五万个顶点
+  function rockFarGeo(name) {
+    if (name === 'rock_snow' || !ROCK_W[name]) return propGeo(name, 0, 1);
+    return SG.LP.MeshCache.get('map:rockfar:' + name, () => {
+      const g = propGeo('rock_large', 0, 1).clone(), f = ROCK_W[name] / ROCK_W.rock_large;
+      g.scale(f, f, f);
+      return g;
+    });
   }
   // 村舍的远景「小房块」：屋身 + 双坡顶（约 30 个三角形），尺寸取道具库模型的包围盒，颜色取配方的墙色、顶色
   const SPECK = {
@@ -2062,14 +2146,21 @@ void main() {
     return _titleUp;
   }
   const defaultHour = () => (titleUp() ? TITLE_HOUR : MAP_HOUR);
-  // 城池（CultureArt.scatter）：镜头到区块 < CITY_LOD 用近景模型，< CITY_INK 描墨线
-  const CITY_LOD = 72, CITY_INK = 38;
+  // 城池（CultureArt.scatter）：镜头到区块 < CITY_LOD 用近景模型，< CITY_INK 描墨线；镜头高于 CITY_OV_Y 时换成合并的远景（全图视角）
+  const CITY_LOD = 72, CITY_INK = 38, CITY_OV_Y = 115;
   // 村落：远于 VILLAGE_HIDE 的区块不画（远看只是几个像素）；桥与关隘的墨线只在 PROP_INK 以内
-  const VILLAGE_HIDE = 105, PROP_INK = 55;
-  // 村落近景（道具库远景细节 + 墨线 + 投影）的半径；更远处用十来个三角形的「小房块」（远看只有几个像素）
-  const VILLAGE_NEAR = 38;
-  // 树的墨线只描镜头 TREE_INK 以内的区块（更远的树只有二三十像素高，墨线把树冠涂成一团黑）
-  const TREE_INK = 26;
+  //（修订：55 → 30——中景里垛口只隔两三个像素，固定像素宽的墨线把关墙画成黑黄相间的斑马纹）
+  const VILLAGE_HIDE = 105, PROP_INK = 30;
+  // 村落近景（道具库远景细节 + 墨线 + 投影）的半径；更远处用十来个三角形的「小房块」（远看只有几个像素；修订：38 → 24，
+  // 小房块按区块合并成一次绘制）
+  const VILLAGE_NEAR = 24;
+  // 石块、灌丛的近景（墨线）半径；更远处为区块合并的远景（与树的 3D 带同宽）
+  const SCATTER_NEAR = VEG_NEAR;
+  // 桥、关隘：镜头 PROP_HIDE 以外整块隐去（只剩一两个像素），PROP_SHADOW 以外不投影
+  const PROP_HIDE = 130, PROP_SHADOW = 60;
+  // 树的墨线：修订后 3D 树一律描墨线（TREE_INK 覆盖整个 3D 带；远处的公告板图集本来就带墨线），
+  // 不再出现「近处的 3D 树没墨线、远处的公告板有墨线」的深度倒置
+  const TREE_INK = VEG_NEAR * 1.1;
   // LP 旗：旗杆（木色，带金色顶尖）与旗面（白色，乘势力色；略带波浪），尺寸同第三版的旗（杆高 2.2、旗面 0.9 × 0.6）
   function lpFlagGeometry() {
     return SG.LP.MeshCache.get('map:flag', () => {
@@ -2718,7 +2809,8 @@ void main() {
         worn(this._cityX[c.id], this._cityZ[c.id], size * 1.3 + 0.2, size * 1.3 + 1.3, 0.75);
         if ((c.id & 31) === 31) yield;
       }
-      for (const o of this._hamlets || []) worn(o.x, o.z, 0.5, 1.7, 0.5);
+      // 修订：村落脚下一片踩实的泥地（半径约 1.3；着色器里泥地也压掉农田，村舍不再落在庄稼上）
+      for (const o of this._hamlets || []) worn(o.x, o.z, 0.9, 1.75, 0.62);
       yield;
       // A = 城池压平 / 视线楔形削出的坡（人工的路堑与台地）：着色时不当作岩壁、裸土，仍是草坡
       for (const c of state.cities) {
@@ -3075,8 +3167,8 @@ void main() {
     }
 
     // 植被 / 石块 / 村舍的实例化网格：按 100 单位的区块与种类分组（视锥剔除、远近两级 LOD）
-    _instBuckets() {
-      const T = this.spec.terrain, tile = 100, map = new Map();
+    _instBuckets(tileSize) {
+      const T = this.spec.terrain, tile = tileSize || 100, map = new Map();
       return {
         map,
         add(kind, px, py, pz, sx, sy, yaw, r, g, b) {
@@ -3158,6 +3250,71 @@ void main() {
         yield;
       }
     }
+    // 修订：石块、灌丛、村舍——每个 100 单位的区块只有一个合并的远景网格（不论种类，一次绘制；实例调色烘进顶点色），
+    // 近景（nearR 以内的实例）照旧是每种一个 LP 实例化网格（墨线；投影按 o.shadow(kind)）。远景合并网格里正用近景模型的实例
+    // 由逐顶点的 aHide 挪走（_mergedTileLOD）。nearGeoFn / farGeoFn(kind) → 几何体（共用，勿释放）
+    *_lpMergedTiles(buckets, nearGeoFn, farGeoFn, name, tiles, o) {
+      o = o || {};
+      const wind = o.wind != null ? o.wind : 0, farMat = lpFarMaterial(wind);
+      if (!farMat) { yield* this._lpInstMeshes(buckets, (k, lod) => (lod ? farGeoFn(k) : nearGeoFn(k)), name, tiles, !!o.shadow); return; }
+      const q = new THREE.Quaternion(), sc = new THREE.Vector3(), tp = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+      const byTile = new Map(), kinds = new Set();
+      for (const b of buckets.map.values()) {
+        const key = b.cx + ',' + b.cz;
+        let t = byTile.get(key);
+        if (!t) { t = { cx: b.cx, cz: b.cz, groups: [] }; byTile.set(key, t); }
+        t.groups.push(b);
+        kinds.add(b.kind);
+      }
+      // 道具库的几何体第一次用到时才建（每种几十毫秒）：先逐种建好，每种一个分片
+      for (const k of kinds) { nearGeoFn(k); yield; farGeoFn(k); yield; }
+      for (const t of byTile.values()) {
+        let n = 0, r = 0;
+        for (const b of t.groups) n += b.c.length / 3;
+        const mats = new Float32Array(n * 16), cols = new Float32Array(n * 3), xz = new Float32Array(n * 2), gi = new Uint8Array(n);
+        const vstart = new Uint32Array(n), vcount = new Uint32Array(n), entries = [], near = [];
+        let i = 0, nv = 0;
+        t.groups.forEach((b, g) => {
+          const m = b.c.length / 3, fg = farGeoFn(b.kind), fc = lpMergeable(fg) ? fg.attributes.position.count : 0;
+          for (let j = 0; j < m; j++, i++) {
+            const k6 = j * 6;
+            tp.set(b.m[k6], b.m[k6 + 1], -b.m[k6 + 2]);
+            q.setFromAxisAngle(up, b.m[k6 + 5]);
+            sc.set(b.m[k6 + 3], b.m[k6 + 4], b.m[k6 + 3]);
+            const mx = new THREE.Matrix4().compose(tp, q, sc);
+            mx.toArray(mats, i * 16);
+            cols[i * 3] = b.c[j * 3]; cols[i * 3 + 1] = b.c[j * 3 + 1]; cols[i * 3 + 2] = b.c[j * 3 + 2];
+            xz[i * 2] = b.m[k6]; xz[i * 2 + 1] = b.m[k6 + 2]; gi[i] = g;
+            r = Math.max(r, Math.hypot(b.m[k6] - t.cx, b.m[k6 + 2] - t.cz));
+            if (fc) entries.push({ geo: fg, matrix: mx, tint: [b.c[j * 3], b.c[j * 3 + 1], b.c[j * 3 + 2]] });
+            vstart[i] = nv; vcount[i] = fc; nv += fc;
+          }
+          const im = lpInst(nearGeoFn(b.kind), m, { outline: o.outline !== false, shadow: o.shadow ? !!o.shadow(b.kind) : false, wind: o.wind });
+          im.name = name;
+          im.visible = false;
+          near.push(im);
+          this.root.add(im);
+        });
+        yield;
+        let far = null, hide = null;
+        if (entries.length) {
+          const geo = SG.LP.mergeGeometries(entries);
+          hide = new THREE.BufferAttribute(new Uint8Array(geo.attributes.position.count), 1);
+          geo.setAttribute('aHide', hide);
+          far = new THREE.Mesh(geo, farMat);
+          far.name = name + 'Far';
+          far.castShadow = false; far.receiveShadow = true;
+          far.matrixAutoUpdate = false;
+          far.visible = false;
+          this.root.add(far);
+          this._mergedVerts = (this._mergedVerts || 0) + geo.attributes.position.count;
+        }
+        const sph = new THREE.Sphere(new THREE.Vector3(t.cx, 1, -t.cz), r + 2);
+        for (const im of near) setInstBounds(im, sph);
+        tiles.push({ mt: true, near, far, hide, n, mats, cols, xz, gi, vstart, vcount, cx: t.cx, cz: t.cz, r: r + 1, mode: '', key: '', hidden: true });
+        yield;
+      }
+    }
     // 树木的区块网格：每区块每树种一个近景实例化网格（平滑模型，投影），另加一个远景公告板网格（所有树种，一次绘制）
     *_treeMeshes(B) {
       const tiles = new Map(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), tp = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
@@ -3236,7 +3393,8 @@ void main() {
         const mats = new Float32Array(n * 16), smats = new Float32Array(n * 16), cols = new Float32Array(n * 3), cells = new Float32Array(n), xz = new Float32Array(n * 2), kind = new Uint8Array(n);
         const near = [], kinds = [];
         let i = 0;
-        t.groups.forEach((b, gi) => {
+        for (let gi = 0; gi < t.groups.length; gi++) {
+          const b = t.groups[gi];
           const m = b.c.length / 3, [vk, vs] = b.kind.split(':'), variant = +vs, cell = imp.cells[vk], k = vegScale(vk);
           for (let j = 0; j < m; j++, i++) {
             const o = j * 6;
@@ -3254,7 +3412,8 @@ void main() {
           near.push(im);
           kinds.push(b.kind);
           this.root.add(im);
-        });
+          yield;
+        }
         const far = new THREE.InstancedMesh(sgeo, smat, n);
         far.name = 'TreeSprites';
         far.castShadow = false; far.receiveShadow = false;
@@ -3280,7 +3439,8 @@ void main() {
     *_genTrees() {
       const rnd = SG.SeededRandom(11);
       const geo = this._geo, D = this.spec.trees;
-      const B = this._instBuckets();
+      // 修订（LP）：树的区块 200 单位（近景是逐实例分配的，区块大只省绘制次数：每区块每树种一次 + 墨线 + 投影）
+      const B = this._instBuckets(vegReady() ? 200 : 100);
       let count = 0;
       const PINE = [0.2, 0.42, 0.27], SPRUCE = [0.15, 0.34, 0.25], DEC_S = [0.3, 0.57, 0.25], DEC_N = [0.48, 0.6, 0.28], CAMPHOR = [0.24, 0.5, 0.24];
       const TROP = [0.14, 0.47, 0.18], PALM = [0.32, 0.58, 0.2], OLIVE = [0.52, 0.58, 0.4], CYPRESS = [0.14, 0.31, 0.19], SHRUB = [0.52, 0.52, 0.3];
@@ -3288,8 +3448,12 @@ void main() {
       const STONEPINE = [0.24, 0.42, 0.22], MAPLE = [0.78, 0.38, 0.16], CEDAR = [0.13, 0.3, 0.2];
       // 第四版：树种换成道具库的配方（VEG）；群落色以「与该树种常用色之比」作为实例色（夹在 0.8–1.2：北方偏黄、南方偏深）
       const LPV = this._lpVeg = vegReady();
+      if (LPV) vegImpostorPrecompile();
       const REF = { broad: DEC_S, broad2: DEC_S, pine: PINE, spruce: SPRUCE, cypress: CYPRESS, poplar: POPLAR, birch: BIRCH, shrub: SHRUB, willow: WILLOW,
-        olive: OLIVE, stonepine: STONEPINE, acacia: ACACIA, bamboo: BAMBOO, palm: PALM };
+        olive: OLIVE, stonepine: STONEPINE, acacia: ACACIA, bamboo: BAMBOO, palm: PALM, dshrub: SHRUB };
+      // 修订：按经纬度挑树种——天竺的季风稀树草原用槐 / 栎 / 少量金合欢（不是东非的平顶金合欢 + 猴面包树）；
+      // 北纬 36° 以北的绿洲是胡杨（不是椰枣）；荒漠里零散的「树」是灌丛
+      const UNP = typeof SG.unproject === 'function' ? SG.unproject : null;
       const lpKind = (kind, c, px, pz, h, hv) => {
         switch (kind) {
           case 'broad': return c === MAPLE ? 'maple' : hv < 0.62 ? 'huai' : 'elm';
@@ -3298,8 +3462,15 @@ void main() {
           case 'spruce': return c === CEDAR ? 'cedar' : h > 2.5 && c === SPRUCE && geo.sample(px, pz)[F_BOREAL] > 0.5 ? 'snowpine' : 'spruce';
           case 'stonepine': return 'umbrella';
           case 'shrub': return 'bush';
-          case 'acacia': return hv > 0.94 ? 'baobab' : 'acacia';
+          case 'acacia': {
+            const g = UNP ? UNP(px, pz) : null;
+            if (g && g.lon > 66) return hv < 0.3 ? 'acacia' : hv < 0.7 ? 'huai' : 'oak';
+            return hv > 0.94 && (!g || g.lon < 45) ? 'baobab' : 'acacia';
+          }
+          case 'dshrub': return 'bush';
           case 'palm': {
+            const g = UNP ? UNP(px, pz) : null;
+            if (g && g.lat > 36) return 'poplar';
             const f = geo.sample(px, pz);
             if (f[F_TROP] > 0.5 && h < 0.9 && hv < 0.3 && geo.coastDist(px, pz) < 1.4) return 'mangrove';
             return f[F_TROP] > 0.35 ? 'coconut' : 'date';
@@ -3312,9 +3483,12 @@ void main() {
         if (LPV) {
           const hv = LP_HASH(px, pz), vk = lpKind(kind, c, px, pz, py, hv), d = VEG[vk], ref = REF[kind];
           const plain = !ref || vk === 'maple' || vk === 'cedar' || vk === 'snowpine' || vk === 'mangrove' || vk === 'baobab';
-          const t = plain ? [1, 1, 1] : [0, 1, 2].map(q => M.clamp(c[q] / ref[q], 0.8, 1.2));
+          // 荒漠、草原上的灌丛：偏灰的鼠尾草色（逐通道调色——这里要的正是去饱和）
+          const t = plain ? [1, 1, 1] : kind === 'dshrub' ? [1.2, 1.04, 1.1] : lpTint(c, ref);
           const variant = d.v > 1 ? Math.floor(LP_HASH(pz + 3.1, px - 1.7) * d.v) % d.v : 0;
-          B.add(vk + ':' + variant, px, py, pz, s, sy, yaw, Math.min(1.3, t[0] * k), Math.min(1.3, t[1] * k), Math.min(1.3, t[2] * k));
+          // 当树种的灌丛（稀树草原、荒漠）小一号：道具库的灌丛又宽又矮，与树冠同宽时远看是一团团怪异的大色块
+          const ks = kind === 'shrub' || kind === 'dshrub' ? 0.75 : 1;
+          B.add(vk + ':' + variant, px, py, pz, s * ks * (d.sx || 1), sy * ks * (d.sy || 1), yaw, Math.min(1.3, t[0] * k), Math.min(1.3, t[1] * k), Math.min(1.3, t[2] * k));
         } else B.add(kind, px, py, pz, s, sy, yaw, Math.min(1, c[0] * k), Math.min(1, c[1] * k), Math.min(1, c[2] * k));
         count++;
       };
@@ -3323,9 +3497,11 @@ void main() {
       const xs = [];
       for (let x = D.x0; x < D.x1; x += SP) xs.push(x);
       this._traceTag = 'trees';
+      let cc = 0, ty = now();
       for (let xi = 0; xi < xs.length; xi++) {
         const x = xs[xi];
         for (let z = D.z0; z < D.z1; z += SP) {
+          if ((++cc & 63) === 0 && now() - ty > 8) { ty = now(); yield; }
           const px = x + (rnd.nextDouble() - 0.5) * 0.75, pz = z + (rnd.nextDouble() - 0.5) * 0.75;
           const r1 = rnd.nextDouble();
           const h = this.surfaceY(px, pz);
@@ -3352,20 +3528,25 @@ void main() {
           const e = 0.5, sl = Math.abs(this.surfaceY(px + e, pz) - this.surfaceY(px - e, pz)) + Math.abs(this.surfaceY(px, pz + e) - this.surfaceY(px, pz - e));
           if (sl > 1.1) continue;
           const north = M.inverseLerp(10, 95, pz);
-          const v = rnd.nextDouble(), s = 0.85 + rnd.nextDouble() * 0.6, jit = (rnd.nextDouble() - 0.5) * 0.16;
+          // 修订：林地里的树大一些（道具库的树比第三版的圆球小，同样的株数成片时读成稀疏的果园）——只改大小，不改位置与株数
+          const v = rnd.nextDouble(), s = (0.85 + rnd.nextDouble() * 0.6) * (forest && LPV ? 1.22 : 1), jit = (rnd.nextDouble() - 0.5) * 0.16;
           const hy = Math.sin(px * 12.9898 + pz * 78.233) * 43758.5453;
           const y = h - 0.04, yaw = (hy - Math.floor(hy)) * Math.PI * 2;
-          if (oasisTree || (des > 0.5 && v < 0.35)) { add('palm', px, y, pz, s * 1.05, s * 1.05, yaw, PALM, jit); continue; }
+          if (oasisTree || (des > 0.5 && v < 0.35)) {
+            if (oasisTree || !LPV) add('palm', px, y, pz, s * 1.05, s * 1.05, yaw, PALM, jit);
+            else add('dshrub', px, y, pz, s * 1.05, s * 1.05, yaw, SHRUB, jit);
+            continue;
+          }
           if (riverTree && des < 0.3) {
             if (tr > 0.4) add('palm', px, y, pz, s, s, yaw, PALM, jit);
             else if (med > 0.4) add('poplar', px, y, pz, s, s * 1.1, yaw, POPLAR, jit);
             else add(v < 0.6 ? 'willow' : 'poplar', px, y, pz, s, s, yaw, v < 0.6 ? WILLOW : POPLAR, jit);
             continue;
           }
-          if (des > 0.45 || (st > 0.5 && !forest)) { add(st > 0.4 && v < 0.12 ? 'poplar' : 'shrub', px, y, pz, s, s, yaw, st > 0.4 && v < 0.12 ? POPLAR : SHRUB, jit); continue; }
+          if (des > 0.45 || (st > 0.5 && !forest)) { add(st > 0.4 && v < 0.12 ? 'poplar' : LPV ? 'dshrub' : 'shrub', px, y, pz, s, s, yaw, st > 0.4 && v < 0.12 ? POPLAR : SHRUB, jit); continue; }
           if (tr > 0.45) {
             if (v < 0.22) add('palm', px, y, pz, s * 1.1, s * 1.1, yaw, PALM, jit);
-            else if (v < 0.34) add('bamboo', px, y, pz, s, s, yaw, BAMBOO, jit);
+            else if (v < 0.27) add('bamboo', px, y, pz, s, s, yaw, BAMBOO, jit);
             else add(v < 0.7 ? 'broad' : 'broad2', px, y, pz, s * 1.1, s * 1.2, yaw, TROP, jit);
             continue;
           }
@@ -3424,8 +3605,10 @@ void main() {
       this._traceTag = 'trees.mesh';
       if (LPV) {
         // 道具库几何体（每种一步）与冒名顶替图集
-        for (const k of VEG_KINDS) { vegScale(k); for (let v = 0; v < VEG[k].v; v++) vegGeo(k, v, 1); yield; }
+        // （近景模型只用来量高度；与远景细节分两步建，各占一个分片）
+        for (const k of VEG_KINDS) { vegScale(k); yield; for (let v = 0; v < VEG[k].v; v++) { vegGeo(k, v, 1); yield; } }
         this._traceTag = 'trees.impostors';
+        yield* vegImpostorsGen();
         impostorMaterial();
         yield;
         yield* this._lpTreeMeshes(B);
@@ -3444,7 +3627,8 @@ void main() {
     *_genScatter() {
       const rnd = SG.SeededRandom(23), G = this._geo, D = this.spec.trees, LPV = this._lpVeg;
       const B = this._instBuckets();
-      let rocks = 0;
+      let rocks = 0, ty = now();
+      this._mergedVerts = 0;
       const SP = 1.35;
       this._traceTag = 'rocks';
       let xi = 0;
@@ -3475,7 +3659,7 @@ void main() {
           } else B.add('rock' + (v === 2 ? 1 : 0), px, h - 0.06 * s, pz, s * (0.8 + 0.3 * v), s * (0.7 + rnd.nextDouble() * 0.5), yaw, c[0] * k, c[1] * k, c[2] * k);
           rocks++;
         }
-        if ((xi & 3) === 3) { this._sub(0.6 * (x - D.x0) / (D.x1 - D.x0)); yield; }
+        if (now() - ty > 5) { ty = now(); this._sub(0.6 * (x - D.x0) / (D.x1 - D.x0)); yield; }
       }
       // 灌丛：草地、丘陵上零散分布（不在农田、林地、沙漠中心）
       const SB = this._instBuckets(), T = this._tex;
@@ -3498,16 +3682,24 @@ void main() {
           const c = [T.c[q] / 255 * 0.62 * k, T.c[q + 1] / 255 * 0.72 * k, T.c[q + 2] / 255 * 0.55 * k];
           if (LPV) {
             const sy = 0.7 + rnd.nextDouble() * 0.5, yaw = rnd.nextDouble() * 6.28, vs = vegScale('bush'), variant = LP_HASH(px, pz) < 0.5 ? 0 : 1;
-            const t = [0, 1, 2].map(ch => M.clamp(T.c[q + ch] / 255 / LUSH[ch] * k, 0.8, 1.2));
-            SB.add('bush:' + variant, px, h - 0.03, pz, s * 1.15 * vs, s * 1.15 * sy * vs, yaw, t[0], t[1], t[2]);
+            const t = lpTint([T.c[q] / 255, T.c[q + 1] / 255, T.c[q + 2] / 255], LUSH);
+            SB.add('bush:' + variant, px, h - 0.03, pz, s * 1.15 * vs, s * 1.15 * sy * vs, yaw, t[0] * k, t[1] * k, t[2] * k);
           } else SB.add('shrub', px, h - 0.03, pz, s * 1.2, s * (0.7 + rnd.nextDouble() * 0.5), rnd.nextDouble() * 6.28, c[0], c[1], c[2]);
         }
         if ((xi & 3) === 3) { this._sub(0.4 + 0.2 * (x - D.x0) / (D.x1 - D.x0)); yield; }
       }
       this._scatter = [];
       if (LPV) {
-        yield* this._lpInstMeshes(B, (kind, lod) => propGeo(kind, 0, lod), 'Rocks', this._scatter, true);
-        yield* this._lpInstMeshes(SB, (key, lod) => { const [k, v] = key.split(':'); return vegGeo(k, +v, 1); }, 'Shrubs', this._scatter, false);
+        // 修订：每区块一个合并的远景网格；近景（墨线）只在 SCATTER_NEAR 以内；只有大石、崖石投影
+        let b0 = this._scatter.length;
+        this._traceTag = 'rocks.mesh';
+        yield* this._lpMergedTiles(B, k => propGeo(k, 0, 0), rockFarGeo, 'Rocks', this._scatter, { shadow: k => k === 'boulder' || k === 'cliff' || k === 'rock_large' });
+        for (let i = b0; i < this._scatter.length; i++) this._scatter[i].nearR = SCATTER_NEAR;
+        b0 = this._scatter.length;
+        this._traceTag = 'shrubs.mesh';
+        const bushGeo = key => { const [k, v] = key.split(':'); return vegGeo(k, +v, 1); };
+        yield* this._lpMergedTiles(SB, bushGeo, bushGeo, 'Shrubs', this._scatter, { wind: VEG_WIND });
+        for (let i = b0; i < this._scatter.length; i++) this._scatter[i].nearR = SCATTER_NEAR;
       } else {
         yield* this._instMeshes(B, (kind, lod) => rockGeometry(+kind.slice(4), lod), treeMaterial('rock'), 'Rocks', this._scatter, false);
         yield* this._instMeshes(SB, treeGeometry, treeMaterial('leaf'), 'Shrubs', this._scatter, false);
@@ -3536,12 +3728,14 @@ void main() {
         }
         for (const [px, pz, h] of pts) {
           const c = pal[rnd.next(pal.length)], k = 0.92 + rnd.nextDouble() * 0.16;
-          const yaw = -o.yaw + Math.PI / 2 + (rnd.next(2) ? 0 : Math.PI / 2) + (rnd.nextDouble() - 0.5) * 0.3;
+          // 修订（LP）：屋向只取顺着 / 垂直于村道两种，不再随机偏转（偏转的一堆小房块远看像散落的杂物）
+          const yaw = -o.yaw + Math.PI / 2 + (rnd.next(2) ? 0 : Math.PI / 2) + (rnd.nextDouble() - 0.5) * (LPV ? 0 : 0.3);
           const s = 0.9 + rnd.nextDouble() * 0.3;
           if (LPV) {
             // 汉地村落：瓦房与草房相间（草顶的暖金色让村子在地图上一眼可见，同 Lanternvale 的农舍）
             const hv = LP_HASH(px + 7.7, pz - 3.1), rec = style === 'han' && hv < 0.6 ? 'house_thatch' : HOUSE_LP[style] || 'house_han';
-            const sc = s * (rec === 'house_thatch' && style === 'han' ? HOUSE_W.round : HOUSE_W[style]) / PROP_W(rec), variant = rec === 'yurt' ? 0 : LP_HASH(px, pz) < 0.5 ? 0 : 1;
+            // 修订：地图比例下每种屋只用一个变体（变化靠朝向、大小、明暗；每个变体都是一次绘制 + 墨线 + 投影）
+            const sc = s * (rec === 'house_thatch' && style === 'han' ? HOUSE_W.round : HOUSE_W[style]) / PROP_W(rec), variant = 0;
             HB.add(rec + ':' + variant, px, h - 0.02, pz, sc, sc, yaw + Math.PI, k, k, k);
           } else HB.add(style, px, h - 0.02, pz, s, s, yaw, c[0] * k, c[1] * k, c[2] * k);
           houses++;
@@ -3559,7 +3753,7 @@ void main() {
             const a = r2.nextDouble() * Math.PI * 2, rr = 1.0 + r2.nextDouble() * 0.6, px = o.x + Math.cos(a) * rr, pz = o.z + Math.sin(a) * rr, h = this.surfaceY(px, pz);
             if (h < 0.4) continue;
             const sc = (0.2 + r2.nextDouble() * 0.06) / PROP_W('haystack');
-            HB.add('haystack:' + (k & 1), px, h - 0.02, pz, sc, sc, r2.nextDouble() * 6.28, 1, 1, 1);
+            HB.add('haystack:0', px, h - 0.02, pz, sc, sc * (k & 1 ? 0.85 : 1), r2.nextDouble() * 6.28, 1, 1, 1);
           }
           if (style === 'han' && r2.nextDouble() < 0.6) {
             const h = this.surfaceY(o.x, o.z);
@@ -3568,7 +3762,8 @@ void main() {
         }
         // 村舍近景也用道具库的远景细节（地图上一间屋只有十几个像素宽）；远处的区块整片隐去
         const before = this._scatter.length;
-        yield* this._lpInstMeshes(HB, (key, lod) => { const [k, v] = key.split(':'); return lod ? speckGeo(k) : propGeo(k, +v, 1); }, 'Villages', this._scatter, true);
+        this._traceTag = 'villages.mesh';
+        yield* this._lpMergedTiles(HB, key => { const [k, v] = key.split(':'); return propGeo(k, +v, 1); }, key => speckGeo(key.split(':')[0]), 'Villages', this._scatter, { shadow: k => !/^(haystack|well)/.test(k) });
         for (let i = before; i < this._scatter.length; i++) { this._scatter[i].hideFar = VILLAGE_HIDE; this._scatter[i].nearR = VILLAGE_NEAR; }
       } else yield* this._instMeshes(HB, kind => houseGeometry(kind), treeMaterial(), 'Villages', this._scatter, true);
       this.houseCount = houses;
@@ -3728,13 +3923,11 @@ void main() {
           yield;
         }
         if (entries.length) {
-          // 按 40 单位的块合并（每块一次绘制 + 一次墨线；墨线按块的远近开关）
-          const sb = new SG.LP.StaticBatch({ chunk: 40, name: 'Bridges' });
-          for (const e of entries) sb.add(e.geo, e.matrix, { castShadow: true });
-          const g = sb.build();
+          // 按 40 单位的块合并（每块一次绘制 + 一次墨线；墨线按块的远近开关）。修订：逐块合并、每块之后让出（一次合并全图的桥要两百毫秒）
+          const g = new THREE.Group();
           g.name = 'Bridges';
-          for (const c of g.children) { c.name = 'Bridges'; this._inkProps.push(c); }
           this.root.add(g);
+          yield* this._chunkBatches(entries, 40, 'Bridges', g);
         }
       }
       // 道路索引（roadDist / terrainInfo）
@@ -3767,6 +3960,23 @@ void main() {
         m.renderOrder = 3;
         m.castShadow = false; m.receiveShadow = false;
         this.root.add(m);
+      }
+    }
+    // 静态合并（LP.StaticBatch）按 chunk 单位的块分开建，每块之后让出；块网格登记到 _inkProps（墨线、投影、隐去按远近）
+    *_chunkBatches(entries, chunk, name, parent) {
+      const bins = new Map();
+      for (const e of entries) {
+        const key = Math.floor(e.matrix.elements[12] / chunk) + ',' + Math.floor(e.matrix.elements[14] / chunk);
+        let b = bins.get(key);
+        if (!b) bins.set(key, (b = []));
+        b.push(e);
+      }
+      for (const list of bins.values()) {
+        const sb = new SG.LP.StaticBatch({ chunk, name });
+        for (const e of list) sb.add(e.geo, e.matrix, { castShadow: true });
+        const g = sb.build();
+        for (const c of g.children.slice()) { c.name = name; parent.add(c); this._inkProps.push(c); }
+        yield;
       }
     }
     // 关隘（第三版修订）：在史实位置 8 单位以内的道路点中挑选——离城 3.6 以上、不在桥上，两侧地势越高（鞍部）、离史实位置越近越好；
@@ -3824,12 +4034,10 @@ void main() {
         this.root.add(m);
       }
       if (lpWalls && lpWalls.entries.length) {
-        const sb = new SG.LP.StaticBatch({ chunk: 40, name: 'Passes' });
-        for (const e of lpWalls.entries) sb.add(e.geo, e.matrix, { castShadow: true });
-        const m = sb.build();
+        const m = new THREE.Group();
         m.name = 'Passes';
-        for (const c of m.children) { c.name = 'Passes'; this._inkProps.push(c); }
         this.root.add(m);
+        yield* this._chunkBatches(lpWalls.entries, 40, 'Passes', m);
         for (const o of lpWalls.objects) this._inkProps.push(o);
         for (const o of lpWalls.objects) { o.traverse(c => { if (c.isMesh) c.userData.sharedGeometry = !c.geometry.attributes.uv; }); this.root.add(o); }
         for (const l of lpWalls.lamps) (this._lampSpecs || (this._lampSpecs = [])).push([l, { color: '#ffc27a', intensity: CITY_LAMP_I * 0.8, range: CITY_LAMP_R * 0.7, nightOnly: true, halo: true, haloSize: CITY_LAMP_H * 0.8 }]);
@@ -4172,7 +4380,8 @@ void main() {
       for (const tile of bodies.values()) { yield* flushBody(tile, 'near'); yield; yield* flushBody(tile, 'far'); yield; }
       if (lpCities) {
         this._traceTag = 'cities.scatter';
-        const sc = this._cityScatter = SG.CultureArt.scatter(cityList, { chunk: 60, lodDist: CITY_LOD, inkDist: CITY_INK, name: 'Cities' });
+        const sc = this._cityScatter = SG.CultureArt.scatter(cityList, { chunk: this._cityChunk || 60, lodDist: CITY_LOD, inkDist: CITY_INK, name: 'Cities' });
+        this._cityOv = { list: cityList, bins: null, keys: null, k: 0, group: null, on: false };
         sc.group.traverse(o => { if (o.isMesh) o.userData.sharedGeometry = true; });
         this.root.add(sc.group);
         // 投影代理：近景区块的城不自己投影（约 5 千三角形一座），改由同一区块的远景模型（≤ 400）只在阴影图里画一遍
@@ -4353,6 +4562,7 @@ void main() {
       return this._applyMood(this._moodWant != null ? this._moodWant : defaultHour());
     }
     followClock(on) {
+      _titleForce = false;
       this._follow = on !== false;
       if (this._follow && SG.Clock && typeof SG.Clock.hour === 'function') { this._moodWant = SG.Clock.hour(); this._applyMood(this._moodWant); }
       return this._follow;
@@ -4545,6 +4755,7 @@ void main() {
       const apply = (tiles, hide, R0) => {
         if (!tiles) return;
         for (const t of tiles) {
+          if (t.mt) { if (!hide && !t.hidden && t.key !== key && now() - t0 > 2.5) continue; this._mergedTileLOD(t, hide, R0, key, cx, cy, cz); continue; }
           if (!hide && t.key !== key && now() - t0 > 2.5) { if (t.tree) { for (const m of t.near) m.visible = true; for (const m of t.hero) if (m) m.visible = true; t.far.visible = true; } else t.near.visible = t.far.visible = true; continue; }
           if (t.tree) { this._treeTileLOD(t, hide, R0, key, cx, cy, cz); continue; }
           t.near.visible = t.far.visible = !hide;
@@ -4579,13 +4790,20 @@ void main() {
       };
       apply(this._treeTiles, hideTrees, this._lpVeg ? VEG_NEAR : 42);
       apply(this._scatter, hideSmall, 50);
-      // 城池：近景细致模型 / 远景简化模型
-      if (this._cityScatter) { this._cityScatter.update(cam); this._cityShadowLOD(); }
+      // 城池：近景细致模型 / 远景简化模型；镜头很高（全图）时换成按 200 单位合并的远景（_cityOverview）
+      if (this._cityScatter && !this._cityOverview(cy)) { this._cityScatter.update(cam); this._cityShadowLOD(); }
       // 桥、关隘：远处不描墨线（固定像素宽的墨线会把几十像素大的模型涂黑）——按对象中心到镜头的距离
       if (this._inkProps) for (const o of this._inkProps) {
         if (!o.userData.inkC) { o.updateMatrixWorld(true); const b = new THREE.Box3().setFromObject(o); o.userData.inkC = b.getCenter(new THREE.Vector3()); o.userData.inkR = b.getSize(new THREE.Vector3()).length() * 0.5; o.userData.inkOn = true; }
         const d = Math.max(0, o.userData.inkC.distanceTo(cam.position) - Math.min(o.userData.inkR, 30)), on = o.userData.inkOn ? d < PROP_INK * 1.08 : d < PROP_INK * 0.92;
         if (on !== o.userData.inkOn) { o.userData.inkOn = on; o.traverse(c => { if (c.name === 'outline' || (c.material && c.material.userData && c.material.userData.lpKind === 'outline')) c.visible = on; }); }
+        const vis = o.userData.visOn !== false ? d < PROP_HIDE * 1.05 : d < PROP_HIDE * 0.95;
+        if (vis !== (o.userData.visOn !== false)) { o.userData.visOn = vis; o.visible = vis; }
+        const sh = o.userData.shOn !== false ? d < PROP_SHADOW * 1.05 : d < PROP_SHADOW * 0.95;
+        if (sh !== (o.userData.shOn !== false)) {
+          o.userData.shOn = sh;
+          o.traverse(c => { if (!c.isMesh) return; if (c.userData.cs0 === undefined) c.userData.cs0 = c.castShadow; c.castShadow = sh && c.userData.cs0; });
+        }
       }
       if (this._cityTiles) for (const t of this._cityTiles) {
         const d = Math.hypot(t.cx - cx, t.cz - cz, cy);
@@ -4619,6 +4837,52 @@ void main() {
       }
       g.b.commit(i);
     }
+    // 全图视角的城：镜头高于 CITY_OV_Y 时所有城本来都是远景模型（≤ 400 三角形，每区块每种模型一次绘制，世界全图约 170 次）；
+    // 这时改画按 200 单位合并的远景（同样的几何体、同样的位置，世界全图约十次绘制）。合并网格第一次需要时逐帧建（每帧一块），
+    // 建好之前照旧画实例化的城。返回 true = 正在用合并网格
+    _cityOverview(cy) {
+      const ov = this._cityOv, sc = this._cityScatter;
+      if (!ov || !sc || !SG.CultureArt || !SG.LP) return false;
+      const want = cy > (ov.on ? CITY_OV_Y * 0.92 : CITY_OV_Y);
+      if (!want) {
+        if (ov.on) { ov.on = false; sc.group.visible = true; ov.group.visible = false; }
+        return false;
+      }
+      if (ov.on) return true;
+      if (!ov.bins) {
+        ov.bins = new Map();
+        const q = new THREE.Quaternion(), e = new THREE.Euler();
+        for (const it of ov.list) {
+          const f = SG.CultureArt.model(it.culture, !!it.capital, it.city || null, { size: it.size || 1, lod: 'far' });
+          if (!f) continue;
+          e.set(0, it.yaw || 0, 0); q.setFromEuler(e);
+          const s = it.size || 1, m = new THREE.Matrix4().compose(new THREE.Vector3(it.x, it.y, it.z), q, new THREE.Vector3(s, s, s));
+          const key = Math.floor(it.x / 200) + ',' + Math.floor(it.z / 200);
+          let b = ov.bins.get(key);
+          if (!b) ov.bins.set(key, (b = []));
+          for (const g of [f.ink, f.plain]) if (lpMergeable(g)) b.push({ geo: g, matrix: m });
+        }
+        ov.keys = [...ov.bins.keys()];
+        ov.group = new THREE.Group();
+        ov.group.name = 'CitiesOverview';
+        ov.group.visible = false;
+        this.root.add(ov.group);
+        return false;
+      }
+      if (ov.k < ov.keys.length) {
+        const list = ov.bins.get(ov.keys[ov.k++]);
+        if (list.length) {
+          const mesh = SG.LP.mesh(SG.LP.mergeGeometries(list), { outline: false, castShadow: false, receiveShadow: true });
+          mesh.name = 'CitiesOverview';
+          mesh.matrixAutoUpdate = false;
+          ov.group.add(mesh);
+        }
+        if (ov.k < ov.keys.length) return false;
+        ov.bins = new Map();   // 建完：释放清单（保留空表，不再重建）
+      }
+      ov.on = true; sc.group.visible = false; ov.group.visible = true;
+      return true;
+    }
     // 城的投影代理（见 _genCities）：近景区块的远景模型可见、投影、在主画面里不画；远景区块照常画、不投影
     _cityShadowLOD() {
       const sc = this._cityScatter && this._cityScatter.scatter;
@@ -4630,6 +4894,50 @@ void main() {
         c.far.castShadow = proxy;
         c.far.visible = proxy || !!c.isFar;
       }
+    }
+    // 合并远景的区块（_lpMergedTiles）：整块在 R 外 → 只画合并网格；整块在 R 内 → 只画近景；跨界 → 逐实例分配，
+    // 用近景的实例在合并网格里由 aHide 挪走
+    _mergedTileLOD(t, hide, R0, key, cx, cy, cz) {
+      if (hide) {
+        if (!t.hidden) { if (t.far) t.far.visible = false; for (const m of t.near) m.visible = false; t.hidden = true; }
+        return;
+      }
+      if (t.hidden) { t.hidden = false; t.key = ''; t.mode = ''; }
+      if (t.key === key) return;
+      t.key = key;
+      const dh = Math.hypot(t.cx - cx, t.cz - cz);
+      const dmin = Math.hypot(Math.max(0, dh - t.r), cy), dmax = Math.hypot(dh + t.r, cy);
+      if (t.hideFar && dmin > t.hideFar) {
+        if (t.mode !== 'off') { if (t.far) t.far.visible = false; for (const m of t.near) m.visible = false; t.mode = 'off'; }
+        return;
+      }
+      const R = t.nearR || R0, mode = dmin > R ? 'far' : dmax < R ? 'near' : 'split';
+      if (mode !== 'split' && mode === t.mode) return;
+      const cnt = t.near.map(() => 0), H = t.hide ? t.hide.array : null, R2 = R * R - cy * cy;
+      let anyFar = false, dirty = false;
+      for (let i = 0; i < t.n; i++) {
+        let isNear = mode === 'near';
+        if (mode === 'split') { const dx = t.xz[i * 2] - cx, dz = t.xz[i * 2 + 1] - cz; isNear = dx * dx + dz * dz < R2; }
+        if (!t.vcount[i]) isNear = true;   // 不能合并的远景：一律用近景
+        if (isNear) {
+          const g = t.gi[i], im = t.near[g], a = cnt[g]++;
+          const NM = im.instanceMatrix.array, NC = im.instanceColor.array;
+          for (let k = 0; k < 16; k++) NM[a * 16 + k] = t.mats[i * 16 + k];
+          NC[a * 3] = t.cols[i * 3]; NC[a * 3 + 1] = t.cols[i * 3 + 1]; NC[a * 3 + 2] = t.cols[i * 3 + 2];
+        } else anyFar = true;
+        if (H && t.vcount[i] && mode !== 'near') {
+          const hv = isNear ? 1 : 0, v0 = t.vstart[i];
+          if (H[v0] !== hv) { H.fill(hv, v0, v0 + t.vcount[i]); dirty = true; }
+        }
+      }
+      if (dirty) t.hide.needsUpdate = true;
+      t.near.forEach((im, k) => {
+        setInstCount(im, cnt[k]);
+        im.visible = cnt[k] > 0;
+        if (cnt[k]) { im.instanceMatrix.needsUpdate = true; im.instanceColor.needsUpdate = true; }
+      });
+      if (t.far) t.far.visible = anyFar;
+      t.mode = mode;
     }
     // 树木区块：镜头 R 以内的树用平滑模型（按树种分到各近景网格），其余写入公告板网格
     _treeTileLOD(t, hide, R, key, cx, cy, cz) {

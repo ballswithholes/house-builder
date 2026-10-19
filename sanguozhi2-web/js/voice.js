@@ -234,6 +234,23 @@
   }
   const recent = [];        // { name, pack, rateEff, t } of the speakers of the last 3 s
   function packOf(lg, voice) { const id = lg + '-' + voice; const L = D().LINGUA[lg]; return L && L.packs.indexOf(id) >= 0 ? id : null; }
+  const nameOf = x => (x && typeof x === 'object' ? x.name : x) || '';
+  // the base pack a speaker uses for this cue (the §B4.2 comparison); cries compare by the rendered voice (sex) and pitchK
+  function packFor(prof, cue) { const lg = usableLingua(prof.lingua); return lg ? voicePack(lg, prof, cue) : null; }
+  const cryVoiceKey = prof => 'cry:' + (prof.sex === 'f' ? 'f' : 'm');
+  // §B4.2 in one scene: opts.pair = [first, second] (duel: challenger / defender; diplomacy: the player's ruler / the partner).
+  // The second of the pair moves away from the first whatever the time between their lines; the first keeps his voice.
+  // null = not one of a pair (battle units: the 3 s window of adjacent speakers).  cue null = a cry.
+  function sceneOthers(prof, cue, opts) {
+    const pr = opts && opts.pair;
+    if (!pr || pr.length !== 2 || !pr[0] || !pr[1]) return null;
+    const n0 = nameOf(pr[0]), n1 = nameOf(pr[1]);
+    if (!n0 || !n1 || n0 === n1) return null;
+    if (prof.name === n0) return [];
+    if (prof.name !== n1) return null;
+    const p0 = profile(genOf(pr[0]));
+    return cue === null ? [{ name: n0, pack: cryVoiceKey(p0), rateEff: p0.pitchK }] : [{ name: n0, pack: packFor(p0, cue), rateEff: p0.rate }];
+  }
 
   // ---------------------------------------------------------------- line choice --
   const lastVar = new Map();        // speaker|cue → last variant index (never the same twice in a row)
@@ -385,7 +402,7 @@
     const ab = P.bytes.slice(ent[0], ent[0] + ent[1]).buffer;
     const pr = new Promise(res => {
       let done = false;
-      const fin = b => { if (done) return; done = true; decoding.delete(key); if (b) store(key, b); res(b || null); };
+      const fin = b => { if (done) return; done = true; decoding.delete(key); if (b) { try { b = trimMp3(ctx, b, ent, P.meta, key); } catch (e) { /* 原样 */ } store(key, b); } res(b || null); };
       try {
         const r = ctx.decodeAudioData(ab, b => fin(b), () => fin(null));
         if (r && r.then) r.then(fin, () => fin(null));
@@ -393,6 +410,26 @@
     });
     decoding.set(key, pr);
     return pr;
+  }
+  // MP3 fallback (§B7.1): the packs keep the Xing / LAME gapless header and each clip entry carries [.., lead, pad] (samples at
+  // 22.05 kHz). A decoder that read the header returns the clip at its length; one that did not returns the encoder + decoder
+  // delay (and, if it decoded the Xing frame as audio, 576 samples more) before the voice and the padding after it: cut those
+  // so the voice starts on time and the clip has its header length (±20 ms, §3.2)
+  const mp3Trim = new Map();     // key → { raw, off } (tests/voice.html)
+  function trimMp3(ctx, b, ent, meta, key) {
+    const G = meta && meta.codec === 'mp3' && meta.gapless;
+    if (!G || !ent || ent[G.lead] === undefined) return b;
+    // the header length (ms) is the source's and may differ from the encoded sample count by a few ms (resampling), so the
+    // three cases are told apart by thresholds far from that error: trimmed (extra ≈ 0), lead + pad, lead + Xing frame + pad
+    const sr0 = meta.sr || 22050, lead = ent[G.lead] / sr0, pad = (ent[G.pad] || 0) / sr0, xf = (G.xingFrame || 576) / sr0;
+    const extra = b.duration - ent[2] / 1000;
+    if (extra < (lead + pad) / 2) { mp3Trim.set(key, { raw: +b.duration.toFixed(4), off: 0 }); return b; }
+    const off = extra < lead + pad + xf / 2 ? lead : lead + xf;
+    const R = b.sampleRate, s0 = Math.round(off * R), n = Math.max(1, Math.min(b.length - s0, b.length - s0 - Math.round(pad * R)));
+    mp3Trim.set(key, { raw: +b.duration.toFixed(4), off: +off.toFixed(4) });
+    const t = ctx.createBuffer(b.numberOfChannels, n, R);
+    for (let c = 0; c < b.numberOfChannels; c++) { const d = b.getChannelData(c).subarray(s0, s0 + n); if (t.copyToChannel) t.copyToChannel(d, c); else t.getChannelData(c).set(d); }
+    return t;
   }
   function store(key, b) {
     const limit = (D() && D().RULES.cacheBytes) || 6 * 1024 * 1024;
@@ -402,18 +439,98 @@
       decoded.delete(k); cacheBytes -= v.length * v.numberOfChannels * 4;
     }
   }
-  function cryBuffer(prof, kind, variant) {
+  // ---------------------------------------------------------------- procedural cries: own LRU ≤ RULES.cryCacheBytes (0.5 MB, §B10.6) --
+  // One rendering per (speaker, kind); the variety between repeats is a small per-play detune (CRY_DETUNE), not more buffers.
+  // Rendered ahead in idle slices for the participants (warm*, §B11); a cry missing at play time is rendered then (≤ 6 ms warm).
+  const cries = new Map();       // 'cry|<speaker>|<kind>' / 'crowd|<n>:<kind>:<variant>' → AudioBuffer
+  let cryBytes = 0, cryRenders = 0;
+  const CRY_DETUNE = [1, 1.03, 0.97];
+  const bufBytes = b => b.length * b.numberOfChannels * 4;
+  function cryGet(key) { const b = cries.get(key); if (b) { cries.delete(key); cries.set(key, b); } return b || null; }
+  function cryStore(key, b) {
+    const limit = (D() && D().RULES.cryCacheBytes) || 512 * 1024;
+    if (cries.has(key)) cryBytes -= bufBytes(cries.get(key));
+    cries.delete(key); cries.set(key, b); cryBytes += bufBytes(b);
+    while (cryBytes > limit && cries.size > 1) {
+      const [k, v] = cries.entries().next().value;
+      cries.delete(k); cryBytes -= bufBytes(v);
+    }
+  }
+  const cryKeyOf = (prof, kind) => 'cry|' + (prof.name || prof.who || '') + '|' + kind;
+  function cryBuffer(prof, kind) {
     const ctx = ctxOf(); const C = SG.VoiceCry;
     if (!ctx || !C) return null;
-    const key = 'cry|' + (prof.name || prof.who || '') + '|' + kind + '|' + (variant | 0);
-    if (decoded.has(key)) return decoded.get(key);
+    const key = cryKeyOf(prof, kind);
+    const hit = cryGet(key);
+    if (hit) return hit;
     const d = C.render(kind, C.voiceOf(prof), fnv(key));
+    cryRenders++;
     try {
       const b = ctx.createBuffer(1, d.length, C.SR);
       if (b.copyToChannel) b.copyToChannel(d, 0); else b.getChannelData(0).set(d);
-      store(key, b); return b;
+      cryStore(key, b); return b;
     } catch (e) { return null; }
   }
+  const crowdKey = (kind, n, variant) => 'crowd|' + (n | 0) + ':' + kind + ':' + ((variant | 0) % 2);
+  function crowdBuffer(d) {
+    const ctx = ctxOf(), C = SG.VoiceCry;
+    const b = ctx.createBuffer(2, d.L.length, C.SR);
+    b.getChannelData(0).set(d.L); b.getChannelData(1).set(d.R);
+    return b;
+  }
+
+  // ---------------------------------------------------------------- idle-slice warm-up (§B11: cries ahead of the duel / battle) --
+  // A queue of small jobs (one cry, or one voice of a crowd) run in requestIdleCallback slices (timeout 400 ms; setTimeout without
+  // it), several per slice while the slice has ≥ 6 ms left; nothing here touches the game state or SG.Random.
+  const warmQ = [];
+  let warmBusy = false, warmJobs = 0;
+  function idle(fn) {
+    if (typeof W.requestIdleCallback === 'function') W.requestIdleCallback(fn, { timeout: 400 });
+    else setTimeout(() => fn(null), 16);
+  }
+  function pump() {
+    if (!warmQ.length) { warmBusy = false; return; }
+    warmBusy = true;
+    idle(dl => {
+      const t0 = now();
+      do {
+        const job = warmQ.shift();
+        try { job(); warmJobs++; } catch (e) { /* 忽略 */ }
+      } while (warmQ.length && dl && typeof dl.timeRemaining === 'function' && dl.timeRemaining() > 6 && now() - t0 < 0.012);
+      pump();
+    });
+  }
+  function enqueue(jobs) { for (const j of jobs) warmQ.push(j); if (!warmBusy) pump(); }
+  function warmCrowd(kind, n, variant) {
+    const C = SG.VoiceCry;
+    if (!ctxOf() || !C || !C.crowdJob) return;
+    const key = crowdKey(kind, n, variant);
+    if (cries.has(key)) { cryGet(key); return; }
+    let job = null;
+    const jobs = [];
+    const steps = Math.max(6, Math.min(10, n | 0 || 8)) + 1;
+    for (let i = 0; i < steps; i++) jobs.push(() => {
+      if (cries.has(key)) return;                    // played (and built) in the meantime
+      if (!job) job = C.crowdJob(kind, n || 8, fnv(crowdKey(kind, n, variant).slice(6)));
+      if (job.step() || !job.done) return;
+      try { cryStore(key, crowdBuffer(job.result())); cryRenders++; } catch (e) { /* 忽略 */ }
+    });
+    enqueue(jobs);
+  }
+  function warmCries(who, kinds) {
+    if (!who || !ctxOf() || !SG.VoiceCry) return;
+    let prof;
+    try { prof = profile(who === 'herald' || who === 'merchant' ? who : genOf(who)); } catch (e) { return; }
+    enqueue(kinds.map(k => () => { if (!cries.has(cryKeyOf(prof, k))) cryBuffer(prof, k); }));
+  }
+  const DUEL_CRIES = ['heavy', 'hurt', 'light', 'charge', 'knockout'];
+  // the battle: both crowd variants of the clash (one per attacking side) and each side's lead officer's battle cry
+  function warmBattle(s) {
+    warmCrowd('charge', 8, 0); warmCrowd('charge', 8, 1);
+    if (s) for (const g of [s.atk && s.atk[0], s.def && s.def[0]]) if (g) warmCries(g, ['shout']);
+  }
+  // the duel: the five effort sounds of both fighters (≈ 2 × 245 KB, inside the 0.5 MB cache)
+  function warmDuel(a, b) { for (const g of [a, b]) if (g) warmCries(g, DUEL_CRIES); }
 
   // ---------------------------------------------------------------- scheduler (§B10.3) --
   const active = [];           // { pri, side, scene, src, nodes, end, cue, stop() }
@@ -429,7 +546,8 @@
     if (f === 'essential') {
       if (pri >= 2) return true;
       const C = D().CONFIG || {};
-      // 精简 keeps the player's own command lines (one per command) and drops the chatter
+      // 精简（仅重要）= priority ≥ 2 (§B10.4); CONFIG.essentialKeepsCommands (false by default) would also keep the player's
+      // routine pri-1 command lines (one per command) and still drop the chatter
       return !!(C.essentialKeepsCommands && opts.command && !def.shell);
     }
     return true;
@@ -476,7 +594,7 @@
     const bus = SG.Sfx && SG.Sfx.voiceBus ? SG.Sfx.voiceBus() : null;
     const dest = bus ? bus.input : ctx.destination;
     const src = ctx.createBufferSource(); src.buffer = buf;
-    try { src.playbackRate.value = opts.cryRate ? 1 : prof.rate; } catch (e) { /* 忽略 */ }
+    try { src.playbackRate.value = opts.cryRate ? (opts.cryRateK || 1) : prof.rate; } catch (e) { /* 忽略 */ }
     const nodes = [src];
     let last = src;
     const link = n => { last.connect(n); last = n; nodes.push(n); return n; };
@@ -518,7 +636,7 @@
     const ctx = ctxOf();
     if (!ctx || ctx.state !== 'running' || !buf) return null;
     const { src, nodes } = graph(ctx, buf, prof, opts, def);
-    const dur = buf.duration / (opts.cryRate ? 1 : prof.rate || 1);
+    const dur = buf.duration / (opts.cryRate ? (opts.cryRateK || 1) : prof.rate || 1);
     const a = { pri: opts.pri || def.pri || 1, side: opts.side, scene: opts.scene || def.scene || 'strategy', src, nodes, end: now() + dur, cue: meta.cue, start: now() };
     active.push(a);
     src.onended = () => { const i = active.indexOf(a); if (i >= 0) active.splice(i, 1); setTimeout(() => { for (const n of nodes) { try { n.disconnect(); } catch (e) { /* 忽略 */ } } }, 50); };
@@ -562,6 +680,53 @@
 .sgv-sub.sgv-at{position:fixed}`;
     document.head.appendChild(s);
   }
+  // ---- where the subtitle stack goes (§B10.5: never over the command grid; here also never over the HUD, the agenda slips or the
+  // units' name labels when a free slot exists). Candidate slots in order of preference (desktop: bottom-left first; phone:
+  // top-left first); the first that overlaps nothing wins, else the one that overlaps least (HUD weighs 3, unit labels 2).
+  const AVOID_HUD = '.sg-battle-card,.sg-battle-actions,.sg-battle-top,.sg-agenda .sg-slip,.sg-citypanel,.sg-endseal,.sg-beam,.sg-topbar,.sg-toast,.sg-dialog,.sg-cmdgrid,.sg-dock';
+  const AVOID_LABEL = '.sg-uinfo';
+  function isShort() {
+    try { return (W.innerHeight || 720) <= 500 || document.documentElement.classList.contains('sg-short'); } catch (e) { return false; }
+  }
+  function boxesOf(sel, weight, out) {
+    for (const el of document.querySelectorAll(sel)) {
+      if (el.closest && el.closest('.sgv-subs')) continue;
+      const r = el.getBoundingClientRect();
+      if (!(r.width > 1 && r.height > 1)) continue;
+      out.push({ x0: r.left, y0: r.top, x1: r.right, y1: r.bottom, w: weight });
+    }
+    return out;
+  }
+  let subSlot = null;
+  function placeSubs(short) {
+    if (!subEl || !subEl.isConnected || typeof document === 'undefined') return;
+    const vw = W.innerWidth || 1280, vh = W.innerHeight || 720;
+    const st = subEl.style;
+    // measure at the top-left corner (the full width available: a stack near the right edge would measure shrunk), then place;
+    // both happen before the next paint
+    st.right = 'auto'; st.bottom = 'auto'; st.left = '0px'; st.top = '0px';
+    const r0 = subEl.getBoundingClientRect();
+    const w = r0.width, h = r0.height;
+    if (!(w > 0 && h > 0)) return;
+    const side = short ? 56 : 16, top = short ? 60 : 72, bot = 18;
+    const slots = [
+      ['bl', side, vh - bot - h], ['tl', side, top], ['tc', (vw - w) / 2, top], ['tr', vw - 16 - w, top],
+      ['ml', side, (vh - h) / 2], ['mr', vw - 16 - w, (vh - h) / 2], ['bc', (vw - w) / 2, vh - bot - h], ['br', vw - 16 - w, vh - 84 - h],
+    ];
+    if (short) { const tl = slots.splice(1, 1)[0]; slots.unshift(tl); }
+    const boxes = boxesOf(AVOID_LABEL, 2, boxesOf(AVOID_HUD, 3, []));
+    const cost = (x, y) => {
+      let c = 0;
+      for (const b of boxes) { const ox = Math.min(x + w, b.x1) - Math.max(x, b.x0), oy = Math.min(y + h, b.y1) - Math.max(y, b.y0); if (ox > 0 && oy > 0) c += ox * oy * b.w; }
+      return c;
+    };
+    const cands = slots.map(([id, x0, y0]) => { const x = clamp(x0, 8, Math.max(8, vw - w - 8)), y = clamp(y0, 8, Math.max(8, vh - h - 8)); return { id, x, y, c: cost(x, y) }; });
+    // keep the current slot while it is free (no jumping cards), else the first free slot, else the least covering one
+    const best = cands.find(c => c.id === subSlot && c.c === 0) || cands.find(c => c.c === 0) || cands.reduce((a, b) => (b.c < a.c ? b : a));
+    subSlot = best.id;
+    st.left = Math.round(best.x) + 'px'; st.top = Math.round(best.y) + 'px';
+    subEl.dataset.slot = best.id;
+  }
   function subtitle(prof, line, dur, opts) {
     if (opts.subtitle === false || typeof document === 'undefined') return;
     const mode = settings.subtitles;
@@ -593,7 +758,11 @@
       (document.getElementById('ui') || document.body).appendChild(card);
     } else {
       subEl.appendChild(card);
-      while (subEl.children.length > 2) subEl.removeChild(subEl.firstChild);
+      // a phone in battle keeps one card (the board is small); otherwise two
+      const short = isShort();
+      const keep = short && (opts.scene === 'battle' || opts.scene === 'duel') ? 1 : 2;
+      while (subEl.children.length > keep) subEl.removeChild(subEl.firstChild);
+      try { placeSubs(short); } catch (e) { /* CSS 的默认位置 */ }
     }
     const life = (dur + D().RULES.bubbleExtra) * 1000;
     setTimeout(() => { card.classList.add('off'); setTimeout(() => card.remove(), 220); }, life);
@@ -628,9 +797,10 @@
     if (!line) { note({ cue, speaker, action: 'drop', why: 'no line' }); resolve(null); return; }
     const prof = line.prof;
     const t = now();
-    // the second of two similar voices in one scene sounds a little different (§B4.2)
+    // the second of two similar voices in one scene sounds a little different (§B4.2): a duel / diplomacy pair (opts.pair)
+    // at any distance in time, otherwise the speakers of the last 3 s (adjacent battle units)
     for (let i = recent.length - 1; i >= 0; i--) if (t - recent[i].t > 3) recent.splice(i, 1);
-    const others = recent.filter(r => r.name !== prof.name);
+    const others = sceneOthers(prof, line.cue, opts) || recent.filter(r => r.name !== prof.name);
     const rateEff = distinctRate(Object.assign({}, prof, { pack: line.pack }), others);
     if (rateEff !== prof.rate) line.prof = Object.assign({}, prof, { rate: rateEff });
     recent.push({ name: prof.name, pack: line.pack, rateEff, t });
@@ -638,9 +808,9 @@
     if ((opts.pri || def.pri) < 2) lastPri1 = t;
     if (def.shell) lastShell = t;
     const finish = (buf, isCry) => {
-      const r = playBuffer(buf, line.prof, Object.assign({}, opts, isCry ? { cryRate: true } : {}), def, line);
-      if (!r) { note({ cue, speaker, action: 'drop', why: 'no audio' }); subtitle(prof, line, 1.2, opts); resolve(null); return; }
-      note({ cue: line.cue, speaker, pri: opts.pri || def.pri, action: isCry ? 'cry' : 'play', lingua: line.lingua, text: line.text, pack: line.pack, dur: +r.dur.toFixed(2) });
+      const r = playBuffer(buf, line.prof, Object.assign({}, opts, isCry ? { cryRate: true, cryRateK: rateEff / (prof.rate || 1) } : {}), def, line);
+      if (!r) { note({ cue, speaker, action: 'drop', why: 'no audio', rate: rateEff }); subtitle(prof, line, 1.2, opts); resolve(null); return; }
+      note({ cue: line.cue, speaker, pri: opts.pri || def.pri, action: isCry ? 'cry' : 'play', lingua: line.lingua, text: line.text, pack: line.pack, dur: +r.dur.toFixed(2), rate: rateEff });
       subtitle(prof, line, r.dur, opts);
       if (opts.onStart) { try { opts.onStart(r.dur); } catch (e) { /* 忽略 */ } }
       // a line with a trailing '~kind' (Tocharian 'Walo! ~roar', Gothic '~roar'): the cry follows the words
@@ -681,17 +851,22 @@
       if (settings.language === 'off' || settings.volume <= 0) return null;
       const prof = profile(x === 'herald' || x === 'merchant' ? x : genOf(x));
       const n = (varCount.get('cry|' + prof.name + '|' + kind) || 0) + 1; varCount.set('cry|' + prof.name + '|' + kind, n);
-      const b = cryBuffer(prof, kind, n % 3);
+      // §B4.2: the second of a duel pair whose rendered voice (sex, pitchK) is within 0.05 of the first's moves ×1.07 / ×0.93
+      let k = 1;
+      const so = sceneOthers(prof, null, opts);
+      if (so && so.length) k = distinctRate({ rate: prof.pitchK, pitchK: prof.pitchK, pack: cryVoiceKey(prof) }, so) / prof.pitchK;
+      const uk = +k.toFixed(4);
+      k = +(k * CRY_DETUNE[n % 3]).toFixed(4);
+      const ctx = ctxOf(); if (!ctx || ctx.state !== 'running') { note({ cue: '~' + kind, speaker: prof.name, action: 'drop', why: 'no audio', rate: k, uk }); return null; }
+      const b = cryBuffer(prof, kind);
       if (!b) return null;
-      const ctx = ctxOf(); if (!ctx || ctx.state !== 'running') return null;
-      const { src, nodes } = graph(ctx, b, prof, Object.assign({ cryRate: true }, opts), { del: kind === 'heavy' || kind === 'shout' || kind === 'roar' ? 'shout' : 'command', pri: 1 });
+      const { src, nodes } = graph(ctx, b, prof, Object.assign({ cryRate: true, cryRateK: k }, opts), { del: kind === 'heavy' || kind === 'shout' || kind === 'roar' ? 'shout' : 'command', pri: 1 });
       src.onended = () => setTimeout(() => { for (const nd of nodes) { try { nd.disconnect(); } catch (e) { /* 忽略 */ } } }, 50);
       src.start();
-      note({ cue: '~' + kind, speaker: prof.name, action: 'cry' });
-      return b.duration;
+      note({ cue: '~' + kind, speaker: prof.name, action: 'cry', rate: k, uk });
+      return b.duration / k;
     } catch (e) { return null; }
   }
-  const crowdCache = {};
   let lastCrowd = -1e9;
   function crowd(kind, n, opts) {
     opts = opts || {};
@@ -702,14 +877,9 @@
       if (!ctx || ctx.state !== 'running' || !C) return null;
       if (now() - lastCrowd < 0.8) return null;              // at most 1 crowd layer
       lastCrowd = now();
-      const v = (n | 0) + ':' + kind + ':' + ((opts.variant | 0) % 2);
-      let b = crowdCache[v];
-      if (!b) {
-        const d = C.crowd(kind, n || 8, fnv(v));
-        b = ctx.createBuffer(2, d.L.length, C.SR);
-        b.getChannelData(0).set(d.L); b.getChannelData(1).set(d.R);
-        crowdCache[v] = b;
-      }
+      const key = crowdKey(kind, n, opts.variant);
+      let b = cryGet(key);
+      if (!b) { b = crowdBuffer(C.crowd(kind, n || 8, fnv(key.slice(6)))); cryStore(key, b); cryRenders++; }
       const bus = SG.Sfx && SG.Sfx.voiceBus ? SG.Sfx.voiceBus() : null;
       const src = ctx.createBufferSource(); src.buffer = b;
       const g = ctx.createGain(); g.gain.value = (opts.gain || 0.55);
@@ -773,7 +943,7 @@
   // These wrap PUBLIC methods (never change arguments, return values or timing; every voice call is fire-and-forget).
   // Each owner can replace a layer by calling SG.Voice.say at the exact beat and then SG.Voice.hooks.off('<name>').
   const Hooks = {
-    on: { commands: true, month: true, succession: true, battle: true, clash: true, duel: true, ui: true },
+    on: { commands: true, month: true, succession: true, battle: true, clash: true, duel: true, ui: true, ending: true },
     installed: {},
     off(name) { Hooks.on[name] = false; },
     install() {
@@ -784,16 +954,28 @@
         E.on('month.phase', (name) => { if (Hooks.on.month) onMonthPhase(name); });
         E.on('faction.succession', (fid, heir) => { if (Hooks.on.succession) onSuccession(fid, heir); });
         E.on('captive.taken', (s, gen) => { if (Hooks.on.battle) onCaptive(s, gen); });
+        E.on('conquest.prepare', (s) => { try { onPrepare(s); } catch (e) { /* 忽略 */ } });
         E.on('conquest.apply', (s, r) => { if (Hooks.on.battle) onConquest(s, r); });
       }
-      wrapBattle(); wrapClash(); wrapDuel();
-      if (!Hooks.installed.retry && typeof document !== 'undefined') { Hooks.installed.retry = true; setTimeout(() => { wrapBattle(); wrapClash(); wrapDuel(); }, 1500); }
+      wrapBattle(); wrapClash(); wrapDuel(); wrapEnding();
+      if (!Hooks.installed.retry && typeof document !== 'undefined') { Hooks.installed.retry = true; setTimeout(() => { wrapBattle(); wrapClash(); wrapDuel(); wrapEnding(); }, 1500); }
     },
   };
   function playerF() { const g = G(); return g ? g.player : -1; }
   function byId(id) { const g = G(); return g && id !== null && id !== undefined && id >= 0 ? g.generals[id] : null; }
   function rulerOfF(f) { const g = G(); try { return g && f >= 0 ? g.ruler(f) : null; } catch (e) { return null; } }
   const CMD_CUE = { recruit: 'cmd.recruit', train: 'cmd.train', move: 'cmd.move', transport: 'cmd.transport', trade: 'cmd.trade' };
+  // ---- §B9 signature lines: ruler selection (audio.js previewRuler), a won decisive battle, unification, the first diplomatic meeting ----
+  const hasSig = x => { const VD = D(); const n = nameOf(x); return !!(VD && n && VD.SIGNATURE[n]); };
+  const SIG_GAP = 0.25;            // seconds between the line before and the signature
+  function sayAfter(p, x, cue, opts) { return Promise.resolve(p).then(() => new Promise(r => setTimeout(() => r(say(x, cue, opts)), SIG_GAP * 1000))); }
+  const metRulers = new WeakMap();  // game → Set of rulers the player has met in diplomacy (this session)
+  function firstMeeting(r) {
+    const g = G(); if (!g || !r) return false;
+    let set = metRulers.get(g); if (!set) { set = new Set(); metRulers.set(g, set); }
+    if (set.has(r.name)) return false;
+    set.add(r.name); return true;
+  }
   function onCommand(cmd, res) {
     if (!res || res.f !== playerF() || res.f < 0) return;
     const g = G();
@@ -814,8 +996,15 @@
       case 'ally': {
         const tr = rulerOfF(res.target !== undefined ? res.target : res.to);
         const who = tr || gen;
+        const me = g && g.ruler(res.f);
+        const op = Object.assign({}, o, { pair: me && tr ? [me, tr] : undefined });
         try { if (tr && SG.Sfx && SG.Sfx.fanfare) SG.Sfx.fanfare(tr.name, { duck: 0.35 }); } catch (e) { /* 忽略 */ }
-        setTimeout(() => say(who, res.ok ? 'cmd.ally.yes' : 'cmd.ally.no', o), 900);
+        // the first time the player meets a hand-suite ruler in diplomacy he introduces himself with his signature line (§B9)
+        const first = tr && hasSig(tr) && firstMeeting(tr);
+        setTimeout(() => {
+          const intro = first ? say(tr, 'sig', Object.assign({}, op, { pri: 3 })) : null;
+          if (intro) sayAfter(intro, who, res.ok ? 'cmd.ally.yes' : 'cmd.ally.no', op); else say(who, res.ok ? 'cmd.ally.yes' : 'cmd.ally.no', op);
+        }, 900);
         return;
       }
       case 'discord': if (res.ok) say(gen, 'cmd.discord.ok', o); else say(gen, 'miss', o); return;
@@ -853,18 +1042,66 @@
     if (!s || !gen || p < 0 || (s.attacker !== p && s.defender !== p)) return;
     say(gen, 'bat.captured', { scene: 'strategy', pri: 3, player: true });
   }
+  // who ruled each side when the army set out (succession may already have run when conquest.apply fires)
+  const prepRulers = new WeakMap();
+  function onPrepare(s) {
+    const g = G(); if (!g || !s) return;
+    const rid = f => (f >= 0 && g.factions[f] ? g.factions[f].ruler : -1);
+    prepRulers.set(s, { a: rid(s.attacker), d: rid(s.defender) });
+  }
+  // §B9 "a won decisive battle": the player won, and the foe's faction fell, or the foe's ruler fought in it (led the attack /
+  // defended the city)
+  function decisiveWin(s, r, p) {
+    const g = G(); if (!g) return false;
+    const won = (r.won && r.attacker === p) || (!r.won && r.defender === p && r.attacker >= 0);
+    if (!won) return false;
+    const foe = r.attacker === p ? r.defender : r.attacker;
+    if (foe < 0) return false;
+    if (g.cities && g.cities.every(c => c.owner === p)) return false;    // the last city: unification says it (wrapEnding)
+    if (g.factions[foe] && g.factions[foe].alive === false) return true;
+    const pr = prepRulers.get(s);
+    const rid = pr ? (r.attacker === p ? pr.d : pr.a) : (g.factions[foe] ? g.factions[foe].ruler : -1);
+    const list = r.attacker === p ? s.def : s.atk;
+    return rid >= 0 && !!(list && list.some(x => x && x.id === rid));
+  }
+  const sigSaid = new WeakSet();
+  function sigAfterWin(s, before) {
+    const g = G(), p = playerF();
+    if (!g || p < 0 || sigSaid.has(s)) return;
+    sigSaid.add(s);
+    const ru = g.ruler(p);
+    if (ru && hasSig(ru)) sayAfter(before, ru, 'sig', { scene: 'strategy', pri: 3, player: true });
+  }
   function onConquest(s, r) {
     const p = playerF();
     if (!s || !r || p < 0 || (r.attacker !== p && r.defender !== p)) return;
-    if (battle.resultSaid) { battle.resultSaid = false; if (!(r.won && r.attacker === p)) return; }
+    const decisive = decisiveWin(s, r, p);
+    if (battle.resultSaid) {
+      battle.resultSaid = false;
+      if (!(r.won && r.attacker === p)) { if (decisive) sigAfterWin(s, battle.resultP); return; }
+    }
     const lead = (s.atk && s.atk[0]) || rulerOfF(r.attacker);
-    if (r.won && r.attacker === p) { if (lead) say(lead, 'bat.cityTaken', { scene: 'strategy', pri: 3, player: true }); return; }
+    if (r.won && r.attacker === p) { const q = lead ? say(lead, 'bat.cityTaken', { scene: 'strategy', pri: 3, player: true }) : null; if (decisive) sigAfterWin(s, q); return; }
     const mine = r.attacker === p ? lead : rulerOfF(p);
-    if (mine) say(mine, r.attacker === p ? 'defeat' : 'victory', { scene: 'strategy', pri: 3, player: true });
+    const q = mine ? say(mine, r.attacker === p ? 'defeat' : 'victory', { scene: 'strategy', pri: 3, player: true }) : null;
+    if (decisive) sigAfterWin(s, q);
+  }
+  // ---- unification (strategy-screen gameOver(true)): the unifier's ending suite (§A3) and his signature line (§B9) ----
+  function wrapEnding() {
+    const SS = SG.StrategyScreen;
+    if (!SS || !SS.prototype || Hooks.installed.ending) return;
+    Hooks.installed.ending = true;
+    wrap(SS.prototype, 'gameOver', function (a) {
+      if (!Hooks.on.ending || !a[0]) return;
+      const g = G(); const ru = g && g.player >= 0 ? g.ruler(g.player) : null;
+      try { if (SG.Sfx && SG.Sfx.music) SG.Sfx.music('ending'); } catch (e) { /* 忽略 */ }
+      if (ru) setTimeout(() => say(ru, 'sig', { scene: 'strategy', pri: 3, player: true, force: true }), 2600);
+    });
   }
   // ---- battle (BattleController / BattleView) ----
-    function unitOpts(bc, u, extra) {
-    const watching = !!(bc && (bc.autoPlayer || bc.playerSide < 0 || (bc.M && bc.M.side !== bc.playerSide)));
+    function autoOf(bc) { return !!(bc && (bc.autoPlayer || bc.playerSide < 0 || (bc.M && bc.M.side !== bc.playerSide) || (typeof bc.watching === 'function' && bc.watching()))); }
+  function unitOpts(bc, u, extra) {
+    const watching = autoOf(bc);
     const player = bc && u && u.side === bc.playerSide;
     let at = null;
     try { if (bc && bc.V && bc.V.screenPos) at = bc.V.screenPos(u); } catch (e) { at = null; }
@@ -922,6 +1159,7 @@
         const ra = g && g.ruler(s.attacker), rd = s.defender >= 0 && g ? g.ruler(s.defender) : null;
         if (SG.MusicSuites) { if (ra) SG.MusicSuites.ensure(ra.name); if (rd) SG.MusicSuites.ensure(rd.name); }
         preload([ra, rd].filter(Boolean).map(r => linguaOf(r)));
+        warmBattle(s);                // §B11: the clash crowd and the lead officers' cries in idle slices before the first clash
       } catch (e) { /* 忽略 */ }
     }, function (a) {
       // result: the player's commander says victory / defeat (pri 3)
@@ -933,7 +1171,7 @@
       const won = (s.attackerWon === true) === (this.playerSide === 0);
       battle.resultSaid = true;
       // a won attack ends in 城池已破 (conquest.apply), so the victory line is left to it
-      if (gen && !(won && this.playerSide === 0)) say(gen, won ? 'victory' : 'defeat', { scene: 'strategy', pri: 3, player: true });
+      battle.resultP = gen && !(won && this.playerSide === 0) ? say(gen, won ? 'victory' : 'defeat', { scene: 'strategy', pri: 3, player: true }) : null;
       if (battle.bc === this) battle.bc = null;
     });
     wrap(P, 'aiPhase', function () {
@@ -982,16 +1220,20 @@
       const u = a[0];
       if (u && u.gen) say(u.gen, 'special', unitOpts(this, u, { pri: 3 }));
     });
-    wrap(P, 'doDuel', function (a) {
+    // (wrapBoth: after the duel — DuelGame.perform calls its own play(), not the wrapped SG.DuelGame.play — the battle's crowd is
+    // re-warmed in case the duel's effort sounds pushed it out of the 0.5 MB cry cache)
+    wrapBoth(P, 'doDuel', function (a) {
       if (!Hooks.on.battle) return;
       const x = a[0], y = a[1];
       if (!x || !x.gen) return;
-      say(x.gen, 'duel', unitOpts(this, x, { pri: 3 }));
+      const pair = y && y.gen ? [x.gen, y.gen] : undefined;
+      if (pair && SG.DuelGame && SG.DuelGame.enabled !== false) warmDuel(x.gen, y.gen);
+      say(x.gen, 'duel', unitOpts(this, x, { pri: 3, pair }));
       try {
         const acc = this.M && typeof this.M.duelAccepts === 'function' ? this.M.duelAccepts(x, y) : true;
-        setTimeout(() => say(y.gen, acc ? 'duel.accept' : 'duel.refuse', unitOpts(this, y, { pri: acc ? 3 : 2 })), 1500);
+        setTimeout(() => say(y.gen, acc ? 'duel.accept' : 'duel.refuse', unitOpts(this, y, { pri: acc ? 3 : 2, pair })), 1500);
       } catch (e) { /* 忽略 */ }
-    });
+    }, function () { if (Hooks.on.battle && battle.bc) warmBattle(null); });
     const BV = SG.BattleView;
     if (BV && BV.prototype) {
       wrap(BV.prototype, 'moveUnit', function (a) {
@@ -1028,7 +1270,9 @@
   function onClashContact(ctx) {
     if (!Hooks.on.clash || !ctx || !ctx.attacker) return;
     const bc = battle.bc;
-    const a = ctx.attacker, auto = !!(bc && (bc.autoPlayer || (bc.watching && bc.watching())));
+    // the same rule as unitOpts: 委任, a watched battle and the enemy's phase are automatic (§B10.3: only pri ≥ 2, only the
+    // player's side or the enemy commander)
+    const a = ctx.attacker, auto = autoOf(bc);
     const side = a.side;
     const player = bc ? side === bc.playerSide : ctx.playerSide === side;
     let commander = false;
@@ -1042,6 +1286,20 @@
     const Sim = DG && DG._Sim;
     if (!Sim || !Sim.prototype || Hooks.installed.duel) return;
     Hooks.installed.duel = true;
+    // DuelGame.play (battle duels and the tournament): warm both fighters' cries; afterwards re-warm the battle's crowd
+    // (the 0.5 MB cry cache may have dropped it for the duel's effort sounds)
+    if (typeof DG.play === 'function' && !DG.play.__sgVoice) {
+      const orig = DG.play;
+      const w = function (opts) {
+        try { if (Hooks.on.duel && opts) warmDuel(opts.a && opts.a.gen, opts.b && opts.b.gen); } catch (e) { /* 忽略 */ }
+        const r = orig.apply(this, arguments);
+        const again = () => { try { if (battle.bc) warmBattle(null); } catch (e) { /* 忽略 */ } };
+        if (r && typeof r.then === 'function') r.then(again, again);
+        return r;
+      };
+      w.__sgVoice = true; w.__orig = orig;
+      DG.play = w;
+    }
     wrapAfter(Sim.prototype, 'emit', function (a) {
       if (!Hooks.on.duel) return;
       const act = DG.active;
@@ -1052,7 +1310,8 @@
   function onDuelEvent(sim, e) {
     if (!e || !sim.f) return;
     const fg = i => sim.f[i] && sim.f[i].gen;
-    const o = i => ({ scene: 'duel', side: i, pan: i === 0 ? -0.35 : 0.35, player: true, commander: true });
+    const pair = [fg(0), fg(1)];        // §B4.2: the defender's voice moves away from the challenger's if they are too close
+    const o = i => ({ scene: 'duel', side: i, pan: i === 0 ? -0.35 : 0.35, player: true, commander: true, pair });
     switch (e.type) {
       case 'swing': if (e.move === 'heavy' || e.kind === 'H') cry(fg(e.who), 'heavy', o(e.who)); else if (Math.random() < 0.35) cry(fg(e.who), 'light', o(e.who)); break;
       case 'chargeFull': cry(fg(e.who), 'charge', o(e.who)); break;
@@ -1091,12 +1350,14 @@
   // ---------------------------------------------------------------- export --
   const Voice = {
     init, say, cry, crowd, readAloud, profile, linguaOf, linguaRaw, usableLingua, pickLine, preload, settings, log, hooks: Hooks, distinctRate,
-    loadPack, decodeClip, onClashContact, codec: null, clashCtx: null,
+    loadPack, decodeClip, onClashContact, codec: null, clashCtx: null, warmBattle, warmDuel, warmCrowd, warmCries,
     get busy() { const t = now(); return active.some(a => a.end > t); },
     get active() { const t = now(); return active.filter(a => a.end > t).map(a => ({ cue: a.cue, pri: a.pri, side: a.side, scene: a.scene, left: +(a.end - t).toFixed(2) })); },
-    _stats() { return { decoded: decoded.size, cacheBytes, packs: Object.keys(packs), useMp3 }; },
+    _mp3Trim: mp3Trim, _trimMp3: trimMp3,
+    _stats() { return { decoded: decoded.size, cacheBytes, packs: Object.keys(packs), useMp3, cries: cries.size, cryBytes, cryRenders, warmJobs, warmQueued: warmQ.length, cryKeys: Array.from(cries.keys()) }; },
     _forceMp3(on) { useMp3 = !!on; Voice.codec = on ? 'mp3' : 'opus'; for (const k of Object.keys(packs)) if ((packs[k].meta.codec === 'mp3') !== useMp3) delete packs[k]; for (const k of Object.keys(loading)) delete loading[k]; decoded.clear(); decoding.clear(); cacheBytes = 0; },
     _reset() { active.splice(0); lastCue.clear(); lastPri1 = -1e9; lastShell = -1e9; log.splice(0); recent.splice(0); },
+    _clearCries() { cries.clear(); cryBytes = 0; cryRenders = 0; warmJobs = 0; warmQ.splice(0); },
     _fnv: fnv,
     _subtitle(x, line, dur, opts) { const prof = x === 'herald' || x === 'merchant' ? profile(x) : profile(genOf(x)); return subtitle(prof, line, dur || 1, opts || {}); },
   };

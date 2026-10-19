@@ -1733,34 +1733,39 @@ vec3 sgCropLV( float id ) {
 		sgFid = mix( 0.5, sgHash( cell * 2.0 + vec2( triB * 0.5, 0.25 ) ), sgFk );
 	}
 	float sgSlopeS = 1.0 - sgNs.y, sgSlopeF = 1.0 - sgNf.y;
+	// 陡坡：绘制纹理是从正上方投下来的，陡坡上会拉成竖直的条纹——陡处收掉斑块与笔触，泥土 / 岩石取平涂色
+	float sgSteep = smoothstep( 0.24, 0.5, sgSlopeS );
 	// 绘制：大 / 中两级水彩斑块 + 笔触
 	vec4 sgPL = texture2D( sgPaint, sgP * 0.031 + vec2( 0.17, 0.53 ) );
 	vec4 sgPM = texture2D( sgPaint, sgP * 0.113 + vec2( 0.61, 0.29 ) );
+	// 雪：雪线以上朝上的面（先算权重：雪地上不面化——Lanternvale 的雪地是平滑的，面化只属于岩石道具）
+	float sgSnowW = smoothstep( 0.3, 0.6, sgMat.b + ( sgPM.r - 0.5 ) * 0.4 + ( sgPL.g - 0.5 ) * 0.25 - sgSlopeF * 0.55 );
 	// 岩石：陡坡与高山（按面取石色：低多边形的手切岩面）
 	// （岩区的边界按平滑坡度与面坡度各半：不切成三角形的斑块）
 	// 平滑坡度已近岩坡、或已到高山时才让面坡度参与（草坡上全用平滑坡度：泥土 / 岩石的边界不显出格线）
 	float sgSlopeR = mix( sgSlopeS, sgSlopeF, 0.4 * max( smoothstep( 0.24, 0.42, sgSlopeS ), smoothstep( 4.2, 5.4, sgH ) ) );
 	float sgRockW = smoothstep( 0.36, 0.54, sgSlopeR + ( sgPL.g - 0.5 ) * 0.2 - sgMat.g * 0.1 ) * ( 1.0 - sgX.a );
-	sgRockW = max( sgRockW, smoothstep( 4.4, 6.4, sgH + ( sgPL.r - 0.5 ) * 1.4 + sgMat.g * 1.0 ) );
+	sgRockW = max( sgRockW, smoothstep( 4.4, 6.4, sgH + ( sgPL.r - 0.5 ) * 1.4 + sgMat.g * 1.0 ) * ( 1.0 - sgX.a ) );
 	// 面化只在岩坡、高山（Lanternvale 的地面是平滑的绘制草地；草坡上的三角格会把人工削出的坡折显成长直线）；
 	// 河岸、水下与海边的低地不面化
 	// （只在岩色已明显的地方：草色的山顶上若隐若现的格线很难看）
-	float sgFacetW = sgFacetSz.z * smoothstep( 0.2, 0.6, sgRockW ) * smoothstep( 0.05, 0.55, sgH );
+	float sgFacetW = sgFacetSz.z * smoothstep( 0.2, 0.6, sgRockW ) * smoothstep( 0.05, 0.55, sgH ) * ( 1.0 - 0.7 * sgSnowW ) * ( 1.0 - sgX.a );
 	vec3 sgN = normalize( mix( sgNs, sgNf, sgFacetW ) );
 	float sgNear = 1.0 - smoothstep( sgPaintK.x, sgPaintK.y, sgCamD );
-	float sgBl = ( ( sgPL.r - 0.5 ) * 1.0 + ( sgPM.r - 0.5 ) * 0.55 ) * sgPaintK.w;
+	float sgBl = ( ( sgPL.r - 0.5 ) * 1.0 + ( sgPM.r - 0.5 ) * 0.55 ) * sgPaintK.w * ( 1.0 - sgSteep );
 	vec3 sgCol = sgTint * ( 1.0 + sgBl * 0.3 );
 	sgCol = mix( sgCol, sgCol * vec3( 1.07, 1.04, 0.86 ), smoothstep( 0.06, 0.3, sgBl ) * 0.75 );
 	sgCol = mix( sgCol, sgCol * vec3( 0.88, 0.97, 1.03 ), smoothstep( -0.06, -0.3, sgBl ) * 0.75 );
-	sgCol *= 1.0 + ( sgPM.g - 0.5 ) * 0.2;
+	sgCol *= 1.0 + ( sgPM.g - 0.5 ) * 0.2 * ( 1.0 - sgSteep );
 	// 林下：更暗、更冷的苔绿
 	sgCol = mix( sgCol, sgCol * vec3( 0.8, 0.88, 0.84 ), sgForest * 0.6 );
 	// 泥土：陡坡、荒地、城郊与村落踩出的地面
-	float sgDirtW = smoothstep( 0.62, 0.88, ( sgPL.g - 0.5 ) * 0.5 + 0.5 * sgPM.r + sgSlopeR * ( 1.1 - sgX.a ) + sgMat.g * 0.3 - 0.02 ) * ( 1.0 - sgMat.b );
+	float sgDirtW = smoothstep( 0.62, 0.88, ( ( sgPL.g - 0.5 ) * 0.5 + 0.5 * sgPM.r - 0.25 ) * ( 1.0 - 0.75 * sgSteep ) + 0.25 + sgSlopeR * ( 1.1 - sgX.a ) + sgMat.g * 0.3 - 0.02 ) * ( 1.0 - sgMat.b );
 	sgDirtW = max( sgDirtW, smoothstep( 0.15, 0.75, sgX.g + ( sgPM.r - 0.5 ) * 0.5 ) );
 	vec3 sgDirtC = mix( vec3( 0.66, 0.5, 0.34 ), vec3( 0.75, 0.6, 0.41 ), sgPM.r );
 	sgDirtC = mix( sgDirtC, vec3( 0.56, 0.41, 0.27 ), smoothstep( 0.55, 0.85, sgPM.g ) * 0.5 );
 	sgDirtC = mix( sgDirtC, sgTint * vec3( 1.1, 0.92, 0.72 ), 0.2 );
+	sgDirtC = mix( sgDirtC, vec3( 0.64, 0.52, 0.39 ), sgSteep * 0.8 );
 	sgCol = mix( sgCol, sgDirtC, sgDirtW * 0.85 );
 	// 田块：拼布般的作物色、田埂；南方水田（青绿带水光）
 	float sgFarm = 1.0 - sgMat.a;
@@ -1781,6 +1786,8 @@ vec3 sgCropLV( float id ) {
 		crop = mix( crop, mix( vec3( 0.66, 0.6, 0.42 ), vec3( 0.52, 0.64, 0.38 ), clamp( sgX.r, 0.0, 1.0 ) ), step( id, 0.03 ) );
 		crop = mix( crop, sgTint, 0.1 );
 		sgFw = smoothstep( 0.3, 0.52, sgFarm + ( sgPM.r - 0.5 ) * 0.5 ) * ( 1.0 - smoothstep( 0.1, 0.26, sgSlopeS ) );
+		// 村落、城郊踩实的泥地上没有庄稼（村舍不落在田块上）
+		sgFw *= 1.0 - smoothstep( 0.2, 0.42, sgX.g );
 		sgCol = mix( sgCol, crop, sgFw );
 	}
 	// 沙：海滩、河滩（按高度，附近要有水）与沙漠（按群落）
@@ -1797,12 +1804,11 @@ vec3 sgCropLV( float id ) {
 	if ( sgRockW > 0.004 ) {
 		vec3 sgStone = mix( vec3( 0.66, 0.62, 0.57 ), vec3( 0.72, 0.63, 0.53 ), clamp( sgMat.g * 0.6 + sgMat.r, 0.0, 1.0 ) );
 		sgStone = mix( sgStone, vec3( 0.53, 0.49, 0.46 ), sgFid * 0.5 );
-		sgStone *= 0.9 + 0.2 * texture2D( sgDetB, vSgW.xz * 0.19 ).r;
+		sgStone *= 0.9 + 0.2 * mix( texture2D( sgDetB, vSgW.xz * 0.19 ).r, 0.5, sgSteep * 0.7 );
 		sgCol = mix( sgCol, sgStone, sgRockW );
 	}
-	// 雪：雪线以上朝上的面
-	float sgSnowW = smoothstep( 0.3, 0.6, sgMat.b + ( sgPM.r - 0.5 ) * 0.4 + ( sgPL.g - 0.5 ) * 0.25 - sgSlopeF * 0.55 );
-	vec3 sgSnow = mix( vec3( 0.95, 0.95, 0.96 ), vec3( 0.78, 0.8, 0.9 ), clamp( sgFid * 0.35 + smoothstep( 0.04, 0.32, sgSlopeF ) * 0.75, 0.0, 1.0 ) );
+	// 雪（权重见上）：背阴处只偏一点淡青灰（不再是白 / 淡紫交替的皱纸）
+	vec3 sgSnow = mix( vec3( 0.95, 0.95, 0.96 ), vec3( 0.86, 0.88, 0.93 ), clamp( sgFid * 0.35 + smoothstep( 0.04, 0.32, sgSlopeF ) * 0.75, 0.0, 1.0 ) );
 	sgCol = mix( sgCol, sgSnow, sgSnowW );
 	// 水下的沙底
 	sgCol = mix( sgCol, vec3( 0.8, 0.76, 0.58 ) * ( 0.88 + 0.16 * sgPM.r ), smoothstep( -0.05, -0.7, sgH ) * 0.8 );
@@ -1819,7 +1825,7 @@ vec3 sgCropLV( float id ) {
 		sgCol = mix( sgCol, fc, fw );
 	}
 	// 面的亮度抖动（坡地才有：平地上看不出三角拼块）、向阳的脊亮 / 沟里暗
-	sgCol *= 1.0 + ( sgFid - 0.5 ) * sgFacetSz.w * smoothstep( 0.02, 0.18, sgSlopeF ) * smoothstep( 0.2, 0.6, sgRockW ) * smoothstep( 0.05, 0.55, sgH );
+	sgCol *= 1.0 + ( sgFid - 0.5 ) * sgFacetSz.w * smoothstep( 0.02, 0.18, sgSlopeF ) * smoothstep( 0.2, 0.6, sgRockW ) * smoothstep( 0.05, 0.55, sgH ) * ( 1.0 - 0.7 * sgSnowW );
 	sgCol *= 0.86 + 0.28 * clamp( sgAO, 0.0, 1.0 );
 	vec3 n = normalize( ( viewMatrix * vec4( sgN, 0.0 ) ).xyz );
 `;

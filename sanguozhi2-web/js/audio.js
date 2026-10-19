@@ -540,7 +540,8 @@
 
   // 冲锋乐句跟随主曲目：移调到其主音，速度取其拍速的整数比（第四版 132–168，§A8），复拍子按附点四分对拍
   const FOLLOW_LO = 132, FOLLOW_HI = 168;
-  const STINGER_BPM_MAX = 176;      // a stinger may be sped up to this tempo so its accent still lands on the clash beat
+  const STINGER_BPM_MAX = FOLLOW_HI; // a stinger may be sped up to this tempo (the §A8 range 132–168) so its accent lands on the clash beat
+  const STINGER_LATE_MAX = 0.18;     // §A8 ±0.2 s with a margin: a stinger whose accent would land later is replaced / dropped
   function followPlan(e, key) {
     let info = e.mainInfo();
     if (playingKey && (!info || info.key !== playingKey)) {
@@ -629,31 +630,45 @@
     if (!base || !e) return false;
     const now = ctx.currentTime;
     if (!opts.force && !crit && now - lastStinger < STINGER_GAP) return false;
-    let key = base, accentBeats = 4;
-    if (crit && sb.suite && SG.Music.get(base + '-crit')) { key = base + '-crit'; accentBeats = 1; }
-    // 快速（≥ 1.5），或两小节句即使提到 ♩176 重音也会晚于 melee1 超过 0.2 s（第三版时间轴：接触后 1.12 s）时，用一小节短句
-    else if ((speed >= (sb.suite ? 1.5 : 2) || (sb.suite && 240 / STINGER_BPM_MAX - clashTiming(speed).melee > 0.2)) && SG.Music.get(base + '-short')) { key = base + '-short'; accentBeats = 2; }
+    let key = base, accentBeats = 4, aim = 'melee';
+    const T = clashTiming(speed);
+    // how late the accent lands when the piece is started at once and sped up to ♩168 (0 when it can be placed exactly)
+    const lateAt = (beats, want) => { const lead = beats * 60 / STINGER_BPM_MAX; return Math.max(0, lead + 0.02 - want); };
+    if (crit && sb.suite && SG.Music.get(base + '-crit')) { key = base + '-crit'; accentBeats = 1; aim = 'crit'; }
+    // 快速（≥ 1.5），或两小节句即使提到 ♩168 重音也会晚于 melee1 超过 0.2 s（第三版时间轴：接触后 1.12 s）时，用一小节短句
+    else if ((speed >= (sb.suite ? 1.5 : 2) || (sb.suite && lateAt(4, T.melee) > STINGER_LATE_MAX)) && SG.Music.get(base + '-short')) { key = base + '-short'; accentBeats = 2; }
     else {
       const vs = [base, base + '-b', base + '-c'].filter(k => SG.Music.get(k) && k !== lastStingerKey);
       if (vs.length) key = vs[Math.floor(Math.random() * vs.length)];
     }
     if (opts.variant && SG.Music.get(opts.variant)) key = opts.variant;
+    // 极快（AI 回合 / 委任再乘「快」：画面 ×3.0 / ×3.6）：一小节短句的两拍前奏在 ♩168 下也来不及 → 用一拍前奏的会心句
+    // （第二拍强奏，对准 melee1）；连一拍也来不及就不放冲锋乐句，只留人声与群呼
+    if (sb.suite && !opts.variant && aim === 'melee' && accentBeats < 4 && lateAt(accentBeats, T.melee) > STINGER_LATE_MAX) {
+      if (lateAt(1, T.melee) <= STINGER_LATE_MAX && SG.Music.get(base + '-crit')) { key = base + '-crit'; accentBeats = 1; }
+      else { Sfx.lastStinger = { key: null, skipped: 'too fast', speed, crit, want: T.melee }; return false; }
+    }
+    // a crit whose stab cannot reach the crit beat (the v3 timeline has no slow crit beat: at ×3.6 it comes 0.16 s after contact)
+    // puts the stab on melee1 like a plain clash; if even that is out of reach, no stinger
+    if (sb.suite && aim === 'crit' && lateAt(1, T.critStab) > STINGER_LATE_MAX) {
+      if (lateAt(1, T.melee) <= STINGER_LATE_MAX) aim = 'melee';
+      else { Sfx.lastStinger = { key: null, skipped: 'too fast', speed, crit, want: T.critStab }; return false; }
+    }
     const plan = followPlan(e, key);
     const info = plan.info, grid = plan.grid;
-    let bpm = plan.bpm, at;
+    let bpm = plan.bpm, at, want = null, lead = 0;
     if (sb.suite) {
       // 第四版对拍：短句 / 会心按时间轴放置（不再对齐主曲的拍点），常规的两小节句从接触开始
-      const T = clashTiming(speed);
-      const want = key.endsWith('-crit') ? T.critStab : key.endsWith('-short') ? T.melee : T.melee;
+      want = aim === 'crit' ? T.critStab : T.melee;
       const b0 = bpm || (SG.Music.get(key) || {}).bpm || 150;
-      let lead = accentBeats * 60 / b0;
+      lead = accentBeats * 60 / b0;
       if (lead > want + 0.05) { bpm = Math.min(STINGER_BPM_MAX, Math.max(FOLLOW_LO, accentBeats * 60 / Math.max(0.2, want))); lead = accentBeats * 60 / bpm; }
       at = now + Math.max(0.02, Math.min(0.7, want - lead));
     }
     const vk = SG.Music.variant(key, { transpose: plan.transpose, bpm }) || key;
     lastStinger = now; lastStingerKey = key;
     e.play(vk, at !== undefined ? { overlay: true, fade: 0.2, duck: 0.3, at } : { overlay: true, fade: 0.2, duck: 0.3, sync: !!info && !info.pending, grid }).catch(err => console.warn(err));
-    Sfx.lastStinger = { key, vk, at: at !== undefined ? at - now : null, speed, crit };
+    Sfx.lastStinger = { key, vk, at: at !== undefined ? at - now : null, speed, crit, want, accent: at !== undefined ? at - now + lead : null, beats: accentBeats };
     return true;
   }
   // 号令（§A3）：叠加；从不打断一次性的胜利 / 战败短曲；同一君主 4 秒内不重复

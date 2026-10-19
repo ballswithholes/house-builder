@@ -15,7 +15,7 @@
   const SG = (typeof window !== 'undefined' ? window : globalThis).SG = (typeof window !== 'undefined' ? window : globalThis).SG || {};
   SG.VoiceData = {
   version: 1,
-  CONFIG: {"frequency":"essential","essentialKeepsCommands":true,"language":"native","hiredKeepLanguage":true,"subtitles":"both","musicStyle":"suite","readAloud":false,"volumes":{"master":100,"music":100,"sfx":100,"voice":100}},
+  CONFIG: {"frequency":"essential","essentialKeepsCommands":false,"language":"native","hiredKeepLanguage":true,"subtitles":"both","musicStyle":"suite","readAloud":false,"volumes":{"master":100,"music":100,"sfx":100,"voice":100}},
   RULES: {"maxVoices":{"strategy":1,"battle":2,"duel":2},"pri1Gap":1.2,"pri2QueueMax":0.6,"preemptFade":0.08,"shellGap":6,"duckLevel":0.5,"duckAttack":0.06,"duckRelease":0.4,"voiceBus":0.9,"hallSend":0.18,"decodeWaitMs":120,"cacheBytes":6291456,"cryCacheBytes":524288,"bubbleExtra":0.8,"fanfareGap":3,"monthStartEvery":3},
   LINGUA: {
     "zh": {"name":"汉语","conf":"A","route":"pinyin","voices":{"m":"kokoro-multi-lang-v1_0#zm_yunjian","m2":"kokoro-multi-lang-v1_0#zm_yunxi","y":"vits-piper-zh_CN-chaowen-medium","f":"kokoro-multi-lang-v1_0#zf_xiaoyi"},"script":"cjk","fb":[],"packs":["zh-m","zh-f"]},

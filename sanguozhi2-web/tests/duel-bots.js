@@ -84,9 +84,8 @@ function turtleBot(idx) {
   };
   return c;
 }
-// 注意（第四版核对）：第三版的 cautious 实际上从未按下格开（用第三版 duel-game.js 跑 MID8 × 30 场：格开 0 次），
-// 第三版量到的 36% 是「挡下后多举防一会儿」的谨慎打法。
-// 为保持第三版目标的原意，cautious 默认不赌格开；带 0.5 概率格开的版本另列为 cautiousP（只打印，不设目标）
+// 第三版原样：cautious 一半时候赌格开（复核用第三版 duel-game.js 实测：MID8 × 20 场格开 700 次、成功 76 次、胜 37.5%，与第三版的 36% 相符）。
+// 不赌格开的版本另列为 cautiousN（只打印，不设目标）
 function cautiousBot(idx, gamble) {
   const base = D.scriptBot('guard', idx), c = { held: base.held, taps: base.taps };
   let holdUntil = 0, pAt = -1, gSeq = -1;
@@ -142,7 +141,7 @@ function backstepBot(idx) {
   };
   return c;
 }
-const BOTS = { turtle: turtleBot, cautious: i => cautiousBot(i, false), cautiousP: i => cautiousBot(i, true), turtleP: turtleParryBot, backstepper: backstepBot };
+const BOTS = { turtle: turtleBot, cautious: i => cautiousBot(i, true), cautiousN: i => cautiousBot(i, false), turtleP: turtleParryBot, backstepper: backstepBot };
 // BOTS-END
 
 // 脚本玩家（左，f[0]）对 真实电脑（右）；返回玩家胜率 % 与统计
@@ -320,7 +319,7 @@ section(4, 'parry rules (scripted)', () => {
     run(sim, 0.03);
     L.ctrl.taps.parry++;
     const e = until(sim, (s, ev) => ev && ev.type === 'parry', 0.5);
-    ok(!!e && e.def === 0 && e.move === 'L', `a light attack landing inside the window should be parried (got ${e && e.move})`);
+    ok(!!e && e.def === 0 && e.kind === 'L', `a light attack landing inside the window should be parried (got ${e && e.move}/${e && e.kind})`);
     ok(R.state === 'parried' && near(R.stun, PR.STAGGER, 1e-6), `attacker should be staggered ${PR.STAGGER}s (state ${R.state}, stun ${R.stun})`);
     ok(L.state === 'parryok' && near(L.counterUntil - sim.clock, PR.COUNTER_WIN, 0.02), `parrier should get a ${PR.COUNTER_WIN}s counter window (state ${L.state})`);
     ok(R.hp === R.hpMax && L.hp === L.hpMax, 'a parry deals no damage');
@@ -328,10 +327,10 @@ section(4, 'parry rules (scripted)', () => {
     const tParry = sim.clock;
     until(sim, s => s.clock >= tParry + 0.52, 1);
     ok(R.state === 'parried', 'attacker is still staggered 0.52 s after the parry');
-    L.ctrl.taps.light++;   // 关羽的招式谱以 M 起手：J = 单出的轻击
+    L.ctrl.taps.light++;   // 关羽的招式谱以 M 起手：J 起手（代替第 1 步，伤害 × kStr）
     const h = until(sim, (s, ev) => ev && ev.type === 'hit' && ev.att === 0, 0.4);
     ok(!!h && h.riposte && !h.guarded, `the first hit inside the counter window should be an unblockable riposte (riposte ${h && h.riposte}, guarded ${h && h.guarded}, defender ${R.state})`);
-    const base = MV.L.dmg * (D.WEAPONS.guandao.pow || 1) * PR.COUNTER_K, exp = D.damage(base, 98, 98);
+    const base = MV.L.dmg * (D.WEAPONS.guandao.pow || 1) * PR.COUNTER_K * (D.jEntry(L.seqStr) >= 0 ? L.kStr : 1), exp = D.damage(base, 98, 98);
     ok(!!h && h.dmg >= Math.floor(exp * 0.92) && h.dmg <= Math.ceil(exp * 1.08), `riposte damage should be x${PR.COUNTER_K} (got ${h && h.dmg}, expected about ${exp.toFixed(1)})`);
     ok(!sim.countering(L), 'the counter window is used up by the first hit');
     const cdLeft = sim.parryCd(L);
@@ -506,6 +505,23 @@ section(6, 'heavy / overhead release: reaction parries and guards are fair for b
     const dt = sim.clock - t0;
     ok(!!h && dt >= 0.30, `K+L overhead startup at war 100 should be >= 0.30 s real (measured ${dt.toFixed(3)}s)`);
   }
+  // 人与电脑同一按键同一时刻起招（复核：K / L 同按的 0.05 秒等待曾让人的中 / 重击晚 3 步）：玩家输入（klHold）按下 K / L 当步即起招；
+  // 0.05 秒内另一键也到 → 跃劈，招式时钟接着第一招走；超过 0.05 秒 → 各算各的
+  {
+    const startSteps = (kl, keys, gap) => {
+      const sim = stage('关羽', '刘备', 2), f = sim.f[0];
+      f.ctrl.klHold = kl;
+      f.ctrl.taps[keys[0]]++; f.ctrl.held[keys[0]] = true;
+      const states = [];
+      for (let i = 0; i < 8; i++) { if (keys[1] && i === gap) { f.ctrl.taps[keys[1]]++; f.ctrl.held[keys[1]] = true; } sim.step(); states.push(f.state); }
+      return { states, ovhT: f.state === 'ovh' ? f.t : -1 };
+    };
+    const lat = ['medium', 'heavy'].map(k => [startSteps(false, [k]).states.join(), startSteps(true, [k]).states.join()]);
+    const both = startSteps(true, ['medium', 'heavy'], 1), late = startSteps(true, ['heavy', 'medium'], 4);
+    ok(lat.every(([a, b]) => a === b), `a human K / L press (klHold) starts on the same step as the same press without the K+L wait (${lat.map(x => x[1].split(',')[0]).join(', ')})`);
+    ok(both.states[1] === 'ovh' && near(both.ovhT, 7 / 60 * stage('关羽', '刘备', 2).f[0].spd, 0.002), `K then L one step later turns into the overhead, timed from the K press (${both.states.slice(0, 3).join()}, t ${both.ovhT.toFixed(3)})`);
+    ok(late.states.indexOf('ovh') < 0, `K pressed 0.067 s after L stays a separate press (${late.states.slice(0, 6).join()})`);
+  }
   const vsAI = (p, ai, chg, n) => {
     const out = { parried: 0, hit: 0, guarded: 0, gbreak: 0, avoid: 0 }, lat = [];
     let looked = 0, lookedParried = 0, unseenOk = 0;
@@ -585,7 +601,7 @@ section(7, 'guard-and-poke / cautious / turtle bots vs AI; war-gap ladder', () =
   const n = Math.max(20, N >> 1);
   const MID8 = [['刘备', '刘备'], ['曹操', '曹操'], ['郭汜', '潘凤'], ['王平', '王平'], ['李傕', '刘备'], ['张济', '曹操'], ['祖茂', '黄祖'], ['孟达', '潘凤']];
   const res = {};
-  for (const k of ['guard', 'parry', 'cautious', 'cautiousP', 'turtle', 'turtleP', 'backstepper']) {
+  for (const k of ['guard', 'parry', 'cautious', 'cautiousN', 'turtle', 'turtleP', 'backstepper']) {
     const rs = MID8.map(([p, a]) => play(k, p, a, n));
     const a = avg(rs.map(r => r.pct));
     const full = rs.reduce((t, r) => t + r.heavies.AIFull, 0) / (rs.length * n), aiP = rs.reduce((t, r) => t + r.aiParries, 0) / rs.length;
@@ -607,8 +623,9 @@ section(7, 'guard-and-poke / cautious / turtle bots vs AI; war-gap ladder', () =
     ok(row[0] >= 85 && row[L.length - 1] <= 15, `${k}: war 30 AI should be easy and war 100 AI hard for a war 72-76 player (${row[0].toFixed(0)}% / ${row[L.length - 1].toFixed(0)}%)`);
   }
   for (const [ps, below, near6] of [[['刘表', '张鲁'], ['陆康'], ['糜芳']], [['关羽', '马超'], ['董卓', '华雄'], ['张辽', '关羽']]]) {
-    const a2 = as => as.reduce((t, a) => t + ps.reduce((u, p) => u + play('parry', p, a, n).pct, 0) / ps.length, 0) / as.length;
-    const lo = a2(below), hi = a2(near6);
+    const a2 = (as, nn) => as.reduce((t, a) => t + ps.reduce((u, p) => u + play('parry', p, a, nn || n).pct, 0) / ps.length, 0) / as.length;
+    // 关羽 / 马超 对低 6–12 武力的真值约 68–72%（n 800），n 20 × 4 时 σ ≈ 5，离门槛 65% 太近：「低于」这一项取 n ≥ 60
+    const lo = a2(below, Math.max(60, n)), hi = a2(near6);
     console.log(`  parry bot as ${ps.join('/')}(${gens[ps[0]].war}): vs AI ${below.map(a => a + gens[a].war).join('/')} ${lo.toFixed(0)}%, vs AI ${near6.map(a => a + gens[a].war).join('/')} ${hi.toFixed(0)}%`);
     ok(lo >= 65, `a skilled player should usually beat an AI 6-12 war below (${ps[0]}: ${lo.toFixed(0)}%)`);
     ok(hi >= 25, `a skilled player should keep a fair chance within +6 war (${ps[0]}: ${hi.toFixed(0)}%)`);
@@ -822,7 +839,8 @@ section(10, 'strings: rules (scripted, deterministic)', () => {
     ok(!!hold10 && hold10.guarded, `an H step delayed 0.10 s is blocked by a defender holding back (step 4 ${hold10 ? (hold10.guarded ? 'blocked' : 'hit') : 'none'})`);
     ok(!!hold05 && !hold05.guarded, `an H step delayed 0.05 s (≤ 0.08) still combos (step 4 ${hold05 ? (hold05.guarded ? 'blocked' : 'hit') : 'none'})`);
   }
-  // d. 防连按：randmash 起的连段 ≤ 1% 打完；只按 J 的连按至多打到招式谱开头那几个 L（≤ 2）
+  // d. 防连按：randmash 起的连段 ≤ 1% 打完；只按 J 的连按至多打到招式谱开头那几个 L（≤ 2）。
+  //    J 起手（jEntry）：第 1 步是中击的，J 代替第 1 步或从第 2 步起——算从起手那一步起连上的步数（起手那一步当作 L）
   {
     let started = 0, completed = 0;
     for (let i = 0; i < 80 && started < 400; i++) {
@@ -835,9 +853,9 @@ section(10, 'strings: rules (scripted, deterministic)', () => {
     for (const name of ['张飞', '赵云', '甘宁', '刘备', '曹操', '夏侯渊']) {
       const sim = stage(name, '刘备', 1.4), f = sim.f[0], o = sim.f[1];
       o.ctrl = D.scriptBot('dummy', 1);
-      const lead = (f.seqStr.match(/^L*/) || [''])[0].length;
-      let maxStep = 0;
-      for (let k = 0; k < 60 * 4; k++) { if (k % 6 === 0) f.ctrl.taps.light++; sim.events.length = 0; sim.step(); for (const e of sim.events) if (e.type === 'strStep' && e.who === 0) maxStep = Math.max(maxStep, e.step + 1); }
+      const ent = D.jEntry(f.seqStr), lead = ent < 0 ? 0 : 1 + (f.seqStr.slice(ent + 1).match(/^L*/) || [''])[0].length;
+      let maxStep = 0, from = 0;
+      for (let k = 0; k < 60 * 4; k++) { if (k % 6 === 0) f.ctrl.taps.light++; sim.events.length = 0; sim.step(); for (const e of sim.events) if (e.type === 'strStep' && e.who === 0) { if (e.entry) from = e.step; maxStep = Math.max(maxStep, e.step + 1 - from); } }
       maxRun = Math.max(maxRun, maxStep);
       if (maxStep > Math.max(lead, 0) || maxStep > 2) badJ.push(`${name} ${f.seqStr} ${maxStep}`);
     }
@@ -903,18 +921,23 @@ section(10, 'strings: rules (scripted, deterministic)', () => {
     const rows = [], badG = [];
     const single = { L: k => { k.ctrl.taps.light++; }, M: k => { k.ctrl.taps.medium++; }, cL: k => { k.ctrl.held.down = true; k.ctrl.taps.light++; }, cM: k => { k.ctrl.held.down = true; k.ctrl.taps.medium++; }, ovh: k => { k.ctrl.taps.ovh++; } };
     for (const name in single) {
+      // 单出的 L 只在 J 起手关掉时才有（COMBO.J_OPEN；开着时 J 总是起连段，被挡后的优劣按下面「第 1 步后停手」的连段公式）
+      if (name === 'L') CO.J_OPEN = false;
       const vals = [30, 76, 100].map(w => -advOf(w, (s, f) => { withSeq(s, 0, name === 'L' ? 'MLMLHLML' : name === 'M' ? 'LMLMHLMH' : 'LMLMHLMH'); single[name](f); }, name));
+      CO.J_OPEN = true;
       const want = MV[name].adv;
       rows.push(`${name} ${vals.map(v => v.toFixed(3)).join('/')} (want ${want})`);
       if (!near(vals[1], want, 0.02 + 1 / 60) || Math.sign(vals[0]) !== Math.sign(want) || Math.sign(vals[2]) !== Math.sign(want)) badG.push(name);
     }
-    for (const seq of ['LLMHMLMH', 'MLMHLMLM', 'LHMLMLMH']) {
-      const vals = [30, 76, 100].map(w => -advOf(w, (s, f) => { withSeq(s, 0, seq); s.f[0].ctrl.taps[TK[seq[0]]]++; }, seq));
+    // 'J:'：第 1 步是中击的串以 J 起手（J 代替第 1 步，用单出轻击的数据）
+    for (const key of ['LLMHMLMH', 'MLMHLMLM', 'LHMLMLMH', 'J:MLMHLMLM', 'J:MMLHMLHH']) {
+      const jo = key.startsWith('J:'), seq = jo ? key.slice(2) : key, s1 = jo ? 'L' : seq[0];
+      const vals = [30, 76, 100].map(w => -advOf(w, (s, f) => { withSeq(s, 0, seq); s.f[0].ctrl.taps[TK[s1]]++; }, seq));
       const f76 = new D._Sim(Object.assign({}, gens['王平'], { war: 76 }), gens['刘备'], D.lookOf(gens['王平']), D.lookOf(gens['刘备'])).f[0];
-      const mv = D.stepMove(seq, 0), bs = D.stepGap(seq, 0) / f76.spd + (seq[1] === 'H' ? -CO.TRAP : CO.BLOCK_PAD);
+      const mv = D.stepMove(seq, 0, s1), bs = D.stepGap(seq, 0, s1) / f76.spd + (seq[1] === 'H' ? -CO.TRAP : CO.BLOCK_PAD);
       const want = bs - (mv.active + mv.recovery) / f76.spd;
-      rows.push(`stop after step 1 of ${seq} ${vals.map(v => v.toFixed(3)).join('/')} (want ${want.toFixed(3)})`);
-      if (!near(vals[1], want, 0.02 + 1 / 60) || Math.sign(vals[0]) !== Math.sign(want) || Math.sign(vals[2]) !== Math.sign(want)) badG.push(seq);
+      rows.push(`stop after step 1 of ${key} ${vals.map(v => v.toFixed(3)).join('/')} (want ${want.toFixed(3)})`);
+      if (!near(vals[1], want, 0.02 + 1 / 60) || Math.sign(vals[0]) !== Math.sign(want) || Math.sign(vals[2]) !== Math.sign(want)) badG.push(key);
     }
     console.log('  on-block advantage (war 30/76/100): ' + rows.join('; '));
     ok(badG.length === 0, `on-block advantages match the frame data at war 76 (±0.02 s + 1 frame) with the same sign at 30 and 100 (${badG.join(', ')})`);
@@ -969,13 +992,13 @@ section(10, 'strings: rules (scripted, deterministic)', () => {
         }
         sum += tot;
       }
-      const per = sum / 4 / f.pow;     // 每串 4 次的平均（伤害浮动 ±8 %），按兵器威力折算（同 a；§8.5 的表都是威力 1）
-      worstRaw = Math.max(worstRaw, sum / 4);
+      const per = sum / 4;     // 每串 4 次的平均（伤害浮动 ±8 %），含兵器威力（实战的数；§8.5「一次破绽不超过半条体力」，复核：不得按威力折算）
+      worstRaw = Math.max(worstRaw, sum / 4 / f.pow);
       if (per > worst) { worst = per; worstName = e.name + ' ' + e.seq; }
     }
     D.critEnabled = true;
-    console.log(`  worst 7 steps + special cancel at equal war 100 (mean of 4, ÷ weapon pow): ${worst.toFixed(1)} HP (${worstName}); raw worst incl. pow ${worstRaw.toFixed(1)}`);
-    ok(worst <= 50, `any string + special cancel deals <= 50 HP at equal war 100 (worst ${worst})`);
+    console.log(`  worst 7 steps + special cancel at equal war 100 (mean of 4, incl. weapon pow): ${worst.toFixed(1)} HP (${worstName}); ÷ pow ${worstRaw.toFixed(1)}`);
+    ok(worst <= 50, `any string + special cancel deals <= 50 HP at equal war 100, weapon pow included (worst ${worst.toFixed(1)})`);
   }
   // j. 格开后以连段起手反击：第一击 ×1.5、不可挡，之后正常递减
   {
@@ -1101,19 +1124,20 @@ section(12, 'strings vs AI (balance)', () => {
   const STRONG = [['关羽', '关羽'], ['吕布', '吕布']], WEAK = [['孙乾', '孙乾']];
   const set = (kind, pairs, opts) => avg(pairs.map(([p, a]) => play(kind, p, a, n, opts).pct));
   // 胜率：连段机器人（命中确认、踩准节拍）不该打垮同武力电脑，但比只会挡的强；会看破的更强
-  const combo = set('combo', MID8), hb = set('hbguard', MID8), breaker = set('breaker', MID8), comboS = set('combo', STRONG), comboW = set('combo', WEAK);
+  // 看破机器人的真值约 64–66%（n 960–1600），离上限 70% 只有约 1.5σ（n 20 × 8 对时 σ ≈ 3.6）：这一项取 n ≥ 40（σ ≈ 2.6）
+  const combo = set('combo', MID8), hb = set('hbguard', MID8), breaker = avg(MID8.map(([p, a]) => play('breaker', p, a, Math.max(40, n)).pct)), comboS = set('combo', STRONG), comboW = set('combo', WEAK);
   console.log(`  vs equal mid AI: combo ${combo.toFixed(0)}%, hbguard ${hb.toFixed(0)}%, breaker ${breaker.toFixed(0)}%; combo vs STRONG ${comboS.toFixed(0)}%, vs WEAK ${comboW.toFixed(0)}%`);
   ok(combo >= hb - 5 && combo >= 30 && combo <= 65, `combo vs equal mid AI should be 30-65% and >= hbguard - 5 (${combo.toFixed(0)}% vs ${hb.toFixed(0)}%)`);
   ok(comboS >= 5 && comboS <= 40, `combo vs strong mirrors should be 5-40% (${comboS.toFixed(0)}%)`);
   ok(breaker >= 35 && breaker <= 70 && breaker >= combo, `breaker vs equal mid AI should be 35-70% and >= combo (${breaker.toFixed(0)}% vs ${combo.toFixed(0)}%)`);
   ok(comboW >= 85, `combo vs weak mirrors should be >= 85% (${comboW.toFixed(0)}%)`);
   // 电脑看破机器人的连段（电脑已见过每一步：战斗记忆 aiKnow 全知）：第一击打中的整串尝试里被看破的比例
-  const breakRate = (kind, pairs) => {
+  const breakRate = (kind, pairs, nn) => {
     let att = 0, brk = 0, hs = 0;
     for (const [p, a] of pairs) {
       const know = new Map([[p, 255]]);
       let cur = false;     // 当前这一串的第一击打中了（整串尝试）
-      play(kind, p, a, nb, { sim: { aiKnow: know }, onEvent(sim, e) {
+      play(kind, p, a, nn || nb, { sim: { aiKnow: know }, onEvent(sim, e) {
         if (e.type === 'strStep' && e.who === 0 && e.step === 0) cur = false;
         if (e.type === 'hit' && e.att === 0 && e.step === 1 && !e.guarded) { att++; cur = true; }
         if (e.type === 'parry' && e.att === 0 && cur && e.step >= 0) { brk++; if (e.route === 'hitstun') hs++; cur = false; }
@@ -1123,7 +1147,8 @@ section(12, 'strings vs AI (balance)', () => {
   };
   const HI = [['关羽', '关羽'], ['吕布', '吕布'], ['张飞', '张飞'], ['赵云', '赵云']], MIDb = [['刘备', '刘备'], ['曹操', '曹操'], ['王平', '王平'], ['李傕', '李傕']], LO = [['孙乾', '孙乾'], ['简雍', '简雍']];
   const nb = Math.max(30, N);
-  const bH = breakRate('combo', HI), bM = breakRate('combo', MIDb), bL = breakRate('combo', LO), dH = breakRate('delay', HI);
+  // 迟滞对比（dH / bH 的硬直看破率之比，历次约 0.44–0.66，门槛 0.7）：两组各取 n ≥ 60，免得 n 40 时偶尔越过门槛
+  const nH = Math.max(60, N), bH = breakRate('combo', HI, nH), bM = breakRate('combo', MIDb), bL = breakRate('combo', LO), dH = breakRate('delay', HI, nH);
   console.log(`  AI breaks of combo strings (steps known): war 90-100 ${bH.pct.toFixed(0)}% (${bH.brk}/${bH.att}), war 60-76 ${bM.pct.toFixed(0)}% (${bM.brk}/${bM.att}), war <= 35 ${bL.pct.toFixed(0)}% (${bL.brk}/${bL.att}); vs delay bot ${dH.pct.toFixed(0)}% (${dH.brk}/${dH.att}); hitstun breaks combo ${bH.hsPct.toFixed(0)}% vs delay ${dH.hsPct.toFixed(0)}%`);
   ok(bH.pct >= 25 && bH.pct <= 55, `AI war 90-100 should break 25-55% of known full-string attempts (${bH.pct.toFixed(0)}%)`);
   ok(bM.pct >= 10 && bM.pct <= 35, `AI war 60-76 should break 10-35% (${bM.pct.toFixed(0)}%)`);
@@ -1131,7 +1156,9 @@ section(12, 'strings vs AI (balance)', () => {
   // 迟滞对付的是受击硬直中按节拍的看破（§9.3）；迟滞超过 0.08 秒放人后被挡、再在举防中格开下一步，是设计里的「反制之反制」，不算在内
   ok(dH.hsPct <= 0.7 * bH.hsPct, `delaying H steps should cut the AI's hitstun break rate by >= 30% (${dH.hsPct.toFixed(0)}% vs ${bH.hsPct.toFixed(0)}%)`);
   // 电脑对电脑：整串打满（8/8 命中）的次数（每名电脑每场）
-  const full = pairs => { let s = 0, m = 0; for (const [a, b] of pairs) for (let i = 0; i < n; i++) { const r = D.simulate(gens[a], gens[b]); s += r.stats[0].fullStrings + r.stats[1].fullStrings; m += 2; } return s / m; };
+  // 每名电脑每场整串数约 0.6（n 600：关羽 / 吕布镜像 0.61–0.63），n 20 时 σ ≈ 0.09，离门槛 0.5 只有约 1.3σ：取 n ≥ 60（σ ≈ 0.05）
+  const nf = Math.max(60, n);
+  const full = pairs => { let s = 0, m = 0; for (const [a, b] of pairs) for (let i = 0; i < nf; i++) { const r = D.simulate(gens[a], gens[b]); s += r.stats[0].fullStrings + r.stats[1].fullStrings; m += 2; } return s / m; };
   const fT = full([['关羽', '关羽'], ['吕布', '吕布']]), fM = full([['刘备', '刘备'], ['曹操', '曹操'], ['王平', '王平']]), fW = full([['孙乾', '孙乾'], ['简雍', '简雍']]);
   console.log(`  AI full strings per AI per match: war 98-100 ${fT.toFixed(2)}, mid ${fM.toFixed(2)}, weak ${fW.toFixed(2)}`);
   ok(fT >= 0.5, `top AIs should complete >= 0.5 full strings per match (${fT.toFixed(2)})`);
@@ -1164,6 +1191,30 @@ section(12, 'strings vs AI (balance)', () => {
   ok(kn.length === 0 || avg(kn) <= 0.005, `known steps are planned on the true beat (${(1000 * avg(kn)).toFixed(1)} ms)`);
   ok(unk.length === 0 || Math.min(...unk) >= 0.03 - 1e-9, `unknown L/H steps are planned at M timing, >= 0.03 s off (min ${unk.length ? (1000 * Math.min(...unk)).toFixed(1) : '-'} ms)`);
   ok(before === 0 && overKnow === 0, `AI honesty: breaks planned only from hitstun (${before}), knowledge only of steps it has seen (${overKnow})`);
+  // 起手键平衡（复核要求）：招式谱第 1 步是中击 vs 是轻击的电脑，同武力、同兵器（长剑）、各取不同的招式谱，左右轮换。
+  // 第 1 步是中击的占 256 / 499：没有 J 起手时只胜 36–43%（J 是最快的一键，只有轻击起手的人抓破绽能接整串）。
+  // 关口：三格合计 45–55%，每格 40–60%（每格 200 场的噪声约 ±3.5 个百分点；--nightly 每格 300 场）
+  {
+    const allC = SG.Combos.all(), Ls = allC.filter(e => e.seq[0] === 'L').map(e => e.seq), Ms = allC.filter(e => e.seq[0] === 'M').map(e => e.seq);
+    const nP = NIGHTLY ? 300 : 200, cells = [];
+    let tot = 0;
+    for (const war of [50, 70, 90]) {
+      let w = 0;
+      for (let i = 0; i < nP; i++) {
+        const ga = { name: '甲', war, intel: 50, pol: 50 }, gb = { name: '乙', war, intel: 50, pol: 50 };
+        const la = D.lookOf(ga), lb = D.lookOf(gb); la.weapon = lb.weapon = 'sword'; la.bow = lb.bow = false;
+        const swap = i % 2 === 1, sim = swap ? new D._Sim(gb, ga, lb, la) : new D._Sim(ga, gb, la, lb), iM = swap ? 1 : 0;
+        withSeq(sim, iM, Ms[(i * 5) % Ms.length]); withSeq(sim, 1 - iM, Ls[(i * 3) % Ls.length]);
+        sim.f[0].ctrl = new D._AI(sim.f[0]); sim.f[1].ctrl = new D._AI(sim.f[1]);
+        sim.runToEnd();
+        if (sim.outcome().winner === iM) w++;
+      }
+      cells.push(100 * w / nP); tot += w;
+    }
+    const pool = 100 * tot / (3 * nP);
+    console.log(`  string-starter parity: M-start vs L-start AI at equal war 50/70/90 (${nP} each): ${cells.map(v => v.toFixed(1)).join(' / ')}%, pooled ${pool.toFixed(1)}%`);
+    ok(pool >= 45 && pool <= 55 && cells.every(v => v >= 40 && v <= 60), `M-start strings win 45-55% (pooled) against L-start strings at equal war, each cell 40-60% (${cells.map(v => v.toFixed(1)).join(' / ')}; pooled ${pool.toFixed(1)})`);
+  }
 });
 
 // ---------------------------------------------------------------- (13) 单挑会心 --
@@ -1196,6 +1247,7 @@ section(13, 'duel crits', () => {
     };
     // 中立轻击（刘备 武力 76 → 3 + 4 × 0.52 = 5.08%）
     const base = D.critBase(76);
+    SG.Random.seed(2026);      // 固定种子（§15.2 (13)）
     const neutral = forced((sim, f, o) => { withSeq(sim, 0, 'MLMLHLML'); const e = hitOnce(sim, f, o, 'L'); return e && !e.guarded ? e.crit : null; }, 2000);
     const counter = forced((sim, f, o) => { withSeq(sim, 0, 'MLMLHLML'); o.ctrl.taps.heavy++; o.ctrl.held.heavy = true; run(sim, 0.03); const e = hitOnce(sim, f, o, 'L'); return e && !e.guarded && e.counter ? e.crit : null; }, 2000);
     console.log(`  forced rolls: neutral ${(100 * neutral).toFixed(1)}% (want ${(100 * base).toFixed(1)}), counter-hit ${(100 * counter).toFixed(1)}% (want ${(100 * (base + CR.COUNTER)).toFixed(1)})`);
@@ -1203,14 +1255,15 @@ section(13, 'duel crits', () => {
     ok(Math.abs(counter - (base + CR.COUNTER)) <= 0.03, 'counter-hits add +15% (within ±3 pp at n = 2000)');
     // 终结技
     let fc = 0, fn = 0;
-    for (let i = 0; i < 600; i++) {
+    SG.Random.seed(2027);      // §15.2 (13)：固定种子、2000 次（复核：600 次时下限只差 2σ，偶尔误报）
+    for (let i = 0; i < 2000; i++) {
       const sim = stage('刘备', '刘备', 1.4), f = withSeq(sim, 0, 'LMLMHLMM');
       const out = playString(sim, f, sim.f[1]);
       const fin = out.events.find(e => e.type === 'hit' && e.step === 8 && !e.guarded);
       if (fin) { fn++; if (fin.crit) fc++; }
     }
     console.log(`  finisher crit ${(100 * fc / fn).toFixed(1)}% of ${fn} (want ${(100 * (base + CR.FINISHER)).toFixed(1)} … +8 if a tip hit)`);
-    ok(fn >= 500 && fc / fn >= base + CR.FINISHER - 0.03, 'finishers add +10% crit chance');
+    ok(fn >= 1600 && fc / fn >= base + CR.FINISHER - 0.015, `finishers add +10% crit chance (${(100 * fc / fn).toFixed(1)}%, at least ${(100 * (base + CR.FINISHER - 0.015)).toFixed(1)})`);
     // 被挡 / 反击 / 绝技 / 箭 永不会心
     let bad = 0;
     for (let i = 0; i < 300; i++) {
@@ -1277,7 +1330,7 @@ section(15, 'items in the duel (budget, best-in-slot sets, 15-war gap, abilities
   else {
     for (const n2 of ['Titles', 'Engage', 'Tourney']) if (IS[n2] && typeof IS[n2] === 'object' && 'enabled' in IS[n2]) IS[n2].enabled = false;
     IS.ScenarioData = IS.Scenarios.classic;   // 经典剧本：独一无二的装备尚无人持有（世界剧本里多在各国君主手上）
-    const DI = IS.ItemsData;
+    const DI = IS.ItemsData, TIERS = IS.Items.TIER || { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 };
     const score = it => (it.stats.dHp || 0) * 0.4 + (it.stats.dDmg || 0) + (it.stats.dGuard || 0) * 0.2 + (it.stats.war || 0) * 0.05 + (it.stats.crit || 0) * 0.1 + (it.ability ? 0.5 : 0);
     const kitOf = (rar, war) => {
       // 每套一局新游戏（独一无二的装备只能发一次）
@@ -1288,7 +1341,8 @@ section(15, 'items in the duel (budget, best-in-slot sets, 15-war gap, abilities
       const ids = [];
       for (const sl of ['weapon', 'armour', 'helmet', 'mount', 'treasure', 'offhand']) {
         // 该部位按单挑数值排序，拿得到（独一无二者可能已有人持有）且装得上（盾须配单手兵器）的第一件
-        for (const it of DI.items.filter(x => x.rarity === rar && x.slot === sl && !(x.req && (x.req.war > war || x.req.intel > 40 || x.req.pol > 40 || x.req.ruler))).sort((a, b) => score(b) - score(a))) {
+        // 「该稀有度或更低」中每部位最好的一件（INTEGRATION §8.3 / integration/duel-gear-estimate.js 的定义；复核：不能只取恰好该稀有度的）
+        for (const it of DI.items.filter(x => TIERS[x.rarity] <= TIERS[rar] && x.slot === sl && !(x.req && (x.req.war > war || x.req.intel > 40 || x.req.pol > 40 || x.req.ruler))).sort((a, b) => score(b) - score(a))) {
           const u = IS.Items.award(fac, it.id, { why: 'test' });
           if (u && IS.Gear.equip(t, u, { force: true, free: true }).ok) { ids.push(it.id); break; }
         }
@@ -1297,15 +1351,14 @@ section(15, 'items in the duel (budget, best-in-slot sets, 15-war gap, abilities
     };
     const RAR = ['common', 'uncommon', 'rare', 'epic', 'legendary'], WARS = [60, 80, 95];
     const rows = [], over = [], kitsSeen = [];
-    let legGain = null;
+    let legMods = null;
     for (const rar of RAR) {
       const vals = WARS.map(w => {
         const k = kitOf(rar, w), mods = JSON.parse(JSON.stringify(k.mods));
         if (w === 80) kitsSeen.push(`${rar}: ${k.ids.join(',')} (war +${k.mods.war - w}, hp +${k.mods.hp - 100}, dmg ${(100 * k.mods.dmg).toFixed(0)}%, ${k.mods.weapon ? k.mods.weapon.key : '-'}, ${k.mods.abilities.map(a => a.t).join('+') || 'no abilities'})`);
-        const gainOut = { gain: 0, n: 0 };
         let s = 0;
-        for (let i = 0; i < cell; i++) s += duelAB(i, gOf(i, w, 1), gOf(i, w, 5), mods, null, null, gainOut);
-        if (rar === 'legendary' && w === 80) legGain = gainOut.gain / gainOut.n;
+        for (let i = 0; i < cell; i++) s += duelAB(i, gOf(i, w, 1), gOf(i, w, 5), mods);
+        if (rar === 'legendary' && w === 80) legMods = JSON.parse(JSON.stringify(k.mods));
         if (k.mods.budget && k.mods.budget.used > 6 + 1e-9) over.push(rar + w);
         return 100 * s / cell;
       });
@@ -1326,22 +1379,78 @@ section(15, 'items in the duel (budget, best-in-slot sets, 15-war gap, abilities
       console.log(`  war 65 + legendary set vs war 80 ungeared: ${pct.toFixed(0)}% (duelWar ${k.mods.war}, hp ${k.mods.hp}, dmg ${k.mods.dmg})`);
       ok(pct <= 30, `a 15-war gap is not bought back by a legendary set (${pct.toFixed(0)}% <= 30%)`);
     }
-    // 神兵之能：每种单独装上（武力 80 同将），折合体力 ≤ 4 / 场；一名武将全部的能力合计 ≤ 4
+    // 神兵之能（复核：只数内部计数 abilGain 时多数能力恒为 0）：折合体力 = 同一种子下「带 / 不带」该能力的终局体力差之差（配对），
+    // 即规格的「造成的伤害 − 受到的伤害」之差（§15.2 (15)）；另量「+4 体力」作参照（被击倒的一方体力恒为 0，终局差只认得约四分之三）。
+    // dHpAdd 折进装备体力（预算里按体力算，不归「能力体力 ≤ 4」），只打印。
+    // 目录里每一种单挑参数化都量（按 t / on / eff / cond / 字段分组，数值取各组最大的一份——上限关口，最强者过即全过）；
+    // 装备模块会折进数值的（dHpAdd、dDmgK、dGuard、dReach、dParry.window、dGuardBreak、dSpd、dCrit）按 SG.Gear.duelMods 的同样方式折进 mods。
+    // 每格：缺省 40 对，夜间 300 对（方差大的——改动出招节奏的那几种——加到 1200 对）。关口：夜间每种 ≤ 4；缺省只抓明显超出（均值 − 2 标准误 > 4）
     {
-      const seen = new Map();
-      for (const it of DI.items) for (const e of (it.ability && it.ability.effects) || []) if (e && D.DUEL_ITEM_EFFECTS.indexOf(e.t) >= 0 && !seen.has(e.t)) seen.set(e.t, e);
-      const res = [], bad = [];
-      for (const [id, e] of seen) {
-        const mods = { abilities: [e], abilityHp: 0 };
-        const out = { gain: 0, n: 0 };
-        for (let i = 0; i < Math.max(20, cell / 3); i++) duelAB(i, gOf(i, 80, 3), gOf(i, 80, 3), mods, null, null, out);
-        const v = out.gain / out.n;
-        res.push(`${id} ${v.toFixed(1)}`);
-        if (v > 4) bad.push(id);
+      const foldOf = e => {
+        const m = { abilities: [], abilityHp: 0 };   // 预算按玩家决定（缺省 6：回复至多 4 点，§3）
+        switch (e.t) {
+          case 'dHpAdd': m.hp = 100 + (e.n || 0); break;
+          case 'dDmgK': m.dmg = e.k || 0; break;
+          case 'dGuard': m.guardPP = e.k || 0; break;
+          case 'dReach': m.reachK = (e.m || 0) / D.WEAPONS.sword.reach; break;
+          case 'dGuardBreak': m.guardBreak = (e.k || 0) / 100; break;
+          case 'dSpd': m.spd = (e.k || 0) / 100; break;
+          case 'dCrit': m.critDuel = (e.crit || 0) / 100; m.critMulDuel = (e.critDmg || 0) / 100; m.abilities.push(e); break;
+          case 'dParry': m.parry = e.window || 0; m.abilities.push(e); break;
+          default: m.abilities.push(e);
+        }
+        return m;
+      };
+      const groups = new Map();
+      for (const it of DI.items) for (const e of (it.ability && it.ability.effects) || []) {
+        if (!e || D.DUEL_ITEM_EFFECTS.indexOf(e.t) < 0) continue;
+        const key = [e.t, e.on || '', e.eff || '', e.cond || '', Object.keys(e).sort().join(',')].join('|');
+        const num = Object.values(e).reduce((t, v) => t + (typeof v === 'number' ? Math.abs(v) : 0), 0);
+        const g = groups.get(key);
+        if (!g || num > g.num) groups.set(key, { e, num });
       }
-      console.log(`  ability HP-equivalent per duel (AI mirror, war 80): ${res.join(' · ')}; legendary set all together ${legGain === null ? '-' : legGain.toFixed(1)}`);
-      ok(bad.length === 0, `each duel ability alone is worth <= 4 HP per duel (${bad.join(', ')})`);
-      ok(legGain === null || legGain <= 4, `all of one fighter's abilities together <= 4 HP per duel (${legGain === null ? '-' : legGain.toFixed(1)})`);
+      const pairN = NIGHTLY ? 300 : 40;
+      const pairRun = (mods, n0, gA, gB) => {
+        const one = (i, md) => {
+          SG.Random.seed(9000 + i);
+          const a = gA(i), b = gB(i), ma = D.duelModsOf(a, b, md || {}), mb = D.duelModsOf(b, a, {});
+          const swap = i % 2 === 1;
+          const sim = swap ? new D._Sim(b, a, D.lookOf(b), D.lookOf(a), { modsA: mb, modsB: ma }) : new D._Sim(a, b, D.lookOf(a), D.lookOf(b), { modsA: ma, modsB: mb });
+          sim.f[0].ctrl = new D._AI(sim.f[0]); sim.f[1].ctrl = new D._AI(sim.f[1]);
+          sim.runToEnd();
+          const A = sim.f[swap ? 1 : 0], B = sim.f[swap ? 0 : 1];
+          return A.hp - B.hp;
+        };
+        let n = 0, s1 = 0, s2 = 0;
+        const more = k => { for (let j = 0; j < k; j++, n++) { const d = one(n, mods.with) - one(n, mods.without); s1 += d; s2 += d * d; } };
+        more(n0);
+        const stat = () => { const m = s1 / n; return { m, se: Math.sqrt(Math.max(0, s2 / n - m * m) / n), n }; };
+        let st = stat();
+        if (NIGHTLY && st.se > 0.6) { more(1200 - n0); st = stat(); }
+        return st;
+      };
+      const g80 = salt => i => ({ name: names[(i * 7 + salt) % names.length], war: 80, intel: 50, pol: 50 });
+      const cal = pairRun({ with: { hp: 104 }, without: null }, pairN, g80(3), g80(4));
+      const perHp = 1;
+      const res = [], bad = [], zero = [];
+      for (const [key, { e }] of groups) {
+        const st = pairRun({ with: foldOf(e), without: null }, pairN, g80(3), g80(4));
+        const hpEq = st.m / perHp, se = st.se / perHp;
+        const label = e.t + (e.on ? '/' + e.on : '') + (e.eff ? '/' + e.eff : '') + (e.cond ? '/' + e.cond : '');
+        if (Math.abs(hpEq) < 0.05 && se < 0.05) zero.push(label); else res.push(`${label} ${hpEq.toFixed(1)}±${se.toFixed(1)}`);
+        if (e.t !== 'dHpAdd' && (NIGHTLY ? hpEq > 4 : hpEq - 2 * se > 4)) bad.push(`${label} ${hpEq.toFixed(1)}`);
+      }
+      // 一名武将全部的能力合计：传说一整套（武力 80）带能力 vs 同一套去掉能力
+      let leg = null;
+      if (legMods) {
+        const noAb = JSON.parse(JSON.stringify(legMods)); noAb.abilities = []; noAb.abilityHp = 0;
+        const st = pairRun({ with: legMods, without: noAb }, pairN, g80(3), g80(4));
+        leg = { hpEq: st.m / perHp, se: st.se / perHp };
+      }
+      console.log(`  ability HP-equivalent per duel (paired with / without, AI mirror war 80, ${pairN}+ pairs; +4 HP measures ${cal.m.toFixed(2)}): ${res.join(' · ')}`);
+      console.log(`  no duel effect: ${zero.join(', ') || '-'}; legendary set's abilities together ${leg ? leg.hpEq.toFixed(1) + '±' + leg.se.toFixed(1) : '-'}`);
+      ok(bad.length === 0, `each duel ability alone is worth <= 4 HP per duel${NIGHTLY ? '' : ' (quick: mean - 2 SE)'} (${bad.join(', ')})`);
+      ok(!leg || (NIGHTLY ? leg.hpEq <= 4 : leg.hpEq - 2 * leg.se <= 4), `all of one fighter's abilities together <= 4 HP per duel (${leg ? leg.hpEq.toFixed(1) : '-'})`);
     }
     // 白名单：白名单之外的单挑字段在目录检查里报错（载入即报错见 tests/items.js §1）；单挑本身也不读它
     {
@@ -1349,29 +1458,39 @@ section(15, 'items in the duel (budget, best-in-slot sets, 15-war gap, abilities
       const dm = D.duelModsOf({ name: '试', war: 80 }, null, { abilities: [{ t: 'unblockable' }, { t: 'dashUnblockable' }, { t: 'dArmor', on: 'heavyStart', dmgK: 0.6 }] });
       ok(probs.length >= 1 && probs.some(p => /unblockable/.test(p)), `SG.Items.validateDuel rejects a non-whitelisted duel field (${probs.join('; ')})`);
       ok(dm.abil.length === 1 && dm.abil[0].t === 'dArmor', `the duel reads only DUEL_ITEM_EFFECTS abilities (${dm.abil.map(a => a.t).join(',')})`);
+      // 预算读玩家决定（DESIGN-V4 §20 问题 3；复核：单挑曾把宽松预算 8 悄悄裁回 6）：装备模块给的 budget.limit 优先，否则 Balance.Decisions.duelBudget
+      const kit = { hp: 110, dmg: 0.03, guardPP: 4, abilityHp: 0, abilities: [] };
+      const b6 = D.duelModsOf({ name: '试', war: 80 }, null, Object.assign({}, kit, { budget: { limit: 6, gearHp: 10, dmg: 3 } }));
+      const b8 = D.duelModsOf({ name: '试', war: 80 }, null, Object.assign({}, kit, { budget: { limit: 8, gearHp: 10, dmg: 3 } }));
+      const bd = D.duelModsOf({ name: '试', war: 80 }, null, Object.assign({}, kit));
+      const dec = SG.Balance.Decisions;
+      ok(b6.budget === 6 && b8.budget === 8 && bd.budget === dec.duelBudget && b8.hp > b6.hp && b8.abilCap === dec.duelBudgetLoose.abilityHp && b6.abilCap === 4,
+        `the duel applies the same budget as the items module (limit 6 → hp ${b6.hp}, 8 → hp ${b8.hp}, ability cap ${b6.abilCap}/${b8.abilCap}; no limit → Decisions.duelBudget ${bd.budget})`);
     }
   }
   // ---- 兵器平衡：各兵器对长剑，无装备，同武力 80（双方都是近战外观；弓将的绝技不计）
   {
     const keys = Object.keys(D.WEAPONS).filter(k => k !== 'sword'), rows = [], bad = [];
-    // 夜间档（每种 300 场）按 45–55%。缺省 60 场一格的噪声约 ±6.5 个百分点、21 种兵器：只抓明显的失衡（每种 30–70%、平均偏差 ≤ 8）
-    const lo = NIGHTLY ? 45 : 30, hi = NIGHTLY ? 55 : 70;
+    // 夜间档按 45–55%（正式的关口）——每种 1000 场：300 场的噪声 ±2.9 个百分点，21 种兵器同时判，真在 50% 的兵器也有八成机会至少一种出界；
+    // 1000 场 ±1.6，误报约 4%。缺省每种 120 场（复核：60 场 30–70% 太松，62–69% 的兵器也能过）：噪声约 ±4.6、21 种同时判——
+    // 每种 35–65%、平均偏差 ≤ 6.5（全都真在 45–55% 时误报约 1%）
+    const pcell = NIGHTLY ? 1000 : 120, lo = NIGHTLY ? 45 : 35, hi = NIGHTLY ? 55 : 65;
     const devs = [];
     for (const key of keys) {
       let s = 0;
-      for (let i = 0; i < cell; i++) {
+      for (let i = 0; i < pcell; i++) {
         const a = gOf(i, 80, 0), b = gOf(i, 80, 3);
         const la = D.lookOf(a), lb = D.lookOf(b); la.weapon = key; lb.weapon = 'sword'; la.bow = false; lb.bow = false;
         s += duelAB(i, a, b, null, la, lb);
       }
-      const pct = 100 * s / cell;
+      const pct = 100 * s / pcell;
       rows.push(`${key} ${pct.toFixed(0)}`);
       devs.push(Math.abs(pct - 50));
       if (pct < lo || pct > hi) bad.push(key + ' ' + pct.toFixed(0));
     }
-    console.log(`  weapon vs 长剑 at war 80 (${cell} per key): ${rows.join(' · ')}`);
+    console.log(`  weapon vs 长剑 at war 80 (${pcell} per key): ${rows.join(' · ')}; mean |win - 50| ${avg(devs).toFixed(1)}`);
     ok(bad.length === 0, `every duel weapon wins ${lo}-${hi}% against the sword at equal war (${bad.join(', ')})`);
-    if (!NIGHTLY) ok(avg(devs) <= 8, `weapon parity: mean |win - 50| <= 8 pp at ${cell} duels per key (${avg(devs).toFixed(1)})`);
+    if (!NIGHTLY) ok(avg(devs) <= 6.5, `weapon parity: mean |win - 50| <= 6.5 pp at ${pcell} duels per key (${avg(devs).toFixed(1)})`);
   }
 });
 

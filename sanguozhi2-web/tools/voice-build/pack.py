@@ -1,17 +1,23 @@
 # tools/voice-build/pack.py — step 5 of the offline voice pipeline (AUDIO-V4 §B7.1, §B7.2)
 # Encodes every clip that passed qa.py with libopus 16 kbps mono (-application voip, 24 kHz; each clip a complete Ogg Opus file)
-# and the MP3 fallback (LAME 32 kbps mono, 22.05 kHz), and writes the packs as classic scripts (file:// cannot fetch):
+# and the MP3 fallback (LAME 32 kbps mono, 22.05 kHz), and writes the packs as classic scripts (file:// cannot fetch).
+# MP3 clips keep their Xing / LAME gapless header (decoders that read it trim the encoder delay and padding themselves); each MP3
+# clip entry also carries [.., lead, pad] (samples at 22.05 kHz: encoder + decoder delay 576 + 529, end padding) read from that
+# header, so voice.js trims a clip itself when the browser's decoder did not (AUDIO-V4 §3.2: decoded length within ±20 ms).
 #   voice/<lingua>-<voice>.js       SG.VoicePacks.add({ id, lingua, voice, model, codec: 'opus', clips: { cue: [[offset, length, ms, rmsDb] | null, …] },
 #                                                       sig: { ruler: [...] } }, '<base64 of the concatenated clips>')
 #   voice/mp3/<lingua>-<voice>.js   the same with codec 'mp3' (downloaded only when the Opus probe fails, e.g. older Safari)
 #   voice/manifest.js               SG.VoiceManifest: packs, sizes, sha1, licences, failed linguas, the codec probe clips
 #   voice/LICENSES.md               every model and its licence
-# Usage: python3 -I tools/voice-build/pack.py <wav dir> <repo root> [--no-mp3]
+# Usage: python3 -I tools/voice-build/pack.py <wav dir> <repo root> [--no-mp3 | --mp3-only]
+#   --mp3-only   rebuild only voice/mp3/*.js and the MP3 fields of voice/manifest.js (the Opus packs are left byte-identical)
 import sys, os, json, base64, hashlib, subprocess, tempfile, wave, math, time
 import numpy as np
 
 wavdir, root = sys.argv[1], sys.argv[2]
 NO_MP3 = '--no-mp3' in sys.argv
+MP3_ONLY = '--mp3-only' in sys.argv
+CODECS = ('mp3',) if MP3_ONLY else ('opus',) if NO_MP3 else ('opus', 'mp3')
 synth = json.load(open(os.path.join(wavdir, 'synth.json'), encoding='utf-8'))
 qa = json.load(open(os.path.join(wavdir, 'qa.json'), encoding='utf-8'))
 ok = { (c['pack'], c['id']): c for c in qa['clips'] }
@@ -21,9 +27,27 @@ os.makedirs(mp3_dir, exist_ok=True)
 
 def enc(fn, codec):
     args = ['ffmpeg', '-loglevel', 'error', '-i', fn, '-ac', '1']
-    if codec == 'opus': args += ['-ar', '24000', '-c:a', 'libopus', '-b:a', '16k', '-application', 'voip', '-f', 'ogg', '-map_metadata', '-1', 'pipe:1']
-    else: args += ['-ar', '22050', '-c:a', 'libmp3lame', '-b:a', '32k', '-f', 'mp3', '-map_metadata', '-1', '-write_xing', '0', 'pipe:1']
+    if codec == 'opus': args += ['-ar', '24000', '-c:a', 'libopus', '-b:a', '16k', '-application', 'voip', '-f', 'ogg', '-map_metadata', '-1', '-fflags', '+bitexact', 'pipe:1']
+    else:
+        # the Xing / LAME frame is filled in by seeking back at the end, so the MP3 goes through a file, not a pipe
+        with tempfile.TemporaryDirectory() as td:
+            out = os.path.join(td, 'c.mp3')
+            subprocess.run(args + ['-ar', '22050', '-c:a', 'libmp3lame', '-b:a', '32k', '-f', 'mp3', '-map_metadata', '-1', '-y', out], check=True, capture_output=True)
+            return open(out, 'rb').read()
     return subprocess.run(args, check=True, capture_output=True).stdout
+
+DEC_DELAY = 529                      # the MP3 synthesis filterbank delay (samples), added to LAME's encoder delay by every decoder
+def lame_gapless(b):
+    # the Xing / Info frame's LAME tag: 12-bit encoder delay and padding at tag + 21 (http://gabriel.mp3-tech.org/mp3infotag.html)
+    i = b.find(b'Info', 0, 200)
+    if i < 0: i = b.find(b'Xing', 0, 200)
+    if i < 0: raise RuntimeError('MP3 without a Xing / Info frame')
+    flags = int.from_bytes(b[i + 4:i + 8], 'big'); p = i + 8
+    for bit, n in ((1, 4), (2, 4), (4, 100), (8, 4)):
+        if flags & bit: p += n
+    t = b[p + 21:p + 24]
+    delay = (t[0] << 4) | (t[1] >> 4); padding = ((t[1] & 15) << 8) | t[2]
+    return delay + DEC_DELAY, max(0, padding - DEC_DELAY)
 
 packs = {}
 for r in synth:
@@ -39,7 +63,7 @@ def js_pack(meta, b64):
             "  var P = SG.VoicePacks = SG.VoicePacks || { _q: [], add: function (m, d) { this._q.push([m, d]); } };\n"
             "  P.add(" + json.dumps(meta, ensure_ascii=False, separators=(',', ':')) + ",\n'" + b64 + "');\n})();\n")
 
-manifest = { 'version': 1, 'built': time.strftime('%Y-%m-%d'), 'codec': 'opus', 'bitrate': '16k', 'packs': {}, 'failed': failed_linguas,
+manifest = { 'version': 1, 'built': time.strftime('%Y-%m-%d'), 'codec': 'opus', 'bitrate': '16k', 'packs': {}, 'failed': failed_linguas, 'mp3Gapless': True,
              'dropped': sorted(c['pack'] + '/' + c['id'] for c in qa['clips'] if not c['ok']) }   # clips the QA gate dropped (the runtime walks the fallback chain)
 lic_rows = {}
 tot = { 'clips': 0, 'opus': 0, 'mp3': 0, 'sec': 0.0 }
@@ -51,9 +75,10 @@ for pid in sorted(packs):
     for r in rs:
         fn = os.path.join(wavdir, r['wav'])
         ms = int(round(r['dur'] * 1000))
-        for codec in (('opus',) if NO_MP3 else ('opus', 'mp3')):
+        for codec in CODECS:
             b = enc(fn, codec)
             ent = [len(blobs[codec]), len(b), ms, r['rms_db']]
+            if codec == 'mp3': ent += list(lame_gapless(b))
             blobs[codec] += b
             m = metas[codec]
             if r['cue'] == 'sig': m['sig'][r['variant']] = ent
@@ -64,8 +89,9 @@ for pid in sorted(packs):
                 arr[v] = ent
         tot['clips'] += 1; tot['sec'] += r['dur']
         lic_rows[r['model']] = ok[(r['pack'], r['id'])]['licence']
-    for codec in (('opus',) if NO_MP3 else ('opus', 'mp3')):
+    for codec in CODECS:
         m = metas[codec]; m['codec'] = codec; m['sr'] = 24000 if codec == 'opus' else 22050
+        if codec == 'mp3': m['gapless'] = { 'lead': 4, 'pad': 5, 'xingFrame': 576 }   # entry indices; a decoder that skips nothing adds the 576-sample Xing frame
         b64 = base64.b64encode(bytes(blobs[codec])).decode('ascii')
         txt = js_pack(m, b64)
         fn = os.path.join(out_dir if codec == 'opus' else mp3_dir, pid + '.js')
@@ -77,6 +103,32 @@ for pid in sorted(packs):
         else:
             e.update(mp3='voice/mp3/' + pid + '.js', mp3Bytes=len(blobs[codec]))
     print(f"{pid:12s} {len(rs):4d} clips  opus {len(blobs['opus']) / 1024:7.1f} KB" + ('' if NO_MP3 else f"  mp3 {len(blobs['mp3']) / 1024:7.1f} KB"), flush=True)
+
+if MP3_ONLY:
+    # keep the Opus packs and the rest of the manifest; refresh only the MP3 fields
+    mf = os.path.join(out_dir, 'manifest.js')
+    txt = open(mf, encoding='utf-8').read()
+    a = txt.index('SG.VoiceManifest = ') + len('SG.VoiceManifest = '); z = txt.rindex(';\n})();')
+    old = json.loads(txt[a:z])
+    for pid, e in manifest['packs'].items():
+        if pid in old['packs']: old['packs'][pid].update(mp3=e['mp3'], mp3Bytes=e['mp3Bytes'])
+    with tempfile.TemporaryDirectory() as td:
+        fn = os.path.join(td, 'probe.wav'); sr = 24000
+        t = np.arange(int(0.12 * sr)) / sr
+        a_ = (0.2 * np.sin(2 * math.pi * 440 * t) * np.minimum(1, np.minimum(t, 0.12 - t) / 0.01)).astype(np.float32)
+        with wave.open(fn, 'wb') as w:
+            w.setnchannels(1); w.setsampwidth(2); w.setframerate(sr); w.writeframes((a_ * 32767).astype(np.int16).tobytes())
+        old['probe']['mp3'] = base64.b64encode(enc(fn, 'mp3')).decode('ascii')
+    old['totals']['mp3Bytes'] = tot['mp3']
+    old['mp3Gapless'] = True
+    open(mf, 'w', encoding='utf-8').write(txt[:a] + json.dumps(old, ensure_ascii=False, indent=1) + txt[z:])
+    lf = os.path.join(out_dir, 'LICENSES.md')
+    lt = open(lf, encoding='utf-8').read()
+    import re
+    lt = re.sub(r'MP3 fallback [0-9.]+ MB', f"MP3 fallback {tot['mp3'] / 1048576:.2f} MB", lt)
+    open(lf, 'w', encoding='utf-8').write(lt)
+    print(f"mp3 packs rebuilt: {len(packs)}, clips {tot['clips']}, mp3 {tot['mp3'] / 1048576:.2f} MB (gapless header + lead / pad per clip)")
+    sys.exit(0)
 
 # codec probe clips (≈ 0.12 s, 440 Hz): voice.js decodes the Opus one at init and switches to MP3 packs if it fails
 with tempfile.TemporaryDirectory() as td:

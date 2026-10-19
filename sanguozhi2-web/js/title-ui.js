@@ -71,8 +71,8 @@
 .sg-office-rank .sg-office-bar i { position: absolute; inset: 0 auto 0 0; width: calc(var(--v, 0) * 100%); background: linear-gradient(90deg, #b98431, #f3c969); border-radius: inherit; transition: width .5s var(--sg-ease, ease); }
 .sg-office-rank .sg-office-status { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sg-office-rank .sg-office-rs { display: none; white-space: nowrap; }
-.sg-office-fx .is-dormant { color: #6b5d4a; }
-.sg-office-fx .is-dormant em { font-style: normal; font-size: .75em; margin-left: .25em; padding: 0 .25em; border: 1px solid #8a7d6a; border-radius: .2rem; }
+.sg-office-fx span.is-dormant { color: #6b5d4a; }
+.sg-office-fx span.is-dormant em { font-style: normal; font-size: .75em; margin-left: .25em; padding: 0 .25em; border: 1px solid #8a7d6a; border-radius: .2rem; }
 .sg-office-head .sg-btn { min-height: 44px; }
 .sg-office-tabs { display: none; gap: .3rem; }
 .sg-office-tabs .sg-btn { min-height: 44px; min-width: 4.4rem; }
@@ -149,7 +149,7 @@
 .sg-office-names button:disabled { opacity: .35; cursor: default; }
 .sg-office-fx { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: .15rem 1rem; font-size: .88rem; border-top: 1px solid #b89a68; padding-top: .35rem; }
 .sg-office-fx .up { color: #1d6b3a; } .sg-office-fx .down { color: #9a2b1f; } .sg-office-fx small { color: #6b5d4a; }
-.sg-office-cost { width: 100%; display: flex; flex-wrap: wrap; gap: .2rem 1rem; justify-content: space-between; font-size: .9rem; }
+.sg-office-cost { width: 100%; display: flex; flex-wrap: wrap; gap: .2rem 1rem; justify-content: space-between; font-size: .9rem; padding-right: 3.6rem; box-sizing: border-box; }
 .sg-office-warn { width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; font-size: .8rem; color: #9a2b1f; }
 .sg-office-warn .sg-portrait { border-radius: .25rem; }
 .sg-office-btns { display: flex; gap: .6rem; margin-top: .2rem; }
@@ -208,6 +208,13 @@
 .sg-office-hist { font-size: .82rem; color: var(--sg-muted, #ada392); line-height: 1.5; }
 .sg-office-acts { display: flex; flex-wrap: wrap; gap: .4rem; }
 .sg-office-acts .sg-btn { min-height: 44px; }
+/* 人物菜单（第四版纸页，character-screen 给本页加 .is-v4）：纸上的深色字，现任官名用家族的深色 */
+.sg-office-tab.is-v4 { color: #2b2622; }
+.sg-office-tab.is-v4 .sg-office-card { background: rgba(255,255,255,.4); }
+.sg-office-tab.is-v4 .sg-office-card .sg-office-cn { color: var(--fcd, #8e2419); }
+.sg-office-tab.is-v4 .sg-office-cs, .sg-office-tab.is-v4 .sg-office-hist, .sg-office-tab.is-v4 .sg-office-rung .sg-office-rr { color: #54473b; }
+.sg-office-tab.is-v4 .sg-office-rung { background: rgba(36,26,33,.07); }
+.sg-office-tab.is-v4 .sg-office-rung .sg-office-rr .ok { color: #1d6b3a; } .sg-office-tab.is-v4 .sg-office-rung .sg-office-rr .no { color: #9a2b1f; }
 .sg-office-tag { display: inline-block; margin-left: .35rem; padding: 0 .3rem; border-radius: .25rem; font-family: var(--sg-font-title); font-size: .78em; line-height: 1.35; color: #fff6e6; background: var(--fc); vertical-align: middle; white-space: nowrap; }
 .sg-office-tag.is-suspended { opacity: .6; text-decoration: line-through; }
 @media (prefers-reduced-motion: reduce) {
@@ -238,6 +245,7 @@
   .sg-office-edict .sg-office-pname { font-size: 1.7rem; }
   .sg-office-fx { grid-template-columns: 1fr 1fr 1fr; font-size: .8rem; }
   .sg-office-stamp { display: none; }
+  .sg-office-cost { padding-right: 0; }
 }
 `;
   let styled = false;
@@ -804,12 +812,18 @@
     const o = Ti.officeOf(gen);
     const f = gen.faction;
     // 页上的按钮走完流程（官制画面关闭、确认或取消）之后，就地换成新的一页（人物菜单不必知道官爵改了什么）
-    const rerender = () => { if (!root.isConnected) return; const fresh = tab(gen); fresh.className = root.className; root.replaceWith(fresh); };
+    // 换完之后再发一个冒泡的 'sg-office-change' 事件（detail.gen = 武将编号），宿主（人物菜单的头部官名）可据此重绘
+    const rerender = () => {
+      if (!root.isConnected) return;
+      const fresh = tab(gen); fresh.className = root.className; root.replaceWith(fresh);
+      try { fresh.dispatchEvent(new CustomEvent('sg-office-change', { bubbles: true, detail: { gen: gen.id } })); } catch (e) { /* 旧浏览器 */ }
+    };
     const after = fn => () => { let p; try { p = fn(); } catch (e) { console.error(e); } Promise.resolve(p).then(rerender, e => { console.error(e); rerender(); }); };
     // 现任
     const card = el('div', 'sg-office-card', null, root);
     if (o) {
       card.style.setProperty('--fc', o.color); card.style.setProperty('--fcl', o.fam === 'war' ? '#ff9a8a' : o.fam === 'intel' ? '#9cc2ff' : '#8fe0a8');
+      card.style.setProperty('--fcd', o.fam === 'war' ? '#8e2419' : o.fam === 'intel' ? '#1f4a82' : '#1d6b3a');
       el('div', '', icon(o.post, f, 64), card);
       const y = Math.floor((o.since - 1) / 12), mo = o.since - y * 12;
       const status = o.captive ? '被俘中，暂不生效' : o.suspended ? '虚衔——国势不足' : '在任';

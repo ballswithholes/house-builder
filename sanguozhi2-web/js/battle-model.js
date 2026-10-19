@@ -369,7 +369,11 @@
       t.troops -= r.dmg;
       t.morale = Math.max(0, t.morale - M.roundToInt(r.dmg * 40 / Math.max(200, t.troops + r.dmg)) - (r.crit ? Balance.CritMorale : 0));
       if (r.crit && a.xp) a.xp.crits++;
+      if (r.crit && a.gen) a.gen.crits = (a.gen.crits | 0) + 1;   // 存档：武将的军队会心次数（INTEGRATION §6.1 gen.crits；人物菜单显示）
       r.targetRouted = this.checkRout(t);
+      // 第四版 ITEMS §8.2 阵斩：会心击溃君主的部队时 25 %（SG.Items.rollSlay：只在阵斩概率 > 0 时取一个随机数——缺省只限君主；
+      // 装备系统关掉时不取，随机数流与第三版相同）
+      if (r.targetRouted && r.crit && slayOn()) r.slain = !!SG.Items.rollSlay(t.gen, 'critRout', a.gen.faction);
       if (!r.targetRouted) {
         r.counter = Math.max(5, M.roundToInt(this.atkPower(t) * Balance.DamageK * Balance.CounterRatio * this.modK(t, 'counter') / this.defFactor(a) * SG.Random.rangeFloat(0.85, 1.15)));
         r.counter = Math.min(r.counter, a.troops);
@@ -678,15 +682,19 @@
       return ok;
     }
     // 单挑：结算胜负后果（败者溃散、其军士气 −8、胜者士气 +15）。供格斗单挑画面（js/duel-game.js）结束后调用
-    duelFinish(a, b, winnerIsA, rounds) {
+    // info（可缺省）= { kind: 'ko' | 'time' | 'skip', big, … }：格斗画面（DuelGame.perform）与速算单挑传入；big = 击倒的一击是会心、绝技或终结技
+    duelFinish(a, b, winnerIsA, rounds, info) {
       const winner = winnerIsA ? a : b, loser = winnerIsA ? b : a;
       loser.troops = 0; loser.alive = false; this.setup.routed.add(loser.gen.id);
       if (winner.xp) { winner.xp.duelWin++; this.xpHit(winner, loser, 0); }
       if (loser.xp) loser.xp.duelLoss++;
       for (const o of this.alive(loser.side)) o.morale = Math.max(0, o.morale - 8);
       winner.morale = Math.min(100, winner.morale + 15);
+      // 第四版 ITEMS §8.2 阵斩：君主单挑被击倒——会心 / 绝技 / 终结技一击 35 %，其他击倒 15 %，时间到 0（只在概率 > 0 时取一个随机数）
+      let slain = false;
+      if (info && info.kind === 'ko' && slayOn()) slain = !!SG.Items.rollSlay(loser.gen, 'duelKO', winner.gen.faction, { big: !!info.big });
       this.checkEnd();
-      return { accepted: true, rounds: rounds || [], winner: winnerIsA ? 0 : 1 };
+      return { accepted: true, rounds: rounds || [], winner: winnerIsA ? 0 : 1, slain };
     }
     duel(a, b) {
       const r = { accepted: false, rounds: [], winner: 0 };
@@ -701,7 +709,9 @@
         r.rounds.push({ who, dmg, hpA, hpB });
       }
       r.winner = hpA >= hpB ? 0 : 1;
-      this.duelFinish(a, b, r.winner === 0, r.rounds);
+      // 速算单挑没有会心 / 绝技 / 终结技：体力归零 = 「其他击倒」，时间到 = 不斩（ITEMS §8.2）
+      const fin = this.duelFinish(a, b, r.winner === 0, r.rounds, { kind: (r.winner === 0 ? hpB : hpA) <= 0 ? 'ko' : 'time', big: false });
+      if (fin.slain) r.slain = true;
       return r;
     }
 
@@ -1235,6 +1245,8 @@
           res.killed = k; res.dmg += d; res.hits.push({ unit: k, dmg: d, primary: true, killed: true });
           routed(k); touch(k); killed = true;
           this.xpHit(u, k, d);
+          // 第四版 ITEMS §8.2 阵斩：暗杀得手于君主 50 %（只在概率 > 0 时取一个随机数）
+          if (slayOn()) res.slain = !!SG.Items.rollSlay(k.gen, 'assassinate', u.gen.faction);
         } else res.success = false;                     // 失手（仍可能造成少量伤害）
       }
       // 3. 伤害（连斩：目标已溃散则转向下一个敌军）
@@ -1411,6 +1423,8 @@
     if (!Mo || !Mo.critChance) return 0;
     return Mo.critChance({ gen, side: 0, formation: formationIdx === undefined ? (gen.formation | 0) : formationIdx, morale: 70, confused: 0, commander: true });
   };
+  // 阵斩（ITEMS §8.2）只在装备系统开着、已载入游戏状态时判定（否则不取随机数）
+  function slayOn() { const I = SG.Items; return !!(I && I.enabled !== false && typeof I.rollSlay === 'function' && SG.G && SG.G.items); }
   function startMorale(u, base) { const Mo = SG.Mods; return Mo && Mo.startMorale ? Mo.startMorale(u, base) : base; }
   // 电脑施展习得新计策的门槛（aiTactic）：期望价值 ≥ max(普通一手 × k, floor)；adj = 已与敌相邻
   BattleModel.aiTactic = { kAdj: 0.9, kFree: 0.8, floorAdj: 80, floorFree: 25, nowDays: 0.5 };

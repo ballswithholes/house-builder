@@ -97,11 +97,25 @@
     for (let i = 0; i < 100; i++) { const c = S.context; if (c && c.state === 'running') return c; await sleep(50); S.unlock(); }
     return S.context;
   }
+  // misalignment of b against a: the residual ‖a − b‖ / ‖a‖ at lag 0 and at ±0.5 / ±1 / ±2 / ±5 ms (the voice's first 400 ms);
+  // returns the lag (ms) of the smallest residual and that residual (voiced speech is periodic, so a plain correlation peak
+  // can sit one pitch period away — the residual at the true lag is near 0, at a period away it is not)
+  function alignOf(a, b) {
+    const A = a.getChannelData(0), B = b.getChannelData(0), R = a.sampleRate, N = Math.min(Math.round(0.4 * R), A.length, B.length);
+    let best = null;
+    for (const ms of [0, 0.5, -0.5, 1, -1, 2, -2, 5, -5]) {
+      const l = Math.round(ms / 1000 * R); let e = 0, p = 0;
+      for (let i = 0; i < N; i++) { const j = i + l; const y = j >= 0 && j < B.length ? B[j] : 0; e += (A[i] - y) * (A[i] - y); p += A[i] * A[i]; }
+      const r = Math.sqrt(e / (p || 1));
+      if (!best || r < best.r) best = { ms, r };
+    }
+    return best;
+  }
   async function decodeAll(mp3) {
     const MF = SG.VoiceManifest;
     if (!MF) { rec(mp3 ? 'MP3 解码' : 'Opus 解码', false, 'voice/manifest.js 不存在'); return; }
     V._forceMp3(!!mp3);
-    let n = 0, bad = 0, worst = 0, errs = [];
+    let n = 0, bad = 0, worst = 0, errs = [], trimmedBy = { decoder: 0, voice: 0 }, rawWorst = 0;
     const t0 = performance.now();
     for (const pid of Object.keys(MF.packs)) {
       const ok = await V.loadPack(pid);
@@ -116,11 +130,53 @@
         if (!b) { bad++; if (errs.length < 8) errs.push(pid + '/' + id + ' 解码失败'); continue; }
         const d = Math.abs(b.duration * 1000 - e[2]);
         worst = Math.max(worst, d);
-        if (d > (mp3 ? 80 : 20)) { bad++; if (errs.length < 8) errs.push(`${pid}/${id} 长度差 ${d.toFixed(0)} ms`); }
+        if (d > 20) { bad++; if (errs.length < 8) errs.push(`${pid}/${id} 长度差 ${d.toFixed(0)} ms`); }
+        if (mp3) {
+          const t = V._mp3Trim.get(pid + '|' + id);
+          if (t) { if (t.off > 0) trimmedBy.voice++; else trimmedBy.decoder++; rawWorst = Math.max(rawWorst, Math.abs(t.raw * 1000 - e[2])); }
+        }
       }
     }
-    rec(mp3 ? '(2) MP3 回退：解码每个片段' : '(1) Opus：解码每个片段', bad === 0, `${n} 段，失败 ${bad}，长度最大偏差 ${worst.toFixed(1)} ms（容差 ${mp3 ? 80 : 20} ms），${((performance.now() - t0) / 1000).toFixed(1)} 秒 ${errs.join('；')}`);
+    const extra = mp3 ? `；解码器按增益头自行裁掉的 ${trimmedBy.decoder} 段、按包内 lead / pad 裁的 ${trimmedBy.voice} 段（解码原长最大偏差 ${rawWorst.toFixed(1)} ms）` : '';
+    rec(mp3 ? '(2) MP3 回退：解码每个片段' : '(1) Opus：解码每个片段', bad === 0, `${n} 段，失败 ${bad}，长度最大偏差 ${worst.toFixed(1)} ms（容差 20 ms）${extra}，${((performance.now() - t0) / 1000).toFixed(1)} 秒 ${errs.join('；')}`);
     V._forceMp3(false);
+  }
+  // (2b) decoders that ignore the LAME header (never seen here: Chromium reads it): the first clip of every MP3 pack decoded
+  //      (i) without its Xing / Info frame (no gapless info at all) and (ii) with the frame's tag broken so it decodes as
+  //      576 samples of silence; voice.js must cut the delay from the pack's lead / pad: length ±20 ms, and the samples line up
+  //      with the header-trimmed decode of the same clip within 1 ms
+  async function mp3NoHeader(ctx) {
+    const MF = SG.VoiceManifest;
+    if (!MF) return;
+    V._forceMp3(true);
+    let n = 0, bad = 0, worstLen = 0, worstLag = 0, worstRes = 0, errs = [];
+    const syncAt = (b, from) => { for (let j = from; j < b.length - 1; j++) if (b[j] === 0xFF && (b[j + 1] & 0xE0) === 0xE0) return j; return -1; };
+    for (const pid of Object.keys(MF.packs)) {
+      if (!await V.loadPack(pid)) continue;
+      const P = SG.VoicePacks.get(pid);
+      if (!P.bytes) { const s = atob(P.b64); P.bytes = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) P.bytes[i] = s.charCodeAt(i); }
+      const [cue, arr] = Object.entries(P.meta.clips).find(([c, a]) => a.some(Boolean));
+      const vi = arr.findIndex(Boolean), e = arr[vi];
+      const raw = P.bytes.slice(e[0], e[0] + e[1]);
+      const id3 = raw[0] === 0x49 && raw[1] === 0x44 && raw[2] === 0x33 ? 10 + ((raw[6] << 21) | (raw[7] << 14) | (raw[8] << 7) | raw[9]) : 0;
+      const f0 = syncAt(raw, id3), f1 = syncAt(raw, f0 + 4 + 32);           // the Info frame, then the first audio frame
+      const noXing = new Uint8Array(raw.length - (f1 - f0)); noXing.set(raw.subarray(0, f0)); noXing.set(raw.subarray(f1), f0);
+      const broken = raw.slice(); for (let i = f0; i < f1 - 4; i++) if (broken[i] === 0x49 && broken[i + 1] === 0x6E && broken[i + 2] === 0x66 && broken[i + 3] === 0x6F) { broken[i] = 0x58; broken[i + 1] = 0x58; }
+      let ref = null;
+      try { ref = await new Promise((res, rej) => ctx.decodeAudioData(raw.slice().buffer, res, rej)); } catch (err) { ref = null; }
+      for (const [tag, bytes] of [['noXing', noXing], ['silentXing', broken]]) {
+        let b = null;
+        try { b = await new Promise((res, rej) => ctx.decodeAudioData(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), res, rej)); } catch (err) { b = null; }
+        n++;
+        if (!b) { bad++; errs.push(pid + ' ' + tag + ' 解码失败'); continue; }
+        const t = V._trimMp3(ctx, b, e, P.meta, 'test|' + pid + '|' + tag);
+        const d = Math.abs(t.duration * 1000 - e[2]); worstLen = Math.max(worstLen, d);
+        if (d > 20) { bad++; errs.push(`${pid} ${tag} 长度差 ${d.toFixed(0)} ms`); }
+        if (ref) { const al = alignOf(ref, t); worstLag = Math.max(worstLag, Math.abs(al.ms)); worstRes = Math.max(worstRes, al.r); if (Math.abs(al.ms) > 1 || al.r > 0.1) { bad++; if (errs.length < 8) errs.push(`${pid} ${tag} 错位 ${al.ms} ms 残差 ${al.r.toFixed(3)}（裁 ${V._mp3Trim.get('test|' + pid + '|' + tag).off} s）`); } }
+      }
+    }
+    V._forceMp3(false);
+    rec('(2b) MP3：不读增益头的解码器（去掉 Xing 帧 / Xing 帧当静音）按 lead / pad 自裁', bad === 0 && n > 0, `${n} 段，失败 ${bad}，长度最大偏差 ${worstLen.toFixed(1)} ms，与按增益头裁的解码逐样本对齐：最佳错位最大 ${worstLag} ms（容差 1 ms），残差最大 ${worstRes.toFixed(3)}（容差 0.1）${errs.slice(0, 8).join('；')}`);
   }
   function rmsOf(an, buf) { an.getFloatTimeDomainData(buf); let s = 0; for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i]; return 10 * Math.log10(s / buf.length + 1e-12); }
   async function ducking(ctx) {
@@ -217,7 +273,7 @@
       await priorities();
       await ducking(ctx);
       await decodeAll(false);
-      if (!/quick/.test(location.search)) await decodeAll(true);
+      if (!/quick/.test(location.search)) { await decodeAll(true); await mp3NoHeader(ctx); }
     }
     const pass = results.filter(r => r.pass).length;
     $('summary').textContent = `${pass} / ${results.length} 通过`;

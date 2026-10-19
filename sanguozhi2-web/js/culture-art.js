@@ -3038,14 +3038,15 @@
     const inkDist = opts.inkDist != null ? +opts.inkDist : 45, lodDist = opts.lodDist || 90;
     const midDist = Math.min(opts.midDist != null ? +opts.midDist : inkDist > 0 ? inkDist : lodDist * 0.6, lodDist * 0.95);
     const sc = new LP.Scatter({ chunk: opts.chunk || 60, lodDist, name: opts.name || 'Cities' });
-    const lamps = [], midOf = new Map();
+    // 中景模型不在这里一次建完（世界地图约 70 份，一次建完会卡一帧 1–2 s）：区块第一次进入中景距离时才建，每帧至多建一份
+    const lamps = [], repOf = new Map();
     for (const it of list) {
       const cap = !!it.capital, city = it.city || null, s = it.size || 1, yaw = it.yaw || 0;
       const m = model(it.culture, cap, city, { size: s }), f = model(it.culture, cap, city, { size: s, lod: 'far' });
-      if (midDist > 0 && m.ink && !midOf.has(m.ink)) {
-        const md = model(it.culture, cap, city, { size: s, lod: 'mid' });
-        midOf.set(m.ink, md.ink && md.ink !== m.ink ? md.ink : null);
-        if (m.plain) midOf.set(m.plain, md.plain && md.plain !== m.plain ? md.plain : null);
+      if (midDist > 0 && m.ink && !repOf.has(m.ink)) {
+        const rp = { culture: it.culture, cap, city, size: s };
+        repOf.set(m.ink, Object.assign({ part: 'ink' }, rp));
+        if (m.plain) repOf.set(m.plain, Object.assign({ part: 'plain' }, rp));
       }
       if (m.ink) sc.add({ near: m.ink, far: f.ink || undefined }, it.x, it.y, it.z, yaw, s, null, { castShadow: true });
       if (m.plain) sc.add({ near: m.plain, far: f.plain || undefined }, it.x, it.y, it.z, yaw, s, null, { outline: false, castShadow: false });
@@ -3056,21 +3057,31 @@
       }
     }
     const group = sc.build();
-    // 墨线部分与不描墨线的部分（中景的贴面较少）都按距离换几何体
-    for (const c of sc.chunks) { const mg = midOf.get(c.near.geometry); if (mg) { c.nearGeo = c.near.geometry; c.midGeo = mg; } }
+    // 墨线部分与不描墨线的部分（中景的贴面较少）都按距离换几何体；c.midGeo：undefined = 还没建，null = 中景与近景相同
+    for (const c of sc.chunks) { const rp = repOf.get(c.near.geometry); if (rp) { c.nearGeo = c.near.geometry; c.midRep = rp; } }
     const _c = new THREE.Vector3(), _p = new THREE.Vector3();
+    function midOf(c) {
+      const rp = c.midRep, md = model(rp.culture, rp.cap, rp.city, { size: rp.size, lod: 'mid' }), g = md && md[rp.part];
+      return g && g !== c.nearGeo ? g : null;
+    }
     function update(cam) {
       sc.update(cam);
       if (!cam || !sc.chunks) return;
       cam.getWorldPosition(_p);
+      let builds = 1;
       for (const c of sc.chunks) {
         const out = c.near && c.near.userData.outline;
-        if (!c.midGeo && !(inkDist > 0 && out)) continue;
+        if (!c.midRep && !(inkDist > 0 && out)) continue;
         _c.copy(c.center).applyMatrix4(group.matrixWorld);
         const d = Math.max(0, _c.distanceTo(_p) - c.radius * 0.5);
-        if (c.midGeo) {
+        if (c.midRep && c.midGeo !== null) {
           const mid = c.isMid ? d > midDist * 0.92 : d > midDist * 1.08;
-          if (mid !== !!c.isMid) { c.isMid = mid; const g = mid ? c.midGeo : c.nearGeo; c.near.geometry = g; if (out) out.geometry = g; }
+          if (mid && c.midGeo === undefined) {
+            // 第一次需要：建（或从缓存取）中景；本帧的建模额度用完就下一帧再换
+            const t0 = performance.now();
+            if (builds > 0) { c.midGeo = midOf(c); if (performance.now() - t0 > 1) builds--; }
+          }
+          if (c.midGeo && mid !== !!c.isMid) { c.isMid = mid; const g = mid ? c.midGeo : c.nearGeo; c.near.geometry = g; if (out) out.geometry = g; }
         }
         if (inkDist > 0 && out) {
           const on = c.inkOn !== false ? d < inkDist * 1.08 : d < inkDist * 0.92;

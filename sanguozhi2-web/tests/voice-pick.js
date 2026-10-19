@@ -9,6 +9,11 @@
      3. duel-bots 名单里的每一对单挑：§B4.2 的区分规则成立（同一基础声音时有效音高至少差 0.05）
      4. pickLine：每位起始君主对每条台词都有可说的话（或程序化喊叫）；同一人同一台词不连续两次用同一变体；名句
      5. 人声不取 SG.Random：在一局经典剧本里跑 3 个月（钩子接上、指令事件照常发出），SG.Random 的调用序列与不接人声时逐位相同
+     6. 钩子路由（假的战斗 / 单挑类）：原方法照常调用、返回值原样；§2 的台词编号；§B9 名句：决定性胜利（城破 / 对方灭亡 / 对方君主在阵）、
+        外交初见（每位君主一次）、天下统一（gameOver(true)）；非决定性胜利不说名句
+     7. 运行时的 §B4.2：单挑双方两句相隔 > 3 秒仍然区分（say 与程序化喊叫都走同一规则），先说的一方保持原声
+     8. §B11 程序化喊叫：空闲时段预先渲染（战斗的群呼与主将喊声、单挑双方的 5 种用力声），独立 LRU ≤ RULES.cryCacheBytes，
+        预渲染后接敌时的群呼不再渲染
    ========================================================================== */
 const fs = require('fs');
 const path = require('path');
@@ -17,8 +22,8 @@ const ROOT = path.join(__dirname, '..');
 const fails = [];
 const ok = (c, m) => { if (!c) fails.push(m); return !!c; };
 
-function loadVoice(withManifest) {
-  const ctx = { console, Math, JSON, Date, setTimeout, clearTimeout, performance: { now: () => Date.now() } };
+function loadVoice(withManifest, clock) {
+  const ctx = { console, Math, JSON, Date, setTimeout, clearTimeout, performance: { now: clock || (() => Date.now()) } };
   ctx.window = ctx; ctx.globalThis = ctx;
   vm.createContext(ctx);
   for (const f of ['js/core.js', 'js/registry.js', 'js/data.js', 'js/world-data.js', 'js/voice-data.js', 'js/voice-cry.js', 'js/voice.js'])
@@ -169,6 +174,95 @@ let randomOk = '(skipped)';
   } catch (e) { fails.push('random harness threw: ' + e.message); }
 }
 
+// ---------------------------------------------------------------- 7. §B4.2 at run time: a duel pair far apart in time --
+let pairOk = '(skipped)';
+const pairDone = (async () => {
+  let T = 1000;
+  const S = loadVoice(true, () => T);
+  S.Voice.settings.set('frequency', 'all');
+  // pairs whose base voices collide (same pack, rates within 0.02) and pairs whose rendered cry voices collide
+  const P = n => S.Voice.profile(n);
+  const names = gens.filter(n => P(n).sex === 'm');
+  let pair = null, cryPair = null;
+  for (let i = 0; i < names.length && !(pair && cryPair); i++) for (let j = i + 1; j < Math.min(names.length, i + 40); j++) {
+    const a = P(names[i]), b = P(names[j]);
+    if (!pair && a.pack === b.pack && Math.abs(a.rate - b.rate) < 0.02) pair = [names[i], names[j]];
+    if (!cryPair && Math.abs(a.pitchK - b.pitchK) < 0.02) cryPair = [names[i], names[j]];
+    if (pair && cryPair) break;
+  }
+  if (!ok(pair && cryPair, 'no colliding pair found for the §B4.2 run-time check')) return;
+  // say() settles after the ≤ 120 ms decode wait (no audio in Node: 'drop no audio' carries the rate it would have used)
+  const settle = () => new Promise(r => setTimeout(r, 200));
+  const last = cue => S.Voice.log.filter(x => x.cue === cue && x.rate !== undefined).slice(-1)[0] || {};
+  const o = { scene: 'duel', pair, force: true };
+  S.Voice.say(pair[0], 'duel.parry', Object.assign({ side: 0 }, o)); await settle();
+  T += 5000;                                                 // 5 s later (performance.now is in ms): outside the 3 s window
+  S.Voice.say(pair[1], 'duel.crit', Object.assign({ side: 1 }, o)); await settle();
+  const ra = last('duel.parry').rate, rb = last('duel.crit').rate;
+  ok(ra === P(pair[0]).rate, `the first of the pair keeps his voice (${ra} vs ${P(pair[0]).rate})`);
+  ok(Math.abs(ra - rb) >= 0.05 - 1e-9, `duel ${pair.join(' vs ')} 5 s apart: rates ${ra} / ${rb} (want ≥ 0.05 apart)`);
+  // without the pair (a line 5 s later) the second keeps his own voice
+  T += 5000;
+  S.Voice.say(pair[1], 'duel.crit', { scene: 'duel', side: 1, force: true }); await settle();
+  ok(last('duel.crit').rate === P(pair[1]).rate, 'outside a pair and the 3 s window the voice is not moved');
+  // cries: the rendered voice (sex, pitchK) of the second moves away too; detune aside
+  const oc = { scene: 'duel', pair: cryPair };
+  S.Voice.cry(cryPair[0], 'hurt', Object.assign({ side: 0 }, oc));
+  T += 5000;
+  S.Voice.cry(cryPair[1], 'hurt', Object.assign({ side: 1 }, oc));
+  const cl = S.Voice.log.filter(x => x.cue === '~hurt').slice(-2);
+  const ka = cl[0] && cl[0].uk, kb = cl[1] && cl[1].uk;
+  const pa = P(cryPair[0]).pitchK * ka, pb = P(cryPair[1]).pitchK * kb;
+  ok(ka === 1 && Math.abs(pa - pb) >= 0.05 - 1e-9, `duel cries ${cryPair.join(' vs ')}: effective pitch ${pa && pa.toFixed(3)} / ${pb && pb.toFixed(3)} (want ≥ 0.05 apart)`);
+  pairOk = `say pair ${pair.join('/')} rate ${ra} → ${rb} (5 s apart); cry pair ${cryPair.join('/')} pitch ${pa.toFixed(3)} → ${pb.toFixed(3)}`;
+})().catch(e => { fails.push('pair harness threw: ' + e.message); });
+// ---------------------------------------------------------------- 8. §B11 cries ahead, own LRU --
+let cryOk = '(skipped)';
+const cryDone = new Promise(resolve => {
+  try {
+    const S = loadVoice(false);
+    const mk = (ch, len, sr) => { const d = Array.from({ length: ch }, () => new Float32Array(len)); return { numberOfChannels: ch, length: len, sampleRate: sr, duration: len / sr, getChannelData: i => d[i], copyToChannel(src, i) { d[i].set(src); } }; };
+    const node = () => ({ connect() {}, disconnect() {}, start() {}, stop() {}, gain: { value: 1 }, playbackRate: { value: 1 } });
+    S.Sfx = { context: { state: 'running', currentTime: 0, sampleRate: 48000, createBuffer: mk, createBufferSource: node, createGain: node } };
+    const limit = S.VoiceData.RULES.cryCacheBytes;
+    // job timings (the slices): wrap the renderer
+    const C = S.VoiceCry; const jobMs = [];
+    const oR = C.render; C.render = function () { const t = Date.now(); const r = oR.apply(this, arguments); jobMs.push(Date.now() - t); return r; };
+    const oJ = C.crowdJob; C.crowdJob = function () { const j = oJ.apply(this, arguments); const st = j.step; j.step = function () { const t = Date.now(); const r = st.apply(this, arguments); jobMs.push(Date.now() - t); return r; }; return j; };
+    const idleWait = () => new Promise(r => { const t = setInterval(() => { if (S.Voice._stats().warmQueued === 0) { clearInterval(t); setTimeout(r, 30); } }, 20); });
+    S.Voice.warmBattle({ atk: [{ name: '关羽' }], def: [{ name: '颜良' }] });
+    ok(S.Voice._stats().warmQueued >= 18, 'battle warm-up queued ' + S.Voice._stats().warmQueued + ' jobs (want 2 crowds × 9 + 2 cries)');
+    idleWait().then(() => {
+      const st1 = S.Voice._stats();
+      ok(st1.cryKeys.includes('crowd|8:charge:0') && st1.cryKeys.includes('crowd|8:charge:1'), 'battle warm-up built both crowd variants: ' + st1.cryKeys.join(' '));
+      ok(st1.cryKeys.includes('cry|关羽|shout') && st1.cryKeys.includes('cry|颜良|shout'), 'battle warm-up built the lead officers\' cries');
+      ok(st1.cryBytes <= limit, `cry cache ${st1.cryBytes} B > ${limit}`);
+      const before = st1.cryRenders;
+      S.Voice.crowd('charge', 8, { variant: 1 });
+      ok(S.Voice._stats().cryRenders === before, 'the clash crowd rendered again at contact after the warm-up');
+      S.Voice.warmDuel('关羽', '颜良');
+      return idleWait().then(() => {
+        const st2 = S.Voice._stats();
+        const want = ['heavy', 'hurt', 'light', 'charge', 'knockout'].flatMap(k => ['cry|关羽|' + k, 'cry|颜良|' + k]);
+        ok(want.every(k => st2.cryKeys.includes(k)), 'duel warm-up missing: ' + want.filter(k => !st2.cryKeys.includes(k)).join(' '));
+        ok(st2.cryBytes <= limit, `cry cache ${st2.cryBytes} B > ${limit} after the duel warm-up`);
+        const r0 = st2.cryRenders;
+        for (const k of ['heavy', 'hurt', 'light', 'charge', 'knockout']) { S.Voice.cry('关羽', k, { scene: 'duel' }); S.Voice.cry('颜良', k, { scene: 'duel' }); }
+        ok(S.Voice._stats().cryRenders === r0, 'duel cries rendered again after the warm-up');
+        // a crowd evicted by the duel is rebuilt by the next warm-up, never past the cap
+        S.Voice.warmBattle(null);
+        return idleWait().then(() => {
+          const st3 = S.Voice._stats();
+          ok(st3.cryBytes <= limit, `cry cache ${st3.cryBytes} B > ${limit} after the re-warm`);
+          ok(st3.cryKeys.includes('crowd|8:charge:0'), 're-warm did not rebuild the crowd');
+          jobMs.sort((a, b) => a - b);
+          cryOk = `warm-up ${st3.warmJobs} jobs (median ${jobMs[jobMs.length >> 1]} ms, max ${jobMs[jobMs.length - 1]} ms per job, Node), cache ${(st2.cryBytes / 1024).toFixed(0)} KB after the duel / ${(st3.cryBytes / 1024).toFixed(0)} KB after the re-warm (cap ${limit / 1024} KB)`;
+        });
+      });
+    }).then(resolve, e => { fails.push('cry warm-up harness: ' + e.message); resolve(); });
+  } catch (e) { fails.push('cry harness threw: ' + e.message); resolve(); }
+});
+
 // ---------------------------------------------------------------- 6. hook routing (fake battle / duel classes) --
 // the wrappers must call the original, pass its result through, and route the cues of AUDIO-V4 §2 (no audio in Node: 'drop no audio')
 let hooksOk = '(skipped)';
@@ -179,13 +273,18 @@ const hookDone = new Promise(resolve => {
     class BM { useTactic(u, t, tgt) { calls.push('useTactic'); return { success: t.ok }; } }
     class BC {
       constructor() { this.M = new BM(); this.playerSide = 0; this.awaitingInput = true; }
-      main(s) { calls.push('main'); return Promise.resolve('done'); }
+      main(s) { calls.push('main'); return new Promise(r => { this._end = r; }); }
       showCard(u) { calls.push('showCard'); }
       doTactic(u, tac, t) { calls.push('doTactic'); this.M.useTactic(u, tac, t); return Promise.resolve(); }
       aiPhase() { calls.push('aiPhase'); return 7; }
     }
     class Sim { constructor() { this.f = [{ gen: '关羽' }, { gen: '颜良' }]; } emit(e) { calls.push('emit:' + e.type); return e.type; } }
-    S.BattleModel = BM; S.BattleController = BC; S.DuelGame = { _Sim: Sim, active: null };
+    class SS { gameOver(won) { calls.push('gameOver'); return 'go'; } }
+    S.BattleModel = BM; S.BattleController = BC; S.DuelGame = { _Sim: Sim, active: null }; S.StrategyScreen = SS;
+    // a tiny game for the strategy-level hooks: 刘备 (player) vs 曹操
+    const gl = [{ id: 0, name: '刘备', faction: 0 }, { id: 1, name: '曹操', faction: 1 }, { id: 2, name: '关羽', faction: 0 }, { id: 3, name: '夏侯惇', faction: 1 }];
+    S.G = { player: 0, year: 194, monthIndex: 5, generals: gl, cities: [{ owner: 0 }, { owner: 1 }, { owner: 1 }],
+      factions: [{ ruler: 0, alive: true }, { ruler: 1, alive: true }], ruler(f) { return gl[this.factions[f].ruler]; } };
     S.Voice.settings.set ? S.Voice.settings.set('frequency', 'all') : (S.Voice.settings.frequency = 'all');
     S.Voice.init(); S.Voice.hooks.install();
     const bc = new BC();
@@ -197,23 +296,52 @@ const hookDone = new Promise(resolve => {
     ok(sim.emit({ type: 'parry', def: 0 }) === 'parry', 'wrapped emit returns the original result');
     sim.emit({ type: 'ko', who: 1, winner: 0 });
     const off = new Sim(); off.emit({ type: 'guardcrush', att: 1 });   // an off-screen simulation: silent
+    // §B9: a won attack where the foe's ruler defended the city → 城破 line, then the player's ruler's signature
+    const E = S.Events;
+    const s1 = { attacker: 0, defender: 1, atk: [gl[2]], def: [gl[1], gl[3]] };
+    E.emit('conquest.prepare', s1); E.emit('conquest.apply', s1, { attacker: 0, defender: 1, won: true });
+    // not decisive: the foe's ruler was not there and his faction lives on
+    const s2 = { attacker: 0, defender: 1, atk: [gl[2]], def: [gl[3]] };
+    setTimeout(() => { E.emit('conquest.prepare', s2); E.emit('conquest.apply', s2, { attacker: 0, defender: 1, won: true }); }, 700);
+    // diplomacy: the first envoy to 曹操 → his fanfare, his signature, his answer; the second → only the answer
+    setTimeout(() => E.emit('command', 'ally', { f: 0, gen: 2, target: 1, ok: true }), 1300);
+    setTimeout(() => E.emit('command', 'ally', { f: 0, gen: 2, target: 1, ok: false }), 2600);
+    // unification
+    setTimeout(() => { ok(new SS().gameOver(true) === 'go', 'wrapped gameOver returns the original result'); }, 3400);
+    // clash contact during the enemy's phase of the player's battle: only the enemy commander's charge (§B10.3)
+    setTimeout(() => {
+      const bb = new BC(); bb.M.units = [{ gen: gl[1], commander: true }, { gen: gl[3] }, { gen: gl[2] }];
+      bb.main({ attacker: 0, defender: 1, atk: [gl[2]], def: [gl[1], gl[3]] });
+      bb.M.side = 1;
+      S.Voice.onClashContact({ attacker: { gen: gl[3], side: 1 } });     // an enemy officer: dropped
+      S.Voice.onClashContact({ attacker: { gen: gl[1], side: 1 } });     // the enemy commander: speaks
+      bb.M.side = 0;
+      setTimeout(() => { S.Voice.onClashContact({ attacker: { gen: gl[2], side: 0 } }); bb._end('done'); }, 900);   // the player's own attack
+    }, 4200);
     setTimeout(() => {
       const cues = new Set(S.Voice.log.map(x => x.cue));
       for (const c of ['bat.select', 'bat.tactic', 'bat.tacticFail', 'duel.parry', 'duel.win', 'duel.lose'])
         ok(cues.has(c), 'hook routed no ' + c + ' (log: ' + [...cues].join(' ') + ')');
       ok(!cues.has('duel.guardcrush'), 'an off-screen duel simulation spoke');
-      ok(calls.join(' ') === 'aiPhase showCard doTactic useTactic emit:parry emit:ko emit:guardcrush', 'original methods not called in order: ' + calls.join(' '));
-      hooksOk = `hooks routed ${[...cues].join(' ')}`;
+      ok(calls.join(' ') === 'aiPhase showCard doTactic useTactic emit:parry emit:ko emit:guardcrush gameOver main', 'original methods not called in order: ' + calls.join(' '));
+      const ch = S.Voice.log.filter(x => x.cue === 'charge' || (x.cue === 'charge' && x.action === 'drop')).map(x => x.speaker + ':' + (x.why || x.action));
+      ok(ch.join(' ') === '夏侯惇:auto-side 曹操:no audio 关羽:no audio', 'clash contact in the enemy phase: ' + ch.join(' ') + ' (want 夏侯惇 dropped, 曹操 and 关羽 voiced)');
+      const seq = S.Voice.log.filter(x => ['bat.cityTaken', 'sig', 'cmd.ally.yes', 'cmd.ally.no'].includes(x.cue)).map(x => x.cue + '@' + x.speaker);
+      const want = ['bat.cityTaken@关羽', 'sig@刘备', 'bat.cityTaken@关羽', 'sig@曹操', 'cmd.ally.yes@曹操', 'cmd.ally.no@曹操', 'sig@刘备'];
+      ok(seq.join(' ') === want.join(' '), 'signature routing: ' + seq.join(' ') + ' (want ' + want.join(' ') + ')');
+      hooksOk = `hooks routed ${[...cues].join(' ')}; §B9 ${seq.join(' → ')}`;
       resolve();
-    }, 2600);
+    }, 6600);
   } catch (e) { fails.push('hook harness threw: ' + e.message); resolve(); }
 });
 
-hookDone.then(() => {
+Promise.all([hookDone, cryDone, pairDone]).then(() => {
 console.log(`generals ${gens.length}; by lingua: ${Object.entries(byLingua).sort((a, b) => b[1] - a[1]).map(([k, v]) => k + ' ' + v).join(' · ')}`);
 console.log(`female ${female} (${femaleF} on a female voice; others on the mild shift), pitch-shifted voices ${shifted}; duel pairs ${pairsN} (${adjusted} adjusted by the uniqueness rule)`);
 console.log('random: ' + randomOk + (MF ? '' : '   (no voice/manifest.js: pack checks skipped)'));
 console.log(hooksOk);
+console.log('§B4.2 run time: ' + pairOk);
+console.log('§B11 cries: ' + cryOk);
 console.log(fails.length ? 'FAIL\n  ' + fails.slice(0, 40).join('\n  ') + (fails.length > 40 ? `\n  … ${fails.length - 40} more` : '') : 'ALL OK');
 process.exitCode = fails.length ? 1 : 0;
 });

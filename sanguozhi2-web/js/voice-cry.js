@@ -9,6 +9,7 @@
        kind：light heavy charge hurt knockout shout roar cheer hm sigh no grumble laugh breath
        voice：{ sex: 'm'|'f', pitchK: 0.86–1.12, age, rough: 0–1, shout: 0–1 覆盖, martial: bool }
    SG.VoiceCry.crowd(kind, n, seed) → { L, R }（Float32Array 立体声；kind：charge cheer dismay；6–10 声，失谐 ±8 %，错开 0–120 ms）
+   SG.VoiceCry.crowdJob(kind, n, seed) → { steps, step() → 还有下一步, done, result() }   同一群呼分成 n + 1 步（空闲时段预先渲染用）
    SG.VoiceCry.KINDS, SG.VoiceCry.SR, SG.VoiceCry.voiceOf(profile)（SG.Voice.profile 的记录 → voice 参数）
    ========================================================================== */
 (function () {
@@ -49,49 +50,56 @@
   // segs：[[音, 秒], …]；voice：见文件头
   function bark(segs, voice, seed, opt) {
     voice = voice || {}; opt = opt || {};
+    // 每样本循环只读局部常量：KINDS 的各条记录形状不同（rise / fall / fade / rough …），在循环里读 opt.x 会退化成多态查找
+    // （实测同一进程渲染全部 14 种时单条喊叫慢 5–20 倍）；表达式的运算次序不变，输出与之前逐位相同
     const female = voice.sex === 'f';
     const fs = female ? 1.17 : 1, age = voice.age || 35;
+    const old = age > 55;
     const pk = voice.pitchK || 1;
-    const f0 = (female ? 210 : 120) * pk * (age > 55 ? 0.92 : 1) * (opt.low || 1);
+    const f0 = (female ? 210 : 120) * pk * (old ? 0.92 : 1) * (opt.low || 1);
     const shout = voice.shout !== undefined ? voice.shout : (opt.shout || 0);
-    const rough = Math.min(1, (voice.rough !== undefined ? voice.rough : (age > 55 ? 0.35 : 0.1)) + (opt.rough || 0) + (voice.martial ? 0.1 : 0));
+    const rough = Math.min(1, (voice.rough !== undefined ? voice.rough : (old ? 0.35 : 0.1)) + (opt.rough || 0) + (voice.martial ? 0.1 : 0));
     const breathy = opt.breathy || 0;
+    const rise = !!opt.rise, fall = !!opt.fall, fadeLast = !!opt.fade;
+    const tremK = old ? 2 : 0.5;
     const R = rng(seed || 1);
     const total = segs.reduce((s, x) => s + x[1], 0), n = Math.ceil((total + 0.12) * SR);
     const out = new Float32Array(n);
     const rs = [reso(), reso(), reso(), reso()], nz = reso();
     let phase = 0, i = 0;
     const cur = V['ə'].map(f => f * fs);
+    const op = 0.6 - shout * 0.15;
     for (let si = 0; si < segs.length; si++) {
       const p = segs[si][0], len = Math.round(segs[si][1] * SR);
       const tgt = (V[p] || cur).map((f, k) => (V[p] ? f * fs : f) * (k < 2 ? 1 + shout * 0.12 : 1));
       const cons = C[p];
+      const isCons = !!cons, plosive = !!(cons && cons[2]), isH = p === 'h';
+      const fadeSeg = fadeLast && si === segs.length - 1;
       if (cons) setReso(nz, cons[0], cons[1]);          // once per segment (exp / cos per sample was the hot spot)
       for (let j = 0; j < len && i < n; j++, i++) {
         const u = (i / SR) / total;
         let contour = 1 + shout * 0.35 * Math.sin(Math.PI * Math.min(1, u * 1.4)) - 0.18 * Math.max(0, u - 0.7);
-        if (opt.rise) contour *= 0.85 + 0.35 * u;
-        if (opt.fall) contour *= 1.08 - 0.3 * u;
-        const jit = 1 + (R() - 0.5) * 0.02 * (1 + rough * 3) + 0.012 * Math.sin(TAU * 5.5 * i / SR) * (age > 55 ? 2 : 0.5);
+        if (rise) contour *= 0.85 + 0.35 * u;
+        if (fall) contour *= 1.08 - 0.3 * u;
+        const jit = 1 + (R() - 0.5) * 0.02 * (1 + rough * 3) + 0.012 * Math.sin(TAU * 5.5 * i / SR) * tremK;
         const f = f0 * (1 + shout * 0.5) * contour * jit;
         for (let k = 0; k < 4; k++) cur[k] += (tgt[k] - cur[k]) * 0.004;
         if ((i & 31) === 0) for (let k = 0; k < 4; k++) setReso(rs[k], cur[k], BW[k] * (1 + shout * 0.5));
         phase += f / SR; if (phase >= 1) phase -= 1;
-        const op = 0.6 - shout * 0.15;
         let g = phase < op ? 0.5 * (1 - Math.cos(Math.PI * phase / op)) : Math.max(0, Math.cos(Math.PI * (phase - op) / (2 * (1 - op))));
         g -= 0.5;
-        let voiced = cons ? 0 : 1 - breathy * 0.85;
-        if (cons && cons[2] && j < len * 0.35) voiced = 0;
+        let voiced = isCons ? 0 : 1 - breathy * 0.85;
+        if (plosive && j < len * 0.35) voiced = 0;
         const asp = (R() * 2 - 1) * (0.06 + rough * 0.2 + shout * 0.1 + breathy * 0.5);
-        let x = g * voiced + asp * (voiced ? 0.5 : (p === 'h' ? 0.9 : 0));
+        let x = g * voiced + asp * (voiced ? 0.5 : (isH ? 0.9 : 0));
         for (let k = 0; k < 4; k++) x = runReso(rs[k], x);
         let y = x * 0.06;
-        if (cons) {
-          const burst = cons[2] && j < SR * 0.01 ? 3 : 1;
-          y += runReso(nz, (R() * 2 - 1)) * (p === 'h' ? 0.12 : 0.25) * burst * Math.min(1, j / (SR * 0.004));
+        if (isCons) {
+          const burst = plosive && j < SR * 0.01 ? 3 : 1;
+          y += runReso(nz, (R() * 2 - 1)) * (isH ? 0.12 : 0.25) * burst * Math.min(1, j / (SR * 0.004));
         }
         let e = Math.min(1, j / (SR * 0.01), (len - j) / (SR * 0.012) + 0.3);
-        if (opt.fade && si === segs.length - 1) e *= 1 - j / len;
+        if (fadeSeg) e *= 1 - j / len;
         out[i] = y * e;
       }
     }
@@ -108,31 +116,46 @@
   }
   // 群呼：n 个声音（6–10），失谐 ±8 %，错开 0–120 ms，左右分开
   const CROWD = { charge: [['u', 0.15], ['o', 0.5]], cheer: [['h', 0.03], ['e', 0.12], ['i', 0.35]], dismay: [['o', 0.2], ['ə', 0.35]] };
-  function crowd(kind, n, seed) {
+  // 分步渲染（§B11：在战斗 / 单挑开始前的空闲时段里做，每步一个声音，最后一步混成立体声）；随机数的取用次序与一次做完相同，结果逐位相同
+  function crowdJob(kind, n, seed) {
     n = Math.max(6, Math.min(10, n | 0 || 8));
     const segs = CROWD[kind] || CROWD.charge;
     const R = rng((seed | 0) ^ 0x51ed);
     const parts = [];
-    let len = 0;
-    for (let k = 0; k < n; k++) {
-      const voice = { sex: R() < 0.12 ? 'f' : 'm', pitchK: 0.92 + R() * 0.16, age: 20 + R() * 40, shout: kind === 'dismay' ? 0.3 : 0.85 + R() * 0.15 };
-      const d = bark(segs.map(s => [s[0], s[1] * (0.85 + R() * 0.3)]), voice, (seed | 0) + k * 7919, { fall: kind === 'dismay' });
-      const off = Math.round(R() * 0.12 * SR), pan = (k / Math.max(1, n - 1)) * 1.2 - 0.6;
-      parts.push({ d, off, pan });
-      len = Math.max(len, off + d.length);
-    }
-    const L = new Float32Array(len), Rr = new Float32Array(len);
-    const g = 1 / Math.sqrt(n);
-    for (const p of parts) {
-      const gl = Math.cos((p.pan + 1) * Math.PI / 4) * g, gr = Math.sin((p.pan + 1) * Math.PI / 4) * g;
-      for (let i = 0; i < p.d.length; i++) { L[p.off + i] += p.d[i] * gl; Rr[p.off + i] += p.d[i] * gr; }
-    }
-    return { L, R: Rr };
+    let len = 0, k = 0, out = null;
+    const job = {
+      steps: n + 1,
+      get done() { return !!out; },
+      step() {
+        if (out) return false;
+        if (k < n) {
+          const voice = { sex: R() < 0.12 ? 'f' : 'm', pitchK: 0.92 + R() * 0.16, age: 20 + R() * 40, shout: kind === 'dismay' ? 0.3 : 0.85 + R() * 0.15 };
+          const d = bark(segs.map(s => [s[0], s[1] * (0.85 + R() * 0.3)]), voice, (seed | 0) + k * 7919, { fall: kind === 'dismay' });
+          const off = Math.round(R() * 0.12 * SR), pan = (k / Math.max(1, n - 1)) * 1.2 - 0.6;
+          parts.push({ d, off, pan });
+          len = Math.max(len, off + d.length);
+          k++;
+          return true;
+        }
+        const L = new Float32Array(len), Rr = new Float32Array(len);
+        const g = 1 / Math.sqrt(n);
+        for (const p of parts) {
+          const gl = Math.cos((p.pan + 1) * Math.PI / 4) * g, gr = Math.sin((p.pan + 1) * Math.PI / 4) * g;
+          for (let i = 0; i < p.d.length; i++) { L[p.off + i] += p.d[i] * gl; Rr[p.off + i] += p.d[i] * gr; }
+        }
+        out = { L, R: Rr };
+        parts.length = 0;
+        return false;
+      },
+      result() { while (!out) job.step(); return out; },
+    };
+    return job;
   }
+  function crowd(kind, n, seed) { return crowdJob(kind, n, seed).result(); }
   // SG.Voice.profile 的记录 → bark 的 voice 参数
   function voiceOf(p) {
     p = p || {};
     return { sex: p.sex || 'm', pitchK: p.pitchK || 1, age: p.age || 35, martial: p.temper === 'martial', rough: p.band === 'old' || p.band === 'elder' ? 0.35 : undefined };
   }
-  SG.VoiceCry = { SR, KINDS, render, crowd, bark, voiceOf };
+  SG.VoiceCry = { SR, KINDS, render, crowd, crowdJob, bark, voiceOf };
 })();

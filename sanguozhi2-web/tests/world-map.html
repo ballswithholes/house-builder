@@ -96,6 +96,7 @@
   const rig = new SG.CameraRig();
   rig.focusMap(60, 50, 95, true);
   const map = new SG.MapView();
+  if (params.get('citychunk')) map._cityChunk = +params.get('citychunk');   // 试验：城池实例化的区块大小（缺省 60）
   const region = params.get('region') || 'auto';
   const t0 = performance.now();
   let lastProgress = 0;
