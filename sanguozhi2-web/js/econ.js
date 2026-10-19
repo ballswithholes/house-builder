@@ -39,6 +39,7 @@
    cityGold(c) → { b, pct, ev, gold, mods }      harvest(c, roll) → { h0, rollRaw, pct, h, mods }
    troopsPerGold(c, g)   trainGain(g, roll, c)   searchP(c, g)   hireP(t, r, f, promise)   allyP(f, t, gift, envoy)
    discordP(a, t)   persuadeP(a, t, f)   rewardLoy(g, roll, ruler)   tradeK(c)   allianceMonths(f, t, envoy)
+   hireMods(t, r, promise) / allyMods(f, t, envoy) / discordMods(a, t) / persuadeMods(a, t) → 各概率的加成项（结果记录的 mods）
    hubTier(c)   shopTier(c)   stageOf(id, c, prev)   stages(c, prev) → { farms, workshop, houses, walls, market }
    levelOfStages(st) / cityLevel(c, prev) → 0–4   levelName(lv)
    tierDevelop(rec) / tierHarvest(rec) → 'miss'|'normal'|'good'|'great'（DOMESTIC-FX §4.2，只看乘成之前的 g0 / rollRaw）
@@ -222,6 +223,14 @@
         const p = (100 - target.loyalty) / 110 * (0.45 + eff(agent, 'intel') / 180) * (0.55 + Mods.virtue(f) / 220) + z(P.gearPersuade, agent) + z(P.titlePersuade, agent);
         return M.clamp(p * (1 - z(P.persuadeRes, target)), 0, CAPS.persuade);
       },
+      // the bonus terms of each chance (probability points; for the result record's chips, DOMESTIC-FX §3.2)
+      hireMods(target, recruiter, promise) { return { gear: z(P.gearHire, recruiter), title: z(P.titleHire, recruiter), promise: promise || 0 }; },
+      allyMods(f, t, envoy) {
+        const ruler = G().ruler(f);
+        return { gear: Math.max(ruler ? z(P.gearDip, ruler) : 0, envoy ? z(P.gearDip, envoy) : 0), title: envoy ? z(P.titleDip, envoy) : 0, rel: z(P.rel, f, t) / 400 };
+      },
+      discordMods(agent, target) { return { gear: z(P.gearDiscord, agent), title: z(P.titleDiscord, agent), res: z(P.discordRes, target) }; },
+      persuadeMods(agent, target) { return { gear: z(P.gearPersuade, agent), title: z(P.titlePersuade, agent), res: z(P.persuadeRes, target) }; },
       // 赏赐：v3 RewardLoyalty + R(0,4)，加上君主装备的 reward（ITEMS §3.4）
       rewardLoy(g, roll, ruler) { return B().RewardLoyalty + roll + (ruler ? z(P.gearReward, ruler) : 0); },
       // 交易：买价 × (1 − t)，卖价 × (1 + t)，t = min(0.25, 城中最好的商才 / 100)（ITEMS §3.4）

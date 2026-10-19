@@ -29,6 +29,7 @@
 
    SG.Clock                      一天一个时钟（INTEGRATION §10.7；地图光照、城池视图、界面 --night 共用）
      hour() → 0–24               玩家回合：7 + 13 × 已用令牌 / 本月令牌；电脑回合与新闻 20.5；换月 6（黎明）
+                                 （新闻 / 黎明在界面 setPhase('day') 时结束；玩家用掉第一枚令牌时也自动结束）
      monthStart(g, n?)           记下本月令牌数 n（缺省 g.tokens；StrategyAI.endMonth 结束时与开局 / 读档时调用）
      setPhase('day'|'ai'|'news'|'dawn')     set(h) / restore()（自己安排时间的演出：武林大会 10:00–20:00）
      night() → 0…1               由 hour() 推出的夜色（界面 --night 用）
@@ -222,9 +223,12 @@
       total() { return total; },
       hour() {
         if (override !== null) return override;
+        const g = SG.G;
+        // the news / dawn of a new month end by themselves once the player spends a token (the screen normally calls
+        // setPhase('day') when the news closes; this keeps the clock right if it does not)
+        if ((phase === 'news' || phase === 'dawn') && g && total > 0 && (g.tokens | 0) < total) phase = 'day';
         if (phase === 'ai' || phase === 'news') return Clock.NIGHT;
         if (phase === 'dawn') return Clock.DAWN;
-        const g = SG.G;
         if (!g || total <= 0) return Clock.DAY_START;
         const used = Math.max(0, Math.min(total, total - (g.tokens | 0)));
         return Clock.DAY_START + Clock.DAY_LEN * used / total;

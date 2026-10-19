@@ -20,7 +20,7 @@
        8 tourney       11 → 12 月公告；正月武林大会
        9 news          syncFV、名次、新闻汇总（ctx.stageUps …）
      StrategyAI.on(phase, fn(ctx), { owner, when, order }) → off()        StrategyAI.onSpend(kind, fn(f, ctx), opts) → off()
-     ctx = { g, news, ended: { year, month, monthIndex }, next: { … }（第 6 相起）, gross: [按势力], harvests: [], stageUps: [],
+     ctx = { g, news, ended: { year, month, monthIndex }, next: { … }（第 6 相起）, gross: [按势力], harvests: [], stageUps: [], healed: [武将编号],
              cityGold: [], defections: [] }
      endMonth 的返回值仍是新闻字符串数组，另带 news.harvests（DOMESTIC-FX §9.1：{ city, land, harvest, roll, rollRaw, pct, mods, tier }）、
        news.cityGold（玩家各城的收入记录）、news.stageUps、news.ctx。
@@ -380,7 +380,7 @@
         g, news,
         ended: { year: g.year, month: g.month, monthIndex: g.monthIndex },
         next: null,
-        gross: [], harvests: [], stageUps: [], cityGold: [], defections: [],
+        gross: [], harvests: [], stageUps: [], cityGold: [], defections: [], healed: [],
       };
       // 0 各势力本月总收入（乘成之前，钱袋按它的 22 % 计）
       for (const f of g.factions) ctx.gross[f.id] = 0;
@@ -393,7 +393,9 @@
       runPhase('items', ctx);
       runPhase('engage', ctx);
       // 4 伤病与外出到期（各模块）→ 出奔
+      StrategyAI.phaseInjuries(g, ctx, 'list');
       runPhase('injuries', ctx);
+      StrategyAI.phaseInjuries(g, ctx, 'clear');
       StrategyAI.phaseDefections(g, ctx);
       runPhase('defections', ctx);
       // 5 忠诚光环
@@ -448,6 +450,13 @@
         }
         c.population = Math.min(2000000, c.population + M.roundToInt(c.population * c.town * Balance.PopGrowthPerTown / 100 * Mo.popK(c)));
       }
+    },
+    // 伤病到期（INTEGRATION §6.4 的统一记录 gen.injury = { until, war, away }）：先列出下个月不再受伤的武将（ctx.healed，
+    // 供 'injuries' 钩子与新闻用），钩子之后删掉这些过期的记录。gen.away（商队、探索……）由 ENGAGEMENT 自己结算。
+    phaseInjuries(g, ctx, step) {
+      const next = ctx.ended.monthIndex + 1;
+      if (step === 'list') { for (const gen of g.generals) if (gen.injury && gen.injury.until <= next) ctx.healed.push(gen.id); return; }
+      for (const id of ctx.healed) { const gen = g.generals[id]; if (gen && gen.injury && gen.injury.until <= next) delete gen.injury; }
     },
     // 低忠诚武将出奔：v3 规则，忠诚取 SG.Mods.effLoy（官爵与羁绊的防护取较大者），德取 SG.Mods.virtue
     phaseDefections(g, ctx) {

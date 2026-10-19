@@ -363,9 +363,14 @@ section('7 Commands → SG.Econ, Commands.lastResult records (DOMESTIC-FX §3.2)
   C.sellFood(c, 1000); r = C.lastResult; eq(r.side, 'sell', 'sell side');
   const tgt = g.factions.find(F => F.id !== g.player && F.alive).id;
   C.ally(c, g.player, tgt, 200); r = C.lastResult; eq(r.cmd, 'ally', 'ally record'); eq(r.target, tgt, 'ally target'); ok(r.p >= 0.05 && r.p <= 0.9, 'ally p');
+  ok(r.mods && r.mods.gear === 0 && r.mods.title === 0 && r.mods.rel === 0, 'ally record carries its chance mods');
   const foe = g.generals.find(x => x.faction >= 0 && x.faction !== g.player && !g.isRuler(x));
   C.discord(gov, foe); r = C.lastResult; eq(r.cmd, 'discord', 'discord record'); eq(r.target, foe.id, 'discord target');
+  ok(r.mods && 'gear' in r.mods && 'res' in r.mods, 'discord record carries its chance mods');
   C.persuade(gov, foe, g.player); r = C.lastResult; eq(r.cmd, 'persuade', 'persuade record');
+  ok(r.mods && r.mods.gear === 0 && r.mods.title === 0 && r.mods.res === 0, 'persuade record carries its chance mods (all 0 without providers)');
+  const freeG = g.generals.find(x => SG.isFree(x));
+  if (freeG) { C.hire(freeG, gov, g.player, c.id, { promise: 0.05 }); r = C.lastResult; eq(r.cmd, 'hire', 'hire record'); eq(r.mods && r.mods.promise, 0.05, 'hire record carries the promise term'); ok(r.p > 0, 'hire p'); }
   C.appoint(c, w); r = C.lastResult; eq(r.cmd, 'appoint', 'appoint record'); eq(c.governor, w.id, 'appoint sets the governor');
   C.develop({ gold: 0 }, gov, 0); r = C.lastResult; eq(r.ok, false, 'failed develop recorded with ok false');
   off(); offE();
@@ -409,6 +414,20 @@ section('8 StrategyAI.endMonth: phases in INTEGRATION §6.3 order, ctx, discreti
   g.month = 7;
   const nh = StrategyAI.endMonth();
   ok(nh.harvests.length === g.citiesOf(g.player).length && nh.harvests.every(h => h.rollRaw >= 0.85 && h.rollRaw <= 1.15 && ['miss', 'normal', 'good', 'great'].indexOf(h.tier) >= 0), 'harvest records: rollRaw and tier');
+  // unified injury record (INTEGRATION §6.4): eff war −war while active, away removes him from the city, expiry in phase 4
+  {
+    const pc = g.citiesOf(g.player)[0], hurt = g.generalsIn(pc.id, g.player).find(x => !g.isRuler(x)) || g.generalsIn(pc.id, g.player)[0];
+    const w0 = hurt.war, mi = g.monthIndex;
+    hurt.injury = { until: mi + 2, war: 5, away: true };
+    eq(SG.Mods.eff(hurt, 'war'), w0 - 5, 'injured: eff war − 5'); eq(SG.Mods.duelWar(hurt), w0 - 5, 'injured: duelWar − 5');
+    ok(g.generalsIn(pc.id, g.player).indexOf(hurt) < 0 && SG.Mods.isAway(hurt), 'injury.away: not in the city, isAway');
+    let healed1 = null; const oh = StrategyAI.on('injuries', ctx => { healed1 = ctx.healed.slice(); });
+    StrategyAI.endMonth();
+    ok(hurt.injury && healed1.indexOf(hurt.id) < 0, 'still injured after month 1 of 2');
+    StrategyAI.endMonth(); oh();
+    ok(!hurt.injury && healed1.indexOf(hurt.id) >= 0, 'injury record removed when it ends; ctx.healed lists him for the hooks');
+    eq(SG.Mods.eff(hurt, 'war'), w0, 'healed: eff war back'); ok(g.generalsIn(pc.id, g.player).indexOf(hurt) >= 0, 'healed: back in the city');
+  }
   // no hooks → no v4 state
   const g2 = newGame('cao', 12, 'classic');
   for (let m = 0; m < 14; m++) { StrategyAI.runAI([]); StrategyAI.endMonth(); }
@@ -424,6 +443,10 @@ section('8 StrategyAI.endMonth: phases in INTEGRATION §6.3 order, ctx, discreti
   g3.tokens = 0; near(SG.Clock.hour(), 20, 'clock 20:00 when the last token is used');
   StrategyAI.runAI([]); near(SG.Clock.hour(), 20.5, 'clock 20:30 during the AI phase');
   SG.Clock.set(10); near(SG.Clock.hour(), 10, 'clock override'); SG.Clock.restore(); near(SG.Clock.hour(), 20.5, 'clock restore');
+  StrategyAI.endMonth(); near(SG.Clock.hour(), 20.5, 'clock 20:30 during the news after endMonth');
+  SG.Clock.setPhase('day'); near(SG.Clock.hour(), 7, 'clock 07:00 when the news closes (setPhase day)');
+  SG.Clock.setPhase('news'); g3.tokens = SG.Clock.total() - 1;
+  near(SG.Clock.hour(), 7 + 13 / SG.Clock.total(), 'news phase ends by itself once a token is spent');
 });
 
 // ===================================================================== 9 city level =====

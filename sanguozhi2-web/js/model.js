@@ -635,6 +635,10 @@
     trainMods() { return { gear: 0, title: 0, project: 0, bonus: 0 }; },
     searchP(c, g) { return 0.22 + g.intel / 260 + G().factions[c.owner].virtue / 420; },
     searchMods() { return { gear: 0, title: 0, project: 0 }; },
+    hireMods(t, r, promise) { return { gear: 0, title: 0, promise: promise || 0 }; },
+    allyMods() { return { gear: 0, title: 0, rel: 0 }; },
+    discordMods() { return { gear: 0, title: 0, res: 0 }; },
+    persuadeMods() { return { gear: 0, title: 0, res: 0 }; },
     hireP(target, recruiter, faction, promise) {
       const f = G().factions[faction];
       let p = 0.32 + f.virtue / 220 + recruiter.intel / 450 - (target.war + target.intel + target.pol) / 900;
@@ -790,12 +794,13 @@
       const p = Commands.hireChance(target, recruiter, faction, opts.promise);
       const via = opts.via || (target.faction >= 0 ? 'captive' : Commands.searchFound === target ? 'search' : 'hire');
       const cityObj = G().cities[city] || null;
-      if (SG.Random.value() > p) { finish('hire', cityObj, recruiter, { ok: false, p, target: target.id, via }); return false; }
+      const mods = econ().hireMods(target, recruiter, opts.promise);
+      if (SG.Random.value() > p) { finish('hire', cityObj, recruiter, { ok: false, p, target: target.id, via, mods }); return false; }
       target.faction = faction; target.city = city; target.hidden = false;
       target.loyalty = M.clamp(60 + M.idiv(virtueOf(faction), 4) + R(-5, 10), 40, 100);
       target.training = 40;
       target.moved = true;
-      finish('hire', cityObj, recruiter, { ok: true, p, target: target.id, via, loyalty: target.loyalty });
+      finish('hire', cityObj, recruiter, { ok: true, p, target: target.id, via, loyalty: target.loyalty, mods });
       return true;
     },
 
@@ -903,7 +908,7 @@
       gift = Math.min(gift, from.gold);
       from.gold -= gift;
       const p = Commands.allyChance(f, target, gift, envoy);
-      const rec = { gift, target, p, targetCities: G().cityCount(target), ourCities: G().cityCount(f), envoy: envoy ? envoy.id : null };
+      const rec = { gift, target, p, targetCities: G().cityCount(target), ourCities: G().cityCount(f), envoy: envoy ? envoy.id : null, mods: econ().allyMods(f, target, envoy || null) };
       if (SG.Random.value() < p) {
         const months = econ().allianceMonths(f, target, envoy || null);
         G().setAlliance(f, target, G().monthIndex + months);
@@ -918,11 +923,12 @@
       const c = G().cities[agent.city];
       if (G().isRuler(target)) { finish('discord', c, agent, { ok: false, target: target.id, d: 0, loyaltyAfter: target.loyalty, p: 0, reason: 'ruler' }); return '离间君主是不可能的。'; }
       const p = econ().discordP(agent, target);
-      if (SG.Random.value() > p) { finish('discord', c, agent, { ok: false, target: target.id, d: 0, loyaltyAfter: target.loyalty, p }); return `${target.name}识破了离间之计。`; }
+      const mods = econ().discordMods(agent, target);
+      if (SG.Random.value() > p) { finish('discord', c, agent, { ok: false, target: target.id, d: 0, loyaltyAfter: target.loyalty, p, mods }); return `${target.name}识破了离间之计。`; }
       let d = M.idiv(R(6, 16) * effOf(agent, 'intel'), Math.max(30, effOf(target, 'intel')));
       d = M.clamp(d, 3, 25);
       target.loyalty = Math.max(0, target.loyalty - d);
-      finish('discord', c, agent, { ok: true, target: target.id, d, loyaltyAfter: target.loyalty, p });
+      finish('discord', c, agent, { ok: true, target: target.id, d, loyaltyAfter: target.loyalty, p, mods });
       return `离间成功！${target.name}的忠诚下降了 ${d}（现为 ${target.loyalty}）。`;
     },
 
@@ -930,7 +936,8 @@
     persuade(agent, target, f) {
       const c0 = G().cities[agent.city];
       const p = Commands.persuadeChance(agent, target, f);
-      if (SG.Random.value() > p) { finish('persuade', c0, agent, { ok: false, target: target.id, city: false, p }); return `${target.name}拒绝了劝诱。`; }
+      const mods = econ().persuadeMods(agent, target);
+      if (SG.Random.value() > p) { finish('persuade', c0, agent, { ok: false, target: target.id, city: false, p, mods }); return `${target.name}拒绝了劝诱。`; }
       const g = G();
       const oldCity = g.cities[target.city];
       const oldF = target.faction;
@@ -941,12 +948,12 @@
         oldCity.owner = f;
         g.autoGovernor(oldCity);
         g.checkFactionDeath(oldF);
-        finish('persuade', c0, agent, { ok: true, target: target.id, city: true, cityId: oldCity.id, p, from: oldF });
+        finish('persuade', c0, agent, { ok: true, target: target.id, city: true, cityId: oldCity.id, p, from: oldF, mods });
         return `${target.name}献城归降！${oldCity.name}归入我方。`;
       }
       target.city = agent.city; target.troops = M.idiv(target.troops, 2); target.moved = true;
       g.autoGovernor(oldCity); g.autoGovernor(g.cities[agent.city]);
-      finish('persuade', c0, agent, { ok: true, target: target.id, city: false, p, from: oldF });
+      finish('persuade', c0, agent, { ok: true, target: target.id, city: false, p, from: oldF, mods });
       return `${target.name}率部来投！`;
     },
   };

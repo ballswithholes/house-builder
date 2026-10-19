@@ -84,10 +84,13 @@ function nativeCampaign(scen, seeds, years) {
       const g = SG.G = SG.GameState.newGame(scen === 'world' ? 'roma' : 'liubei', scen);
       g.player = -1;
       const d0 = SG.StrategyAI.stats.defections;
-      const r = { alive: {}, f25: null, defections: 0, fame: 0, ap: 0 };
+      const r = { alive: {}, f25: null, defections: 0, fame: 0, ap: 0, ms: 0, fm: 0 };
       const total = g.cities.length;
       for (let m = 0; m < years * 12; m++) {
+        const t0 = process.hrtime.bigint();
         SG.StrategyAI.runAI([]); SG.StrategyAI.endMonth();
+        r.ms += Number(process.hrtime.bigint() - t0) / 1e6;
+        r.fm += g.factions.filter(f => f.alive && f.id !== g.player).length;
         if (r.f25 === null) for (const f of g.factions) if (f.alive && g.cityCount(f.id) > total * 0.25) { r.f25 = (m + 1) / 12; break; }
         if ((m + 1) % 12 === 0) r.alive[(m + 1) / 12] = g.factions.filter(f => f.alive).length;
       }
@@ -132,6 +135,10 @@ function nativeGates() {
     }
     const fameAll = avg(r.all.runs.map(x => x.fame));
     gate(`${scen} fame bonus ≤ +10`, fameAll <= 10 + 1e-9, fameAll.toFixed(2));
+    // INTEGRATION §6.6: ≤ 60 ms CPU per AI faction-month (v3 AI turn + every v4 phase; the January tournament is exempt and
+    // measured by tests/tourney.js)
+    const msPer = v => v.runs.reduce((s, x) => s + x.ms, 0) / Math.max(1, v.runs.reduce((s, x) => s + x.fm, 0));
+    gate(`${scen} CPU per AI faction-month ≤ 60 ms (runAI + endMonth, all on)`, msPer(r.all) <= 60, `${msPer(r.off).toFixed(3)} → ${msPer(r.all).toFixed(3)} ms`);
     info(`income pct median ${median(r.all.st.incomePct).toFixed(3)}, at the +35 % cap ${(100 * r.all.st.atCap / Math.max(1, r.all.st.n)).toFixed(2)} % of city-months; AP avg ${avg(r.all.runs.map(x => x.ap)).toFixed(2)}`);
   }
 }
@@ -161,7 +168,8 @@ function protoGates() {
   {
     const [seeds, years] = Q ? [4, 4] : [12, 10];
     console.log(`== B0 equivalence: prototype campaign classic ${seeds} × ${years} y, econ-proto.js vs js/econ.js (every printed number)`);
-    const strip = L => L.map(l => l.replace(/\[\d+ s\]/, ''));
+    // wall-clock numbers ("[9 s]", "3.4 ms each") are not results
+    const strip = L => L.map(l => l.replace(/\[\d+ s\]/g, '').replace(/[0-9.]+ ms each/g, '_ ms each'));
     const a = strip(protoRun('campaign', 'classic', seeds, years, { VARIANTS: 'off,all', SEED0: '0', W0_ECON: 'proto' }));
     const b = strip(protoRun('campaign', 'classic', seeds, years, { VARIANTS: 'off,all', SEED0: '0', W0_ECON: 'js' }));
     const diff = a.filter((l, i) => l !== b[i]);
