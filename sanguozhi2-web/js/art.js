@@ -1546,12 +1546,342 @@ float sgMHash( vec2 p ) { return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 
     return mat;
   }
 
+  // ================================================= 第四版：Lanternvale 风格的地形 --
+  // 战略地图的地面改用 SG.LP 的光照（与试点的地面、道具、城池同一套：包裹式太阳漫反射、半球天光、黄金时刻提亮、夜色调、
+  // 琥珀色灯池、雾），着色是 Lanternvale 式的「绘制地面」：暖鼠尾草绿的草地上有水彩斑块、笔触、近处的草叶笔画与野花点，
+  // 柔和的泥土、拼布般的田块（南方为水田）、奶油色的沙滩；山体按固定的三角格（1.25 单位，交替对角线，与网格的 LOD 无关）
+  // 平面着色并逐面抖动亮度——低多边形的「手切」山坡（Lanternvale 的 MapTerrain 同样交替对角线），岩石按面取石色，雪落在朝上的面上。
+  // 地形不描墨线。着色器取自 SG.LP.material 的着色器文本（只替换反照率与法线两处），光照与 LP 材质完全一致；LP 不可用时返回 null
+  // （调用方退回 terrainMaterial）。
+  //   绘制细节纹理（paintDetail，512²，可平铺）：R 水彩斑块（0.5 = 不变）、G 笔触（0.5 = 不变）、B 野花点、A 三叶草 / 草丛暗点。
+  let _paint = null;
+  function* paintDetailGen() {
+    if (_paint) return _paint;
+    const N = 512, cv = document.createElement('canvas');
+    cv.width = cv.height = N;
+    const g = cv.getContext('2d', { willReadFrequently: true });
+    const rnd = SG.SeededRandom(4242), r = () => rnd.nextDouble();
+    const out = new Uint8Array(N * N * 4);
+    const grab = ch => { const d = g.getImageData(0, 0, N, N).data; for (let i = 0; i < N * N; i++) out[i * 4 + ch] = d[i * 4]; };
+    const tiled = fn => { for (const ox of [-N, 0, N]) for (const oy of [-N, 0, N]) fn(ox, oy); };
+    const blob = (x, y, rad, k, v, a, wob) => {
+      // 不规则的水彩团：多边形半径按两级正弦扰动，从外到内叠几层（边缘柔、中间实）
+      const n = 22, ph1 = r() * 6.28, ph2 = r() * 6.28;
+      for (let layer = 0; layer < 6; layer++) {
+        const s = 1.06 - layer * 0.09;
+        g.fillStyle = `rgba(${v},${v},${v},${a})`;
+        tiled((ox, oy) => {
+          g.beginPath();
+          for (let i = 0; i <= n; i++) {
+            const t = i / n * Math.PI * 2, rr = rad * s * (1 + wob * (0.6 * Math.sin(t * 3 + ph1) + 0.4 * Math.sin(t * 5 + ph2)));
+            const px = x + ox + Math.cos(t) * rr * k, py = y + oy + Math.sin(t) * rr;
+            if (i) g.lineTo(px, py); else g.moveTo(px, py);
+          }
+          g.fill();
+        });
+      }
+    };
+    // R：水彩斑块（亮暖 / 暗冷两种）
+    g.fillStyle = 'rgb(128,128,128)'; g.fillRect(0, 0, N, N);
+    for (let i = 0; i < 64; i++) {
+      const light = r() < 0.5;
+      blob(r() * N, r() * N, 26 + r() * 64, 0.7 + r() * 0.6, light ? 196 : 66, 0.12, 0.22);
+      if ((i & 15) === 15) yield;
+    }
+    grab(0);
+    yield;
+    // G：笔触（短而略弯的刷痕，亮暖 / 暗冷）
+    g.fillStyle = 'rgb(128,128,128)'; g.fillRect(0, 0, N, N);
+    g.lineCap = 'round';
+    for (let i = 0; i < 900; i++) {
+      const x = r() * N, y = r() * N, len = 12 + r() * 30, a = (r() - 0.5) * 1.3 - Math.PI / 2, light = r() < 0.55;
+      const v = light ? 172 + (r() * 24 | 0) : 78 + (r() * 22 | 0);
+      g.strokeStyle = `rgba(${v},${v},${v},0.5)`;
+      g.lineWidth = 2.5 + r() * 4.5;
+      const bx = Math.cos(a + 0.5) * len * 0.18, by = Math.sin(a + 0.5) * len * 0.18;
+      tiled((ox, oy) => {
+        g.beginPath(); g.moveTo(x + ox, y + oy);
+        g.quadraticCurveTo(x + ox + Math.cos(a) * len * 0.5 + bx, y + oy + Math.sin(a) * len * 0.5 + by, x + ox + Math.cos(a) * len, y + oy + Math.sin(a) * len);
+        g.stroke();
+      });
+      if ((i & 127) === 127) yield;
+    }
+    grab(1);
+    yield;
+    // B：野花点（成簇）
+    g.fillStyle = 'rgb(0,0,0)'; g.fillRect(0, 0, N, N);
+    g.fillStyle = 'rgb(255,255,255)';
+    for (let c = 0; c < 46; c++) {
+      const cx = r() * N, cy = r() * N, m = 4 + (r() * 9 | 0), sp = 10 + r() * 18;
+      for (let k = 0; k < m; k++) {
+        const a = r() * 6.28, d = Math.sqrt(r()) * sp, rad = 2.6 + r() * 2.2;
+        tiled((ox, oy) => { g.beginPath(); g.arc(cx + ox + Math.cos(a) * d, cy + oy + Math.sin(a) * d, rad, 0, Math.PI * 2); g.fill(); });
+      }
+    }
+    grab(2);
+    yield;
+    // A：三叶草 / 草丛暗点（三瓣的小团）
+    g.fillStyle = 'rgb(0,0,0)'; g.fillRect(0, 0, N, N);
+    g.fillStyle = 'rgba(255,255,255,0.85)';
+    for (let c = 0; c < 70; c++) {
+      const cx = r() * N, cy = r() * N, m = 3 + (r() * 6 | 0), sp = 8 + r() * 16;
+      for (let k = 0; k < m; k++) {
+        const a = r() * 6.28, d = Math.sqrt(r()) * sp, rad = 2.4 + r() * 2.2, x0 = cx + Math.cos(a) * d, y0 = cy + Math.sin(a) * d, rot = r() * 6.28;
+        tiled((ox, oy) => {
+          for (let q = 0; q < 3; q++) { g.beginPath(); g.arc(x0 + ox + Math.cos(rot + q * 2.09) * rad * 0.8, y0 + oy + Math.sin(rot + q * 2.09) * rad * 0.8, rad, 0, Math.PI * 2); g.fill(); }
+        });
+      }
+      if ((c & 31) === 31) yield;
+    }
+    grab(3);
+    const t = new THREE.DataTexture(out, N, N, THREE.RGBAFormat);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.magFilter = THREE.LinearFilter;
+    t.minFilter = THREE.LinearMipmapLinearFilter;
+    t.generateMipmaps = true;
+    if (Gfx.renderer) t.anisotropy = Math.min(4, Gfx.renderer.capabilities.getMaxAnisotropy());
+    t.needsUpdate = true;
+    _paint = t;
+    return t;
+  }
+
+  const LPT_VS_PARS = 'varying vec3 vSgW;\n';
+  const LPT_FS_PARS = `
+uniform sampler2D sgDetA;
+uniform sampler2D sgDetB;
+uniform sampler2D sgPaint;
+uniform sampler2D sgBlade;
+uniform sampler2D sgMapN;
+uniform sampler2D sgMapC;
+uniform sampler2D sgMapM;
+uniform sampler2D sgMapX;
+uniform sampler2D sgOutC;
+uniform sampler2D sgOutM;
+uniform sampler2D sgFacet;
+uniform vec4 sgXfN;
+uniform vec4 sgXfC;
+uniform vec4 sgXfO;
+uniform vec4 sgInner;
+uniform vec4 sgFacetXf;    // x0, z0, 格距, 0
+uniform vec4 sgFacetSz;    // 1 / 宽, 1 / 高, 面化强度, 逐面抖动
+uniform vec4 sgPaintK;     // x 草叶笔画近景距离, y 远, z 野花密度, w 斑块强度
+varying vec3 vSgW;
+float sgHash( vec2 p ) { vec3 p3 = fract( vec3( p.xyx ) * 0.1031 ); p3 += dot( p3, p3.yzx + 33.33 ); return fract( ( p3.x + p3.y ) * p3.z ); }
+vec3 sgCropLV( float id ) {
+  vec3 c = vec3( 0.60, 0.71, 0.36 );                          // 青苗
+  c = mix( c, vec3( 0.85, 0.73, 0.38 ), step( 0.2, id ) );    // 熟麦
+  c = mix( c, vec3( 0.64, 0.49, 0.34 ), step( 0.36, id ) );   // 翻耕的土
+  c = mix( c, vec3( 0.53, 0.66, 0.32 ), step( 0.5, id ) );    // 菜畦
+  c = mix( c, vec3( 0.80, 0.70, 0.42 ), step( 0.64, id ) );   // 粟
+  c = mix( c, vec3( 0.70, 0.75, 0.40 ), step( 0.78, id ) );   // 嫩黄绿
+  c = mix( c, vec3( 0.86, 0.79, 0.40 ), step( 0.9, id ) );    // 油菜花
+  return c;
+}
+`;
+  const LPT_FS_MAIN = `
+	// ---- 绘制地面（第四版）----
+	vec2 sgP = vec2( vSgW.x, - vSgW.z );
+	float sgH = vSgW.y;
+	float sgCamD = length( vViewPosition );
+	vec3 sgTint = vec3( 0.0 );
+	vec4 sgMat = vec4( 0.0 );
+	vec4 sgX = vec4( 0.0 );
+	float sgForest = 0.0, sgAO = 0.5, sgWI = 0.0;
+	vec3 sgNs = normalize( ( vec4( vNormalV, 0.0 ) * viewMatrix ).xyz );
+	float sgNearW = 1.0;
+	{
+		vec2 e = min( sgP - sgInner.xy, sgInner.zw - sgP );
+		sgWI = clamp( min( e.x, e.y ) * 0.2, 0.0, 1.0 );
+		if ( sgWI < 1.0 ) {
+			vec2 uvO = sgP * sgXfO.zw + sgXfO.xy;
+			sgTint = texture2D( sgOutC, uvO ).rgb * ( 1.0 - sgWI );
+			sgMat = texture2D( sgOutM, uvO ) * ( 1.0 - sgWI );
+		}
+		if ( sgWI > 0.0 ) {
+			vec2 uvC = sgP * sgXfC.zw + sgXfC.xy;
+			vec4 ic = texture2D( sgMapC, uvC );
+			vec2 uvN = sgP * sgXfN.zw + sgXfN.xy;
+			vec4 tn = texture2D( sgMapN, uvN );
+			vec3 n2 = vec3( tn.r * 2.0 - 1.0, 0.0, tn.g * 2.0 - 1.0 );
+			n2.y = sqrt( max( 0.0, 1.0 - dot( n2.xz, n2.xz ) ) );
+			sgTint += ic.rgb * sgWI;
+			sgMat += texture2D( sgMapM, uvC ) * sgWI;
+			sgX = texture2D( sgMapX, uvC ) * sgWI;
+			sgForest = ic.a * sgWI;
+			sgAO = mix( 0.5, tn.b, sgWI );
+			sgNs = normalize( mix( sgNs, n2, sgWI ) );
+			if ( sgH < 0.6 ) {
+				// 附近有水（高度 < 0.02）才有沙滩：四个方向上取最低处
+				vec2 d1 = vec2( 1.0, 0.0 ) * sgXfN.zw, d2 = vec2( 0.0, 1.0 ) * sgXfN.zw;
+				float a1 = min( min( texture2D( sgMapN, uvN + d1 ).a, texture2D( sgMapN, uvN - d1 ).a ), min( texture2D( sgMapN, uvN + d2 ).a, texture2D( sgMapN, uvN - d2 ).a ) );
+				sgNearW = mix( 1.0, 1.0 - smoothstep( 0.03, 0.2, a1 * 8.0 - 4.0 ), sgWI );
+			}
+		}
+	}
+	// 固定三角格上的面法线（交替对角线；与 LOD 网格无关）与面编号
+	vec3 sgNf = sgNs;
+	float sgFid = 0.5;
+	if ( sgWI > 0.0 ) {
+		vec2 fp = ( sgP - sgFacetXf.xy ) / sgFacetXf.z;
+		vec2 cell = floor( fp ), f = fp - cell;
+		vec4 fn = texture2D( sgFacet, ( cell + 0.5 ) * sgFacetSz.xy );
+		float odd = mod( cell.x + cell.y, 2.0 );
+		float triB = odd < 0.5 ? step( f.y, f.x ) : step( 1.0, f.x + f.y );
+		vec2 nxz = mix( fn.rg, fn.ba, triB ) * 2.0 - 1.0;
+		vec3 nf = vec3( nxz.x, sqrt( max( 0.0, 1.0 - dot( nxz, nxz ) ) ), nxz.y );
+		sgNf = normalize( mix( sgNs, nf, sgWI ) );
+		sgFid = sgHash( cell * 2.0 + vec2( triB * 0.5, 0.25 ) );
+	}
+	// 平原上几乎不面化（不显三角拼块），丘陵、山地按三角格平面着色
+	// （河岸、水下与海边的低地不面化：岸坡被三角格切成的尖楔很难看）
+	vec3 sgN = normalize( mix( sgNs, sgNf, sgFacetSz.z * mix( 0.3, 1.0, smoothstep( 0.015, 0.09, 1.0 - sgNf.y ) ) * smoothstep( 0.05, 0.55, sgH ) ) );
+	float sgSlopeS = 1.0 - sgNs.y, sgSlopeF = 1.0 - sgNf.y;
+	// 绘制：大 / 中两级水彩斑块 + 笔触
+	vec4 sgPL = texture2D( sgPaint, sgP * 0.031 + vec2( 0.17, 0.53 ) );
+	vec4 sgPM = texture2D( sgPaint, sgP * 0.113 + vec2( 0.61, 0.29 ) );
+	float sgNear = 1.0 - smoothstep( sgPaintK.x, sgPaintK.y, sgCamD );
+	float sgBl = ( ( sgPL.r - 0.5 ) * 1.0 + ( sgPM.r - 0.5 ) * 0.55 ) * sgPaintK.w;
+	vec3 sgCol = sgTint * ( 1.0 + sgBl * 0.3 );
+	sgCol = mix( sgCol, sgCol * vec3( 1.07, 1.04, 0.86 ), smoothstep( 0.06, 0.3, sgBl ) * 0.75 );
+	sgCol = mix( sgCol, sgCol * vec3( 0.88, 0.97, 1.03 ), smoothstep( -0.06, -0.3, sgBl ) * 0.75 );
+	sgCol *= 1.0 + ( sgPM.g - 0.5 ) * 0.2;
+	// 林下：更暗、更冷的苔绿
+	sgCol = mix( sgCol, sgCol * vec3( 0.8, 0.88, 0.84 ), sgForest * 0.6 );
+	// 泥土：陡坡、荒地、城郊与村落踩出的地面
+	float sgDirtW = smoothstep( 0.62, 0.88, ( sgPL.g - 0.5 ) * 0.5 + 0.5 * sgPM.r + sgSlopeF * ( 1.1 - sgX.a ) + sgMat.g * 0.3 - 0.02 ) * ( 1.0 - sgMat.b );
+	sgDirtW = max( sgDirtW, smoothstep( 0.15, 0.75, sgX.g + ( sgPM.r - 0.5 ) * 0.5 ) );
+	vec3 sgDirtC = mix( vec3( 0.66, 0.5, 0.34 ), vec3( 0.75, 0.6, 0.41 ), sgPM.r );
+	sgDirtC = mix( sgDirtC, vec3( 0.56, 0.41, 0.27 ), smoothstep( 0.55, 0.85, sgPM.g ) * 0.5 );
+	sgDirtC = mix( sgDirtC, sgTint * vec3( 1.1, 0.92, 0.72 ), 0.2 );
+	sgCol = mix( sgCol, sgDirtC, sgDirtW * 0.85 );
+	// 田块：拼布般的作物色、田埂；南方水田（青绿带水光）
+	float sgFarm = 1.0 - sgMat.a;
+	float sgFw = 0.0;
+	if ( sgFarm > 0.02 ) {
+		vec4 sgDB = texture2D( sgDetB, sgP * 0.11 + vec2( 0.13, 0.71 ) );
+		float id = sgDB.b;
+		vec3 crop = sgCropLV( id ) * ( 0.9 + 0.16 * sgDB.a );
+		vec2 rd = vec2( cos( id * 6.2832 ), sin( id * 6.2832 ) );
+		float row = 0.5 + 0.5 * sin( dot( sgP, rd ) * 24.0 );
+		float rowK = ( 1.0 - smoothstep( 24.0, 60.0, sgCamD ) ) * step( 0.03, id );
+		crop *= mix( 1.0, 0.93 + 0.09 * row, rowK );
+		// 水田：青绿的秧苗，少数田块灌水（带天光的浅青），田埂是草绿
+		vec3 pad = mix( vec3( 0.45, 0.63, 0.31 ), vec3( 0.56, 0.68, 0.33 ), step( 0.5, fract( id * 5.0 ) ) ) * ( 0.93 + 0.1 * sgPM.r );
+		pad = mix( pad, vec3( 0.74, 0.7, 0.38 ), step( 0.82, fract( id * 3.0 ) ) * 0.8 );
+		pad = mix( pad, vec3( 0.5, 0.66, 0.6 ), step( 0.78, fract( id * 7.0 ) ) * 0.75 );
+		crop = mix( crop, pad, clamp( sgX.r, 0.0, 1.0 ) );
+		crop = mix( crop, mix( vec3( 0.66, 0.6, 0.42 ), vec3( 0.52, 0.64, 0.38 ), clamp( sgX.r, 0.0, 1.0 ) ), step( id, 0.03 ) );
+		crop = mix( crop, sgTint, 0.1 );
+		sgFw = smoothstep( 0.3, 0.52, sgFarm + ( sgPM.r - 0.5 ) * 0.5 ) * ( 1.0 - smoothstep( 0.1, 0.26, sgSlopeS ) );
+		sgCol = mix( sgCol, crop, sgFw );
+	}
+	// 沙：海滩、河滩（按高度，附近要有水）与沙漠（按群落）
+	vec4 sgDA = texture2D( sgDetA, sgP * 0.23 );
+	float sgBeach = ( 1.0 - smoothstep( 0.18, 0.46, sgH + ( sgPM.g - 0.5 ) * 0.14 ) ) * max( sgNearW, 1.0 - smoothstep( -0.02, 0.05, sgH ) );
+	float sgRip = mix( 0.06, 0.22, smoothstep( 0.3, 0.8, sgMat.r ) );
+	vec3 sgSand = mix( vec3( 0.91, 0.84, 0.64 ), sgTint * 1.04, clamp( sgMat.r * 0.7, 0.0, 0.6 ) );
+	sgSand *= 1.0 - sgRip * 0.5 + sgRip * sgDA.b + ( sgPM.r - 0.5 ) * 0.1;
+	sgSand *= mix( 0.86, 1.0, smoothstep( 0.0, 0.22, sgH ) );
+	float sgSandW = max( sgBeach, smoothstep( 0.2, 0.7, sgMat.r + ( sgPL.r - 0.5 ) * 0.3 ) * ( 1.0 - sgFw ) );
+	sgCol = mix( sgCol, sgSand, sgSandW );
+	// 岩石：陡坡与高山，按面取石色（低多边形的手切岩面）
+	float sgRockW = smoothstep( 0.36, 0.54, sgSlopeF + ( sgPL.g - 0.5 ) * 0.2 - sgMat.g * 0.1 ) * ( 1.0 - sgX.a );
+	sgRockW = max( sgRockW, smoothstep( 4.4, 6.4, sgH + ( sgPL.r - 0.5 ) * 1.4 + sgMat.g * 1.0 ) );
+	if ( sgRockW > 0.004 ) {
+		vec3 sgStone = mix( vec3( 0.66, 0.62, 0.57 ), vec3( 0.72, 0.63, 0.53 ), clamp( sgMat.g * 0.6 + sgMat.r, 0.0, 1.0 ) );
+		sgStone = mix( sgStone, vec3( 0.53, 0.49, 0.46 ), sgFid * 0.5 );
+		sgStone *= 0.9 + 0.2 * texture2D( sgDetB, vSgW.xz * 0.19 ).r;
+		sgCol = mix( sgCol, sgStone, sgRockW );
+	}
+	// 雪：雪线以上朝上的面
+	float sgSnowW = smoothstep( 0.3, 0.6, sgMat.b + ( sgPM.r - 0.5 ) * 0.4 + ( sgPL.g - 0.5 ) * 0.25 - sgSlopeF * 0.55 );
+	vec3 sgSnow = mix( vec3( 0.95, 0.95, 0.96 ), vec3( 0.78, 0.8, 0.9 ), clamp( sgFid * 0.35 + smoothstep( 0.04, 0.32, sgSlopeF ) * 0.75, 0.0, 1.0 ) );
+	sgCol = mix( sgCol, sgSnow, sgSnowW );
+	// 水下的沙底
+	sgCol = mix( sgCol, vec3( 0.8, 0.76, 0.58 ) * ( 0.88 + 0.16 * sgPM.r ), smoothstep( -0.05, -0.7, sgH ) * 0.8 );
+	// 近景：草叶笔画、野花点、三叶草暗点（只在草地上）
+	float sgMeadow = ( 1.0 - sgFw ) * ( 1.0 - sgSandW ) * ( 1.0 - sgSnowW ) * ( 1.0 - sgRockW ) * ( 1.0 - sgDirtW * 0.7 );
+	if ( sgNear * sgMeadow > 0.01 ) {
+		vec3 bl = texture2D( sgBlade, sgP * 0.55 ).rgb * 2.0;
+		sgCol *= mix( vec3( 1.0 ), bl, 0.7 * sgNear * sgMeadow );
+		vec4 pf = texture2D( sgPaint, sgP * 0.43 + vec2( 0.05, 0.71 ) );
+		float fh = sgHash( floor( sgP * 2.2 ) );
+		vec3 fc = fh < 0.3 ? vec3( 0.98, 0.96, 0.9 ) : fh < 0.55 ? vec3( 0.98, 0.84, 0.36 ) : fh < 0.8 ? vec3( 0.93, 0.62, 0.72 ) : vec3( 0.7, 0.6, 0.92 );
+		float fw = smoothstep( 0.45, 0.8, pf.b ) * sgNear * sgMeadow * ( 1.0 - sgForest ) * sgPaintK.z;
+		sgCol *= 1.0 - smoothstep( 0.4, 0.9, pf.a ) * 0.22 * sgNear * sgMeadow;
+		sgCol = mix( sgCol, fc, fw );
+	}
+	// 面的亮度抖动（坡地才有：平地上看不出三角拼块）、向阳的脊亮 / 沟里暗
+	sgCol *= 1.0 + ( sgFid - 0.5 ) * sgFacetSz.w * smoothstep( 0.02, 0.18, sgSlopeF ) * smoothstep( 0.05, 0.55, sgH );
+	sgCol *= 0.86 + 0.28 * clamp( sgAO, 0.0, 1.0 );
+	vec3 n = normalize( ( viewMatrix * vec4( sgN, 0.0 ) ).xyz );
+`;
+  // LP 的 LowPoly 着色器 → 地形着色器（锚点不在时返回 null）
+  let _lptSrc;
+  function lpTerrainSource() {
+    if (_lptSrc !== undefined) return _lptSrc;
+    _lptSrc = null;
+    const LP = SG.LP;
+    if (!LP || !LP.material || !LP.globals || !LP.grassDetail) return null;
+    const base = LP.material({});
+    let vs = base.vertexShader, fs = base.fragmentShader;
+    const rep = (s, a, b) => (s.indexOf(a) >= 0 ? s.replace(a, b) : null);
+    vs = rep(vs, 'vColor = color;', 'vColor = vec4( 1.0, 1.0, 1.0, 0.0 );');
+    vs = vs && rep(vs, 'worldPosition.xyz = lpWindSway( worldPosition.xyz, lpWind * uWindScale );', 'vSgW = worldPosition.xyz;');
+    fs = rep(fs, 'vec3 n = normalize( vNormalV );', LPT_FS_MAIN);
+    fs = fs && rep(fs, 'vec3 albedo = lpLin( vColor.rgb ) * uTint;', 'vec3 albedo = lpLin( clamp( sgCol, 0.0, 1.0 ) ) * uTint;');
+    fs = fs && rep(fs, 'void main() {', LPT_FS_PARS + 'void main() {');
+    if (!vs || !fs) { console.warn('lpTerrainMaterial: LP shader anchors not found; using the classic terrain material'); return null; }
+    vs = rep(vs, 'void main() {', LPT_VS_PARS + 'void main() {');
+    // 地形不加边缘光（Lanternvale/Terrain 的 rim = 0）
+    const rimLine = fs.match(/float rim = pow\([^;]*;/);
+    if (rimLine) fs = fs.replace(rimLine[0], 'float rim = 0.0;');
+    _lptSrc = { vs, fs };
+    return _lptSrc;
+  }
+  // opts.maps = terrainMaterial 的 maps 外加 { x: DataTexture（R 水田、G 踩出的泥地）, facet: DataTexture, facetXf: Vector4(x0, z0, 格距, 0),
+  //   facetSz: Vector4(1/宽, 1/高, 面化强度, 逐面抖动) }；opts.paint：近景距离等（sgPaintK）
+  function lpTerrainMaterial(opts) {
+    const o = opts || {}, m = o.maps;
+    const src = lpTerrainSource();
+    if (!src || !m) return null;
+    const LP = SG.LP;
+    const det = Gfx.terrainDetail();
+    if (!_paint) { const it = paintDetailGen(); while (!it.next().done) { /* 同步跑完 */ } }
+    const u = THREE.UniformsUtils.merge([THREE.UniformsLib.lights, THREE.UniformsLib.fog, {
+      uTint: { value: new THREE.Vector3(1, 1, 1) }, uFlash: { value: new THREE.Vector4(1, 1, 1, 0) }, uRimBoost: { value: 0 }, uFogScale: { value: 1 },
+      uWindScale: { value: 0 }, uFade: { value: 1 }, uLit: { value: -1 },
+    }]);
+    for (const k in LP.globals) u[k] = LP.globals[k];
+    const tu = {
+      sgDetA: { value: det.a }, sgDetB: { value: det.b }, sgPaint: { value: _paint }, sgBlade: { value: LP.grassDetail() },
+      sgMapN: { value: m.n }, sgMapC: { value: m.c }, sgMapM: { value: m.m }, sgMapX: { value: m.x }, sgOutC: { value: m.oc }, sgOutM: { value: m.om },
+      sgFacet: { value: m.facet },
+      sgXfN: { value: m.xfN }, sgXfC: { value: m.xfC }, sgXfO: { value: m.xfO }, sgInner: { value: m.inner },
+      sgFacetXf: { value: m.facetXf }, sgFacetSz: { value: m.facetSz },
+      sgPaintK: { value: o.paint || new THREE.Vector4(20, 52, 1, 1) },
+    };
+    Object.assign(u, tu);
+    let fs = src.fs;
+    // 调试：opts.debug = GLSL 语句（在法线换算之前执行，如 'sgCol = vec3( sgDirtW, sgRockW, sgX.g );'）
+    if (o.debug) fs = fs.replace('vec3 n = normalize( ( viewMatrix * vec4( sgN, 0.0 ) ).xyz );', o.debug + '\n\tvec3 n = normalize( ( viewMatrix * vec4( sgN, 0.0 ) ).xyz );');
+    const mat = new THREE.ShaderMaterial({ uniforms: u, vertexShader: src.vs, fragmentShader: fs, lights: true, fog: true, vertexColors: false });
+    mat.name = 'TerrainLP';
+    mat.userData.terrainUniforms = tu;
+    mat.userData.lpKind = 'terrain';
+    return mat;
+  }
+
   Object.assign(Gfx, {
     // 砖石材质（城池、关隘、桥；共享实例，勿 dispose）：near / far 为淡出的镜头距离（缺省 16 / 30）
     masonryMaterial,
     // 地形细节纹理 { a, b }（同步生成，约 40ms；地图构建时用 terrainDetailGen 分片生成）
     terrainDetail() { if (!_detail) { const it = terrainDetailGen(); while (!it.next().done) { /* 同步跑完 */ } } return _detail; },
     terrainDetailGen,
+    // 第四版：Lanternvale 风格的绘制地面（LP 光照、固定三角格的面化山坡）；LP 不可用时返回 null。paintDetailGen：绘制细节纹理（可分片）
+    lpTerrainMaterial,
+    paintDetailGen,
+    paintDetail() { if (!_paint) { const it = paintDetailGen(); while (!it.next().done) { /* 同步跑完 */ } } return _paint; },
     // 新建地形材质。opts.maps = { n, c, m, oc, om: DataTexture；xfN, xfC, xfO: Vector4（uv = 地图坐标 × zw + xy）；inner: Vector4(x0, z0, x1, z1)}
     terrainMaterial(opts) {
       const o = opts || {};

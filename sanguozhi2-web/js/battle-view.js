@@ -1423,6 +1423,531 @@ void main() {
     mb.flag(V(cxU + 0.85, kh, czU + 0.85), 2.4, 0.8, 0.55, defCol);
   }
 
+  // =========================================== 第四版：Lanternvale 风格的战场布景 --
+  // DESIGN-V4 §2（美术推广 · 战场）：按试点批准的画风（SG.LP / SG.LPProps）重画布景——
+  //   地面：绘制式的顶点色（各群落的草地四色斑块、森林地面、赭黄的丘坡、拼布般的田块、泥土路、沙岸、按面着色的岩石与积雪）
+  //         + LP 的笔触细节纹理；坡地按面平面着色并逐面抖动亮度（Lanternvale 的「手切」山坡），地形不描墨线；
+  //         格线、棋盘边框与棋盘外的略暗照旧画在着色器里（LP 光照：午后的暖光、黄金时刻提亮、夜色调、灯池、雾）。
+  //   景物：树按群落 / 纬度 / 文化取 SG.LPProps 的配方（槐 · 栎 · 榆 · 柳 · 杨 · 松 · 云杉 · 柏 · 海枣 · 椰 · 橄榄 · 金合欢 · 黄山松 · 竹），
+  //         石、灌木、草垛、栅栏（按文化：木栅 / 篱笆 / 石垣 / 竹篱）、水井、大车、村舍（按文化）同样取配方；每种配方一个实例化网格 +
+  //         一个实例化墨线；挡在部队与镜头之间的树抖动溶解（换成单独的淡出副本）。草丛、野花、卵石、落叶合成一个不描墨线、随风摆的网格。
+  //   城池：SG.LPProps.parts 的夯土（汉）/ 石（罗马、高句丽）/ 土坯（西亚）墙、垛口、勒脚与歇山 / 攒尖顶的角楼、门楼，各文化的本阵；
+  //         按米建模，缩放到棋盘（城墙走道 4.1 米 = 1.45 单位，与部队站立的墙顶同高）。桥、登陆的船同样改为 LP。
+  //   部队：脚下柔和的圆影（LP.BlobShadows，全部部队一次绘制）。
+  // 没有载入 js/lowpoly.js / js/lp-props.js 时（旧测试页）一律退回第三版的画法。
+  const LPOK = () => !!(SG.LP && SG.LP.MeshBuilder && SG.LP.material && SG.LP.instances && SG.LPProps && SG.LPProps.geometry);
+  const _hx = {};
+  const hx = h => _hx[h] || (_hx[h] = SG.LP.Paint.hex(h));
+  const mix3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+  const mul3 = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
+  // 值噪声（0..1，按整数格点哈希，平滑插值）
+  function vnoise(x, z, s) {
+    const f = (i, j) => SG.LP.hash01([i, j, s], 17);
+    const ix = Math.floor(x), iz = Math.floor(z), tx = x - ix, tz = z - iz, sx = tx * tx * (3 - 2 * tx), sz = tz * tz * (3 - 2 * tz);
+    const a = f(ix, iz), b = f(ix + 1, iz), c = f(ix, iz + 1), d = f(ix + 1, iz + 1);
+    return (a + (b - a) * sx) * (1 - sz) + (c + (d - c) * sx) * sz;
+  }
+  // 各群落的草地四色（亮 · 次亮 · 暗 · 最暗；BIOMES 顺序：温带、草原、沙漠、热带、稀树草原、地中海、寒带、高山），
+  // 与试点地面一样向 #D2D294 混 16%（暖、柔）
+  const MEADOW_HEX = [
+    ['#98AE5C', '#AABD68', '#7E9A4C', '#6E8C46'],
+    ['#B4AC64', '#C2B870', '#A09A56', '#8E8C4C'],
+    ['#D4BE8A', '#DEC896', '#C6AE7A', '#B89E6C'],
+    ['#84A852', '#94B65E', '#6C9446', '#5E8640'],
+    ['#C2AE66', '#CEBC74', '#AE9C58', '#9E8E50'],
+    ['#A6AA62', '#B4B66E', '#929858', '#848A4E'],
+    ['#84A060', '#92AC6A', '#728E54', '#64804C'],
+    ['#90A666', '#9EB270', '#7E9458', '#70864E'],
+  ];
+  let MEADOW = null;
+  function meadowPal() {
+    if (!MEADOW) MEADOW = MEADOW_HEX.map(p => p.map(h => mix3(hx(h), hx('#D2D294'), 0.16)));
+    return MEADOW;
+  }
+  const CROPS_HEX = ['#D8BE6C', '#C9B060', '#B8C46A', '#9EB45E', '#C8A464', '#A8875A', '#D0C484'];
+  // 地面一点的绘制色：pal = 群落四色（已按四角混合），n1 / n2 / n3 = 低 / 中 / 高频噪声
+  function paintMeadow(pal, n1, n2, n3) {
+    let c = mix3(mix3(pal[2], pal[0], sm(0.25, 0.75, n1)), pal[1], sm(0.55, 0.85, n2) * 0.7);
+    c = mix3(c, pal[3], sm(0.32, 0.12, n2) * 0.6);
+    return mul3(c, 0.93 + n3 * 0.12);
+  }
+
+  // ---- 棋盘的 LP 地形材质：SG.LP.material 的着色器（同一套光照）+ 坡地按面着色、逐面抖动 + 格线 / 棋盘边框 / 棋盘外略暗 --
+  const BOARD_PLANAR = 0.55, BOARD_DETAIL_K = 0.8;
+  const BOARD_FS_PARS = 'uniform vec4 sgBoard;\nuniform float sgGridK;\nuniform vec4 sgFacet;\nvarying vec3 vSgW;\n';
+  const BOARD_FS_NORMAL = `vec3 n = normalize( vNormalV );
+  // 坡地：屏幕导数求出的面法线（低多边形的「手切」坡面），按坡度从平滑法线过渡过去；逐面的亮度抖动按世界面法线取哈希
+  vec3 sgUpV = normalize( ( viewMatrix * vec4( 0.0, 1.0, 0.0, 0.0 ) ).xyz );
+  vec3 sgFN = normalize( cross( dFdx( vViewPosition ), dFdy( vViewPosition ) ) );
+  if ( dot( sgFN, n ) < 0.0 ) sgFN = - sgFN;
+  float sgFK = smoothstep( sgFacet.x, sgFacet.y, 1.0 - clamp( dot( n, sgUpV ), 0.0, 1.0 ) );
+  n = normalize( mix( n, sgFN, sgFK ) );
+  vec3 sgFW = ( vec4( sgFN, 0.0 ) * viewMatrix ).xyz;
+  float sgFJ = fract( sin( dot( floor( sgFW * 23.0 + 0.5 ), vec3( 12.9898, 78.233, 37.719 ) ) ) * 43758.5453 ) - 0.5;`;
+  const BOARD_FS_ALBEDO = `  albedo *= 1.0 + sgFJ * sgFacet.z * sgFK;
+  {
+    // 格线与棋盘边框（格坐标 = (世界 x − 原点 x, −世界 z − 原点 z) / 2）；棋盘外略暗、略褪色
+    vec2 bt = ( vec2( vSgW.x, - vSgW.z ) - sgBoard.xy ) * 0.5;
+    vec2 dOut = max( max( - bt, bt - sgBoard.zw ), vec2( 0.0 ) );
+    float outD = length( dOut );
+    float ins = 1.0 - step( 1e-4, outD );
+    vec2 g = abs( fract( bt ) - 0.5 );
+    vec2 fw = max( fwidth( bt ), vec2( 1e-4 ) );
+    vec2 ln2 = 1.0 - smoothstep( vec2( 0.0 ), fw * 1.3 + 0.012, vec2( 0.5 ) - g );
+    float ln = max( ln2.x, ln2.y ) * ins;
+    float sgFar = 1.0 - smoothstep( 0.35, 0.9, max( fw.x, fw.y ) );
+    albedo *= 1.0 - sgGridK * ln * sgFar;
+    float o = smoothstep( 0.0, 1.6, outD );
+    float lum = dot( albedo, vec3( 0.3, 0.59, 0.11 ) );
+    albedo = mix( albedo, mix( albedo, vec3( lum ), 0.22 ) * 0.86, o );
+    vec2 e = min( bt, sgBoard.zw - bt );
+    float edge = ( 1.0 - smoothstep( 0.0, fw.x * 1.5 + 0.035, abs( min( e.x, e.y ) ) ) ) * step( - 0.05, min( e.x, e.y ) );
+    albedo *= 1.0 - 0.42 * edge;
+  }
+`;
+  let _boardSrc;
+  function boardSource() {
+    if (_boardSrc !== undefined) return _boardSrc;
+    _boardSrc = null;
+    const LP = SG.LP;
+    const base = LP.material({ detail: LP.grassDetail(), planar: BOARD_PLANAR, detailK: BOARD_DETAIL_K });
+    let vs = base.vertexShader, fs = base.fragmentShader;
+    const rep = (s, a, b) => (s && s.indexOf(a) >= 0 ? s.replace(a, b) : null);
+    const sway = 'worldPosition.xyz = lpWindSway( worldPosition.xyz, lpWind * uWindScale );';
+    vs = rep(vs, sway, sway + '\n  vSgW = worldPosition.xyz;');
+    vs = rep(vs, 'void main() {', 'varying vec3 vSgW;\nvoid main() {');
+    fs = rep(fs, 'vec3 n = normalize( vNormalV );', BOARD_FS_NORMAL);
+    fs = rep(fs, '  // emission code (LP.EMIT)', BOARD_FS_ALBEDO + '  // emission code (LP.EMIT)');
+    fs = rep(fs, 'void main() {', BOARD_FS_PARS + 'void main() {');
+    if (!vs || !fs) { console.warn('BattleView: LP shader anchors not found; using the classic board material'); return null; }
+    // 地形不加边缘光（Lanternvale 的地形 rim = 0）
+    const rimLine = fs.match(/float rim = pow\([^;]*;/);
+    if (rimLine) fs = fs.replace(rimLine[0], 'float rim = 0.0;');
+    _boardSrc = { vs, fs, defines: Object.assign({}, base.defines || {}) };
+    return _boardSrc;
+  }
+  function boardMaterialLP(W, H) {
+    const src = boardSource();
+    if (!src) return null;
+    const LP = SG.LP;
+    const u = THREE.UniformsUtils.merge([THREE.UniformsLib.lights, THREE.UniformsLib.fog, {
+      uRimBoost: { value: 0 }, uFogScale: { value: 1 }, uWindScale: { value: 0 }, uFade: { value: 1 }, uLit: { value: -1 }, uPlanar: { value: BOARD_PLANAR }, uDetailK: { value: BOARD_DETAIL_K },
+      sgGridK: { value: 0.2 },
+    }]);
+    // 向量 / 贴图在合并之后再放（UniformsUtils.merge 会复制贴图对象，造成重复上传）
+    u.uTint = { value: new THREE.Vector3(1, 1, 1) };
+    u.uFlash = { value: new THREE.Vector4(1, 1, 1, 0) };
+    u.uDetail = { value: LP.grassDetail() };
+    u.sgBoard = { value: new THREE.Vector4(ORIGIN.x, ORIGIN.z, W, H) };
+    u.sgFacet = { value: new THREE.Vector4(0.07, 0.26, 0.16, 0) };
+    for (const k in LP.globals) u[k] = LP.globals[k];
+    const m = new THREE.ShaderMaterial({ uniforms: u, vertexShader: src.vs, fragmentShader: src.fs, lights: true, fog: true, vertexColors: true });
+    m.defines = Object.assign({}, src.defines);
+    m.extensions = { derivatives: true };
+    m.name = 'BattleBoardLP';
+    m.userData.boardUniforms = { sgBoard: u.sgBoard, sgGridK: u.sgGridK };
+    return m;
+  }
+
+  // ---- 景物配方 --
+  // 树：种类 → [[配方, 目标高（棋盘单位，再乘实例的 s）], …]（同种多个配方按位置哈希轮换）
+  const LP_TREE = {
+    broad: [['tree_huai', 1.62], ['tree_oak', 1.55], ['tree_elm', 1.72]],
+    broadT: [['tree_huai', 1.6], ['tree_oak', 1.55]],
+    pine: [['tree_pine', 1.95]], spruce: [['tree_spruce', 2.05]], poplar: [['tree_poplar', 2.25]],
+    palm: [['palm_date', 1.95]], palmT: [['palm_coconut', 1.9]], cypress: [['tree_cypress', 1.85]], acacia: [['tree_acacia', 1.42]],
+    olive: [['tree_olive', 1.2]], umbrella: [['tree_pine_cloud', 1.55]], willow: [['tree_willow', 1.7]], bamboo: [['bamboo', 1.55]],
+    snowpine: [['pine_snow', 1.95]],
+  };
+  const LP_FENCE = { han: 'fence_wood', korea: 'fence_wood', wa: 'fence_bamboo', roman: 'wall_stone', persia: 'wall_stone', arab: 'wall_stone', africa: 'wall_stone', moor: 'wall_stone',
+    tarim: 'wall_stone', kushan: 'wall_stone', india: 'fence_bamboo', seasia: 'fence_bamboo', nanman: 'fence_bamboo', yi: 'fence_bamboo', celt: 'fence_wattle', german: 'fence_wattle',
+    steppe: 'fence_wattle', sarmatian: 'fence_wattle' };
+  const LP_HUT = { han: ['house_han', 0], tile: ['house_med', 0], flat: ['house_mud', 0], yurt: ['yurt', 0], thatch: ['house_thatch', 1], long: ['house_thatch', 0], round: ['house_thatch', 1], stilt: ['house_thatch', 3] };
+  const _lpH = {};
+  // 配方的模型高度 / 宽度（近景几何体，按配方 + 种子缓存）
+  function lpSize(name, seed) {
+    const k = name + '|' + seed;
+    if (_lpH[k]) return _lpH[k];
+    const g = SG.LPProps.geometry(name, { seed });
+    return (_lpH[k] = { w: Math.max(0.01, g.size[0]), h: Math.max(0.01, g.size[1]), d: Math.max(0.01, g.size[2]) });
+  }
+  const phash = (x, z, s) => SG.LP.hash01([x, s, z], 29);
+  const HIDE_M = new THREE.Matrix4().makeScale(0, 0, 0), _fm = new THREE.Matrix4();
+  // 一个景物条目（_buildProps 的 lists）→ LP 配方与变换：{ name, seed, lod, opts, sc: 数 | [x, y, z], tint, ink, cast, fade, dy }
+  function lpPropSpec(kind, e, ctx) {
+    const near = e.near || e.hi, h0 = phash(e.x, e.z, 3);
+    const far = !(e.near || e.hi) || /Lo$/.test(kind);
+    let base = kind.replace(/Lo$/, '');
+    const T = (list, s) => {
+      const [name, tH] = list[Math.floor(h0 * list.length) % list.length];
+      const seed = Math.floor(phash(e.x, e.z, 7) * 2);
+      const sz = lpSize(name, seed), k = tH * s / sz.h;
+      return { name, seed, lod: far ? 'far' : 'near', sc: [k * e.ax, k * e.ay, k * e.ax], tint: e.c, ink: !!near, cast: !!near, fade: !!e.near, tree: true };
+    };
+    switch (base) {
+      case 'broad': {
+        const bi = e.bi | 0;
+        if (ctx.wet && ctx.wet(e) && (bi === 0 || bi === 5) && h0 < 0.35) return T(LP_TREE.willow, e.s);
+        if ((bi === 3 || ctx.south) && h0 > 0.78) return T(LP_TREE.bamboo, e.s);
+        return T(bi === 3 ? LP_TREE.broadT : LP_TREE.broad, e.s);
+      }
+      case 'pine': return T((e.bi === 6 || e.bi === 7) && e.y > BASE_Y + 1.6 ? LP_TREE.snowpine : LP_TREE.pine, e.s);
+      case 'spruce': case 'poplar': case 'cypress': case 'acacia': case 'olive': case 'umbrella': return T(LP_TREE[base], e.s);
+      case 'palm': return T(e.bi === 3 || ctx.south ? LP_TREE.palmT : LP_TREE.palm, e.s);
+      case 'rock': {
+        const name = e.s < 0.17 ? 'rock_small' : e.s < 0.3 ? 'rock_large' : 'boulder', seed = Math.floor(h0 * 4);
+        const sz = lpSize(name, seed), k = 1.9 * e.s / sz.w;
+        return { name, seed, lod: 'near', sc: [k, k * (0.85 + phash(e.x, e.z, 11) * 0.3), k], tint: e.c, ink: true, cast: !!near, dy: -0.05 * e.s };
+      }
+      case 'bush': { const v = h0 < 0.5 ? 'pilot' : h0 < 0.8 ? 'round' : 'flowering'; const k = 0.62 * e.s / lpSize('bush', 0).w; return { name: 'bush', seed: 0, opts: { variant: v }, lod: 'near', sc: k, tint: e.c, ink: true, cast: !!near }; }
+      case 'scrub': { const k = 0.5 * e.s / lpSize('bush', 0).w; return { name: 'bush', seed: 1, opts: { variant: 'round' }, lod: 'near', sc: [k, k * 0.6, k], tint: [e.c[0] * 1.05, e.c[1] * 0.98, e.c[2] * 0.72], ink: true, cast: false }; }
+      case 'hay': { const k = 0.4 * e.s / lpSize('haystack', 0).h; return { name: 'haystack', seed: Math.floor(h0 * 2), lod: 'near', sc: k, ink: true, cast: !!near }; }
+      case 'fence': { const name = ctx.fence; const k = 0.84 * e.s / lpSize(name, 0).w; return { name, seed: 0, lod: 'near', sc: k, ink: true, cast: false }; }
+      case 'cairn': { const k = 0.34 / lpSize('rock_small', 1).w; return { name: 'rock_small', seed: 1, lod: 'near', sc: [k, k * 1.4, k], tint: [1.08, 1.06, 1.02], ink: true, cast: false }; }
+      case 'well': return { name: 'well', seed: 0, lod: 'near', sc: 0.5 / lpSize('well', 0).w, ink: true, cast: true };
+      case 'cart': return { name: 'cart', seed: 0, opts: { color: '#B89A66' }, lod: 'near', sc: 1.0 / lpSize('cart', 0).d, ink: true, cast: true };
+      default:
+        if (/^hut_/.test(base)) { const [name, seed] = LP_HUT[base.slice(4)] || LP_HUT.han, k = 0.95 * e.s / lpSize(name, seed).w; return { name, seed, lod: 'near', sc: k, ink: true, cast: true }; }
+        return null;
+    }
+  }
+
+  // ---- 草丛 / 野花 / 卵石 / 落叶（合成一个不描墨线、随风摆的网格；与试点的 grassField 相同的做法）--
+  const GRASS_HEX = [['#8DB45A', '#A6C46A', '#7AA44E', '#B4C878'], ['#B8B46A', '#C8C078', '#A6A25C', '#D0C888'], ['#C8B47A', '#D4C088', '#B8A46C', '#DCCB94'],
+    ['#7EAE50', '#96C060', '#6A9A44', '#A8C870'], ['#C2B468', '#D0C276', '#B0A45C', '#D8CC84'], ['#A8B266', '#B8C072', '#96A05A', '#C4C880'], ['#86A85E', '#98B66A', '#749654', '#A8C078'], ['#90AE66', '#A2BC72', '#80A05A', '#B0C67E']];
+  const FLOWER_HEX = ['#F5F0E6', '#F2B8C6', '#F4D35E', '#C9A8FF', '#F08C6C'];
+  function grassMeshLP(items, seed) {
+    const LP = SG.LP, P = LP.Paint;
+    const M = new LP.MeshBuilder(seed || 811);
+    M.jitter = 0.08;
+    M.windGradient = true; M.wind = 0.5;
+    const flowers = FLOWER_HEX.map(hx);
+    for (const it of items) {
+      const k = it.k;
+      if (it.t === 'tuft') {
+        const greens = (GRASS_HEX[it.bi | 0] || GRASS_HEX[0]).map(hx);
+        M.windY0 = it.y; M.windY1 = it.y + 0.35 * k;
+        M.tuft([it.x, it.y, it.z], (0.2 + M.random01() * 0.18) * k, 4 + ((M.random01() * 3) | 0), P.shade(greens[(M.random01() * 4) | 0], it.dim || 1));
+      } else if (it.t === 'flowers') {
+        M.windY0 = it.y; M.windY1 = it.y + 0.3;
+        const fc = it.c || flowers[(M.random01() * flowers.length) | 0];
+        for (let i = 0; i < 4; i++) {
+          const a = M.random01() * Math.PI * 2, d = Math.sqrt(M.random01()) * 0.22 * k, x = it.x + Math.cos(a) * d, z = it.z + Math.sin(a) * d, fy = (0.12 + M.random01() * 0.12) * k;
+          M.color = hx('#5E8E42'); M.segment([x, it.y, z], [x, it.y + fy, z], 0.008, 0.006, 3, false, false);
+          M.color = fc; M.emission = 0.06;
+          M.push().translate(x, it.y + fy, z).rotate(-20 + M.random01() * 40, M.random01() * 360, 0);
+          M.disc([0, 0, 0], 0.05 * k, 5); M.disc([0, -0.003, 0], 0.05 * k, 5, true);
+          M.color = hx('#F4D35E'); M.sphere([0, 0.008, 0], 0.016 * k, 4, 2, false);
+          M.pop(); M.emission = 0;
+        }
+      } else if (it.t === 'speck') {
+        M.wind = 0;
+        M.color = it.c || flowers[(M.random01() * flowers.length) | 0]; M.emission = 0.05;
+        M.disc([it.x, it.y + 0.02, it.z], (0.025 + M.random01() * 0.018) * k, 5);
+        M.emission = 0; M.wind = 0.5;
+      } else if (it.t === 'pebble') {
+        M.wind = 0;
+        const greys = [hx('#9C948A'), hx('#B3AB9E'), hx('#7F786F')], r = (0.04 + M.random01() * 0.04) * k;
+        M.color = P.shade(greys[(M.random01() * 3) | 0], 0.92 + M.random01() * 0.14);
+        M.push().translate(it.x, it.y, it.z).rotate(0, M.random01() * 360, 0).scale(1, 1, 0.7 + M.random01() * 0.3);
+        M.lathe([[r, 0.004], [r * 0.75, r * 0.45], [0, r * 0.62]], 5, false, false, false);
+        M.pop(); M.wind = 0.5;
+      } else if (it.t === 'leaf') {
+        M.wind = 0;
+        const leaves = [hx('#9A6A3A'), hx('#B48A48'), hx('#7E5A36'), hx('#A87F3E')];
+        M.color = P.shade(leaves[(M.random01() * 4) | 0], 0.92 + M.random01() * 0.16);
+        M.push().translate(it.x, it.y + 0.018, it.z).rotate(0, M.random01() * 360, 0);
+        M.disc([0, 0, 0], (0.035 + M.random01() * 0.02) * k, 4);
+        M.pop(); M.wind = 0.5;
+      }
+    }
+    if (M.isEmpty) return null;
+    const mesh = LP.mesh(M.toGeometry(), { outline: false, castShadow: false });
+    mesh.name = 'LP grass';
+    return mesh;
+  }
+
+  // ---- 城池（LP）：按米建模（城心为原点，+Z 朝镜头），整体缩放 FORT_FS 到棋盘单位 --
+  const FORT_FS = 0.35;          // 1 米 = 0.35 单位：城墙走道 4.14 米 = 1.45 单位（部队站立的墙顶）
+  function fortStyleLP(style) {
+    if (style === 'roman') return { fam: 'roman', wall: 'stone', merlon: hx('#C8BEA8') };
+    if (style === 'persia' || style === 'arab' || style === 'tarim' || style === 'kushan') return { fam: 'mud', wall: style === 'kushan' ? 'brick' : 'mud', merlon: hx(style === 'kushan' ? '#B07A5E' : '#C8A47A') };
+    if (style === 'korea') return { fam: 'korea', wall: 'stone', merlon: hx('#A8A49A') };
+    if (style === 'wa' || style === 'stilt' || style === 'celt' || style === 'german' || style === 'steppe') return { fam: 'timber', wall: 'rammed', merlon: null };
+    return { fam: 'han', wall: 'rammed', merlon: PAL_LP().rammed };
+  }
+  const PAL_LP = () => SG.LP.PAL;
+  // 方形的夯土 / 石砌墩台（四面都有层理）：中心 (x, z)，边长 s，高 h
+  function lpBlock(M, kind, x, z, s, h, merl, rot) {
+    const parts = SG.LPProps.parts;
+    M.push().translate(x, 0, z).rotate(0, rot || 0, 0);
+    parts.wall(M, { len: s, h, thick: s, kind, batter: 0.04, faces: 'fk' });
+    M.push().rotate(0, 90, 0);
+    parts.wall(M, { len: s - 0.02, h: h - 0.01, thick: s - 0.02, kind, batter: 0.04, faces: 'fk' });
+    M.pop();
+    if (merl) {
+      const n = Math.max(2, Math.round(s / 1.15)), xs = [];
+      for (let i = 0; i < n; i++) xs.push(-s / 2 + (i + 0.5) * s / n);
+      for (let k = 0; k < 4; k++) { M.push().rotate(0, k * 90, 0); parts.merlons(M, xs, h, s / 2 - 0.2 - 0.04 * h, [s / n * 0.55, 0.7, 0.4], merl); M.pop(); }
+    }
+    M.pop();
+  }
+  // 歇山 / 攒尖的小亭（城楼、角楼）：四柱 + 栏额 + 屋顶，立在 y 高处
+  function lpPavilion(M, x, y, z, w, d, style, pal, lanterns) {
+    const LP = SG.LP, P = LP.Paint, parts = SG.LPProps.parts, PAL = PAL_LP();
+    const hw = w / 2 - 0.25, hd = d / 2 - 0.25, ch = 2.0;
+    M.color = P.shade(PAL.stone, 0.95); M.box([x, y + 0.08, z], [w, 0.16, d], null, 'tfkrl');
+    parts.columns(M, [[x - hw, z - hd], [x + hw, z - hd], [x - hw, z + hd], [x + hw, z + hd]], y + 0.16, y + 0.16 + ch, { r: 0.13 });
+    M.color = PAL.hanRedDark; M.box([x, y + ch + 0.05, z + hd], [w - 0.3, 0.22, 0.16], null, 'fbt'); M.box([x, y + ch + 0.05, z - hd], [w - 0.3, 0.22, 0.16], null, 'kbt');
+    M.color = P.shade(PAL.hanRed, 0.9); M.box([x, y + 0.75, z], [w - 0.7, 1.15, d - 0.7], null, 'fkrl');
+    parts.hanRoof(M, { style, w: w - 0.2, d: d - 0.2, y: y + 0.16 + ch + 0.12, palette: pal || 'slate', detail: 'low', cx: x, cz: z, over: 0.7 });
+    if (lanterns) for (const s of [-1, 1]) M.ribLantern([x + s * (hw - 0.1), y + ch - 0.35, z + hd + 0.12], 0.17, 0.4, PAL.vermilion, 'night', PAL.iron, true, 6);
+  }
+  // 圆塔（罗马石塔 / 西亚土坯塔）：中心 (x, z)，半径 r，高 h；roof：'cone' 瓦锥顶 / 'flat' 垛口平顶 / 'dome'
+  function lpRoundTower(M, x, z, r, h, wallC, roof, merl) {
+    const LP = SG.LP, P = LP.Paint, PAL = PAL_LP();
+    M.push().translate(x, 0, z);
+    M.color = P.shade(wallC, 0.86); M.cylinder([0, 0, 0], r * 1.08, r * 1.04, 0.5, 10, false, false, false);
+    const rows = Math.max(2, Math.round(h / 1.1));
+    for (let i = 0; i < rows; i++) { M.color = P.shade(wallC, 0.95 + ((i % 2) ? 0.06 : 0)); M.cylinder([0, 0.5 + (h - 0.5) * i / rows, 0], r, r, (h - 0.5) / rows, 10, false, false, i === rows - 1); }
+    M.color = P.shade(wallC, 1.05); M.band([0, 0, 0], r + 0.08, r + 0.08, h - 0.12, h + 0.08, 10);
+    if (roof === 'cone') { M.color = PAL.terracotta; M.cylinder([0, h + 0.08, 0], r + 0.35, 0, r * 1.25, 10, false, true, false); }
+    else if (roof === 'dome') SG.LPProps.parts.dome(M, { c: [0, h + 0.08, 0], r: r * 0.7, drumH: 0.25, color: '#E8E0D0', sides: 10 });
+    if (roof !== 'cone' && merl) { for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; M.color = P.shade(merl, 0.95 + 0.1 * (i % 2)); M.box([Math.cos(a) * (r - 0.2), h + 0.43, Math.sin(a) * (r - 0.2)], [0.5, 0.7, 0.5], null, 'tfkrl'); } }
+    M.pop();
+  }
+  // 木望楼：四柱、平台、护栏与茅草攒尖顶
+  function lpWatchtower(M, x, z, s, h) {
+    const LP = SG.LP, P = LP.Paint, PAL = PAL_LP(), hs = s / 2 - 0.2;
+    M.color = PAL.timber;
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) M.segment([x + sx * hs, 0, z + sz * hs], [x + sx * hs * 0.9, h + 1.3, z + sz * hs * 0.9], 0.16, 0.13, 5);
+    M.color = PAL.wood; M.box([x, h, z], [s + 0.3, 0.22, s + 0.3], P.shade(PAL.woodLight, 0.95), 'tbfkrl');
+    M.color = P.shade(PAL.wood, 0.9);
+    for (let k = 0; k < 4; k++) { M.push().translate(x, 0, z).rotate(0, k * 90, 0); M.box([0, h + 0.55, hs + 0.1], [s + 0.2, 0.7, 0.12], null, 'fkt'); M.pop(); }
+    SG.LPProps.parts.thatchRoof(M, { w: s, d: s, y: h + 1.3, style: 'hip', over: 0.45, rise: s * 0.75, cx: x, cz: z });
+  }
+  // 木栅：一排削尖的木桩（沿 X，中心在原点，前方 +Z）
+  function lpPalisade(M, len, h) {
+    const PAL = PAL_LP(), P = SG.LP.Paint;
+    const n = Math.max(3, Math.round(len / 0.42));
+    for (let i = 0; i < n; i++) {
+      const x = -len / 2 + (i + 0.5) * len / n, hh = h * (0.92 + 0.08 * ((i * 7) % 3));
+      M.color = P.shade(i % 2 ? PAL.wood : PAL.timber, 0.95 + 0.1 * ((i * 5) % 3) / 2);
+      M.cylinder([x, 0, 0], 0.2, 0.19, hh, 5, false, false, false);
+      M.color = P.shade(PAL.woodLight, 0.95); M.cone([x, hh, 0], 0.19, 0.42, 5);
+    }
+    M.color = PAL.timberDark; M.box([0, h * 0.62, -0.18], [len, 0.16, 0.12], null, 'tfkb');
+  }
+  /**
+   * 城池（LP 版）：城墙、城门（缺口两侧门楼）、角楼、本阵。返回 { geo（描墨线）, plain（地面铺装，不描）, flag: 世界坐标, lamps }
+   * 版式与第三版一致（墙沿城池外圈格中心线、墙顶 1.45 单位、门格是缺口），只换画风。
+   */
+  function buildFortLP(view, Tm, look, defHex) {
+    const LP = SG.LP, P = LP.Paint, parts = SG.LPProps.parts, PAL = PAL_LP();
+    const m = view.model, ca = Tm.castle, st = look.style, S = fortStyleLP(st);
+    const gy = BASE_Y + 0.06;
+    const cx = ORIGIN.x + ca.x * T + T / 2, cz = -(ORIGIN.z + ca.y * T + T / 2);
+    const FS = FORT_FS, Rm = 2 * T / FS, Hm = 1.45 / FS, w0 = 1.12 / FS, timber = S.fam === 'timber';
+    const M = new LP.MeshBuilder(((ca.x * 31 + ca.y) | 0) + 77), Pv = new LP.MeshBuilder(78);
+    M.jitter = 0.06; M.aoStrength = 0.22; M.aoHeight = 1.4;
+    Pv.jitter = 0.05;
+    M.push().translate(cx, gy, cz).scale(FS);
+    Pv.push().translate(cx, gy + 0.012, cz).scale(FS);
+    // 内院铺地（不描墨线）：石板 / 夯土 / 草地
+    {
+      const ir = Rm - w0 / 2 + 0.2, n = 9, cell = 2 * ir / n;
+      const tones = timber ? [hx('#A08A62'), hx('#968058'), hx('#AA9468')] : S.fam === 'mud' ? [hx('#D8C094'), hx('#CEB488'), hx('#E0C89C')] : [hx('#B8B0A0'), hx('#AAA294'), hx('#C4BCAC')];
+      for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+        const x0 = -ir + i * cell, z0 = -ir + j * cell, c = P.shade(tones[(i * 3 + j * 5) % 3], 0.94 + 0.1 * SG.LP.hash01([i, j, 5], 3));
+        Pv.quad([x0 + 0.03, 0, z0 + 0.03], [x0 + cell - 0.03, 0, z0 + 0.03], [x0 + cell - 0.03, 0, z0 + cell - 0.03], [x0 + 0.03, 0, z0 + cell - 0.03], [0, 1, 0], c);
+      }
+      Pv.color = P.shade(tones[1], 0.72);
+      Pv.quad([-ir, -0.01, -ir], [ir, -0.01, -ir], [ir, -0.01, ir], [-ir, -0.01, ir], [0, 1, 0]);
+    }
+    const isGate = (x, y) => x >= 0 && y >= 0 && x < m.W && y < m.H && m.map[x][y] === TR().Gate;
+    // 四边：out 为三维坐标的外向（+Z 朝镜头），yaw 把局部 +Z 转到外向
+    const sides = [
+      { ox: 0, oz: 1, yaw: 0, gate: isGate(ca.x, ca.y - 2) },
+      { ox: 1, oz: 0, yaw: 90, gate: isGate(ca.x + 2, ca.y) },
+      { ox: 0, oz: -1, yaw: 180, gate: isGate(ca.x, ca.y + 2) },
+      { ox: -1, oz: 0, yaw: -90, gate: isGate(ca.x - 2, ca.y) },
+    ];
+    const cr = (timber ? 0.5 : S.fam === 'han' || S.fam === 'korea' ? 0.62 : 0.7) / FS;   // 角楼半宽
+    const gap = 0.75 / FS, gr = (timber ? 0.45 : S.fam === 'han' || S.fam === 'korea' ? 0.5 : 0.55) / FS;   // 门洞半宽、门楼半宽
+    const run = (x0, x1) => {
+      const len = x1 - x0, xm = (x0 + x1) / 2;
+      if (len < 0.2) return;
+      M.push().translate(xm, 0, 0);
+      if (timber) {
+        // 土垒（梯形断面的草坡）+ 外沿木栅
+        const bh = Hm * 0.45, b0 = w0 / 2 + 0.6, b1 = w0 / 2 - 0.4;
+        M.color = hx('#8A7A52');
+        M.quad([-len / 2, 0, b0], [len / 2, 0, b0], [len / 2, bh, b1], [-len / 2, bh, b1], [0, 0.6, 1], hx('#8E9A58'));
+        M.quad([-len / 2, 0, -b0], [-len / 2, bh, -b1], [len / 2, bh, -b1], [len / 2, 0, -b0], [0, 0.6, -1], hx('#7E8A50'));
+        M.quad([-len / 2, bh, -b1], [-len / 2, bh, b1], [len / 2, bh, b1], [len / 2, bh, -b1], [0, 1, 0], hx('#9AA462'));
+        M.push().translate(0, bh - 0.1, b1 * 0.55);
+        lpPalisade(M, len, Hm * 0.62);
+        M.pop();
+        // 走道：木板（部队站在墙顶 = Hm）
+        M.color = PAL.wood; M.box([0, Hm - 0.12, -0.6], [len, 0.24, 2.0], P.shade(PAL.woodLight, 0.92), 'tfkb');
+        for (let i = 0; i < Math.max(2, Math.round(len / 2.4)); i++) { const x = -len / 2 + (i + 0.5) * len / Math.max(2, Math.round(len / 2.4)); M.color = PAL.timber; M.segment([x, bh, -0.6], [x, Hm - 0.2, -0.6], 0.14, 0.12, 5); }
+      } else {
+        parts.wall(M, { len, h: Hm, thick: w0, kind: S.wall, batter: 0.07 });
+        // 外侧垛口、内侧矮女墙、外脚勒脚
+        const n = Math.max(2, Math.round(len / 1.25)), xs = [];
+        for (let i = 0; i < n; i++) xs.push(-len / 2 + (i + 0.5) * len / n);
+        if (S.fam === 'mud') { for (const x of xs) { M.color = P.shade(S.merlon, 0.95 + 0.08 * ((x * 13 | 0) % 2)); M.box([x, Hm + 0.3, w0 / 2 - 0.55], [0.75, 0.6, 0.5], null, 'tfkrl'); M.box([x, Hm + 0.78, w0 / 2 - 0.55], [0.42, 0.36, 0.4], null, 'tfkrl'); } }
+        else parts.merlons(M, xs, Hm, w0 / 2 - 0.6, [len / n * 0.55, 0.78, 0.42], S.merlon);
+        M.color = P.shade(S.merlon || PAL.stone, 0.9); M.box([0, Hm + 0.17, -w0 / 2 + 0.6], [len, 0.34, 0.3], null, 'tfkb');
+        if (S.fam === 'han' || S.fam === 'korea') parts.plinth(M, -len / 2, len / 2, w0 / 2 - 0.05, 0.55);
+      }
+      M.pop();
+    };
+    const L = Rm;   // 半边长（墙中心线到城心）
+    let flagAt = null;
+    for (const sd of sides) {
+      M.push().translate(sd.ox * Rm, 0, sd.oz * Rm).rotate(0, sd.yaw, 0);
+      const a = -L + cr * 0.6, b = L - cr * 0.6;
+      if (sd.gate) {
+        const gw = gap + gr * 1.8;
+        run(a, -gw); run(gw, b);
+        // 门楼：缺口两侧的墩台 + 城楼小亭；门扇敞开贴在门洞内侧；缺口上方一道额枋与匾
+        for (const s of [-1, 1]) {
+          const tx = s * (gap + gr * 0.9), th = (1.45 + 0.45) / FS;
+          if (timber) lpWatchtower(M, tx, 0, gr * 2, th - 1.2);
+          else if (S.fam === 'han' || S.fam === 'korea') { lpBlock(M, S.wall, tx, 0, gr * 2, th, S.merlon && null, 0); lpPavilion(M, tx, th, 0, gr * 2 + 0.5, gr * 2 + 0.3, 'xieshan', S.fam === 'korea' ? 'grey' : 'slate', true); }
+          else lpRoundTower(M, tx, 0, gr * 1.05, th, S.fam === 'roman' ? hx('#C8BEA8') : S.merlon, S.fam === 'roman' ? 'cone' : st === 'arab' ? 'dome' : 'flat', S.merlon);
+          // 门扇（敞开、向内）
+          M.color = timber ? PAL.timber : hx('#A83E2E');
+          M.push().translate(s * gap, 0, -0.4).rotate(0, s * 70, 0);
+          M.box([-s * 0.85, 1.55, 0], [1.7, 3.1, 0.14], null, 'tbfkrl');
+          M.pop();
+        }
+        const ly = (1.45 + 0.25) / FS;
+        M.color = timber ? PAL.timberDark : PAL.hanRedDark;
+        M.box([0, ly, w0 / 2 - 0.4], [2 * gap + 0.6, 0.42, 0.42], null, 'tbfkrl');
+        M.color = PAL.lacquer; M.box([0, ly + 0.55, w0 / 2 - 0.25], [2.0, 0.75, 0.12], null, 'tfkrl');
+        M.color = P.shade(PAL.stone, 0.9); M.box([0, 0.06, 0], [2 * gap + 0.4, 0.12, w0 * 0.9], null, 'tfkrl');
+      } else {
+        run(a, b);
+        // 汉式墙段中间的马面
+        if (S.fam === 'han') { lpBlock(M, S.wall, 0, w0 / 2 + 0.75, 2.6, Hm, null, 0); }
+      }
+      M.pop();
+    }
+    // 角楼
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+      const x = sx * Rm, z = sz * Rm, th = (1.45 + 0.3) / FS;
+      if (timber) lpWatchtower(M, x, z, cr * 2, th - 1.0);
+      else if (S.fam === 'han' || S.fam === 'korea') { lpBlock(M, S.wall, x, z, cr * 2, th, S.merlon, 0); if (sz > 0 || true) lpPavilion(M, x, th, z, cr * 1.5, cr * 1.5, 'pyramid', S.fam === 'korea' ? 'grey' : 'slate', false); }
+      else lpRoundTower(M, x, z, cr, th, S.fam === 'roman' ? hx('#C8BEA8') : S.merlon, S.fam === 'roman' ? 'cone' : 'flat', S.merlon);
+    }
+    // 本阵（城心偏北 0.45 单位，部队站在南侧前方）
+    M.push().translate(0, 0, -0.45 / FS);
+    lpKeep(M, st, S);
+    M.pop();
+    // 帅旗位置（与第三版同：东北角 (0.85, 0.85) 单位，Unity 北 = 三维 −Z）
+    flagAt = { x: cx + 0.85, y: gy, z: cz - 0.85 };
+    M.pop(); Pv.pop();
+    return { geo: M.isEmpty ? null : M.toGeometry(), plain: Pv.isEmpty ? null : Pv.toGeometry(), flag: flagAt, tris: M.triangleCount + Pv.triangleCount };
+  }
+  // 各文化的本阵（米，原点为本阵中心地面，正面朝 +Z）
+  function lpKeep(M, st, S) {
+    const LP = SG.LP, P = LP.Paint, parts = SG.LPProps.parts, PAL = PAL_LP();
+    if (S.fam === 'han' || S.fam === 'korea') {
+      const korea = S.fam === 'korea';
+      // 三层台基、朱柱殿身、重檐（金顶 / 高句丽灰瓦）
+      M.color = PAL.stoneLight; M.box([0, 0.3, 0], [5.6, 0.6, 3.4], P.shade(PAL.stoneLight, 1.04), 'tfkrl');
+      M.color = PAL.stone; M.box([0, 0.75, 0.05], [4.9, 0.3, 2.9], P.shade(PAL.stoneLight, 1.0), 'tfkrl');
+      M.color = PAL.stone; M.box([0, 0.3, 1.95], [1.5, 0.6, 0.6], null, 'tfrl');
+      const y0 = 0.9;
+      M.color = korea ? hx('#8E5A44') : PAL.hanRed; M.box([0, y0 + 1.0, -0.15], [3.8, 2.0, 1.8], null, 'fkrl');
+      parts.columns(M, [[-1.8, 1.0], [-0.6, 1.0], [0.6, 1.0], [1.8, 1.0]], y0, y0 + 2.0, { r: 0.13 });
+      M.color = PAL.lacquer; M.box([0, y0 + 0.8, 0.76], [0.9, 1.6, 0.06], null, 'f');
+      parts.window(M, { x: -1.2, y: y0 + 1.2, z: 0.75, w: 0.7, h: 0.7 }); parts.window(M, { x: 1.2, y: y0 + 1.2, z: 0.75, w: 0.7, h: 0.7 });
+      const r1 = parts.hanRoof(M, { style: 'hip', w: 4.4, d: 2.6, y: y0 + 2.05, palette: korea ? 'grey' : 'gold', detail: 'mid', over: 0.75, rise: 1.0 });
+      M.color = korea ? hx('#8E5A44') : PAL.hanRed; M.box([0, r1.ridgeY - 0.15, 0], [2.6, 1.0, 1.3], null, 'fkrl');
+      parts.hanRoof(M, { style: korea ? 'xieshan' : 'hip', w: 3.0, d: 1.6, y: r1.ridgeY + 0.35, palette: korea ? 'grey' : 'gold', detail: 'mid', over: 0.6 });
+      return;
+    }
+    if (S.fam === 'roman') {
+      // 列柱神庙：台基、前后两排柱、赤陶瓦三角山墙朝前
+      M.color = PAL.stoneLight; M.box([0, 0.35, 0], [5.0, 0.7, 3.4], hx('#E8E2D4'), 'tfkrl');
+      const cols = []; for (let i = 0; i < 5; i++) for (const z of [1.25, -1.25]) cols.push([-1.9 + i * 0.95, z]);
+      parts.columns(M, cols, 0.7, 3.0, { r: 0.17, color: '#ECE6D8', base: '#D8D0C0', sides: 8 });
+      M.color = hx('#E4DCCC'); M.box([0, 1.85, 0], [3.2, 2.3, 1.6], null, 'fkrl');
+      M.color = hx('#E8E2D4'); M.box([0, 3.12, 0], [4.9, 0.3, 3.2], null, 'tbfkrl');
+      M.push().rotate(0, 90, 0); parts.terracottaRoof(M, { style: 'gable', w: 3.1, d: 4.6, y: 3.27, over: 0.25, rise: 1.0, detail: 'low' }); M.pop();
+      return;
+    }
+    if (S.fam === 'mud') {
+      if (st === 'kushan' || st === 'tarim') {
+        M.push().scale(0.62); parts.stupa(M, { r: 2.2 }); M.pop();
+        return;
+      }
+      // 平顶宫殿 + 正面伊万 + 穹顶（阿拉伯加尖塔）
+      const wc = hx(st === 'arab' ? '#E4D4B0' : '#D8B88A');
+      M.color = wc; M.box([0, 1.4, 0.1], [4.6, 2.8, 2.6], null, 'fkrl');
+      parts.flatRoof(M, { w: 4.6, d: 2.6, y: 2.8, color: st === 'arab' ? '#E4D4B0' : '#D8B88A', cz: 0.1 });
+      M.color = P.shade(wc, 1.05); M.box([0, 2.0, 1.45], [2.4, 4.0, 0.5], null, 'tfrl');
+      M.color = hx('#3A2E28'); M.box([0, 1.25, 1.71], [1.3, 2.5, 0.04], null, 'f');
+      M.color = hx(st === 'arab' ? '#C9A04A' : '#4E8E96'); M.box([0, 3.6, 1.72], [2.2, 0.3, 0.06], null, 'f');
+      parts.dome(M, { c: [0, 3.25, -0.2], r: 1.25, drumH: 0.5, shape: st === 'arab' ? 'hemi' : 'onion', color: st === 'arab' ? '#F0EAE0' : '#5E9C94', drum: '#D8CBB4' });
+      return;
+    }
+    // 木构文化
+    if (st === 'steppe') {
+      const felt = hx('#EEE6D6');
+      M.color = felt; M.cylinder([0, 0, 0], 2.0, 2.0, 1.5, 12, false, false, false);
+      M.color = hx('#B8442E'); M.band([0, 0, 0], 2.02, 2.02, 1.0, 1.2, 12);
+      M.color = P.shade(felt, 0.95); M.cylinder([0, 1.5, 0], 2.1, 0.5, 1.2, 12, false, true, false);
+      M.color = PAL.gold; M.cylinder([0, 2.7, 0], 0.5, 0.15, 0.35, 10, false, true, true);
+      M.color = hx('#B8442E'); M.box([0, 0.65, 2.0], [0.8, 1.3, 0.12], null, 'f');
+      for (const s of [-1, 1]) { M.color = PAL.timber; M.segment([s * 2.3, 0, 1.4], [s * 2.3, 5.0, 1.4], 0.08, 0.06, 5); M.color = hx('#3A2E28'); M.cylinder([s * 2.3, 3.6, 1.4], 0.12, 0.45, 1.2, 6, false, false, false); }
+      return;
+    }
+    if (st === 'celt') {
+      M.color = hx('#A88A62'); M.cylinder([0, 0, 0], 2.0, 2.0, 1.6, 12, false, false, false);
+      M.color = hx('#C8A868'); M.cylinder([0, 1.5, 0], 2.6, 0.1, 2.6, 12, false, true, false);
+      M.color = PAL.timberDark; M.box([0, 0.75, 1.98], [0.9, 1.5, 0.1], null, 'f');
+      return;
+    }
+    // 倭 / 南海：高床殿；日耳曼：长屋
+    if (st === 'german') {
+      M.color = PAL.timber; M.box([0, 1.1, 0], [5.4, 2.2, 2.6], null, 'fkrl');
+      parts.thatchRoof(M, { w: 5.6, d: 2.6, y: 2.2, style: 'gable', rise: 2.0 });
+      M.color = PAL.timberDark; M.box([0, 0.9, 1.32], [1.0, 1.8, 0.06], null, 'f');
+      return;
+    }
+    for (const x of [-2.0, 0, 2.0]) for (const z of [-0.9, 0.9]) { M.color = PAL.timber; M.segment([x, 0, z], [x, 1.8, z], 0.14, 0.12, 5); }
+    M.color = PAL.wood; M.box([0, 1.85, 0], [4.8, 0.2, 2.6], P.shade(PAL.woodLight, 0.95), 'tbfkrl');
+    M.color = P.shade(PAL.woodLight, 0.92); M.box([0, 2.65, 0], [3.8, 1.4, 1.9], null, 'fkrl');
+    parts.thatchRoof(M, { w: 4.0, d: 2.1, y: 3.3, style: 'gable', rise: 2.3, over: 0.55 });
+    if (st === 'wa') for (const s of [-1, 1]) { M.color = PAL.timberDark; M.segment([s * 2.5, 5.4, -0.3], [s * 2.9, 6.6, 0.3], 0.07, 0.05, 4); M.segment([s * 2.5, 5.4, 0.3], [s * 2.9, 6.6, -0.3], 0.07, 0.05, 4); }
+  }
+
+  // ---- 桥（LP）：木桥（汉、木构文化）/ 石桥（罗马、西亚）；桥面与第三版同高（部队站在桥面上）--
+  function bridgeInto(M, b, stone) {
+    const LP = SG.LP, P = LP.Paint, PAL = PAL_LP();
+    const cx = ORIGIN.x + b.x * T + T / 2, cz = -(ORIGIN.z + b.y * T + T / 2), y = WATER_Y + 0.34;
+    const ax = b.axis === 'x', L = T + 0.6, Wd = 1.0;
+    M.push().translate(cx, y, cz).rotate(0, ax ? 0 : 90, 0);
+    if (stone) {
+      M.color = PAL.stoneLight; M.box([0, -0.07, 0], [L, 0.14, Wd], P.shade(PAL.stoneLight, 1.04), 'tbfkrl');
+      for (const s of [-1, 1]) { M.color = PAL.stone; M.box([0, 0.09, s * (Wd / 2 - 0.05)], [L, 0.2, 0.1], null, 'tfkrl'); }
+      for (const s of [-1, 1]) { M.color = PAL.stoneDark; M.box([s * 0.55, -0.42, 0], [0.3, 0.62, Wd * 0.9], null, 'fkrl'); }
+    } else {
+      const n = 9;
+      for (let i = 0; i < n; i++) { const x = -L / 2 + (i + 0.5) * L / n; M.color = P.shade(i % 2 ? PAL.wood : PAL.woodLight, 0.92 + 0.08 * ((i * 7) % 3) / 2); M.box([x, -0.04, 0], [L / n - 0.02, 0.08, Wd], null, 'tbfkrl'); }
+      for (const s of [-1, 1]) {
+        M.color = PAL.timber; M.box([0, 0.2, s * (Wd / 2 - 0.04)], [L, 0.06, 0.07], null, 'tbfk');
+        for (let i = 0; i < 4; i++) { const x = -L / 2 + 0.15 + i * (L - 0.3) / 3; M.color = PAL.timberDark; M.box([x, 0.08, s * (Wd / 2 - 0.04)], [0.08, 0.26, 0.08], null, 'tfkrl'); }
+        M.color = PAL.timberDark; M.segment([s * 0.55, -0.7, -Wd * 0.3], [s * 0.55, -0.05, -Wd * 0.3], 0.07, 0.07, 5); M.segment([s * 0.55, -0.7, Wd * 0.3], [s * 0.55, -0.05, Wd * 0.3], 0.07, 0.07, 5);
+      }
+    }
+    M.pop();
+  }
+
   // ============================================================ UnitVisual --
   // 一支部队：骑马的主将（js/figure.js 中精度模型）+ 若干实例化士兵（BattleView.crowd，低精度、势力色）+ 头顶信息。
   // 动作：待机、行军（沿路径行走 / 小跑）、攻击（突进 + 挥击）、受击、必杀（蓄势）、溃散（倒地）。
@@ -1550,7 +2075,9 @@ void main() {
       const lift = gp.y - this.view.groundY(gp.x, gp.z);
       for (const q of this.sold) {
         const wx = gp.x + q.x * c + q.z * s, wz = gp.z - q.x * s + q.z * c;
-        cr.setTransform(q.id, wx, this.view.groundY(wx, wz) + Math.max(0, lift), wz, ry + Math.PI, FIG_S);
+        const wy = this.view.groundY(wx, wz) + Math.max(0, lift);
+        cr.setTransform(q.id, wx, wy, wz, ry + Math.PI, FIG_S);
+        q.wx = wx; q.wy = wy; q.wz = wz;     // 第四版：脚下圆影的位置
       }
     }
     // 动作：clip ∈ attack | hit | special | rout；dur 秒
@@ -1827,8 +2354,27 @@ void main() {
       this.build();
       this.stats.buildMs = performance.now() - t0;
       if (SG.Gfx && SG.Gfx.scene) SG.Gfx.scene.add(this.group);
+      // 第四版：战场的时刻（主场景的 SG.Gfx.mood；缺省为温暖的午后 BattleView.MOOD_HOUR）。战略地图隐藏时会把氛围还原成它构建前的
+      // 时刻，所以每帧在 update 里确认一次；释放时还原为开战前的时刻
+      const st = SG.Gfx && SG.Gfx.moodState ? SG.Gfx.moodState() : null;
+      this._moodPrev = st ? st.hour : null;
+      this._moodHour = BattleView.MOOD_HOUR;
+      this._applyMood();
     }
     get root() { return this.group; }
+    // setMood('dawn' | 'morning' | 'noon' | 'afternoon' | 'golden' | 'dusk' | 'night' | 小时数 | null)：战场的时刻（null = 缺省的午后）
+    setMood(what) {
+      const H = SG.LP && SG.LP.MOOD_HOURS;
+      this._moodHour = what == null ? BattleView.MOOD_HOUR : typeof what === 'number' ? what : (H && H[what] != null ? H[what] : BattleView.MOOD_HOUR);
+      this._applyMood();
+      return SG.Gfx && SG.Gfx.moodState ? SG.Gfx.moodState() : null;
+    }
+    _applyMood() {
+      const G = SG.Gfx;
+      if (this.disposed || !G || !G.mood || !G.setMood || this._moodHour == null) return;
+      const st = G.moodState();
+      if (!st || Math.abs(st.hour - this._moodHour) > 1e-3) G.setMood(this._moodHour);
+    }
 
     get boardCenter() { return SG.U(ORIGIN.x + this.model.W * T / 2, 0, ORIGIN.z + this.model.H * T / 2); }
 
@@ -1875,6 +2421,8 @@ void main() {
       const ph = this.stats.phases = {};
       let tp = performance.now();
       const lap = k => { const n = performance.now(); ph[k] = Math.round(n - tp); tp = n; };
+      // 第四版：有 SG.LP / SG.LPProps 时按 Lanternvale 风格画布景（否则第三版）
+      this._lp = LPOK();
       const Tm = this.ter = terrainModel(this);
       const W = m.W, H = m.H;
       lap('model');
@@ -1895,15 +2443,18 @@ void main() {
       this._buildWater(); lap('water');
       this._buildProps(); lap('props');
       // 城池
-      const fb = new SG.MeshBuilder();
-      buildFort(this, fb, Tm, look, defCol);
-      this._buildBridges(fb);
-      const fortMat = SG.Gfx.masonryMaterial ? SG.Gfx.masonryMaterial(36, 90) : SG.Gfx.lowPoly();
-      this._fortMat = fortMat;
-      const fort = SG.Gfx.mesh(fb.toGeometry(), fortMat, { castShadow: true, receiveShadow: true });
-      fort.name = 'Fort';
-      this.stats.fortTris = fb.count / 3;
-      this.group.add(fort);
+      if (this._lp) this._buildFortLP(look, defCol);
+      else {
+        const fb = new SG.MeshBuilder();
+        buildFort(this, fb, Tm, look, defCol);
+        this._buildBridges(fb);
+        const fortMat = SG.Gfx.masonryMaterial ? SG.Gfx.masonryMaterial(36, 90) : SG.Gfx.lowPoly();
+        this._fortMat = fortMat;
+        const fort = SG.Gfx.mesh(fb.toGeometry(), fortMat, { castShadow: true, receiveShadow: true });
+        fort.name = 'Fort';
+        this.stats.fortTris = fb.count / 3;
+        this.group.add(fort);
+      }
       lap('fort');
       // 光标
       this.cursor = SG.Gfx.mesh(flatDisc(T * 0.62), SG.Gfx.unlit(C(1, 0.85, 0.35), SG.Gfx.ringTexture, 1), { castShadow: false, receiveShadow: false });
@@ -1941,6 +2492,13 @@ void main() {
       if (SG.Figure && typeof SG.Figure.crowd === 'function') {
         try { this.crowd = SG.Figure.crowd({ lod: 'low' }); this.crowd.root.name = 'Soldiers'; this.group.add(this.crowd.root); }
         catch (e) { console.error(e); this.crowd = null; }
+      }
+      // 第四版：部队（主将、战马、士兵）脚下柔和的圆影，全部部队一次绘制（每帧在 update 里摆放）
+      this._blobs = null;
+      if (this._lp && SG.LP.BlobShadows) {
+        this._blobs = new SG.LP.BlobShadows(Math.max(16, m.units.length * 8));
+        this._blobs.mesh.name = 'UnitShadows';
+        this.group.add(this._blobs.mesh);
       }
       lap('fx');
       for (const u of m.units) this.createUnit(u, u.side === 0 ? atkCol : defCol);
@@ -2004,6 +2562,10 @@ void main() {
       for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const k = sm(0, 3, edgeD(xs[i], ys[j])); if (k < 1) hh[j * nx + i] = M.lerp(skirtY, hh[j * nx + i], k); }
       const nu = G.nu, nv = G.nv, tint = [0, 0, 0], edgeTint = [0, 0, 0];
       let edgeN = 0;
+      // 第四版：LP 地形材质与绘制式的顶点色（vec4：sRGB 反照率 + alpha 里的自发光编码 0）
+      const lpMat = this._lp ? boardMaterialLP(W, H) : null;
+      const C4 = lpMat ? new Float32Array(N * 4) : null, edge4 = [0, 0, 0];
+      const pal = C4 ? meadowPal() : null, crops = C4 ? CROPS_HEX.map(hx) : null, pw = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]];
       for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
         const o = j * nx + i, u = xs[i], v = ys[j], h = hh[o];
         P[o * 3] = ORIGIN.x + (u + 0.5) * T; P[o * 3 + 1] = h; P[o * 3 + 2] = -(ORIGIN.z + (v + 0.5) * T);
@@ -2056,6 +2618,36 @@ void main() {
         // 积雪：山岳上高出本格山基约 1.4–1.85 以上的峰顶（寒冷度按群落）
         const peakH = inB && mt > 0.01 ? h - bilinear(Tm.tgt, W, H, u, v) : 0;
         Bt[o * 4] = hl * (1 - rk * 0.6); Bt[o * 4 + 1] = mt; Bt[o * 4 + 2] = (COLD[bi] || 0) * coldW * sm(1.4, 1.85, peakH) * mt;
+        if (C4) {
+          // 绘制式地面：群落四色（四角混合）的草地斑块 → 森林地面 / 丘坡的赭黄 / 田块 / 泥土路 / 岩石 / 沙 / 雪
+          for (const q of pw) q[0] = q[1] = q[2] = 0;
+          for (const [a, b, w] of [[0, 0, (1 - tx) * (1 - ty)], [1, 0, tx * (1 - ty)], [0, 1, (1 - tx) * ty], [1, 1, tx * ty]]) {
+            const P4 = pal[G.biome[(cj + b) * nu + ci + a]] || pal[0];
+            for (let q = 0; q < 4; q++) { pw[q][0] += P4[q][0] * w; pw[q][1] += P4[q][1] * w; pw[q][2] += P4[q][2] * w; }
+          }
+          const n1 = vnoise(u * 0.5, v * 0.5, 1), n2 = vnoise(u * 1.6, v * 1.6, 2), n3 = vnoise(u * 2.7, v * 2.7, 3);
+          let c = paintMeadow(pw, n1, n2, n3);
+          if (fo > 0.01) c = mix3(c, mix3(mul3(pw[3], 0.84), hx('#6E6A3C'), 0.12 + 0.22 * n3), fo * 0.62);
+          if (hl > 0.01) c = mix3(c, mix3(pw[0], hx('#C8B878'), 0.5), hl * (0.32 + 0.3 * n2) * (1 - rk));
+          const farmK = farm * (1 - rk) * (1 - fortK);
+          if (farmK > 0.02) {
+            const fu = Math.floor(u / 1.35 + 0.35 * vnoise(v * 0.4, 3.1, 9)), fv = Math.floor(v / 0.95 + 0.25 * vnoise(u * 0.4, 7.3, 10));
+            const crop = mul3(crops[Math.floor(SG.LP.hash01([fu, fv, 13], 5) * crops.length) % crops.length], 0.95 + 0.1 * n3);
+            c = mix3(c, crop, M.clamp01(farmK * 0.95));
+          }
+          if (rk > 0.01) {
+            let d = mix3(hx('#AC8155'), hx('#BE9566'), sm(0.45, 0.85, n2) * 0.8);
+            d = mix3(d, hx('#8E6744'), sm(0.62, 0.92, n3) * 0.5);
+            c = mix3(c, d, M.clamp01((rk + (n3 - 0.5) * 0.45) * 1.3));
+          }
+          if (bare > 0.01) c = mix3(c, mul3(mix3(hx('#8E877C'), hx('#AAA294'), n2), 0.92 + 0.12 * n3), M.clamp01(bare * 1.2));
+          if (sand > 0.01) c = mix3(c, mul3(hx('#E2CFA0'), 0.95 + 0.08 * n2), M.clamp01(sand));
+          const snowK = Math.max(Am[o * 4 + 2], Bt[o * 4 + 2]);
+          if (snowK > 0.01) c = mix3(c, mul3(hx('#EEF1F5'), 0.95 + 0.06 * n3), M.clamp01(snowK));
+          if (h < WATER_Y) c = mix3(c, mul3(hx('#B4A27C'), 1 - 0.25 * M.clamp01((WATER_Y - h) / 0.9)), M.clamp01((WATER_Y - h) / 0.2));
+          C4[o * 4] = M.clamp01(c[0]); C4[o * 4 + 1] = M.clamp01(c[1]); C4[o * 4 + 2] = M.clamp01(c[2]); C4[o * 4 + 3] = 0;
+          if (ed > 2.5 && ed < 3.01) { edge4[0] += C4[o * 4]; edge4[1] += C4[o * 4 + 1]; edge4[2] += C4[o * 4 + 2]; }
+        }
       }
       const idx = new (N > 65535 ? Uint32Array : Uint16Array)((nx - 1) * (ny - 1) * 6);
       const split = new Uint8Array((nx - 1) * (ny - 1));   // 1：沿 a–d 对角线切分
@@ -2069,7 +2661,7 @@ void main() {
       const geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.BufferAttribute(P, 3));
       geo.setAttribute('normal', new THREE.BufferAttribute(Nn, 3));
-      geo.setAttribute('color', new THREE.BufferAttribute(Cc, 3));
+      geo.setAttribute('color', C4 ? new THREE.BufferAttribute(C4, 4) : new THREE.BufferAttribute(Cc, 3));
       geo.setAttribute('aMat', new THREE.BufferAttribute(Am, 4));
       geo.setAttribute('aBt', new THREE.BufferAttribute(Bt, 4));
       geo.setIndex(new THREE.BufferAttribute(idx, 1));
@@ -2081,9 +2673,11 @@ void main() {
         if (k >= 1) continue;
         const o = j * nx + i;
         for (let c = 0; c < 3; c++) Cc[o * 3 + c] = M.lerp(edgeTint[c], Cc[o * 3 + c], k);
+        if (C4 && edgeN) for (let c = 0; c < 3; c++) C4[o * 4 + c] = M.lerp(edge4[c] / edgeN, C4[o * 4 + c], k);
         Am[o * 4] *= k; Am[o * 4 + 1] *= k; Am[o * 4 + 2] *= k; Am[o * 4 + 3] = M.lerp(1, Am[o * 4 + 3], k);
       }
-      const mat = this._terrainMat = battleTerrainMaterial(W, H);
+      if (C4 && edgeN) { edge4[0] /= edgeN; edge4[1] /= edgeN; edge4[2] /= edgeN; }
+      const mat = this._terrainMat = lpMat || battleTerrainMaterial(W, H);
       const mesh = SG.Gfx.mesh(geo, mat, { castShadow: false, receiveShadow: true });
       mesh.name = 'Board';
       this.group.add(mesh);
@@ -2093,12 +2687,12 @@ void main() {
         const y = seaSkirt ? WATER_Y : skirtY;
         const pos = [], col = [], nor = [], ix = [];
         const pts = [[X0, Z0], [X1, Z0], [X1, Z1], [X0, Z1], [X0 - R, Z0 - R], [X1 + R, Z0 - R], [X1 + R, Z1 + R], [X0 - R, Z1 + R]];
-        for (const [x, z] of pts) { pos.push(x, y, -z); nor.push(0, 1, 0); if (seaSkirt) col.push(0, 0, 0); else col.push(edgeTint[0], edgeTint[1], edgeTint[2]); }
+        for (const [x, z] of pts) { pos.push(x, y, -z); nor.push(0, 1, 0); if (seaSkirt) col.push(0, 0, 0); else if (C4) col.push(edge4[0], edge4[1], edge4[2], 0); else col.push(edgeTint[0], edgeTint[1], edgeTint[2]); }
         for (let k = 0; k < 4; k++) { const a = k, b = (k + 1) % 4, c = 4 + k, d = 4 + (k + 1) % 4; ix.push(a, c, d, a, d, b); }
         const sg = new THREE.BufferGeometry();
         sg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
         sg.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
-        sg.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+        sg.setAttribute('color', new THREE.Float32BufferAttribute(col, C4 && !seaSkirt ? 4 : 3));
         if (!seaSkirt) sg.setAttribute('aMat', new THREE.Float32BufferAttribute(new Float32Array(8 * 4).map((_, i) => (i % 4 === 3 ? 1 : 0)), 4));
         if (!seaSkirt) sg.setAttribute('aBt', new THREE.Float32BufferAttribute(new Float32Array(8 * 4), 4));
         sg.setIndex(ix);
@@ -2164,12 +2758,14 @@ void main() {
       const R = () => rnd.nextDouble();
       const lists = {};                // kind → [{ x, y, z, s, yaw, c: [r,g,b], near }]
       // hi：棋盘外、镜头一侧离棋盘边 3 格以内的树也用近景模板（镜头下方近在眼前，不再露出一级细分的多边形树冠）
+      const lp = this._lp;
       const put = (kind, u, v, s, cm, near, sink, hi) => {
         const wx = ORIGIN.x + (u + 0.5) * T, wz = -(ORIGIN.z + (v + 0.5) * T);
         const y = this._gridH(u, v) - (sink || 0.04) * s;
-        const al = TREE_ALIAS[kind];
+        // 第四版：杨、云杉有自己的 LP 配方（不借阔叶 / 松的模板非等比缩放）
+        const al = lp ? null : TREE_ALIAS[kind];
         if (al) kind = near || hi ? al[0] : al[1];
-        (lists[kind] || (lists[kind] = [])).push({ x: wx, y, z: wz, s, yaw: R() * Math.PI * 2, c: cm, near, u, v, ax: al ? al[2] : 1, ay: al ? al[3] : 1 });
+        (lists[kind] || (lists[kind] = [])).push({ x: wx, y, z: wz, s, yaw: R() * Math.PI * 2, c: cm, near, hi: !!hi, u, v, ax: al ? al[2] : 1, ay: al ? al[3] : 1, bi: lp ? biomeAt(u, v) : 0 });
       };
       const cult = (this.look && this.look.culture) || 'han';
       const tgt = (m.setup || {}).target, lat = tgt && typeof tgt.lat === 'number' ? tgt.lat : null;
@@ -2271,6 +2867,12 @@ void main() {
         else if ((sl > 0.32 || h > BASE_Y + 1.6) && R() < 0.035) { const g = 0.9 + R() * 0.2; put('rock', u, v, 0.25 + R() * 0.35, [g, g * 0.98, g * 0.95], false, 0.3); }
         else if (Math.max(Math.abs(u - (W - 1) / 2) - W / 2, Math.abs(v - (H - 1) / 2) - H / 2) < 3 && R() < 0.5 * (1 - BIOME_ARID[bi] * 0.7)) put('tuft', u, v, 1 + R() * 0.5, BIOME_ARID[bi] > 0.3 ? [1.12, 1.04, 0.74] : [0.92, 1, 0.86], false, 0);
       }
+      if (lp) {
+        this._buildPropsLP(lists, R);
+        const Tr0 = Tm.Tr;
+        if (Tr0 && Tr0.notes && Tr0.notes.indexOf('landing') >= 0) this._buildBoats();
+        return;
+      }
       // 实例化网格（棋盘内的树用带抖动淡出的材质：挡在部队与镜头之间时淡去，见 _updatePropFade）
       const mat = SG.Gfx.lowPoly();
       const fadeMat = this._propFadeMat = propFadeMaterial();
@@ -2325,6 +2927,152 @@ void main() {
       const Tr = Tm.Tr;
       if (Tr && Tr.notes && Tr.notes.indexOf('landing') >= 0) this._buildBoats();
     }
+    // 第四版：景物用 SG.LPProps 的配方（每个配方 / 种子 / 远近一个实例化网格 + 实例化墨线），草丛等合成一个网格
+    _buildPropsLP(lists, R) {
+      const LP = SG.LP, Props = SG.LPProps, Tm = this.ter, G = Tm.G, m = this.model, Tn = TR(), W = m.W, H = m.H, nu = G.nu, nv = G.nv;
+      const cult = (this.look && this.look.culture) || 'han', base = SG.cultureBase ? SG.cultureBase(cult) : cult;
+      const gIdx = (u, v) => M.clamp(Math.round(Tm.gj(v)), 0, nv - 1) * nu + M.clamp(Math.round(Tm.gi(u)), 0, nu - 1);
+      const ctx = {
+        fence: LP_FENCE[cult] || LP_FENCE[base] || 'fence_wood',
+        south: cult === 'seasia' || cult === 'nanman' || cult === 'yi' || base === 'seasia',
+        wet: e => { const o = gIdx(e.u, e.v); return G.river[o] < 1.6 || (G.water[o] | 0) > 0; },
+      };
+      const groups = new Map(), grass = [];
+      for (const kind of Object.keys(lists)) for (const e of lists[kind]) {
+        if (kind === 'tuft') { grass.push({ t: 'tuft', x: e.x, y: e.y, z: e.z, k: e.s, bi: e.bi, dim: e.near ? 1 : 0.94 }); continue; }
+        if (kind === 'flowers') { grass.push({ t: 'flowers', x: e.x, y: e.y, z: e.z, k: e.s, c: e.c }); continue; }
+        const sp = lpPropSpec(kind, e, ctx);
+        if (!sp) continue;
+        const key = sp.name + '|' + sp.seed + '|' + sp.lod + '|' + (sp.opts ? JSON.stringify(sp.opts) : '') + '|' + (sp.ink ? 1 : 0) + (sp.cast ? 1 : 0) + (sp.fade ? 1 : 0);
+        let g = groups.get(key);
+        if (!g) groups.set(key, (g = { sp, items: [] }));
+        g.items.push({ e, sp });
+        // 树下的落叶（棋盘内）
+        if (sp.tree && e.near) for (let k = 0; k < 4; k++) { const a = R() * Math.PI * 2, d = 0.12 + R() * 0.5; const lx = e.x + Math.cos(a) * d, lz = e.z + Math.sin(a) * d; grass.push({ t: 'leaf', x: lx, y: this.groundY(lx, lz), z: lz, k: 1 }); }
+      }
+      // 平原格上的小花点、道路上的卵石
+      for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) {
+        const t = m.map[x][y];
+        if (Tm.inFort(x, y) || t !== Tn.Plain) continue;
+        const o = gIdx(x, y), arid = BIOME_ARID[G.biome[o] | 0] || 0, road = Tm.Tr && G.road[o] < 0.14;
+        const n = road ? 0 : Math.round(5 * (1 - arid * 0.8));
+        for (let k = 0; k < n; k++) {
+          const u = x + (R() - 0.5) * 1.9, v = y + (R() - 0.5) * 1.9;
+          const wx = ORIGIN.x + (u + 0.5) * T, wz = -(ORIGIN.z + (v + 0.5) * T), gy = this._gridH(u, v);
+          if (gy < WATER_Y + 0.14) continue;
+          grass.push({ t: 'speck', x: wx, y: gy, z: wz, k: 1 });
+        }
+        if (road) for (let k = 0; k < 6; k++) {
+          const u = x + (R() - 0.5) * 1.6, v = y + (R() - 0.5) * 1.6;
+          const wx = ORIGIN.x + (u + 0.5) * T, wz = -(ORIGIN.z + (v + 0.5) * T), gy = this._gridH(u, v);
+          if (gy < WATER_Y + 0.14) continue;
+          grass.push({ t: 'pebble', x: wx, y: gy, z: wz, k: 1 });
+        }
+      }
+      this._fade = { items: [], byTile: new Map() };
+      this._props = [];
+      const q = new THREE.Quaternion(), sv = new THREE.Vector3(), pv = new THREE.Vector3(), Y = new THREE.Vector3(0, 1, 0), mm = new THREE.Matrix4();
+      let tris = 0;
+      for (const { sp, items } of groups.values()) {
+        let gg;
+        try { gg = Props.geometry(sp.name, Object.assign({ seed: sp.seed, lod: sp.lod }, sp.opts || {})); } catch (e) { console.error(e); continue; }
+        for (const geo of [gg.ink, gg.plain]) if (geo) geo.userData.sharedGeometry = true;
+        const n = items.length;
+        const im = gg.ink ? LP.instances(gg.ink, n, { tints: true, castShadow: sp.cast, receiveShadow: true, outline: sp.ink, name: 'LP_' + sp.name + (sp.lod === 'far' ? '_far' : '') }) : null;
+        const pim = gg.plain ? LP.instances(gg.plain, n, { tints: true, castShadow: false, receiveShadow: true, outline: false, name: 'LP_' + sp.name + '_plain' }) : null;
+        items.forEach((it, k) => {
+          const e = it.e, s = sp.sc;
+          q.setFromAxisAngle(Y, e.yaw);
+          if (Array.isArray(s)) sv.set(s[0], s[1], s[2]); else sv.set(s, s, s);
+          mm.compose(pv.set(e.x, e.y + (sp.dy || 0), e.z), q, sv);
+          const tint = sp.tint || null;
+          if (im) LP.setInstanceMatrix(im, k, mm, tint || [1, 1, 1]);
+          if (pim) LP.setInstanceMatrix(pim, k, mm, tint || [1, 1, 1]);
+          if (sp.fade) {
+            const hgt = lpSize(sp.name, sp.seed).h * sv.y;
+            const f = { lp: true, im, pim, k, el: mm.elements.slice(), tint, gg, x: e.x, z: e.z, s: hgt / 1.55, t: 0, cur: 0, proxy: null, look: null };
+            this._fade.items.push(f);
+            const key = Math.round(e.u) + ',' + Math.round(e.v);
+            (this._fade.byTile.get(key) || this._fade.byTile.set(key, []).get(key)).push(f);
+          }
+        });
+        for (const x of [im, pim]) {
+          if (!x) continue;
+          LP.commitInstances(x, n);
+          x.computeBoundingSphere();
+          if (x.userData.outline) x.userData.outline.boundingSphere = x.boundingSphere;
+          this.group.add(x);
+          this._props.push(x);
+        }
+        tris += gg.tris * n;
+        if (sp.tree) this.stats.trees += n; else if (/^rock|boulder/.test(sp.name)) this.stats.rocks += n; else this.stats.dress = (this.stats.dress || 0) + n;
+      }
+      this.stats.tufts = grass.filter(g => g.t === 'tuft').length;
+      const gm = grassMeshLP(grass, (Tm.seed ^ 0x2545f491) | 0);
+      if (gm) { gm.name = 'Grass'; this.group.add(gm); tris += gm.geometry.userData.tris || 0; this.stats.grassTris = gm.geometry.userData.tris || 0; }
+      this.stats.propTris = tris;
+      this.stats.propSets = groups.size;
+    }
+    // 挡住部队的树：把它的实例藏起来，换成一棵单独的、按 look.fade 抖动溶解的副本（几何体与材质共用，不重编译）
+    _lpFade(it) {
+      const on = it.cur > 0.01;
+      if (on && !it.proxy) {
+        const LP = SG.LP, g = new THREE.Group();
+        if (it.gg.ink) g.add(LP.mesh(it.gg.ink, { castShadow: false }));
+        if (it.gg.plain) g.add(LP.mesh(it.gg.plain, { outline: false, castShadow: false }));
+        g.matrixAutoUpdate = false;
+        g.matrix.fromArray(it.el);
+        g.name = 'FadedTree';
+        it.look = LP.setLook(g, { fade: 1, tint: it.tint || undefined });
+        this.group.add(g);
+        it.proxy = g;
+        for (const x of [it.im, it.pim]) if (x) { x.setMatrixAt(it.k, HIDE_M); x.instanceMatrix.needsUpdate = true; }
+      }
+      if (it.proxy) it.look.fade = 1 - 0.72 * M.clamp01(it.cur);
+      if (!on && it.proxy) {
+        this.group.remove(it.proxy);
+        it.proxy = null; it.look = null;
+        _fm.fromArray(it.el);
+        for (const x of [it.im, it.pim]) if (x) { x.setMatrixAt(it.k, _fm); x.instanceMatrix.needsUpdate = true; }
+      }
+    }
+    // 第四版：城池、桥、帅旗（LP）
+    _buildFortLP(look, defCol) {
+      const LP = SG.LP, Tm = this.ter;
+      let fort;
+      try { fort = buildFortLP(this, Tm, look, cssHex(defCol)); } catch (e) { console.error(e); fort = null; }
+      if (fort && fort.geo) {
+        const fm = LP.mesh(fort.geo, { castShadow: true });
+        fm.name = 'Fort';
+        this.group.add(fm);
+      }
+      if (fort && fort.plain) {
+        const pm = LP.mesh(fort.plain, { outline: false, castShadow: false });
+        pm.name = 'FortPaving';
+        this.group.add(pm);
+      }
+      this.stats.fortTris = fort ? fort.tris : 0;
+      // 帅旗（守方势力色）
+      if (fort && fort.flag) {
+        try {
+          const fl = SG.LPProps.make('banner', { color: cssHex(defCol), seed: 0 });
+          const k = 2.4 / Math.max(0.1, lpSize('banner', 0).h);
+          fl.position.set(fort.flag.x, fort.flag.y, fort.flag.z);
+          fl.scale.setScalar(k);
+          fl.traverse(o => { if (o.geometry) o.geometry.userData.sharedGeometry = true; });
+          fl.name = 'FortBanner';
+          this.group.add(fl);
+        } catch (e) { console.error(e); }
+      }
+      // 桥（木桥 / 石桥按文化）
+      if (Tm.bridges.size) {
+        const fam = fortStyleLP(look.style).fam, stone = fam === 'roman' || fam === 'mud';
+        const Mb = new LP.MeshBuilder(91);
+        Mb.jitter = 0.06;
+        for (const b of Tm.bridges.values()) bridgeInto(Mb, b, stone);
+        if (!Mb.isEmpty) { const bm = LP.mesh(Mb.toGeometry(), { castShadow: true }); bm.name = 'Bridges'; this.group.add(bm); }
+      }
+    }
     // 挡在部队与镜头之间的树淡去（地面投影上：部队往镜头方向、树高 / tan(俯角) 以内，横向约 0.8 格以内）
     _updatePropFade(dt) {
       const F = this._fade, cam = SG.Gfx && SG.Gfx.camera;
@@ -2355,6 +3103,7 @@ void main() {
         if (Math.abs(it.t - it.cur) < 0.004) continue;
         it.cur += (it.t - it.cur) * k;
         if (Math.abs(it.t - it.cur) < 0.01) it.cur = it.t;
+        if (it.lp) { this._lpFade(it); continue; }
         it.attr.array[it.k] = it.cur;
         (dirty || (dirty = new Set())).add(it.attr);
       }
@@ -2370,9 +3119,25 @@ void main() {
         if (this.ter.heightAt(u, v) > WATER_Y - 0.25 || placed.some(q => Math.hypot(q.u - u, q.v - v) < 1.6)) continue;
         placed.push({ u, v });
         const yaw = (rnd.nextDouble() - 0.5) * 0.9 + (v < m.H / 2 ? 0.12 : -0.12);
-        boatInto(mb, ORIGIN.x + (u + 0.5) * T, WATER_Y, ORIGIN.z + (v + 0.5) * T, yaw, 0.95 + rnd.nextDouble() * 0.2, col, rnd);
+        const sc = 0.95 + rnd.nextDouble() * 0.2;
+        if (this._lp) {
+          // 第四版：攻方文化的船（汉 / 东方：沙船；罗马：桨帆船，帆为势力色；西亚、天竺、非洲：三角帆船）
+          try {
+            const c0 = this.cultureOf(0), b0 = SG.cultureBase ? SG.cultureBase(c0) : c0;
+            const name = c0 === 'roman' ? 'galley' : /^(persia|arab|africa|moor|india|kushan)$/.test(c0) || /^(persia|arab|africa|india)$/.test(b0) ? 'dhow' : 'junk';
+            const boat = SG.LPProps.make(name, { color: cssHex(col), seed: n });
+            const len = Math.max(0.1, lpSize(name, n & 3).w);
+            boat.scale.setScalar(2.5 * sc / len);
+            boat.position.set(ORIGIN.x + (u + 0.5) * T, WATER_Y - 0.02, -(ORIGIN.z + (v + 0.5) * T));
+            boat.rotation.y = -yaw;
+            boat.traverse(o => { if (o.geometry) o.geometry.userData.sharedGeometry = true; });
+            boat.name = 'Boat';
+            this.group.add(boat);
+          } catch (e) { console.error(e); }
+        } else boatInto(mb, ORIGIN.x + (u + 0.5) * T, WATER_Y, ORIGIN.z + (v + 0.5) * T, yaw, sc, col, rnd);
         n++;
       }
+      if (this._lp) { this.stats.boats = n; return; }
       if (!n) return;
       const boats = SG.Gfx.mesh(mb.toGeometry(), SG.Gfx.lowPoly(), { castShadow: true, receiveShadow: true });
       boats.name = 'Boats';
@@ -2559,6 +3324,8 @@ void main() {
       }
       if (this.crowd) this.crowd.setTime(time);
       for (const v of this.visuals.values()) v.update(dt, time);
+      this._applyMood();
+      this._updateBlobs();
       this._layoutLabels(dt);
       this._updateBurning();
       this._updateEmitters(dt);
@@ -2572,6 +3339,20 @@ void main() {
       this._spUpdate(dt);         // 必杀技：镜头震动、花瓣粒子
     }
 
+    // 第四版：部队脚下的圆影（主将与战马一团、每名士兵一团；随部队移动、溃散后随模型隐去）
+    _updateBlobs() {
+      const B = this._blobs;
+      if (!B) return;
+      let n = 0;
+      const cap = B.capacity;
+      for (const v of this.visuals.values()) {
+        if (!v.group.visible || n >= cap) continue;
+        const p = v.group.position;
+        if (v.fig || v._mesh) B.set(n++, p.x, p.y, p.z, 0.62, 0.62, 0.5);
+        for (const q of v.sold) if (q.wx !== undefined && n < cap) B.set(n++, q.wx, q.wy, q.wz, 0.24, 0.24, 0.42);
+      }
+      B.commit(n);
+    }
     // ------------------------------------------------------ 标签避让 --
     // 部队头顶标签互相遮挡时（窄屏上格距只有约 30px）按优先级排布：选中部队 > 主将 > 靠近镜头的部队。
     // 先放的标签留在原位；后放的若与已放的重叠，就在小范围内上移 / 下移 / 左右平移到最近的空位
@@ -3073,14 +3854,20 @@ void main() {
       for (const l of this.lights) { l.intensity = 0; if (l.dispose) l.dispose(); }
       const shared = new Set([SG.Gfx.lowPoly(), SG.Gfx.water()]);
       if (this._fortMat) shared.add(this._fortMat);
-      for (const im of this._props || []) { if (im.dispose) im.dispose(); }
+      for (const im of this._props || []) { if (im.dispose) im.dispose(); if (im.userData && im.userData.outline) im.userData.outline.dispose(); }
+      if (this._fade) for (const it of this._fade.items) if (it.proxy) { this.group.remove(it.proxy); it.proxy = null; }
+      if (this._blobs) { this._blobs.dispose(); this._blobs = null; }
+      // 第四版：SG.LP 的共用材质（LP LowPoly / Outline / blob shadow，按选项缓存）与 SG.LPProps 的缓存几何体不释放
+      const lpShared = mt => !!(mt && mt.userData && (mt.userData.lpKind || /^LP /.test(mt.name || '')));
       this.group.traverse(o => {
         if (o.geometry && !discCacheHas(o.geometry) && o.geometry !== this.hlGeo && !(o.geometry.userData && o.geometry.userData.sharedGeometry)) o.geometry.dispose();
-        if (o.material && !shared.has(o.material) && !(o.isPoints)) {
+        if (o.material && !shared.has(o.material) && !lpShared(o.material) && !(o.isPoints)) {
           if (Array.isArray(o.material)) o.material.forEach(mm => mm.dispose()); else o.material.dispose();
         }
       });
       if (this.group.parent) this.group.parent.remove(this.group);
+      // 还原开战前的时刻（战略地图再显示时会套用它自己的时刻）
+      if (this._moodPrev != null && SG.Gfx && SG.Gfx.mood && SG.Gfx.setMood) { try { SG.Gfx.setMood(this._moodPrev); } catch (e) { /* 忽略 */ } }
     }
   }
 
@@ -4855,6 +5642,8 @@ void main() {
 
   BattleView.Origin = ORIGIN;
   BattleView.T = T;
+  // 第四版：战场的缺省时刻（温暖的午后，与战略地图的 16.3 时相近；SG.LP.Mood 的小时数）
+  BattleView.MOOD_HOUR = 16.0;
 
   SG.BattleView = BattleView;
   SG.UnitVisual = UnitVisual;

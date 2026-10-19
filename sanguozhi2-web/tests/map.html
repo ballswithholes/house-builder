@@ -22,7 +22,10 @@
 <script src="../vendor/three.min.js"></script>
 <script src="../js/core.js"></script>
 <script src="../js/world-geo.js"></script>
+<script src="../js/lowpoly.js"></script>
+<script src="../js/lp-props.js"></script>
 <script src="../js/art.js"></script>
+<script src="../js/culture-art.js"></script>
 <script src="../js/camera.js"></script>
 <script src="../js/map-view.js"></script>
 <script>
@@ -68,15 +71,19 @@
   SG.Gfx.init(app);
   // 截图 / 计时需要固定画质（?auto=1 打开自适应画质）
   SG.Gfx.autoQuality = params.get('auto') === '1';
+  // ?mood=dawn|morning|noon|afternoon|golden|dusk|night|小时：地图的时刻（缺省为地图自己的午后）
+  const moodQ = params.get('mood');
   const rig = new SG.CameraRig();
   rig.focusMap(60, 50, 95, true);
   const map = new SG.MapView();
+  if (params.get('tdebug')) SG.MapView.debugTerrain = params.get('tdebug');
   // ?async=1：用 buildAsync（分片构建）
   const useAsync = params.get('async') === '1';
   const t0 = performance.now();
   if (!useAsync) map.build(state);
   start(useAsync ? map.buildAsync(state, { traceSteps: params.get('trace') === '1' }) : Promise.resolve());
-  function start(p) { p.then(() => { window.__test.buildMs = performance.now() - t0; begin(); }); }
+  function start(p) { p.then(() => { window.__test.buildMs = performance.now() - t0; if (moodQ) setMood(moodQ); begin(); }); }
+  function setMood(m) { m = isNaN(+m) ? m : +m; if (map.setMood) map.setMood(m); else SG.Gfx.setMood(m); }
   rig.onTap.push((x, y) => { const id = map.pick(x, y); map.select(id); window.__lastPick = id; });
 
   const frameTimes = [];
@@ -122,7 +129,7 @@
   }
 
   window.__test = {
-    state, map, rig, buildMs: 0,
+    state, map, rig, buildMs: 0, setMood,
     view(mapX, mapY, dist, yaw) {
       rig.yaw = rig.desiredYaw = yaw || 0;
       rig.focusMap(mapX, mapY, dist, true);

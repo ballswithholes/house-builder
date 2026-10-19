@@ -2806,12 +2806,15 @@
   /**
    * 战略地图用：把一批城池放进一个 LP.Scatter —— 同一模型键（文化 × 档次 × 变体）的城共用几何体、实例化绘制（墨线同样实例化），
    * 按块（chunk）切换近 / 远景；同时给出世界坐标的灯位（可逐个 SG.Gfx.addLamp / mood.addLamp）。
-   * list = [{ x, y, z（three 坐标，城心地面）, yaw（弧度）, size, culture, capital, city }]；opts = { chunk: 60, lodDist: 90, name }
-   * → { group, scatter, lamps, update(camera) }（每帧或镜头移动后调 update 切换远近景）
+   * 三个距离带：inkDist 以内 = 近景 + 墨线；inkDist–lodDist = 近景、不描墨线（墨线是固定像素宽：城在屏幕上只有几十像素时，
+   * 每个垛口、瓦檐都描一圈会把整座城涂黑）；lodDist 以外 = 远景。
+   * list = [{ x, y, z（three 坐标，城心地面）, yaw（弧度）, size, culture, capital, city }]；opts = { chunk: 60, lodDist: 90,
+   * inkDist: 45（0 = 近景一律描墨线）, name } → { group, scatter, lamps, update(camera) }（每帧或镜头移动后调 update）
    */
   function scatter(list, opts) {
     opts = opts || {};
     if (!ready()) return { group: new THREE.Group(), scatter: null, lamps: [], update() {} };
+    const inkDist = opts.inkDist != null ? +opts.inkDist : 45;
     const sc = new LP.Scatter({ chunk: opts.chunk || 60, lodDist: opts.lodDist || 90, name: opts.name || 'Cities' });
     const lamps = [];
     for (const it of list) {
@@ -2826,7 +2829,20 @@
       }
     }
     const group = sc.build();
-    return { group, scatter: sc, lamps, update: cam => sc.update(cam) };
+    const _c = new THREE.Vector3(), _p = new THREE.Vector3();
+    function update(cam) {
+      sc.update(cam);
+      if (!(inkDist > 0) || !cam || !sc.chunks) return;
+      cam.getWorldPosition(_p);
+      for (const c of sc.chunks) {
+        const out = c.near && c.near.userData.outline;
+        if (!out) continue;
+        _c.copy(c.center).applyMatrix4(group.matrixWorld);
+        const d = Math.max(0, _c.distanceTo(_p) - c.radius * 0.5), on = c.inkOn !== false ? d < inkDist * 1.08 : d < inkDist * 0.92;
+        if (on !== (c.inkOn !== false)) { c.inkOn = on; out.visible = on; }
+      }
+    }
+    return { group, scatter: sc, lamps, update };
   }
 
   SG.CultureArt = {

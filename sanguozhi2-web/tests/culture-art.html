@@ -43,6 +43,7 @@
      view=fit | map | close        相机：全部、地图视角（约同游戏中层镜头）、近看第一座；yaw / pitch / dist / focus=第 n 格
      shot=1                        截图模式（隐藏界面）；nolab=1 不画标签
      scatter=1                     用 SG.CultureArt.scatter 实例化（战略地图的接法：同模型实例化 + 墨线实例化 + 远近景按块切换 + 灯位）
+     inkDist=45                    （scatter）墨线距离带：更远的近景不描墨线（0 = 一律描）；noink=1（逐个模型时）不画墨线
      perf=200                      性能模式：200 座随机文化 / 档次的城排成网格（间距 spacing=5），配合 scatter=1 比较绘制次数与帧时 */
 (function () {
   if (THREE.ColorManagement) THREE.ColorManagement.enabled = false;
@@ -134,10 +135,11 @@
       });
     });
   });
+  if (Q.has('noink')) for (const o of objs) o.traverse(m => { if (m.name === 'outline') m.visible = false; });
   let SC = null;
   if (SCATTER) {
     const t0 = performance.now();
-    SC = CA.scatter(items, { chunk: +qv('chunk', 30), lodDist: +qv('lodDist', 60) });
+    SC = CA.scatter(items, { chunk: +qv('chunk', 30), lodDist: +qv('lodDist', 60), inkDist: +qv('inkDist', 45) });
     ms += performance.now() - t0;
     scene.add(SC.group);
     for (const l of SC.lamps) mood.addLamp(l.pos, l);

@@ -31,6 +31,20 @@
      SG.Specials.tierName(t)          → '一阶' … '四阶'
      SG.Specials.check() 另检查池：池内名称、参数与全部专属必杀两两不同（rep.pool = { total, byTier }）
 
+   第四版（ITEMS §7.3 宝具；本节由装备工作流 W1 负责）：
+     SG.Specials.known(gen) 末尾追加武将装备上的「宝具」（每件装备的主动能力每战一次）：
+       { id: 'item:<装备编号>:<效果序号>[:<选项>]', item, itemActive: true, pool: true（独立的每战一次，不占专属必杀）, tier: null,
+         name, kind（battle-model 认得的机制；新机制 plant / cloud 先映射到 command / fortify，原机制记在 itemKind）, 数值参数,
+         color（装备辉光色）, fx（现有特效；装备自己的特效名记在 itemFx，美术推广后换成专属特效）, extras（cond douse douseSelf bind
+         captureOnRout returns selfDef rootDays foeTacHit pierce confuse …：battle-model 的 useSpecial 之后调用 itemPostStep 结算） }
+       SG.Items 未载入或 SG.Items.enabled = false 时不追加。
+     SG.Specials.itemSpecials(gen) → 只有宝具        SG.Specials.byId('item:…') → 宝具（满数值，不看持有者）
+     SG.Specials.validateItemActive(effect, item) → 问题列表（ITEM_RANGE：宝具可超出必杀的参数上限，如玉玺号令半径 7）
+     SG.Specials.itemUsable(model, u, sp) → { ok, why }（cond: 'castle' 须立于城门 / 城楼）
+     SG.Specials.itemPostStep(model, u, res) → res（灭火、缚身、插地、云师、穿舶擒将的附加效果；battle-model.useSpecial 之后调用）
+     SG.Specials.ITEM_KINDS（plant 插地、cloud 云师）· ITEM_FX（装备特效名 → 现有特效）· tierName(null) = '宝具'
+     SG.Specials.ITEM_KINDS_NATIVE = false：battle-model 能直接结算 plant / cloud 后设为 true，宝具即用原机制
+
    控制层辅助（bc = SG.BattleController 实例；用到 bc.M、bc.V、bc.pickEnemy、bc.showCard、bc.updateHud）
      SG.Specials.menuItem(bc, u)            → 战斗行动菜单的「必杀」条目（SG.UI.item；会多招时显示「名」等 N 招 · 可用 k）
      SG.Specials.cardLine(u)                → 部队情报卡的 HTML：每招一行「名」可用 / 已施展
@@ -467,6 +481,7 @@
     syncData();
     if (id.indexOf('lp:') === 0) return poolMap.get(id) || null;
     if (id.indexOf('sp:') === 0) return cache.get(id.slice(3)) || null;
+    if (id.indexOf('item:') === 0) return itemById(id);
     return null;
   }
   // 该武将会的全部必杀：专属必杀在前，其后为已习得的可习得必杀（每招每战一次）
@@ -475,8 +490,8 @@
     if (!sig) return [];
     const out = [sig];
     const P = SG.Progress;
-    if (P && P.enabled === false) return out;
-    if (gen && Array.isArray(gen.specials)) for (const id of gen.specials) { const sp = byId(id); if (sp && sp.pool && out.indexOf(sp) < 0) out.push(sp); }
+    if (!(P && P.enabled === false) && gen && Array.isArray(gen.specials)) for (const id of gen.specials) { const sp = byId(id); if (sp && sp.pool && out.indexOf(sp) < 0) out.push(sp); }
+    for (const sp of itemSpecials(gen)) out.push(sp);
     return out;
   }
 
@@ -617,11 +632,12 @@
     const head = '<div>必杀 <span style="color:' + uiColor(sig) + '">「' + esc(sig.name) + '」</span>' +
       (usedIn(u, sig) ? '<span class="sg-muted">　已施展</span>' : '<span class="sg-good">　未施展</span>') + '</div>';
     if (list.length === 1) return head;
-    // 习得的招式压成一行：可用的着色，已施展的灰显划线（情报卡在横屏手机上也不至过长）
-    const more = list.slice(1).map(sp => usedIn(u, sp)
+    // 习得的招式压成一行：可用的着色，已施展的灰显划线（情报卡在横屏手机上也不至过长）；宝具另起一行
+    const line = arr => arr.map(sp => usedIn(u, sp)
       ? '<s class="sg-muted">' + esc(sp.name) + '</s>'
       : '<span style="color:' + uiColor(sp) + '">' + esc(sp.name) + '</span>').join('<span class="sg-muted"> · </span>');
-    return head + '<div>习得 ' + more + '</div>';
+    const learned = list.slice(1).filter(sp => !sp.itemActive), items = list.filter(sp => sp.itemActive);
+    return head + (learned.length ? '<div>习得 ' + line(learned) + '</div>' : '') + (items.length ? '<div>宝具 ' + line(items) + '</div>' : '');
   }
 
   // 选招：会多招且不止一招可用时弹出菜单；结果记入 u.spPick（规则层 useSpecial 缺省用它）
@@ -636,7 +652,7 @@
       const items = list.map(x => {
         const us = usable1(Mdl, u, x);
         // 右栏只放等阶 / 原因（短），数值摘要放在说明行，窄屏上也不挤
-        const tier = x.pool ? '<span class="sg-muted">' + TIER_NAME[x.tier] + '</span>' : '<span class="sg-goldc">专属</span>';
+        const tier = x.itemActive ? '<span class="sg-goldc">宝具</span>' : x.pool ? '<span class="sg-muted">' + TIER_NAME[x.tier] + '</span>' : '<span class="sg-goldc">专属</span>';
         return uiItem('<span style="color:' + uiColor(x) + '">' + esc(x.name) + '</span>', us.ok ? tier : tier + ' <span class="sg-muted">' + esc(us.why) + '</span>', us.ok, esc(rules(x)));
       });
       const r = await SG.UI.choose(u.gen.name + ' 的必杀', items, null, 680);
@@ -909,10 +925,145 @@
     });
   }
 
+  // ============================================================ 宝具（ITEMS §7.3；装备工作流 W1）==
+  // 新机制：插地（战神之剑：周围友军攻击 ×atk、自身防御 ×selfDef 并 rootDays 日不动）与云师（天符印：敌军计策命中 −foeTacHit 个百分点）。
+  // battle-model 还不认得它们时以 command / fortify 结算（ITEM_KINDS[k].base），附加部分由 itemPostStep 做。
+  const ITEM_KINDS = {
+    plant: { label: '插地', stat: 'war', target: 'self', fx: 'aura', color: '#e0553a', base: 'command',
+      params: { radius: [3, 1, 4, 1], atk: [1.3, 1, 1.4, 0.01], morale: [15, 0, 30, 1], selfDef: [1.4, 1, 1.6, 0.01], rootDays: [2, 1, 3, 1] } },
+    cloud: { label: '云师', stat: 'intel', target: 'self', fx: 'spirit', color: '#c8d8f0', base: 'fortify',
+      params: { radius: [99, 1, 99, 1], foeTacHit: [-25, -40, 0, 1], turns: [2, 1, 3, 1] } },
+  };
+  // 宝具可超出必杀的参数上限（传说 ≤ 2.8 次普通攻击，仍在 AREA_TOTAL 之内）：
+  const ITEM_RANGE = { command: { radius: [1, 7] }, volley: { range: [2, 6] }, rampage: { strikesXpower: 3.0 } };
+  // 机制表之外允许的附加字段（itemPostStep 或 battle-model 结算）
+  const ITEM_EXTRAS = ['cond', 'douse', 'douseSelf', 'bind', 'captureOnRout', 'returns', 'selfDef', 'rootDays', 'foeTacHit', 'pierce', 'confuse', 'turns', 'chance', 'dot', 'heal', 'counter', 'burn', 'splash', 'strikes'];
+  const ITEM_META = ['t', 'kind', 'name', 'fx', 'label', 'item', 'idx', 'opt', 'slot', 'glow', 'half', 'choice'];
+  // 装备特效名 → 现有特效（battle-view V.specialFx）；美术推广做出专属特效后改这里即可
+  const ITEM_FX = { redhare: 'dash', jadeseal: 'aura', vajra: 'lightning', quake: 'rock', serpent: 'dash', grassblade: 'fire', sunarrow: 'arrow', wind: 'wind',
+    rain: 'heal', cloud: 'spirit', oath: 'aura', boatarrow: 'arrow', stupa: 'shield', oxmace: 'rock', kaviani: 'aura', jinn: 'wind', lughspear: 'dash',
+    thunderhammer: 'lightning', aressword: 'aura', giantbow: 'arrows', salii: 'shield', hail: 'arrows', yellowturban: 'lightning', taia: 'shock',
+    turtlebow: 'arrows', harp: 'aura' };
+  const DAMAGE_KINDS = new Set(['smite', 'cleave', 'charge', 'rampage', 'volley', 'blaze', 'storm', 'flood', 'roar', 'drain', 'assassinate', 'poison', 'scheme']);
+  function validateItemActive(e, it) {
+    const out = [];
+    const tag = '宝具「' + (e && e.name) + '」' + (it ? '（' + it.id + '）' : '') + '：';
+    if (!e || typeof e !== 'object') return [tag + '不是对象'];
+    if (typeof e.name !== 'string' || !e.name.trim()) out.push(tag + '缺少名字');
+    else if (e.name.replace(/·.*$/, '').length > 7) out.push(tag + '名字过长');
+    const IK = ITEM_KINDS[e.kind], K = KINDS[e.kind] || IK;
+    if (!K) { out.push(tag + '未知机制 ' + e.kind); return out; }
+    const R = ITEM_RANGE[e.kind] || {};
+    for (const k of Object.keys(e)) {
+      if (ITEM_META.indexOf(k) >= 0) continue;
+      const p = K.params[k];
+      if (!p) { if (ITEM_EXTRAS.indexOf(k) < 0) out.push(tag + K.label + '没有参数 ' + k); continue; }
+      const v = e[k];
+      if (!num(v)) { out.push(tag + '参数 ' + k + ' 应为数字'); continue; }
+      const lo = R[k] ? R[k][0] : p[1], hi = R[k] ? R[k][1] : p[2];
+      if (v < lo - 1e-9 || v > hi + 1e-9) out.push(tag + '参数 ' + k + ' = ' + v + ' 超出 [' + lo + ', ' + hi + ']');
+    }
+    if (e.kind === 'rampage') { const sv = (e.strikes || K.params.strikes[0]) * (e.power || K.params.power[0]); if (sv > (R.strikesXpower || 2.65) + 1e-9) out.push(tag + '连斩总威力过高 ' + sv); }
+    if (e.fx && FX.indexOf(e.fx) < 0 && !ITEM_FX[e.fx]) out.push(tag + '未知特效 ' + e.fx);
+    return out;
+  }
+  // 一条宝具定义 → 规则层认得的招式对象（冻结）
+  const itemCacheById = new Map();
+  function buildItemSpecial(def, it) {
+    const IK = ITEM_KINDS[def.kind];
+    const kind = IK && !SG.Specials.ITEM_KINDS_NATIVE ? IK.base : def.kind;
+    const K = KINDS[kind] || KINDS.smite;
+    const id = 'item:' + it.id + ':' + def.idx + (def.opt >= 0 ? ':' + def.opt : '');
+    const sp = { id, gen: '', item: it.id, itemActive: true, pool: true, tier: null, name: String(def.name || '宝具'), kind, itemKind: def.kind,
+      stat: K.stat, choice: def.choice || null, slot: def.slot || it.slot };
+    if (it.cat === 'weapon' && DAMAGE_KINDS.has(kind)) sp.stat = 'war';
+    const R = ITEM_RANGE[kind] || {};
+    for (const k of Object.keys(K.params)) {
+      const p = K.params[k];
+      let v = num(def[k]) ? def[k] : p[0];
+      v = M.clamp(v, R[k] ? R[k][0] : p[1], R[k] ? R[k][1] : p[2]);
+      if (def.half && (k === 'power' || k === 'atk' || k === 'def' || k === 'morale' || k === 'heal')) v = k === 'atk' || k === 'def' ? 1 + (v - 1) / 2 : v / 2;
+      sp[k] = p[3] >= 1 ? Math.round(v) : fix(v);
+    }
+    if (IK && kind === 'command') { sp.atk = M.clamp(num(def.atk) ? def.atk : IK.params.atk[0], 1, 1.4); sp.def = 1; sp.turns = def.rootDays || 2; sp.radius = def.radius || 3; sp.morale = def.morale || 0; }
+    if (IK && kind === 'fortify') { sp.radius = 3; sp.def = 1.1; sp.counter = 1; sp.turns = def.turns || 2; sp.morale = 0; }
+    const extras = {};
+    for (const k of ITEM_EXTRAS) if (def[k] !== undefined && !(k in K.params)) extras[k] = def[k];
+    if (IK) for (const k of Object.keys(IK.params)) if (def[k] !== undefined) extras[k] = def[k];
+    sp.extras = Object.freeze(extras);
+    const glow = def.glow || (it.visual && it.visual.icon && it.visual.icon.glow);
+    sp.color = /^#[0-9a-f]{6}$/i.test(String(glow || '')) ? String(glow).toLowerCase() : K.color;
+    sp.itemFx = def.fx || null;
+    sp.fx = FX.indexOf(def.fx) >= 0 ? def.fx : ITEM_FX[def.fx] || K.fx;
+    sp.cry = '';
+    const label = (SG.Items && SG.Items.displayName ? SG.Items.displayName(it) : it.name);
+    sp.lore = '「' + label + '」' + (def.choice ? def.choice + '·' : '') + '宝具，每战一次。';
+    sp.desc = sp.lore + explain(sp) + (extras.cond === 'castle' ? '须立于城门或城楼。' : '') + (extras.douse || extras.douseSelf ? '并扑灭火势。' : '') + (extras.bind ? '目标 ' + extras.bind + ' 日不能移动。' : '');
+    sp.auto = false; sp.problems = [];
+    sp.half = !!def.half;
+    return Object.freeze(sp);
+  }
+  function itemById(id) {
+    if (itemCacheById.has(id)) return itemCacheById.get(id);
+    const I = SG.Items; if (!I || !I.get) return null;
+    const p = id.split(':'); const it = I.get(p[1]); if (!it || !it.ability) return null;
+    const i = +p[2], e = it.ability.effects[i]; if (!e) return null;
+    let def;
+    if (e.t === 'active') def = Object.assign({}, e, { idx: i, opt: -1 });
+    else if (e.t === 'activeChoice' && p[3] !== undefined) { const o = (e.options || [])[+p[3]]; if (!o) return null; def = Object.assign({}, o, { name: o.label, choice: e.name, idx: i, opt: +p[3] }); }
+    else return null;
+    const sp = buildItemSpecial(def, it);
+    itemCacheById.set(id, sp);
+    return sp;
+  }
+  const itemCacheGen = new WeakMap();
+  function itemSpecials(gen) {
+    const I = SG.Items;
+    if (!I || I.enabled === false || !gen || typeof I.actives !== 'function') return [];
+    let defs;
+    try { defs = I.actives(gen); } catch (e) { return []; }
+    if (!defs.length) return [];
+    const key = defs.map(d => d.item + ':' + d.idx + ':' + d.opt + (d.half ? 'h' : '')).join('|');
+    const c = itemCacheGen.get(gen);
+    if (c && c.key === key) return c.list;
+    const list = defs.map(d => (d.half ? buildItemSpecial(d, I.get(d.item)) : itemById('item:' + d.item + ':' + d.idx + (d.opt >= 0 ? ':' + d.opt : '')))).filter(Boolean);
+    itemCacheGen.set(gen, { key, list });
+    return list;
+  }
+  // 宝具的使用条件（battle-model 的 spUsable1 之后调用）：cond 'castle' 须立于城门 / 城楼
+  function itemUsable(model, u, sp) {
+    if (!sp || !sp.itemActive || !sp.extras) return { ok: true };
+    if (sp.extras.cond === 'castle') {
+      const T = SG.Terrain || {}, t = model && model.map && model.map[u.x] ? model.map[u.x][u.y] : -1;
+      if (!(t === (T.Gate !== undefined ? T.Gate : 6) || t === (T.Castle !== undefined ? T.Castle : 7))) return { ok: false, why: '须立于城门或城楼' };
+    }
+    return { ok: true };
+  }
+  // 宝具的附加效果（battle-model 的 useSpecial 成功之后调用）
+  function itemPostStep(model, u, res) {
+    const sp = res && res.sp;
+    if (!sp || !sp.itemActive || !res.success || !model) return res;
+    const x = sp.extras || {};
+    const B = model.burning;
+    const douseAt = (px, py) => { if (B && B[px] && B[px][py] > 0) { B[px][py] = 0; (res.doused = res.doused || []).push({ x: px, y: py }); } };
+    if (x.douse) for (const p of res.area || []) douseAt(p.x, p.y);
+    if (x.douseSelf) for (let dx = -x.douseSelf; dx <= x.douseSelf; dx++) for (let dy = -x.douseSelf; dy <= x.douseSelf; dy++) if (Math.abs(dx) + Math.abs(dy) <= x.douseSelf) douseAt(u.x + dx, u.y + dy);
+    const add = (t, mod) => { if (typeof model.addMod === 'function') model.addMod(t, Object.assign({ src: sp.id + ':x' }, mod)); };
+    if (x.bind && res.target && res.target.alive) add(res.target, { move: -99, days: x.bind });
+    if (sp.itemKind === 'plant') add(u, { def: x.selfDef || 1.4, move: -99, days: x.rootDays || 2 });
+    if (sp.itemKind === 'cloud' && Array.isArray(model.units)) for (const e of model.units) if (e.alive && e.side !== u.side) e.tacHitMod = { k: (x.foeTacHit || -25) / 100, until: (model.day | 0) + (x.turns || 2) };
+    if (x.captureOnRout) for (const t of res.routed || []) t.forceCapture = true;
+    if (x.returns) res.returns = true;
+    res.itemFx = sp.itemFx;
+    return res;
+  }
+
   SG.Specials = {
     KINDS, FX, FLOOD_RIVER, FLOOD_DRY, CHARGE_CAP, AREA_TOTAL,
     of, all, check, validate, signature, needsTarget, targetSide, explain, rules, kindName, cultureOf, uiColor,
-    pool, byId, known, TIER_NAME, tierName(t) { return TIER_NAME[t] || ''; },
+    pool, byId, known, TIER_NAME, tierName(t) { return t === null || t === undefined ? '宝具' : TIER_NAME[t] || ''; },
+    itemSpecials, validateItemActive, itemUsable, itemPostStep, ITEM_KINDS, ITEM_FX, ITEM_RANGE, ITEM_EXTRAS,
+    ITEM_KINDS_NATIVE: false,
     fallback(gen) { return normalize(fallback(gen), gen.name, true); },
     menuItem, cardLine, pickSpecial, pickTarget, menu, perform, cutIn,
   };

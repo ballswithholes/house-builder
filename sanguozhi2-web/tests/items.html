@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>装备图录 · 三国志-霸王的世界</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>
+  /* tests/items.html — 602 件装备的图录（ITEMS §17.5）：目录校验、文字图标（美术之前的占位，SG.ShopScreen.icon 的钩子）、
+     29 个宝具都能解析成规则层的招式、详情卡；手机横屏也能看。无头检查读 window.__itemsTest。 */
+  html, body { height: auto; overflow: auto; position: static; background: #16151d; color: #f5eddb; }
+  body { margin: 0; font-family: var(--sg-font-body); }
+  header { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; padding: .6rem 1rem; background: rgba(18,18,26,.96); border-bottom: 1px solid rgba(243,201,105,.3); }
+  header h1 { margin: 0; font-family: var(--sg-font-title); font-weight: normal; color: #f3c969; font-size: 1.5rem; }
+  header select, header input { min-height: 36px; background: #24222c; color: #f5eddb; border: 1px solid #5a5244; border-radius: 6px; padding: 0 .4rem; font: inherit; }
+  #summary { padding: .4rem 1rem; font-size: .9rem; color: #c9bfa9; }
+  #summary .bad { color: #ff7361; } #summary .good { color: #73d98c; }
+  #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr)); gap: .45rem; padding: .6rem 1rem 1rem; }
+  .cell { display: flex; gap: .45rem; align-items: center; padding: .35rem .45rem; border-radius: .5rem; background: rgba(255,240,210,.05); cursor: pointer; min-height: 52px; }
+  .cell:hover { background: rgba(255,240,210,.1); }
+  .cell .n { font-size: .9rem; line-height: 1.2; }
+  .cell .s { font-size: .75rem; color: #ada392; }
+  #detail { position: fixed; right: 1rem; bottom: 1rem; width: min(26rem, calc(100vw - 2rem)); max-height: 70vh; overflow: auto; z-index: 6; }
+  #actives { padding: 0 1rem 1rem; font-size: .85rem; }
+  #actives table { border-collapse: collapse; width: 100%; }
+  #actives td, #actives th { border-bottom: 1px solid rgba(255,255,255,.08); padding: .2rem .4rem; text-align: left; }
+  h2 { font-family: var(--sg-font-title); font-weight: normal; color: #f3c969; margin: .6rem 1rem .2rem; font-size: 1.2rem; }
+</style>
+</head>
+<body>
+<div id="ui"></div>
+<header>
+  <h1>装备图录</h1>
+  <select id="fr"><option value="">全部品级</option><option value="legendary">传说</option><option value="epic">史诗</option><option value="rare">稀有</option><option value="uncommon">精良</option><option value="common">普通</option></select>
+  <select id="fs"><option value="">全部部位</option></select>
+  <select id="fc"><option value="">全部文化</option></select>
+  <input id="q" placeholder="搜索名字" size="8">
+  <span id="count"></span>
+</header>
+<div id="summary">校验中……</div>
+<div id="grid"></div>
+<h2>宝具（每战一次的主动能力 → 规则层招式）</h2>
+<div id="actives"></div>
+<div id="detail"></div>
+
+<script src="../js/core.js"></script>
+<script src="../js/registry.js"></script>
+<script src="../js/world-geo.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/world-data.js"></script>
+<script src="../js/items-data.js"></script>
+<script src="../js/econ.js"></script>
+<script src="../js/model.js"></script>
+<script src="../js/items.js"></script>
+<script src="../js/migrate-v4.js"></script>
+<script src="../js/strategy-ai.js"></script>
+<script src="../js/battle-math.js"></script>
+<script src="../js/battle-model.js"></script>
+<script src="../js/specials-data.js"></script>
+<script src="../js/specials.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../js/shop-screen.js"></script>
+<script>
+'use strict';
+(function () {
+  const SG = window.SG, I = SG.Items, D = SG.ItemsData, S = SG.ShopScreen;
+  const esc = SG.esc;
+  const out = { ok: false, count: 0, problems: [], icons: 0, actives: 0, cards: 0 };
+  window.__itemsTest = out;
+  // 一局游戏（图标与比较要用到武将）
+  SG.Random.seed(5);
+  SG.G = SG.GameState.newGame('liubei', 'classic');
+  // 目录校验（tools/gen-items.js check 的同一套）
+  const rep = I.checkCatalogue();
+  out.problems = rep.problems.slice();
+  const sum = document.getElementById('summary');
+  sum.innerHTML = (rep.problems.length ? '<span class="bad">' + rep.problems.length + ' 个问题：' + rep.problems.slice(0, 6).map(esc).join('；') + '</span>' : '<span class="good">目录校验通过</span>') +
+    ' · 兵器 ' + rep.stats.weapons + ' · 甲胄装备 ' + rep.stats.gear + ' · ' + Object.entries(rep.stats.byRarity).map(([r, n]) => D.rarities[r].name + ' ' + n).join(' · ') +
+    ' · 经典剧本可得 ' + rep.stats.reach.classic.weapons + ' / ' + rep.stats.reach.classic.gear + ' · 能力 ' + rep.stats.abilities + ' · 宝具 ' + rep.stats.actives;
+  // 筛选
+  const fs = document.getElementById('fs'), fc = document.getElementById('fc');
+  for (const [k, v] of Object.entries(D.slots)) fs.insertAdjacentHTML('beforeend', '<option value="' + k + '">' + v.name + '</option>');
+  for (const [k, v] of Object.entries(D.cultures)) fc.insertAdjacentHTML('beforeend', '<option value="' + k + '">' + v.name + '</option>');
+  const grid = document.getElementById('grid'), detail = document.getElementById('detail');
+  const gy = SG.G.generals.find(x => x.name === '关羽');
+  const ORDER = { legendary: 0, epic: 1, rare: 2, uncommon: 3, common: 4 };
+  function draw() {
+    const r = document.getElementById('fr').value, s = fs.value, c = fc.value, q = document.getElementById('q').value.trim();
+    const list = D.items.filter(it => (!r || it.rarity === r) && (!s || it.slot === s) && (!c || it.culture === c) && (!q || it.name.indexOf(q) >= 0))
+      .sort((a, b) => ORDER[a.rarity] - ORDER[b.rarity] || a.slot.localeCompare(b.slot) || a.id.localeCompare(b.id));
+    grid.innerHTML = '';
+    for (const it of list) {
+      const d = document.createElement('div');
+      d.className = 'cell';
+      d.innerHTML = S.icon(it.id, 44) + '<div><div class="n" style="color:' + D.rarities[it.rarity].color + '">' + esc(I.displayName(it)) + '</div><div class="s">' + D.rarities[it.rarity].name + ' · ' + D.slots[it.slot].name + ' · ' + D.cultures[it.culture].name + '</div></div>';
+      d.addEventListener('click', () => { detail.innerHTML = S.card(it.id, { gen: gy }); out.cards++; });
+      grid.appendChild(d);
+    }
+    document.getElementById('count').textContent = list.length + ' 件';
+    out.count = list.length;
+    out.icons = grid.querySelectorAll('.sg-shop-icon').length;
+  }
+  for (const id of ['fr', 'fs', 'fc', 'q']) document.getElementById(id).addEventListener('input', draw);
+  // 样式（shop-screen 首次打开时注入；图录直接用）
+  if (!document.getElementById('sg-shop-style')) { SG.ShopScreen.open({ city: SG.G.cities[SG.G.factions[SG.G.player].ruler >= 0 ? SG.G.ruler(SG.G.player).city : 0] }); SG.ShopScreen.close(); }
+  draw();
+  // 宝具 → 招式
+  const rows = [];
+  for (const it of D.items) if (it.ability) it.ability.effects.forEach((e, i) => {
+    const ids = e.t === 'active' ? ['item:' + it.id + ':' + i] : e.t === 'activeChoice' ? e.options.map((o, j) => 'item:' + it.id + ':' + i + ':' + j) : [];
+    for (const id of ids) {
+      const sp = SG.Specials.byId(id);
+      out.actives += sp ? 1 : 0;
+      rows.push('<tr><td>' + S.icon(it.id, 28) + ' ' + esc(I.displayName(it)) + '</td><td style="color:' + (sp ? sp.color : '#ff7361') + '">' + esc(sp ? sp.name : '（无法解析）') + '</td><td>' + (sp ? SG.Specials.kindName(sp.kind) + (sp.itemKind !== sp.kind ? '（' + sp.itemKind + '）' : '') : '') + '</td><td>' + (sp ? esc(sp.itemFx || '') + ' → ' + sp.fx : '') + '</td><td>' + (sp ? esc(SG.Specials.rules(sp)) : '') + '</td></tr>');
+    }
+  });
+  document.getElementById('actives').innerHTML = '<table><tr><th>装备</th><th>宝具</th><th>机制</th><th>特效</th><th>数值</th></tr>' + rows.join('') + '</table>';
+  detail.innerHTML = S.card('qinglong', { gen: gy });
+  out.cards++;
+  out.ok = rep.problems.length === 0 && out.count === 602 && out.icons === 602 && out.actives === 31;
+})();
+</script>
+</body>
+</html>

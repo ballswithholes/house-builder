@@ -38,6 +38,14 @@
        Mdl.progress = setup.progress = [{ gen, side, won, exp, from, to, learned, xp }]（电脑武将已自动习得 learned；
        玩家武将见 SG.Progress.pending(G.player)）。setup.progressDone = true，防止同一场再被自动结算计一次。
      载入时包装 SG.Conquest.autoResolve（SG.Progress.hookConquest）：电脑之间自动结算的攻城战也给经验。
+
+   第四版（COMBAT-V4 §2 军队会心；INTEGRATION §3.2 战斗乘数，公式在 js/battle-math.js 的 SG.Mods）：
+     attack(a, t)：最先取恰好一个 SG.Random.value() 判定会心（SG.Mods.rollCrit；会心关闭时照取，随机数流不变），
+       会心 → 伤害 × critK（1.5，装备至多 1.8）、目标士气再 −5、a.xp.crits++；返回 r.crit / r.critK / r.critP。
+       反击、计策、必杀、自动结算永不会心。没有 js/econ.js（如旧的 Node 测试）时不取这个随机数，与第三版完全相同。
+     atkPower × SG.Mods.atkMul、defFactor × SG.Mods.defMul（装备 × 官职 × 羁绊 × 光环，各自 ≤ ×1.60）；出阵士气 + 装备 + 官职（≤ 25）；
+     行动点 = SG.Mods.actionPoints（人望封顶）。critChance(u) · BattleModel.critChanceOf(gen, formationIdx)（人物菜单）·
+     BattleModel.critEnabled（测试开关）· atkExpectCrit（电脑的普通攻击估值含会心期望）· 电脑选阵型时攻方另加 FORM_CRIT × 0.5 × 攻。
    ========================================================================== */
 (function () {
   const SG = window.SG;
@@ -71,7 +79,7 @@
       this.spPick = null;         // 选招菜单 / 电脑选定、尚未施展的必杀编号
       this.tacReady = {};         // 新计策的冷却：编号 → 可再用的日子
       this.mods = [];             // 限时加成（见 BattleModel.addMod）
-      this.xp = { dmg: 0, heal: 0, routs: 0, cmdRouts: 0, duelWin: 0, duelLoss: 0, specials: 0, tactics: 0, tacFail: 0 };   // 本战经验来源
+      this.xp = { dmg: 0, heal: 0, routs: 0, cmdRouts: 0, duelWin: 0, duelLoss: 0, specials: 0, tactics: 0, tacFail: 0, crits: 0 };   // 本战经验来源（第四版 + crits）
       if (o) Object.assign(this, o);
     }
     get troops() { return this.gen.troops; }
@@ -114,7 +122,7 @@
         const u = new BUnit({ gen: s.atk[i], side: 0, x: 0, y: 0 });
         u.troops0 = s.atk[i].troops;   // 出阵兵力：回复类必杀不得超过此数（非免费征兵）
         u.commander = i === 0 || g.isRuler(s.atk[i]);
-        u.morale = 60 + M.idiv(s.atk[i].training, 5);
+        u.morale = startMorale(u, 60 + M.idiv(s.atk[i].training, 5));   // 第四版：+ 装备 + 官职（≤ 25，INTEGRATION §3.2）
         this.units.push(u);
       }
       if (this.units.filter(u => u.side === 0 && u.commander).length > 1) {
@@ -124,7 +132,7 @@
         const u = new BUnit({ gen: s.def[i], side: 1 });
         u.troops0 = s.def[i].troops;
         u.commander = i === 0;
-        u.morale = 65 + M.idiv(s.def[i].training, 5);
+        u.morale = startMorale(u, 65 + M.idiv(s.def[i].training, 5));
         this.units.push(u);
       }
       this.deploy();
@@ -290,6 +298,7 @@
     // ---------------------------------------------------------- 回合 --
     actionPoints(s) {
       const f = s === 0 ? this.setup.attacker : this.setup.defender;
+      if (SG.Mods && SG.Mods.actionPoints) return SG.Mods.actionPoints(f);   // 第四版：人望 = SG.Mods.fame（声望 + 事件 + 装备 ≤ +10，INTEGRATION §3.4）
       const fame = f >= 0 ? G().factions[f].fame : 40;
       return M.clamp(Balance.ActionPointsBase + M.idiv(fame, Balance.ActionPointsFameDiv), 2, Balance.ActionPointsMax);
     }
@@ -336,20 +345,30 @@
     move(u, to) { u.x = to.x; u.y = to.y; this.checkEnd(); }
 
     atkPower(u) {
-      return u.troops * (0.5 + u.gen.war / 200) * u.form.atk * (0.6 + u.gen.training / 250) * (0.6 + u.morale / 250) * this.modK(u, 'atk') * this.vetK(u);
+      return u.troops * (0.5 + u.gen.war / 200) * u.form.atk * (0.6 + u.gen.training / 250) * (0.6 + u.morale / 250) * this.modK(u, 'atk') * this.vetK(u) * this.v4Atk(u);
     }
-    defFactor(u) { return u.form.def * Defs.terrainDef(this.map[u.x][u.y]) * (0.8 + u.gen.training / 500) * this.modK(u, 'def') * this.vetK(u); }
+    defFactor(u) { return u.form.def * Defs.terrainDef(this.map[u.x][u.y]) * (0.8 + u.gen.training / 500) * this.modK(u, 'def') * this.vetK(u) * this.v4Def(u); }
+    // 第四版：装备 × 官职 / 主将 × 羁绊 × 光环的乘积（SG.Mods.atkMul / defMul，js/battle-math.js；各自 ≤ ×1.60、负向 ≥ ×0.5；
+    // 没有 js/econ.js 或没有提供者时为 1）。clash.js 与人物菜单读同样的数字（SG.BattleMath.unitPreview）。
+    v4Atk(u) { const Mo = SG.Mods; return Mo && Mo.atkMul ? Mo.atkMul(u, this) : 1; }
+    v4Def(u) { const Mo = SG.Mods; return Mo && Mo.defMul ? Mo.defMul(u, this) : 1; }
+    // 第四版：军队会心率（COMBAT-V4 §2.1；人物菜单用 BattleModel.critChanceOf）
+    critChance(u) { const Mo = SG.Mods; return Mo && Mo.critChance ? Mo.critChance(u) : 0; }
     // 第三版：老练加成（SG.Progress.vetK：每高 1 级攻、防、计策威力 +4%；1 级与成长关闭时为 1，与第一版相同）
     vetK(u) { const P = SG.Progress; return P && P.vetK && u.gen ? P.vetK(u.gen) : 1; }
     // 计策 / 智力系必杀的威力：施计者老练 ÷ 目标老练
     tacK(u, e) { return this.vetK(u) / this.vetK(e); }
 
     attack(a, t) {
-      const r = { dmg: 0, counter: 0, targetRouted: false, selfRouted: false };
-      r.dmg = Math.max(10, M.roundToInt(this.atkPower(a) * Balance.DamageK / this.defFactor(t) * SG.Random.rangeFloat(0.85, 1.15)));
+      const r = { dmg: 0, counter: 0, targetRouted: false, selfRouted: false, crit: false, critK: 1, critP: 0 };
+      // 第四版：会心判定最先取恰好一个随机数（COMBAT-V4 §2.2；关掉会心时照取，开 / 关的对局一一配对）
+      const cr = SG.Mods && SG.Mods.rollCrit ? SG.Mods.rollCrit(a) : null;
+      if (cr) { r.crit = cr.crit; r.critK = cr.k; r.critP = cr.p; }
+      r.dmg = Math.max(10, M.roundToInt(this.atkPower(a) * Balance.DamageK / this.defFactor(t) * SG.Random.rangeFloat(0.85, 1.15) * r.critK));
       r.dmg = Math.min(r.dmg, t.troops);
       t.troops -= r.dmg;
-      t.morale = Math.max(0, t.morale - M.roundToInt(r.dmg * 40 / Math.max(200, t.troops + r.dmg)));
+      t.morale = Math.max(0, t.morale - M.roundToInt(r.dmg * 40 / Math.max(200, t.troops + r.dmg)) - (r.crit ? Balance.CritMorale : 0));
+      if (r.crit && a.xp) a.xp.crits++;
       r.targetRouted = this.checkRout(t);
       if (!r.targetRouted) {
         r.counter = Math.max(5, M.roundToInt(this.atkPower(t) * Balance.DamageK * Balance.CounterRatio * this.modK(t, 'counter') / this.defFactor(a) * SG.Random.rangeFloat(0.85, 1.15)));
@@ -761,6 +780,12 @@
     // ---- 计算基准 ----
     // 一次普通攻击的期望伤害（不含随机浮动）
     atkExpect(a, t) { return this.atkPower(a) * Balance.DamageK / this.defFactor(t); }
+    // 第四版：含会心期望的普通攻击（COMBAT-V4 §2.4；只用于 aiNormalValue，其余 atkExpect 不含会心，必杀 / 计策的设计比例不变）
+    atkExpectCrit(a, t) {
+      const Mo = SG.Mods;
+      if (!Mo || !Mo.critChance || !Mo.critEnabled || !Mo.critEnabled()) return this.atkExpect(a, t);
+      return this.atkExpect(a, t) * (1 + Mo.critChance(a) * (Mo.critK(a) - 1));
+    }
     routBonus(t) { return t.commander ? 6000 : 300; }
     // 必杀技伤害基准（期望值）。
     //   武力系（stat 'war'）：一次普通攻击的期望伤害 × 武勇系数（0.8 + 武力/500），随己方兵力、阵型、训练、士气与敌方防御变化；
@@ -1130,7 +1155,7 @@
     aiNormalValue(u) {
       let best = 0;
       for (const t of this.adjacentEnemies(u)) {
-        const d = Math.min(t.troops, this.atkExpect(u, t));
+        const d = Math.min(t.troops, this.atkExpectCrit(u, t));   // 第四版：攻方普通攻击可会心（反击不会）
         const c = Math.min(u.troops, this.atkExpect(t, u) * Balance.CounterRatio * this.modK(t, 'counter'));
         best = Math.max(best, d - 0.5 * c + (t.troops - d < 50 ? this.routBonus(t) : 0));
       }
@@ -1296,7 +1321,9 @@
       for (let i = 0; i < Defs.formations.length; i++) {
         if (!this.formationAllowed(u, i)) continue;
         const f = Defs.formations[i];
-        const s = u.side === 0 ? f.atk * 1.2 + f.def * 0.8 + f.move * 0.05 : f.atk * 0.7 + f.def * 1.3;
+        let s = u.side === 0 ? f.atk * 1.2 + f.def * 0.8 + f.move * 0.05 : f.atk * 0.7 + f.def * 1.3;
+        // 第四版：攻方略看重阵型会心（+ FORM_CRIT × 0.5 × 攻，COMBAT-V4 §2.4；会心关闭时与第三版相同）
+        if (u.side === 0 && f.crit && SG.Mods && SG.Mods.critEnabled && SG.Mods.critEnabled()) s += f.crit * 0.5 * f.atk;
         if (s > score) { score = s; best = i; }
       }
       return best;
@@ -1376,6 +1403,15 @@
   }
   BattleModel.Dirs = Object.freeze([P(1, 0), P(-1, 0), P(0, 1), P(0, -1)]);
   BattleModel.specialsEnabled = true;   // false：不使用必杀技（tests/sim.js 平衡对比）
+  // 第四版：false 时不会心（照样取会心的随机数，随机数流与开启时相同；SG.Crit.enabled 是全局开关）
+  BattleModel.critEnabled = true;
+  // 人物菜单的会心率（独自一军、本人为主将；与战斗同一个 SG.Mods.critChance）
+  BattleModel.critChanceOf = function (gen, formationIdx) {
+    const Mo = SG.Mods;
+    if (!Mo || !Mo.critChance) return 0;
+    return Mo.critChance({ gen, side: 0, formation: formationIdx === undefined ? (gen.formation | 0) : formationIdx, morale: 70, confused: 0, commander: true });
+  };
+  function startMorale(u, base) { const Mo = SG.Mods; return Mo && Mo.startMorale ? Mo.startMorale(u, base) : base; }
   // 电脑施展习得新计策的门槛（aiTactic）：期望价值 ≥ max(普通一手 × k, floor)；adj = 已与敌相邻
   BattleModel.aiTactic = { kAdj: 0.9, kFree: 0.8, floorAdj: 80, floorFree: 25, nowDays: 0.5 };
   // 第三版：电脑之间自动结算的攻城战也给经验（strategy-ai.js 先于本文件载入；不耗随机数，s.progressDone 防重复）

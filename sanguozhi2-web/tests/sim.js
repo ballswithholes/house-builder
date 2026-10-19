@@ -11,6 +11,9 @@
    第三版：(7) 成长——等级表、格数与等阶、升级候选与习得、存档 v3 与第二版存档迁移、可习得必杀与计策的数据和规则、
    成长后的压力测试、多年全电脑模拟（成长开 / 关）的等级分布、战术战斗平衡（同一批局面成长开 / 关对比）与成长的分量。
    (1)–(3) 在成长打开时运行：第 1 级的战斗与第二版完全相同，自动结算不看等级，故输出与第二版一致。
+   第四版（COMBAT-V4 §2.7 / §15.3）：载入 econ.js 与 battle-math.js；(1d) 军队会心——公式、混乱不会心、每次 attack() 恰好一个
+   会心随机数（开 / 关配对）、装备 + 官职封顶、内政经验只算一半的等级项，以及 (1c) 战斗组合 300 场的会心率、强弱比、胜率 / 天数 /
+   伤害 / 超时的变化与 battleExp 的会心经验。(1)–(3)、(7e)–(7h) 的数字因随机数流后移而与第三版不同（只更新输出，容差不变）。
    用法：node tests/sim.js        退出码 = 失败数
    ========================================================================== */
 const path = require('path');
@@ -19,7 +22,9 @@ const vm = require('vm');
 
 global.window = global;
 const root = path.join(__dirname, '..', 'js');
-for (const f of ['core.js', 'data.js', 'model.js', 'strategy-ai.js', 'battle-model.js', 'specials-data.js', 'specials.js', 'tactics-data.js']) {
+// 第四版：载入 econ.js / battle-math.js（SG.Mods：军队会心 COMBAT-V4 §2、战斗乘数；没有提供者时乘数为 1）——
+// attack() 每次先取一个会心随机数，(1)–(3) 的输出因随机数流后移而与第三版不同（COMBAT-V4 §2.2：只更新输出，不放宽容差）
+for (const f of ['core.js', 'data.js', 'econ.js', 'model.js', 'strategy-ai.js', 'battle-math.js', 'battle-model.js', 'specials-data.js', 'specials.js', 'tactics-data.js']) {
   vm.runInThisContext(fs.readFileSync(path.join(root, f), 'utf8'), { filename: f });
 }
 const SG = global.SG;
@@ -160,7 +165,17 @@ function runBattle(seed, pr, stats) {
         }
         if (Mdl.result !== 0) break;
         const act = Mdl.planAction(u);
-        if (act.kind === 'attack') { const r = Mdl.attack(u, act.target); if (stats) stats.atkDmg.push(r.dmg); }
+        if (act.kind === 'attack') {
+          const r = Mdl.attack(u, act.target);
+          if (stats) stats.atkDmg.push(r.dmg);
+          const cs = stats && stats.crit;   // 第四版 (1d)：会心统计
+          if (cs) {
+            cs.att++; cs.p += r.critP || 0; cs.dmg += r.dmg;
+            if (r.crit) { cs.n++; cs.extra += r.dmg - r.dmg / r.critK; }
+            const b = u.gen.war >= 90 ? 'hi' : u.gen.war >= 50 && u.gen.war < 60 ? 'lo' : '';
+            if (b) { cs[b + 'A']++; if (r.crit) cs[b + 'C']++; }
+          }
+        }
         else if (act.kind === 'tactic') Mdl.useTactic(u, act.tactic, act.target);
         else if (act.kind === 'duel') Mdl.duel(u, act.target);
         else if (act.kind === 'special') {
@@ -270,6 +285,107 @@ try {
   BattleModel.specialsEnabled = true;
   fails++;
   console.log('specials balance FAILED: ' + (e.stack || e));
+}
+
+// (1d) 第四版军队会心（COMBAT-V4 §2.7）：(1c) 的战斗组合 300 场，会心关 / 开（同一批种子；attack() 无论开关都先取一个随机数，一一配对）
+console.log('== (1d) army crits: 300 battles with crits off vs on (paired streams) ==');
+try {
+  const Mo = SG.Mods, B = SG.Balance;
+  if (!Mo || !Mo.critChance || !Mo.rollCrit) throw new Error('SG.Mods.critChance / rollCrit missing (js/battle-math.js not loaded)');
+  // ---- 规则单元：公式、混乱、反击、每次恰好一个随机数 ----
+  const expectP = (war, lvl, form, morale) => M.clamp(B.CritBase + B.CritPerWar * Math.max(0, war - B.CritWarFrom) + B.CritPerLevel * (lvl - 1) + Mo.FORM_CRIT[form] + (morale >= 90 ? 0.01 : 0), 0, B.CritCap);
+  let unitBad = 0;
+  for (const war of [30, 50, 70, 100]) for (const lvl of [1, 10]) for (const form of [0, 1, 5]) {
+    const gen = { name: 't', war, intel: 50, pol: 50, level: lvl, exp: 0, dexp: 0 };
+    const p = Mo.critChance({ gen, formation: form, morale: 70, confused: 0 });
+    if (Math.abs(p - expectP(war, lvl, form, 70)) > 1e-12) { unitBad++; console.log(`  critChance war ${war} L${lvl} form ${form}: ${p} expected ${expectP(war, lvl, form, 70)}`); }
+  }
+  const g100 = { name: 't', war: 100, intel: 50, pol: 50, level: 10, exp: 0, dexp: 0 };
+  if (Math.abs(Mo.critChance({ gen: g100, formation: 5, morale: 95, confused: 0 }) - expectP(100, 10, 5, 95)) > 1e-12) unitBad++;
+  if (Mo.critChance({ gen: g100, formation: 5, morale: 95, confused: 1 }) !== 0) { unitBad++; console.log('  a confused unit must never crit'); }
+  // 非战斗经验只算一半（vetLevel = levelFor(exp − 0.5 × dexp)）：同样的经验全是内政经验时，等级项比战斗经验少
+  const Lx = SG.Progress.levelFor, need10 = (() => { let e = 0; while (Lx(e) < 10 && e < 1e6) e += 10; return e; })();
+  const gBattle = { name: 'b', war: 50, intel: 50, pol: 50, exp: need10, dexp: 0, level: Lx(need10) };
+  const gDom = { name: 'd', war: 50, intel: 50, pol: 50, exp: need10, dexp: need10, level: Lx(need10) };
+  const pB = Mo.critChance({ gen: gBattle, formation: 1, morale: 70, confused: 0 }), pD = Mo.critChance({ gen: gDom, formation: 1, morale: 70, confused: 0 });
+  const vB = Mo.vetLevel(gBattle), vD = Mo.vetLevel(gDom);
+  console.log(`  level term: battle exp ${need10} → vetLevel ${vB} crit ${(pB * 100).toFixed(2)}%; the same exp all domestic → vetLevel ${vD} crit ${(pD * 100).toFixed(2)}%`);
+  if (!(vD < vB && pD < pB && vD === Lx(need10 * 0.5))) { unitBad++; console.log('  domestic exp should count half for the crit level term'); }
+  // 一次 attack() 恰好取一个会心随机数：开 / 关后随机数流位置相同；反击从不会心
+  const streamAfter = critOn => {
+    SG.Random.seed(5); SG.G = GameState.newGame('cao');
+    const g = SG.G, c0 = g.cityByKey('chenliu');
+    const s0 = Conquest.prepare(c0.owner, c0, g.cityByKey('luoyang'), g.officersIn(c0).filter(x => x.troops > 0).slice(0, 2), 0, 0);
+    const Md = new BattleModel(s0), a = Md.units[0], t = Md.units.find(u => u.side === 1);
+    BattleModel.critEnabled = critOn; SG.Random.seed(77);
+    const r = Md.attack(a, t);
+    const v = SG.Random.value();
+    BattleModel.critEnabled = true;
+    return { v, r };
+  };
+  const sOff = streamAfter(false), sOn = streamAfter(true);
+  if (sOff.v !== sOn.v) { unitBad++; console.log('  attack() must draw exactly one crit roll whether crits are on or off'); }
+  if (sOff.r.crit) { unitBad++; console.log('  crits off must never crit'); }
+  // 强制会心（p = 1 的提供者）：伤害 × critK、士气多扣 5、反击照常且不会心（attack 只返回攻方的 crit）
+  {
+    const off = Mo.provide ? Mo.provide({ gearCrit: () => 1, titleCrit: () => 1 }, { owner: 'sim-1d' }) : null;
+    SG.Random.seed(5); SG.G = GameState.newGame('cao');
+    const g = SG.G, c0 = g.cityByKey('chenliu');
+    const s0 = Conquest.prepare(c0.owner, c0, g.cityByKey('luoyang'), g.officersIn(c0).filter(x => x.troops > 0).slice(0, 2), 0, 0);
+    const Md = new BattleModel(s0), a = Md.units[0], t = Md.units.find(u => u.side === 1);
+    a.gen.war = 100; a.formation = 5; a.morale = 95;
+    const p = Mo.critChance(a);
+    if (off) { if (typeof off === 'function') off(); else if (off.off) off.off(); }
+    console.log(`  forced: gear + title crit capped at +${(B.CritGearCap * 100).toFixed(0)} pp → p(war 100, 锋矢, morale 95) = ${(p * 100).toFixed(2)}% (cap ${(B.CritCap * 100).toFixed(0)}%)`);
+    if (Math.abs(p - Math.min(B.CritCap, expectP(100, Mo.vetLevel(a.gen), 5, 95) + B.CritGearCap)) > 1e-9) { unitBad++; console.log('  gear + title crit should add at most CritGearCap'); }
+  }
+  if (unitBad) throw new Error(unitBad + ' crit unit checks failed');
+  console.log('  unit checks: formula at war 30/50/70/100 × L1/L10 × formations, confused 0, one draw per attack, cap: OK');
+
+  // ---- 300 场配对平衡 ----
+  const pairs2 = pairs.concat([['xiapi', 'xiaopei'], ['changan', 'tianshui'], ['chengdu', 'jiangzhou'], ['ye', 'jinyang'], ['shouchun', 'lujiang']]);
+  const runs = {};
+  for (const on of [false, true]) {
+    BattleModel.critEnabled = on;
+    const r = runs[on] = { w: 0, n: 0, days: 0, timeout: 0, xpCrits: 0, st: { specials: 0, spDmg: [], atkDmg: [], ratio: [], ratio1: [], byKind: {}, kinds: {}, assassin: [],
+      crit: { att: 0, n: 0, p: 0, dmg: 0, extra: 0, hiA: 0, hiC: 0, loA: 0, loC: 0 } } };
+    for (let seed = 1; seed <= 300; seed++) {
+      const { Mdl } = runBattle(1000 + seed, pairs2[seed % pairs2.length], r.st);
+      r.n++; r.days += Mdl.day; if (Mdl.result === 1) r.w++;
+      if (Mdl.resultReason.indexOf('期限') >= 0) r.timeout++;
+      for (const u of Mdl.units) r.xpCrits += (u.xp && u.xp.crits) || 0;
+    }
+  }
+  BattleModel.critEnabled = true;
+  const f1 = x => (100 * x).toFixed(1) + '%';
+  for (const on of [false, true]) {
+    const r = runs[on], c = r.st.crit;
+    console.log(`  crits ${on ? 'ON ' : 'OFF'}: attacker win ${f1(r.w / r.n)}, avg days ${(r.days / r.n).toFixed(2)}, time-outs ${r.timeout}, attacks ${c.att}, crits ${c.n} (${f1(c.n / Math.max(1, c.att))}), avg attack dmg ${(c.dmg / Math.max(1, c.att)).toFixed(0)}`);
+  }
+  const on = runs[true], off = runs[false], c = on.st.crit;
+  const rate = c.n / Math.max(1, c.att), hi = c.hiC / Math.max(1, c.hiA), lo = c.loC / Math.max(1, c.loA);
+  const dWin = 100 * (on.w - off.w) / on.n, dDays = (on.days - off.days) / on.n;
+  const dmgK = (c.dmg / c.att) / (off.st.crit.dmg / off.st.crit.att), share = c.extra / Math.max(1, c.dmg);
+  console.log(`  crit rate ${f1(rate)} (target 4-9%; mean p ${f1(c.p / Math.max(1, c.att))}); war >= 90 ${f1(hi)} (${c.hiA} attacks) vs war 50-59 ${f1(lo)} (${c.loA}) = x${(hi / Math.max(1e-9, lo)).toFixed(1)} (target >= 2)`);
+  console.log(`  attacker win shift ${dWin >= 0 ? '+' : ''}${dWin.toFixed(1)} pp (target <= 4), days ${dDays >= 0 ? '+' : ''}${dDays.toFixed(2)} (<= 1.0), attack damage x${dmgK.toFixed(3)} (+2 … +7 %), crit extra damage share ${f1(share)} (<= 6%), time-outs ${on.timeout} vs ${off.timeout} (<= off + 10), xp.crits ${on.xpCrits} (= crits ${c.n})`);
+  if (!(rate >= 0.04 && rate <= 0.09)) throw new Error('crit rate ' + f1(rate) + ' outside 4-9%');
+  if (!(hi >= 2 * lo)) throw new Error('crit rate of war >= 90 should be at least twice war 50-59');
+  if (Math.abs(dWin) > 4) throw new Error('attacker win rate shifted ' + dWin.toFixed(1) + ' pp with crits');
+  if (Math.abs(dDays) > 1.0) throw new Error('battle length shifted ' + dDays.toFixed(2) + ' days with crits');
+  if (!(dmgK >= 1.02 && dmgK <= 1.07)) throw new Error('average attack damage x' + dmgK.toFixed(3) + ' outside +2 … +7 %');
+  if (share > 0.06) throw new Error('crit extra damage share ' + f1(share) + ' > 6%');
+  if (on.timeout > off.timeout + 10) throw new Error('crits made more battles time out');
+  if (on.xpCrits !== c.n) throw new Error('xp.crits ' + on.xpCrits + ' != crits ' + c.n);
+  if (off.st.crit.n !== 0) throw new Error('crits happened while switched off');
+  // Progress.battleExp：每次会心 +2（上限之内）
+  const x0 = { dmg: 0, heal: 0, routs: 0, cmdRouts: 0, duelWin: 0, duelLoss: 0, specials: 0, tactics: 0, tacFail: 0, crits: 0, won: false, commander: false };
+  const e0 = SG.Progress.battleExp(x0), e3 = SG.Progress.battleExp(Object.assign({}, x0, { crits: 3 }));
+  console.log(`  Progress.battleExp: 0 crits ${e0}, 3 crits ${e3} (+2 each)`);
+  if (e3 - e0 !== 6) throw new Error('battleExp should add 2 per crit');
+} catch (e) {
+  BattleModel.critEnabled = true;
+  fails++;
+  console.log('army crits FAILED: ' + (e.stack || e));
 }
 
 // ========================================================= (2) 随机玩家模拟 --

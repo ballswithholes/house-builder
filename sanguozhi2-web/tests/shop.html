@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>市场与府库 · 测试</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>
+  /* tests/shop.html — 市场 / 府库界面对一局脚本化的游戏（ITEMS §17.5）：买、卖、比较、装备、赐宝物、胡商、图鉴、揭示；
+     1280×720 与 844×390 的版式由无头脚本截图检查。?run=0 只打开市场不跑脚本；?tab=book 打开图鉴；?city=luoyang 指定城。
+     无头检查读 window.__shopTest = { ok, steps: [{ name, ok, detail }] }。 */
+  #app { background: radial-gradient(ellipse at 40% 40%, #5b6b4a, #2b3326 70%); }
+  #log { position: fixed; left: 8px; bottom: 8px; z-index: 5; max-width: 40vw; max-height: 40vh; overflow: auto; font: 12px/1.4 monospace; color: #e8e2d0; background: rgba(0,0,0,.6); padding: 6px 8px; border-radius: 6px; pointer-events: auto; }
+  #log .bad { color: #ff8c73; } #log .good { color: #8fe0a0; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="ui"></div>
+<div id="log"></div>
+<script src="../js/core.js"></script>
+<script src="../js/registry.js"></script>
+<script src="../js/world-geo.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/world-data.js"></script>
+<script src="../js/items-data.js"></script>
+<script src="../js/econ.js"></script>
+<script src="../js/model.js"></script>
+<script src="../js/items.js"></script>
+<script src="../js/migrate-v4.js"></script>
+<script src="../js/strategy-ai.js"></script>
+<script src="../js/battle-math.js"></script>
+<script src="../js/battle-model.js"></script>
+<script src="../js/audio.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../js/portrait-data.js"></script>
+<script src="../js/portrait.js"></script>
+<script src="../js/specials-data.js"></script>
+<script src="../js/specials.js"></script>
+<script src="../js/shop-screen.js"></script>
+<script>
+'use strict';
+(async function () {
+  const SG = window.SG, I = SG.Items, Gr = SG.Gear, S = SG.ShopScreen;
+  const params = new URLSearchParams(location.search);
+  const out = { ok: false, steps: [], done: false };
+  window.__shopTest = out;
+  const logEl = document.getElementById('log');
+  const step = (name, ok, detail) => { out.steps.push({ name, ok: !!ok, detail: detail || '' }); logEl.insertAdjacentHTML('beforeend', '<div class="' + (ok ? 'good' : 'bad') + '">' + (ok ? '✓ ' : '✗ ') + SG.esc(name) + (detail ? ' — ' + SG.esc(detail) : '') + '</div>'); };
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const click = el => { if (!el) throw new Error('missing element'); el.click(); };
+  const q = s => document.querySelector(s);
+  const qa = s => Array.from(document.querySelectorAll(s));
+  const btn = (sel, text) => qa(sel).find(b => b.textContent.includes(text) && !b.disabled);
+  try {
+    SG.UI.init();
+    SG.Random.seed(+(params.get('seed') || 11));
+    const g = SG.G = SG.GameState.newGame(params.get('ruler') || 'cao', 'classic');
+    const f = g.player;
+    // 洛阳给玩家（都会，10 格，有珍品与镇城之宝）
+    const city = g.cityByKey(params.get('city') || 'luoyang');
+    city.owner = f; city.gold = 20000;
+    const ruler = g.ruler(f);
+    const gens = g.generalsOf(f).slice(0, 4);
+    for (const x of gens) x.city = city.id;
+    g.autoGovernor(city);
+    I.restock(city, true);
+    I.openMerchant(city, SG.SeededRandom(3));
+    step('scripted state', city.shop.stock.length >= 4, city.name + ' tier ' + I.shopTier(city) + ', ' + city.shop.stock.length + ' entries + merchant ' + city.shop.merchant.stock.length);
+    if (params.get('run') === '0') { S.open({ city, tab: params.get('tab') || 'buy' }); out.ok = true; out.done = true; return; }
+    // 1 打开
+    S.open({ city, gen: gens[1] || gens[0] });
+    await wait(400);
+    step('shop opens', !!q('.sg-shop') && qa('.sg-shop-tile').length === city.shop.stock.length + city.shop.merchant.stock.length, qa('.sg-shop-tile').length + ' tiles');
+    // 2 选一件 → 详情 + 比较
+    click(qa('.sg-shop-tile')[0]);
+    await wait(300);
+    step('detail card + compare', !!q('.sg-shop-card') && !!q('.sg-shop-delta'), (q('.sg-shop-delta') || {}).textContent || '');
+    // 3 买
+    const arm0 = I.armoury(f, { vault: false }).length, gold0 = city.gold;
+    click(btn('.sg-shop-actions .sg-btn', '购买'));
+    await wait(400);
+    const arm1 = I.armoury(f, { vault: false }).length;
+    step('buy: armoury +1, gold paid', arm1 === arm0 + 1 && city.gold < gold0, arm0 + ' → ' + arm1 + ', gold ' + gold0 + ' → ' + city.gold);
+    await wait(700);
+    // 4 装备给选中的武将
+    const eqb = btn('.sg-shop-actions .sg-btn', '装备给');
+    if (eqb) { click(eqb); await wait(300); }
+    step('equip the purchase', !eqb || qa('.sg-shop-note').some(n => /装备上了|此位|盾|需/.test(n.textContent)), eqb ? eqb.textContent : 'no 装备 button (requirement)');
+    // 5 胡商的货（×1.5）
+    const merchTile = qa('.sg-shop-tile').find(t => t.textContent.includes('胡商'));
+    step('merchant stock tagged 胡商', !!merchTile);
+    // 6 出售
+    click(btn('.sg-shop-tabs .sg-btn', '出售')); await wait(250);
+    const sellable = qa('.sg-shop-tile:not(.is-off)');
+    if (sellable.length) { click(sellable[0]); await wait(250); const g1 = city.gold; click(btn('.sg-shop-actions .sg-btn', '变卖')); await wait(250); const ok = q('.sg-confirm') ? (click(btn('.sg-confirm .sg-btn', '是')), true) : true; await wait(400); step('sell from the armoury', city.gold > g1, g1 + ' → ' + city.gold); }
+    else step('sell from the armoury', true, 'nothing sellable');
+    // 7 府库：专属兵器不能动；赐宝物
+    click(btn('.sg-shop-tabs .sg-btn', '府库')); await wait(250);
+    step('armoury tab lists the faction armoury and city treasures', qa('.sg-shop-tile').length === I.armoury(f).length, qa('.sg-shop-tile').length + ' tiles (incl. 镇 ' + qa('.sg-shop-tag').filter(t => t.textContent === '镇').length + ')');
+    const target = g.generalsOf(f).find(x => !g.isRuler(x) && x.city === city.id);
+    const u = I.award(f, 'han_yubi', { why: 'test' });
+    S.refresh(); await wait(200);
+    const r1 = I.gift(target, u, { roll: 2 });
+    const back = Gr.unequip(target, 'treasure');
+    const r2 = I.gift(target, u, { roll: 4 });
+    step('gift once per instance', r1.ok && r1.loy > 0 && r2.ok && r2.loy === 0, 'first +' + r1.loy + ', take-back ' + back.loyaltyDelta + ', again +' + r2.loy);
+    const ru = ruler.gear.weapon;
+    step('bound ruler-unique cannot move', !Gr.unequip(ruler, 'weapon').ok && !I.sell(f, ru, city).ok);
+    // 8 图鉴
+    click(btn('.sg-shop-tabs .sg-btn', '图鉴')); await wait(300);
+    const col = I.collection(f);
+    step('collection book', qa('.sg-shop-page').length === Object.keys(SG.ItemsData.cultures).length && col.seen > 0, col.seen + ' seen, ' + col.owned + ' owned, pages ' + qa('.sg-shop-page').length);
+    // 9 触控目标 ≥ 44 px
+    click(btn('.sg-shop-tabs .sg-btn', '购买')); await wait(250);
+    const small = qa('.sg-shop .sg-btn, .sg-shop-tile, .sg-shop-slot').filter(b => b.offsetParent && b.getBoundingClientRect().height < 43.5);
+    step('touch targets ≥ 44 px', small.length === 0, small.map(b => b.textContent.trim().slice(0, 8)).join(' | '));
+    // 10 关闭
+    click(q('.sg-shop .sg-close')); await wait(300);
+    step('close', !q('.sg-shop') && !S.current);
+    // 11 揭示
+    S.reveal({ id: 'chitu', from: '吕布', how: 'slain' });
+    await wait(900);
+    step('reveal overlay', !!q('.sg-shop-reveal'));
+    q('.sg-shop-reveal').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    await wait(300);
+    // 留着市场开着给截图
+    S.open({ city, gen: gens[0], tab: params.get('tab') || 'buy' });
+    await wait(300);
+    if (qa('.sg-shop-tile').length) click(qa('.sg-shop-tile')[Math.min(3, qa('.sg-shop-tile').length - 1)]);
+    out.ok = out.steps.every(s => s.ok);
+  } catch (e) {
+    step('threw', false, String(e && e.stack || e));
+  }
+  out.done = true;
+})();
+</script>
+</body>
+</html>

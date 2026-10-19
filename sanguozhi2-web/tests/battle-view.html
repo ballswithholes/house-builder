@@ -27,11 +27,14 @@
          ?sc=world|classic 剧本；?city=江陵&from=襄阳 目标城与出发城（real=1）
          ?fx=1   自动播放全部动画与特效
          ?nofig=1 不载入 js/figure.js（旧版低多边形部队）
-         ?atk=cao&def=liubei  指定双方势力（仅假模型）；?cult=roman&acult=steppe 双方城池的文化（仅假模型） */
+         ?atk=cao&def=liubei  指定双方势力（仅假模型）；?cult=roman&acult=steppe 双方城池的文化（仅假模型）
+         ?mood=golden|dusk|night|16.5  战场的时刻（BattleView.setMood；缺省为午后）
+         ?lp=0  不载入 js/lowpoly.js / js/lp-props.js（第三版画法，对照用；js/figure.js 仍会自行载入 lowpoly.js） */
 (function () {
   const Q = new URLSearchParams(location.search);
   const optional = ['../js/world-geo.js', '../js/data.js', '../js/world-data.js', '../js/model.js', '../js/strategy-ai.js', '../js/battle-model.js', '../js/audio.js', '../js/ui.js',
-    '../js/portrait-data.js', '../js/portrait.js', '../js/art.js', '../js/culture-art.js', '../js/camera.js'];
+    '../js/portrait-data.js', '../js/portrait.js', '../js/lowpoly.js', '../js/lp-props.js', '../js/art.js', '../js/culture-art.js', '../js/camera.js'];
+  if (Q.get('lp') === '0') { optional.splice(optional.indexOf('../js/lowpoly.js'), 2); }
   if (Q.get('terrain')) optional.push('../js/map-view.js');
   if (!Q.get('nofig')) optional.push('../js/figure.js');
   optional.push('../js/battle-terrain.js', '../js/battle-view.js');
@@ -226,6 +229,7 @@
     }
     const model = Q.get('real') ? (SG.G && window.__map ? realModelFrom(SG.G) : realModel()) : fakeModel();
     const view = new SG.BattleView(model);
+    if (Q.get('mood') && view.setMood) view.setMood(isNaN(+Q.get('mood')) ? Q.get('mood') : +Q.get('mood'));
     window.__viewMs = view.stats ? view.stats.buildMs : 0;
     if (!view.group.parent) SG.Gfx.scene.add(view.group);
     const rig = new SG.CameraRig(SG.Gfx.camera, SG.Gfx.renderer.domElement);

@@ -1,40 +1,19 @@
 'use strict';
 /* ==========================================================================
-   单挑格斗（第二版 §4E，第三版格开 §3）人机强度与格开规则回归（Node，无依赖）
-   脚本玩家（SG.DuelGame.scriptBot：固定套路，规则随机数走 SG.Random，可复现）对战真实电脑（SG.DuelGame._AI），检查：
-   (1) 原有回归（与 tests/duel.html 的 botTally 相同）：跳入空中斩 / 连按 不能以弱胜强；
-   (2) 连按（masher）：同武力 72–76 的电脑平均胜率 ≤ 45%，武力 ≤ 40 仍好欺负（≥ 80%），武力 90 以上更难（≤ 30%，但并非无法取胜）；
-   (3) 电脑对电脑：武力决定胜负、同将对打五五开；电脑会用格开（武力高者），武力 35 以下不会；同将对打不耗到时间
-       （刘备 对 刘备 平均 ≤ 42 秒、超时 ≤ 10%，孙乾 对 孙乾 超时 ≤ 45%）；
-   (4) 格开规则（脚本化的确定性场景）：窗口随武力 0.15–0.22 秒；成功 → 对手硬直约 0.6 秒、己方 0.7 秒反击窗口，
-       反击第一击 ×1.5 且不可格挡；落空 → 0.4 秒破绽；冷却 2.5 秒（明显长于攻击与格挡）；受击硬直中按下只格开第三段，
-       且须踩准节奏（第三段打到前 0.6 × 窗口内），按早了白费（提示「过早」），没等到第三段则收势破绽；绝技不可格开；
-       电脑抓格开落空的破绽（武力越高越准）；
-   (5) 格开机器人（parry：熟练的防守反击 + 人的反应 0.22 秒与节奏误差 σ 0.045 秒的格开）与连按格开机器人（spam）
-       在不同武力差下的胜率表：强将难、弱将易；连按格开不比连按更占便宜；格开对熟练玩家确有帮助（不低于同一打法不用格开
-       的 guard）；按途径 / 招式分类格开次数（确有按节奏格开第三段、看准格开满蓄重击），电脑格开机器人重击的次数有上限；
-   (6) 重击与反应：轻点重击（约 0.15 秒）谁都来不及看准格开，满蓄重击（约 0.27 秒）人的反应来得及；电脑看重击的反应
-       时间不快于看其他来招，格开满蓄重击至多约一半。
-   (7) 防守试探型打法（第三版 refine「电脑像个像样的格斗对手」）：guard（看见来招才挡、按节奏试探、命中才接连段）对同武力
-       72–76 的电脑 ≤ 50%（原 73%：电脑挡下试探就抢回合、不往对手的出手节奏里撞、看准大招收招反击）；parry 与 cautious
-       （知道被挡后轮到对方、举防或格开那一刀）仍有一搏（25–70%）；turtle（一味举防）≤ 70%，且电脑真会在他够不着处蓄满重击
-       破防（每场 ≥ 1 次满蓄；同类兵器约 30–55%，长枪龟缩对短兵电脑仍有七八成——蓄力的站位只有几厘米宽，见报告）；武力差阶梯（玩家 刘备 / 曹操 对 电脑武力 30 → 100）胜率随电脑武力单调下降。
-   第三版改动说明：绝技起手（定格与突进）改为无敌（原先对手被定格前已出的招一解冻就能打断绝技）、电脑会格开连按者的连段，
-   因此连按武力 98 的同将更难了（约 5–10%），(1) 中「连按 关羽 对 关羽」的下限由 5% 调为 2%（仍须能赢）；
-   (2) 中「连按武力 90 以上」的平均下限同理由 3% 调为 2%（N = 60、种子 7/3/11 实测 4.5–7%，修订前后相同，40 场时偶有 2.5%）。
-   修订（审查意见）：受击硬直中的格开须踩准第三段的节奏（原先挨了第二段随时按都行）、满蓄重击松手后举刀一顿（起手随蓄力
-   0.13 → 0.27 秒）、电脑看重击不再比看其他来招快（原为 0.6 × 反应时间）；(4) C 改为「踩准节奏 → 格开 / 按早 → 白费」，新增 (6)。
-   第三版 refine（电脑 AI）：电脑挡下连段末段必反击、不再往连按者的刀口上撞，连按更难了：(2) 同武力平均上限 45% → 30%
-   （原约 30–35%，现约 15–25%）；连按武力 98 的同将约 2–3%（原约 5%），(1) 中这一项的下限改为 0%、张飞 对 刘备 下限
-   60% → 50%（原约 92%，现约 73%），「强将并非无法取胜」改由 (2) 中至少 300 场合计 ≥ 1% 来查（不再 40 场一组碰运气）；
-   (4) F 落空惩罚的样本由 30 增到 200（实测约 90% 对 58%；原先 30 场时武力 30 一项就在 47–73% 之间跳）；(6) 满蓄重击的样本由 60 增到 120，
-   松手后电脑退开 / 抢先出手而没打到的重击也计入分母（原先剔除，挑剩的样本把约 50% 的格开量成 60–65%）。
-   第三版 refine（电脑 AI，审查修订）：(6) 电脑格开满蓄重击的比例改按「电脑看清了这一记、来得及决定」的次数算（AI.hvSeq 记下的
-   那一记，且当时在格开够得着的距离内）——只数打到了的会高估（没掷中格开的常被电脑退开躲掉），把退开的算进分母又会低估；
-   样本 200 记，另查「没看清就格开」为 0。(7) 新增 turtleP（龟缩 + 见蓄力重击松手就格开，原先约 92%）≤ 70%、backstepper
-   （被挡就后撤再抓挥空，原先约 62–69%）≤ 55%，以及熟练玩家（parry）对武力低 6–12 的电脑 ≥ 65%、武力相近（±6）≥ 25%
-   （武力 50 与 98 的玩家各一组）。
-   用法：node tests/duel-bots.js [每组场数，默认 40] [种子，默认 7]      退出码 = 失败数
+   单挑格斗 人机强度与规则回归（Node，无依赖）——第二版 §4E、第三版格开 §3、第四版 COMBAT-V4 §15
+   脚本玩家（SG.DuelGame.scriptBot：固定套路，规则随机数走 SG.Random，可复现）对战真实电脑（SG.DuelGame._AI）。
+   (1)–(7) 第三版的目标「精神不变」（同样的对局、同样的场数；第四版的按键与招式谱下）：
+     (1) 跳入 / 只按 J 连按不能以弱胜强 · (2) 连按对同武力 72–76 的电脑平均 ≤ 30%，武力 ≤ 40 仍好欺负，90 以上难但能赢 ·
+     (3) 电脑对电脑：武力决定胜负、同将五五开、刘备同将 20–40 秒且超时 ≤ 10%、强将会格开、弱将不会 ·
+     (4) 格开规则（脚本化）：窗口 0.15–0.22 秒、成功 / 落空 / 冷却 / 反击；受击硬直中的格开改为「连段第 3 步起、按来招类型的窗口」·
+     (5) 格开 / 连按格开机器人的胜率表 · (6) 重击与跃劈的反应（跃劈起手 ≥ 0.30 秒）· (7) 防守型打法与武力阶梯
+   (8) 后退格挡：与防键格挡的胜率差 ≤ 6 个百分点；近身判定（有威胁时后退不动）；命中那一步才按后退也挡得住；越身 0.10 秒宽限；空中不能挡
+   (9) 下段 / 上段：只能蹲挡 / 站挡；削血 ×0.2；人的反应能站挡跃劈；电脑看跃劈（强 ≥ 70%、弱 ≤ 40%）；电脑挡二择的下段 35–75%（≤ 80%）；
+       换挡不早于反应时间；mixup 对同武力电脑 ≤ 60%
+   (10) 连段规则 a–k（脚本化、确定性）· (11) 看破连段（脚本化）· (12) 连段对电脑（平衡）· (13) 单挑会心 · (14) 性能 ·
+   (15) 装备在单挑里（预算、各稀有度最佳一套、15 武力差、白名单）与兵器类型平衡（各兵器对长剑 45–55%）
+   用法：node tests/duel-bots.js [每组场数，默认 40] [种子，默认 7] [--quick]（(15) 每格 60 场；缺省 300 场为夜间档）
+        [--only 1,4,10]（只跑这几节）      退出码 = 失败数
    ========================================================================== */
 const path = require('path');
 const fs = require('fs');
@@ -43,45 +22,56 @@ const vm = require('vm');
 global.window = global;
 const root = path.join(__dirname, '..', 'js');
 // DUEL_GAME_JS=路径：用另一份 duel-game.js 跑同一套测试（试改电脑 AI 时对比用）
-for (const f of ['core.js', 'data.js', 'duel-game.js']) {
+for (const f of ['core.js', 'data.js', 'world-data.js', 'combo-data.js', 'combos.js', 'duel-game.js']) {
   const file = f === 'duel-game.js' && process.env.DUEL_GAME_JS ? process.env.DUEL_GAME_JS : path.join(root, f);
   vm.runInThisContext(fs.readFileSync(file, 'utf8'), { filename: f });
 }
-const SG = global.SG, D = SG.DuelGame, MV = D.MOVES, PR = D.PARRY;
-const N = +process.argv[2] || 40;
-SG.Random.seed(+process.argv[3] || 7);
+const SG = global.SG, D = SG.DuelGame, MV = D.MOVES, ST = D.STEP, PR = D.PARRY, CO = D.COMBO, CR = D.CRIT;
+const ARGS = process.argv.slice(2), POS = ARGS.filter(a => !a.startsWith('--'));
+const QUICK = ARGS.includes('--quick');
+const N = +POS[0] || 40;
+const SEED = +POS[1] || 7;
+const onlyI = ARGS.indexOf('--only'), ONLY = onlyI >= 0 ? (ARGS[onlyI + 1] || '').split(',') : null;
+SG.Random.seed(SEED);
+const T0 = Date.now();
 
 const gens = {};
 for (const s of SG.ScenarioData.Generals) { const p = s.split('|'); gens[p[0]] = { name: p[0], war: +p[1], intel: +p[2], pol: +p[3] }; }
+const worldGens = {};
+for (const s of SG.Scenarios.world.Generals) { const p = s.split('|'); worldGens[p[0]] = { name: p[0], war: +p[1], intel: +p[2], pol: +p[3], culture: p[9] || 'han' }; }
 
 let fails = 0, checks = 0;
 function ok(cond, msg) { checks++; if (!cond) { fails++; console.log('  FAIL: ' + msg); } }
-function section(name, fn) {
-  console.log('== ' + name);
+function section(id, name, fn) {
+  if (ONLY && ONLY.indexOf(String(id)) < 0) return;
+  const t = Date.now();
+  console.log('== (' + id + ') ' + name);
   try { fn(); } catch (e) { fails++; console.log('  FAILED: ' + (e.stack || e)); }
+  console.log(`  [${((Date.now() - t) / 1000).toFixed(1)} s]`);
 }
 const near = (a, b, eps) => Math.abs(a - b) <= eps;
+const avg = a => a.reduce((s, x) => s + x, 0) / Math.max(1, a.length);
+const TK = { L: 'light', M: 'medium', H: 'heavy' };
 
 // BOTS-BEGIN（本文件另加的脚本玩家，规则随机数同样走 SG.Random）
 //   turtle 龟缩：电脑在兵器距离 +1.2 米内就一直按住格挡，只抓看得见的破绽（收招 / 落空 / 被格开；蓄力够得着也打），
 //          在跟前蓄力的一半会被他上前打断；隔 1.5–2.5 秒才试探一下；从不格开——量电脑会不会用满蓄重击破防（在他够不着处蓄满）
-//   cautious 谨慎：同 guard（看见来招才挡、按节奏试探），但知道「被挡之后轮到对方」：自己的试探被挡就继续举防约 0.3–0.5 秒，
-//          一半时候还按人的节奏（σ 0.045 秒）格开电脑抢回合的那一刀——量电脑会不会被这种应对反制（慢半拍、改为不抢）
-//   turtleP 龟缩 + 格开：同 turtle，另看见电脑松开蓄到六成以上的重击（不管够不够得着）就按人的反应（0.22 ± 0.04 秒）格开——
-//          操作说明教的「按住 L、点 U」；量电脑会不会只靠满蓄重击破防而被格开反击（应改为佯攻骗格开、趁格开冷却再真打）
-//   backstepper 后撤：同 guard，自己的试探被挡就立刻后撤步，再抓电脑挥空的收招（看见 0.2 秒后冲刺斩）——
-//          量电脑抢回合那一刀会不会一直挥空（应记住他会退开、改为冲刺追击）
+//   cautious 谨慎：同 guard，但知道「被挡之后轮到对方」：自己的试探被挡就继续举防约 0.3–0.5 秒，一半时候按人的节奏格开电脑抢回合的那一刀
+//   turtleP 龟缩 + 格开：同 turtle，另看见电脑松开蓄到六成以上的重击就按人的反应（0.22 ± 0.04 秒）格开
+//   backstepper 后撤：同 guard，自己的试探被挡就立刻后撤步，再抓电脑挥空的收招（看见 0.2 秒后冲刺斩）
 const gz = () => (SG.Random.value() + SG.Random.value() + SG.Random.value() + SG.Random.value() - 2) * 1.732;
+const HELD = () => ({ x: 0, up: false, down: false, light: false, medium: false, heavy: false, guard: false, special: false, parry: false, dash: 0 });
+const TAPS = () => ({ light: 0, medium: 0, up: 0, special: 0, heavy: 0, dir: 0, parry: 0, ovh: 0 });
 function turtleBot(idx) {
-  const c = { held: { x: 0, up: false, light: false, heavy: false, guard: false, special: false, parry: false, dash: 0 }, taps: { light: 0, up: 0, special: 0, heavy: 0, dir: 0, parry: 0 } };
-  let nt = -1, cSeq = -1, cHit = false;
+  const c = { held: HELD(), taps: TAPS() };
+  let nt = -1, cSeq = -1, cHit = false, chSeq = -1;
   c.update = (dt, sim) => {
     const me = sim.f[idx], o = sim.f[1 - idx], d = Math.abs(o.x - me.x), now = sim.clock, H = c.held, T = c.taps;
-    const reach = me.reach * MV.light1.reachK + 0.2 - 0.03, free = sim.actionable(me) || me.state === 'guard';
+    const reach = me.reach * MV.L.reachK + 0.2 - 0.03, free = sim.actionable(me) || me.state === 'guard';
     H.x = 0; H.heavy = false;
     if (nt < 0) nt = now + 1 + SG.Random.value();
     if (me.state === 'parryok' || sim.countering(me)) { H.guard = false; if (d <= reach + 0.05) T.light++; else H.x = me.face; return; }
-    if ((me.state === 'light1' || me.state === 'light2') && me.hitIdx > 0 && o.state === 'hitstun') { T.light++; return; }
+    if (me.state === 'str' && me.strOn && me.strIdx < 2 && me.hitIdx > 0 && o.state === 'hitstun' && chSeq !== me.seq) { chSeq = me.seq; T[TK[me.seqStr[me.strIdx + 1]]]++; return; }
     const seen = sim.seen(o.idx, 0.2);
     if (seen && seen.state === 'charge' && seen.seq !== cSeq) { cSeq = seen.seq; cHit = SG.Random.value() < 0.5; }   // 看见对手在跟前蓄力：一半时候上前打断
     const open = seen && o.seq === seen.seq && (seen.phase === 'recovery' || seen.state === 'parrywhiff' || seen.state === 'parried' || (seen.state === 'charge' && cHit));
@@ -99,16 +89,16 @@ function cautiousBot(idx) {
   c.update = (dt, sim) => {
     const me = sim.f[idx], o = sim.f[1 - idx], now = sim.clock, H = c.held, T = c.taps;
     // 自己的出手被挡（对手进入防御硬直）：料定对手硬直一结束就还手
-    if (o.state === 'guardstun' && o.seq !== gSeq && MV[me.state] && me.hitIdx > 0) {
+    if (o.state === 'guardstun' && o.seq !== gSeq && me.mv && me.hitIdx > 0) {
       gSeq = o.seq;
       const freeAt = now + Math.max(0, o.stun - o.t);
       holdUntil = freeAt + 0.3 + 0.2 * SG.Random.value();
-      if (sim.parryReady(me) && SG.Random.value() < 0.5) pAt = freeAt + MV.light1.startup / o.spd - me.parryW * 0.5 + 0.045 * gz();
+      if (sim.parryReady(me) && SG.Random.value() < 0.5) pAt = freeAt + MV.L.startup / o.spd - me.parryW * 0.5 + 0.045 * gz();
     }
     base.update(dt, sim);
     if (me.state === 'parryok' || sim.countering(me)) { pAt = -1; holdUntil = 0; return; }
     if (pAt >= 0 && now >= pAt && (sim.actionable(me) || me.state === 'guard' || me.state === 'guardstun')) { T.parry++; pAt = -1; }
-    if (now < holdUntil && (sim.actionable(me) || me.state === 'guard')) { H.guard = true; H.x = 0; T.light = 0; T.heavy = 0; T.special = 0; }
+    if (now < holdUntil && (sim.actionable(me) || me.state === 'guard')) { H.guard = true; H.x = 0; T.light = 0; T.medium = 0; T.heavy = 0; T.special = 0; }
   };
   return c;
 }
@@ -132,7 +122,7 @@ function backstepBot(idx) {
   let gSeq = -1, bsPending = false, pun = -1;
   c.update = (dt, sim) => {
     const me = sim.f[idx], o = sim.f[1 - idx], H = c.held, T = c.taps, d = Math.abs(o.x - me.x);
-    if (o.state === 'guardstun' && o.seq !== gSeq && MV[me.state] && me.hitIdx > 0) { gSeq = o.seq; bsPending = true; }
+    if (o.state === 'guardstun' && o.seq !== gSeq && me.mv && me.hitIdx > 0) { gSeq = o.seq; bsPending = true; }
     base.update(dt, sim);
     H.dash = 0;
     if (bsPending) {
@@ -141,8 +131,8 @@ function backstepBot(idx) {
       return;
     }
     // 电脑挥空的收招（看见 0.2 秒后）：近则出手，稍远冲刺斩
-    const seen = sim.seen(o.idx, 0.2), reach = me.reach * MV.light1.reachK + 0.2 - 0.03;
-    if (seen && o.seq === seen.seq && MV[o.state] && seen.phase === 'recovery' && o.hitIdx === 0 && o.seq !== pun && (sim.actionable(me) || me.state === 'guard' || me.state === 'backstep') && d < reach + 1.2) {
+    const seen = sim.seen(o.idx, 0.2), reach = me.reach * MV.L.reachK + 0.2 - 0.03;
+    if (seen && o.seq === seen.seq && o.mv && seen.phase === 'recovery' && o.hitIdx === 0 && o.seq !== pun && (sim.actionable(me) || me.state === 'guard' || me.state === 'backstep') && d < reach + 1.2) {
       pun = o.seq; H.guard = false; if (d > reach) H.dash = me.face; T.light++;
     }
   };
@@ -151,99 +141,47 @@ function backstepBot(idx) {
 const BOTS = { turtle: turtleBot, cautious: cautiousBot, turtleP: turtleParryBot, backstepper: backstepBot };
 // BOTS-END
 
-// 脚本玩家（左，f[0]）对 真实电脑（右）；返回玩家胜率 % 与格开统计
-// by：格开按「谁 途径/招式」分类计数（如 'P hitstun/light3'、'AI stance/heavy'）；heavies：双方松手的重击数（满蓄 / 全部）
-function play(kind, p, a, n) {
-  const P = gens[p], A = gens[a];
-  let w = 0, parries = 0, tries = 0, aiParries = 0;
-  const by = {}, heavies = { P: 0, PFull: 0, AI: 0, AIFull: 0 };
+// 脚本玩家（左，f[0]）对 真实电脑（右）；返回玩家胜率 % 与统计
+// by：格开按「谁 途径/招式」分类计数；heavies：双方松手的重击数（满蓄 / 全部）；aiStats：电脑一方的 outcome 统计累计
+function play(kind, p, a, n, opts) {
+  opts = opts || {};
+  const P = opts.genP || gens[p], A = opts.genA || gens[a];
+  let w = 0, parries = 0, tries = 0, aiParries = 0, time = 0, tos = 0;
+  const by = {}, heavies = { P: 0, PFull: 0, AI: 0, AIFull: 0 }, agg = { P: {}, AI: {} }, ev = {};
   for (let i = 0; i < n; i++) {
-    const sim = new D._Sim(P, A, D.lookOf(P), D.lookOf(A));
-    sim.f[0].ctrl = kind === 'ai' ? new D._AI(sim.f[0]) : BOTS[kind] ? BOTS[kind](0) : D.scriptBot(kind, 0); sim.f[1].ctrl = new D._AI(sim.f[1]);
+    const sim = new D._Sim(P, A, D.lookOf(P), D.lookOf(A), opts.sim);
+    sim.f[0].ctrl = kind === 'ai' ? new D._AI(sim.f[0]) : BOTS[kind] ? BOTS[kind](0) : D.scriptBot(kind, 0);
+    sim.f[1].ctrl = new D._AI(sim.f[1]);
+    if (opts.setup) opts.setup(sim);
     sim.running = true;
     for (let k = 0; k < 60 * 75 && !sim.result; k++) {
       sim.events.length = 0; sim.step();
       for (const e of sim.events) {
         if (e.type === 'parry') { const key = (e.def === 0 ? 'P ' : 'AI ') + e.route + '/' + e.move; by[key] = (by[key] || 0) + 1; }
         else if (e.type === 'heavyGo') { const k2 = e.who === 0 ? 'P' : 'AI'; heavies[k2]++; if (e.charge >= 0.85) heavies[k2 + 'Full']++; }
+        if (opts.onEvent) opts.onEvent(sim, e);
       }
+      if (opts.onStep) opts.onStep(sim);
     }
     if (!sim.result) sim.timeUp();
     const o = sim.outcome();
     if (o.winner === 0) w++;
+    if (o.kind === 'time') tos++;
+    time += sim.time;
     parries += o.stats[0].parries; tries += o.stats[0].parryTries; aiParries += o.stats[1].parries;
+    for (const [side, st] of [['P', o.stats[0]], ['AI', o.stats[1]]]) for (const k in st) if (typeof st[k] === 'number') agg[side][k] = (agg[side][k] || 0) + st[k];
   }
-  return { pct: 100 * w / n, parries: parries / n, tries: tries / n, aiParries: aiParries / n, by, heavies };
+  return { pct: 100 * w / n, parries: parries / n, tries: tries / n, aiParries: aiParries / n, by, heavies, agg, n, time: time / n, tos: 100 * tos / n };
 }
 const rate = (kind, p, a, n) => play(kind, p, a, n).pct;
 
-section('(1) botTally regression (same cases as tests/duel.html)', () => {
-  const cases = [
-    ['jumper', '孙乾', '吕布', 0, 10], ['jumper', '刘备', '吕布', 0, 40], ['jumper', '关羽', '关羽', 0, 75],
-    ['masher', '孙乾', '吕布', 0, 10], ['masher', '刘备', '吕布', 0, 40], ['masher', '关羽', '关羽', 0, 75], ['masher', '张飞', '刘备', 50, 100],
-  ];
-  for (const [kind, p, a, lo, hi] of cases) {
-    const pct = rate(kind, p, a, N);
-    console.log(`  ${kind} ${p}(${gens[p].war}) vs AI ${a}(${gens[a].war}): ${pct.toFixed(0)}% (want ${lo}-${hi})`);
-    ok(pct >= lo && pct <= hi, `${kind} ${p} vs ${a}: ${pct.toFixed(0)}% outside ${lo}-${hi}`);
-  }
-});
-
-// 同武力的若干组合（含长枪对短兵、双剑、大斧、骨朵等兵器差异）
-const MID = [['刘备', '刘备'], ['曹操', '曹操'], ['王平', '王平'], ['郭汜', '郭汜'], ['李傕', '刘备'], ['刘备', '王平'], ['霍峻', '刘备'],
-  ['张济', '曹操'], ['祖茂', '黄祖'], ['郭汜', '潘凤'], ['潘凤', '孟优'], ['吴懿', '孟优'], ['孟达', '潘凤'], ['孟优', '吴懿']];
-let masherMidAvg = 0;
-section('(2) masher vs equal-war AI', () => {
-  const rows = MID.map(([p, a]) => [p, a, rate('masher', p, a, N)]);
-  const avg = rows.reduce((s, r) => s + r[2], 0) / rows.length, max = Math.max(...rows.map(r => r[2]));
-  masherMidAvg = avg;
-  console.log('  war 72-76: ' + rows.map(r => `${r[0]}>${r[1]} ${r[2].toFixed(0)}`).join('  '));
-  console.log(`  war 72-76 average ${avg.toFixed(0)}%, worst pair ${max.toFixed(0)}%`);
-  ok(avg <= 30, `masher average vs war 72-76 AI is ${avg.toFixed(0)}% (want <= 30%; v3 before the AI refine: about 30-35%)`);
-  ok(max <= 65, `masher worst pair vs war 72-76 AI is ${max.toFixed(0)}% (want <= 65%)`);
-  ok(avg >= 5, `war 72-76 AI should still be beatable by mashing sometimes (got ${avg.toFixed(0)}%)`);
-
-  const weak = [['孙乾', '孙乾'], ['简雍', '孙乾'], ['沮授', '陶谦'], ['陶谦', '沮授']].map(([p, a]) => rate('masher', p, a, N));
-  const wAvg = weak.reduce((s, x) => s + x, 0) / weak.length;
-  console.log(`  war <= 40: ${weak.map(x => x.toFixed(0)).join(' ')}  average ${wAvg.toFixed(0)}%`);
-  ok(wAvg >= 80, `weak generals (war <= 40) should stay easy to mash (got ${wAvg.toFixed(0)}%)`);
-
-  // 强将：每组至少 75 场（合计 ≥ 300 场），「并非无法取胜」才不至于碰运气
-  const nS = Math.max(N, 75);
-  const strong = [['关羽', '关羽'], ['张飞', '赵云'], ['华雄', '张郃'], ['吕布', '吕布']].map(([p, a]) => rate('masher', p, a, nS));
-  const sAvg = strong.reduce((s, x) => s + x, 0) / strong.length;
-  console.log(`  war >= 90 (${nS} each): ${strong.map(x => x.toFixed(1)).join(' ')}  average ${sAvg.toFixed(1)}%`);
-  ok(sAvg <= 30 && sAvg >= 1, `strong generals (war >= 90) should be hard but not impossible to mash (got ${sAvg.toFixed(1)}%)`);
-  ok(sAvg < avg + 5, `strong generals should not be easier to mash than average ones (${sAvg.toFixed(0)}% vs ${avg.toFixed(0)}%)`);
-});
-
-section('(3) AI vs AI: war decides, mirror is even; strong AI parries, weak AI does not', () => {
-  const n = N;
-  const sim = (a, b) => { let w = 0; for (let i = 0; i < n; i++) if (D.simulate(gens[a], gens[b]).winner === 0) w++; return 100 * w / n; };
-  const big = sim('吕布', '孙乾'), gap = sim('典韦', '李典'), mirror = sim('关羽', '关羽');
-  console.log(`  吕布 vs 孙乾 ${big.toFixed(0)}%, 典韦 vs 李典 ${gap.toFixed(0)}%, 关羽 mirror ${mirror.toFixed(0)}%`);
-  ok(big >= 95, '吕布 should crush 孙乾');
-  ok(gap >= 75, '典韦(96) should usually beat 李典(78)');
-  ok(mirror >= 25 && mirror <= 75, 'mirror match should be roughly even');
-  // 电脑对电脑（无画面模拟 / 观战）不该耗到时间：同将对打平均时长与超时比例（原先 刘备 约 31 秒 / 0%、孙乾 约 54 秒 / 15–27%）
-  const dur = (a, b, m) => { let t = 0, to = 0; for (let i = 0; i < m; i++) { const r = D.simulate(gens[a], gens[b]); t += r.time; if (r.kind === 'time') to++; } return { t: t / m, to: 100 * to / m }; };
-  const dMid = dur('刘备', '刘备', Math.max(40, n)), dWeak = dur('孙乾', '孙乾', Math.max(80, n));
-  console.log(`  AI mirror duration: 刘备 ${dMid.t.toFixed(1)}s (time-outs ${dMid.to.toFixed(0)}%), 孙乾 ${dWeak.t.toFixed(1)}s (time-outs ${dWeak.to.toFixed(0)}%)`);
-  ok(dMid.t <= 42 && dMid.to <= 10, `AI mid mirrors should not drag (刘备 mirror ${dMid.t.toFixed(1)}s, ${dMid.to.toFixed(0)}% time-outs; want <= 42s, <= 10%)`);
-  ok(dWeak.to <= 45, `weak AI mirrors should mostly end before the clock (孙乾 mirror ${dWeak.to.toFixed(0)}% time-outs; want <= 45%)`);
-  const strongAI = play('ai', '吕布', '吕布', Math.max(10, n >> 1)), weakAI = play('ai', '孙乾', '孙乾', Math.max(10, n >> 1));
-  console.log(`  parries per match: 吕布 mirror ${strongAI.parries.toFixed(2)} + ${strongAI.aiParries.toFixed(2)}, 孙乾 mirror ${weakAI.parries.toFixed(2)} (tries ${weakAI.tries.toFixed(2)})`);
-  ok(strongAI.parries + strongAI.aiParries >= 0.4, `strong AIs should parry each other sometimes (got ${(strongAI.parries + strongAI.aiParries).toFixed(2)} per match)`);
-  ok(weakAI.tries === 0, `war 30 AI should not parry (tried ${weakAI.tries.toFixed(2)} per match)`);
-});
-
-// ---------------------------------------------------------------- (4) 格开规则 --
+// ---------------------------------------------------------------- 手动场景 --
 // 手动操作者：taps / held 由测试直接写
-function manual() { return { held: { x: 0, up: false, light: false, heavy: false, guard: false, special: false, parry: false, dash: 0 }, taps: { light: 0, up: 0, special: 0, heavy: 0, dir: 0, parry: 0 }, update() {} }; }
-// 场景：左 f[0]、右 f[1] 相距 dist，双方手动操作
-function stage(a, b, dist) {
-  const A = gens[a], B = gens[b];
-  const sim = new D._Sim(A, B, D.lookOf(A), D.lookOf(B));
+function manual() { return { held: HELD(), taps: TAPS(), update() {} }; }
+// 场景：左 f[0]、右 f[1] 相距 dist，双方手动操作；ga / gb 可为姓名或武将对象
+function stage(a, b, dist, opts) {
+  const A = typeof a === 'string' ? gens[a] || worldGens[a] : a, B = typeof b === 'string' ? gens[b] || worldGens[b] : b;
+  const sim = new D._Sim(A, B, D.lookOf(A), D.lookOf(B), opts);
   sim.f[0].x = -dist / 2; sim.f[1].x = dist / 2;
   sim.f[0].ctrl = manual(); sim.f[1].ctrl = manual();
   sim.running = true;
@@ -261,15 +199,116 @@ function until(sim, pred, sec) {
   return null;
 }
 const run = (sim, sec) => until(sim, () => false, sec);
+// 连段驱动（脚本）：f 开打本人的招式谱，每一步在窗口一开就按下一步（= 踩准节拍：在接续点开始下一步）。
+//   upto：打到第几步为止（1–8）；late：第 lateAt 步（2–8）晚按 late 秒（相对接续点）；hold：第 holdAt 步是重步时按住 L 迟滞 hold 秒；
+//   onStep(sim, f, i)：每步开始时回调。返回 tick()，每步调用一次（在 sim.step 之前）
+function driver(sim, f, opts) {
+  opts = opts || {};
+  const upto = opts.upto || 8;
+  let started = false, pressedFor = -1, pressAt = -1, holdTill = -1, lateSeq = -1;
+  return () => {
+    const c = f.ctrl, now = sim.clock;
+    if (holdTill >= 0) { c.held.heavy = now < holdTill; if (now >= holdTill) holdTill = -1; }
+    if (!started) { started = true; c.taps[TK[f.seqStr[0]]]++; return; }
+    if (f.state !== 'str' || !f.strOn) return;
+    const i = f.strIdx, ni = i + 1;
+    if (ni >= upto || ni > 7 || pressedFor === ni) return;
+    // 本步的时钟（下一逻辑步推进后）
+    const tNext = f.t + (1 / 60) * f.spd;
+    if (pressAt < 0 || lateSeq !== f.seq) {
+      lateSeq = f.seq;
+      const late = opts.lateAt === ni + 1 ? opts.late || 0 : 0;
+      pressAt = late > 0 ? f.cp + late * f.spd : f.winOpen + 1e-6;
+    }
+    if (tNext >= pressAt) {
+      c.taps[TK[f.seqStr[ni]]]++; pressedFor = ni; pressAt = -1;
+      // 迟滞：按住 L 直到「下一步开始（本步接续点）+ 起手到停住处 + hold」
+      if (opts.hold && opts.holdAt === ni + 1 && f.seqStr[ni] === 'H') { c.held.heavy = true; holdTill = now + 1 / 60 + Math.max(0, f.cp - tNext) / f.spd + (ST[ni === 7 ? 'FH' : 'H'].startup - CO.WIN_EARLY) / f.spd + opts.hold; }
+    }
+  };
+}
+// 用给定的招式谱造一名武将（兜底不进表：直接改 seqStr / kStr）
+function withSeq(sim, idx, seq) { const f = sim.f[idx]; f.seqStr = seq; f.kStr = SG.Combos.kStr(seq); return f; }
+// 打一串，返回事件列表与 { hits, guarded, dmg }；dummy：对手的 held（每步写入）
+function playString(sim, f, o, opts) {
+  opts = opts || {};
+  const tick = driver(sim, f, opts), out = { hits: 0, guarded: 0, dmg: 0, events: [], steps: [] };
+  for (let k = 0; k < 60 * (opts.sec || 3); k++) {
+    tick();
+    if (opts.dummy) opts.dummy(sim, o, f);
+    sim.events.length = 0; sim.step();
+    for (const e of sim.events) {
+      out.events.push(e);
+      if (e.type === 'hit' && e.att === f.idx) { if (e.guarded) out.guarded++; else out.hits++; out.dmg += e.dmg; out.steps.push(e.step); }
+    }
+    if (k > 10 && f.state !== 'str' && f.state !== 'special' && !(o.state === 'hitstun' || o.state === 'guardstun')) break;
+    if (opts.stop && opts.stop(sim, out)) break;
+  }
+  return out;
+}
+const war76 = g => Object.assign({}, g, { war: 76 });
 
-section('(4) parry rules (scripted)', () => {
-  // 窗口随武力
+section(1, 'botTally regression (same cases as tests/duel.html)', () => {
+  const cases = [
+    ['jumper', '孙乾', '吕布', 0, 10], ['jumper', '刘备', '吕布', 0, 40], ['jumper', '关羽', '关羽', 0, 75],
+    ['masher', '孙乾', '吕布', 0, 10], ['masher', '刘备', '吕布', 0, 40], ['masher', '关羽', '关羽', 0, 75], ['masher', '张飞', '刘备', 40, 100],
+  ];
+  for (const [kind, p, a, lo, hi] of cases) {
+    const pct = rate(kind, p, a, N);
+    console.log(`  ${kind} ${p}(${gens[p].war}) vs AI ${a}(${gens[a].war}): ${pct.toFixed(0)}% (want ${lo}-${hi})`);
+    ok(pct >= lo && pct <= hi, `${kind} ${p} vs ${a}: ${pct.toFixed(0)}% outside ${lo}-${hi}`);
+  }
+});
+
+// 同武力的若干组合（含长枪对短兵、双剑、大斧、骨朵等兵器差异）
+const MID = [['刘备', '刘备'], ['曹操', '曹操'], ['王平', '王平'], ['郭汜', '郭汜'], ['李傕', '刘备'], ['刘备', '王平'], ['霍峻', '刘备'],
+  ['张济', '曹操'], ['祖茂', '黄祖'], ['郭汜', '潘凤'], ['潘凤', '孟优'], ['吴懿', '孟优'], ['孟达', '潘凤'], ['孟优', '吴懿']];
+section(2, 'masher vs equal-war AI', () => {
+  const rows = MID.map(([p, a]) => [p, a, rate('masher', p, a, N)]);
+  const av = rows.reduce((s, r) => s + r[2], 0) / rows.length, max = Math.max(...rows.map(r => r[2]));
+  console.log('  war 72-76: ' + rows.map(r => `${r[0]}>${r[1]} ${r[2].toFixed(0)}`).join('  '));
+  console.log(`  war 72-76 average ${av.toFixed(0)}%, worst pair ${max.toFixed(0)}%`);
+  ok(av <= 30, `masher average vs war 72-76 AI is ${av.toFixed(0)}% (want <= 30%)`);
+  ok(max <= 65, `masher worst pair vs war 72-76 AI is ${max.toFixed(0)}% (want <= 65%)`);
+  ok(av >= 5, `war 72-76 AI should still be beatable by mashing sometimes (got ${av.toFixed(0)}%)`);
+  const weak = [['孙乾', '孙乾'], ['简雍', '孙乾'], ['沮授', '陶谦'], ['陶谦', '沮授']].map(([p, a]) => rate('masher', p, a, N));
+  const wAvg = avg(weak);
+  console.log(`  war <= 40: ${weak.map(x => x.toFixed(0)).join(' ')}  average ${wAvg.toFixed(0)}%`);
+  ok(wAvg >= 80, `weak generals (war <= 40) should stay easy to mash (got ${wAvg.toFixed(0)}%)`);
+  // 强将：每组至少 75 场（合计 ≥ 300 场），「并非无法取胜」才不至于碰运气
+  const nS = Math.max(N, 75);
+  const strong = [['关羽', '关羽'], ['张飞', '赵云'], ['华雄', '张郃'], ['吕布', '吕布']].map(([p, a]) => rate('masher', p, a, nS));
+  const sAvg = avg(strong);
+  console.log(`  war >= 90 (${nS} each): ${strong.map(x => x.toFixed(1)).join(' ')}  average ${sAvg.toFixed(1)}%`);
+  ok(sAvg <= 30 && sAvg >= 1, `strong generals (war >= 90) should be hard but not impossible to mash (got ${sAvg.toFixed(1)}%)`);
+  ok(sAvg < av + 5, `strong generals should not be easier to mash than average ones (${sAvg.toFixed(0)}% vs ${av.toFixed(0)}%)`);
+});
+
+section(3, 'AI vs AI: war decides, mirror is even; strong AI parries, weak AI does not', () => {
+  const n = N;
+  const simR = (a, b) => { let w = 0; for (let i = 0; i < n; i++) if (D.simulate(gens[a], gens[b]).winner === 0) w++; return 100 * w / n; };
+  const big = simR('吕布', '孙乾'), gap = simR('典韦', '李典'), mirror = simR('关羽', '关羽');
+  console.log(`  吕布 vs 孙乾 ${big.toFixed(0)}%, 典韦 vs 李典 ${gap.toFixed(0)}%, 关羽 mirror ${mirror.toFixed(0)}%`);
+  ok(big >= 95, '吕布 should crush 孙乾');
+  ok(gap >= 75, '典韦(96) should usually beat 李典(78)');
+  ok(mirror >= 25 && mirror <= 75, 'mirror match should be roughly even');
+  const dur = (a, b, m) => { let t = 0, to = 0; for (let i = 0; i < m; i++) { const r = D.simulate(gens[a], gens[b]); t += r.time; if (r.kind === 'time') to++; } return { t: t / m, to: 100 * to / m }; };
+  const dMid = dur('刘备', '刘备', Math.max(40, n)), dWeak = dur('孙乾', '孙乾', Math.max(80, n));
+  console.log(`  AI mirror duration: 刘备 ${dMid.t.toFixed(1)}s (time-outs ${dMid.to.toFixed(0)}%), 孙乾 ${dWeak.t.toFixed(1)}s (time-outs ${dWeak.to.toFixed(0)}%)`);
+  ok(dMid.t >= 20 && dMid.t <= 40 && dMid.to <= 10, `AI mid mirrors: 刘备 mirror ${dMid.t.toFixed(1)}s, ${dMid.to.toFixed(0)}% time-outs (want 20-40 s, <= 10%)`);
+  ok(dWeak.to <= 45, `weak AI mirrors should mostly end before the clock (孙乾 mirror ${dWeak.to.toFixed(0)}% time-outs; want <= 45%)`);
+  const strongAI = play('ai', '吕布', '吕布', Math.max(10, n >> 1)), weakAI = play('ai', '孙乾', '孙乾', Math.max(10, n >> 1));
+  console.log(`  parries per match: 吕布 mirror ${strongAI.parries.toFixed(2)} + ${strongAI.aiParries.toFixed(2)}, 孙乾 mirror ${weakAI.parries.toFixed(2)} (tries ${weakAI.tries.toFixed(2)})`);
+  ok(strongAI.parries + strongAI.aiParries >= 0.4, `strong AIs should parry each other sometimes (got ${(strongAI.parries + strongAI.aiParries).toFixed(2)} per match)`);
+  ok(weakAI.tries === 0, `war 30 AI should not parry (tried ${weakAI.tries.toFixed(2)} per match)`);
+});
+
+// ---------------------------------------------------------------- (4) 格开规则 --
+section(4, 'parry rules (scripted)', () => {
   console.log(`  window: war 30 ${D.parryWindow(30).toFixed(3)}s, war 65 ${D.parryWindow(65).toFixed(3)}s, war 100 ${D.parryWindow(100).toFixed(3)}s; cooldown ${PR.CD}s`);
   ok(near(D.parryWindow(30), 0.15, 1e-6) && near(D.parryWindow(100), 0.22, 1e-6) && D.parryWindow(65) > 0.15 && D.parryWindow(65) < 0.22, 'parry window should scale 0.15 → 0.22 s with war');
-  // 冷却明显长于普通攻击（轻击一个循环）与格挡（随按随放）
-  const l1 = MV.light1, cyc = (l1.startup + l1.active + l1.recovery) / 0.9;
+  const l1 = MV.L, cyc = (l1.startup + l1.active + l1.recovery) / 0.9;
   ok(PR.CD >= 2 && PR.CD > cyc * 4, `parry cooldown ${PR.CD}s should be clearly longer than a light attack cycle (${cyc.toFixed(2)}s)`);
-
   // A. 成功格开：右方轻击，左方在起手中按 U → 对手 parried ≈0.6 秒，己方 parryok + 0.7 秒反击窗口
   {
     const sim = stage('关羽', '关羽', 1.6), L = sim.f[0], R = sim.f[1];
@@ -277,26 +316,24 @@ section('(4) parry rules (scripted)', () => {
     run(sim, 0.03);
     L.ctrl.taps.parry++;
     const e = until(sim, (s, ev) => ev && ev.type === 'parry', 0.5);
-    ok(!!e && e.def === 0 && e.move === 'light1', 'a light attack landing inside the window should be parried');
+    ok(!!e && e.def === 0 && e.move === 'L', `a light attack landing inside the window should be parried (got ${e && e.move})`);
     ok(R.state === 'parried' && near(R.stun, PR.STAGGER, 1e-6), `attacker should be staggered ${PR.STAGGER}s (state ${R.state}, stun ${R.stun})`);
     ok(L.state === 'parryok' && near(L.counterUntil - sim.clock, PR.COUNTER_WIN, 0.02), `parrier should get a ${PR.COUNTER_WIN}s counter window (state ${L.state})`);
-    ok(R.hp === 100 && L.hp === 100, 'a parry deals no damage');
-    // 对手硬直结束后按住格挡，反击仍在窗口内 → 不可格挡、×1.5
+    ok(R.hp === R.hpMax && L.hp === L.hpMax, 'a parry deals no damage');
     R.ctrl.held.guard = true;
     const tParry = sim.clock;
     until(sim, s => s.clock >= tParry + 0.52, 1);
     ok(R.state === 'parried', 'attacker is still staggered 0.52 s after the parry');
-    L.ctrl.taps.light++;
+    L.ctrl.taps.light++;   // 关羽的招式谱以 M 起手：J = 单出的轻击
     const h = until(sim, (s, ev) => ev && ev.type === 'hit' && ev.att === 0, 0.4);
     ok(!!h && h.riposte && !h.guarded, `the first hit inside the counter window should be an unblockable riposte (riposte ${h && h.riposte}, guarded ${h && h.guarded}, defender ${R.state})`);
-    const base = MV.light1.dmg * (D.WEAPONS.guandao.pow || 1) * PR.COUNTER_K, exp = D.damage(base, 98, 98);
+    const base = MV.L.dmg * (D.WEAPONS.guandao.pow || 1) * PR.COUNTER_K, exp = D.damage(base, 98, 98);
     ok(!!h && h.dmg >= Math.floor(exp * 0.92) && h.dmg <= Math.ceil(exp * 1.08), `riposte damage should be x${PR.COUNTER_K} (got ${h && h.dmg}, expected about ${exp.toFixed(1)})`);
     ok(!sim.countering(L), 'the counter window is used up by the first hit');
-    // 冷却中再按 U：不进入格开
     const cdLeft = sim.parryCd(L);
     ok(cdLeft > 1.5 && cdLeft < PR.CD, `parry should be on cooldown right after use (${cdLeft.toFixed(2)}s left)`);
   }
-  // B. 落空：没有来招 → 窗口过后 0.4 秒破绽；冷却 2.5 秒（期间再按无效），冷却好了才能再格开；挨打算「破绽」
+  // B. 落空：没有来招 → 窗口过后 0.4 秒破绽；冷却 2.5 秒；挨打算「破绽」
   {
     const sim = stage('刘备', '刘备', 3.5), L = sim.f[0];
     L.ctrl.taps.parry++;
@@ -315,7 +352,6 @@ section('(4) parry rules (scripted)', () => {
     L.ctrl.taps.parry++;
     run(sim, 0.03);
     ok(L.state === 'parry', `after the cooldown U should parry again (state ${L.state})`);
-    // 落空破绽中挨打 = 破绽 ×1.2
     const sim2 = stage('刘备', '刘备', 1.6), L2 = sim2.f[0], R2 = sim2.f[1];
     L2.ctrl.taps.parry++;
     until(sim2, s => L2.state === 'parrywhiff', 0.5);
@@ -323,70 +359,41 @@ section('(4) parry rules (scripted)', () => {
     const h = until(sim2, (s, ev) => ev && ev.type === 'hit' && ev.att === 1, 0.4);
     ok(!!h && h.counter && !h.guarded, 'a hit during the whiff recovery should be a counter hit (破绽)');
   }
-  // C. 看破连段：受击硬直中按 U 只格开第三段；只打两段则硬直结束时收势破绽
+  // C. 受击硬直中的格开（第四版）：连段第 1–2 步不可看破；第 3 步起按来招类型的窗口（见 (11) 的完整矩阵）；只打两步则收势破绽 0.24 秒
   {
-    const combo = (sim, R, n) => {
-      R.ctrl.taps.light++;
-      let pressed = 1;
-      return () => { if (pressed < n && MV[R.state] && R.state === 'light' + pressed && R.hitIdx > 0) { R.ctrl.taps.light++; pressed++; } };
-    };
-    // 踩准节奏：在第三段打到前 0.3 × 窗口按下 → 格开；挨了第二段立刻按（早于 0.6 × 窗口）→ 白费，第三段照样打中、提示「过早」
-    const third = (early) => {
+    const hs = (pressFor, upto) => {
       const sim = stage('刘备', '关羽', 1.5), L = sim.f[0], R = sim.f[1];
-      const tick = combo(sim, R, 3);
-      let pressedU = false, ev = null, earlyEv = null;
-      for (let i = 0; i < 120 && !ev; i++) {
+      const tick = driver(sim, R, { upto });
+      let pressed = false, out = { parry: null, early: false, whiffT: 0 };
+      for (let i = 0; i < 150; i++) {
         tick();
-        const now2 = early ? R.state === 'light2' && R.hitIdx > 0 : R.state === 'light3' && (MV.light3.startup - R.t) / R.spd <= L.parryW * PR.HS_K * 0.5;
-        if (!pressedU && now2 && L.state === 'hitstun') { L.ctrl.taps.parry++; pressedU = true; }
+        if (!pressed && L.state === 'hitstun' && R.state === 'str' && R.strIdx === pressFor - 2 && R.hitIdx > 0) { L.ctrl.taps.parry++; pressed = true; }
         sim.events.length = 0; sim.step();
-        ev = sim.events.find(e => e.type === 'parry' || (e.type === 'hit' && e.move === 'light3')) || null;
-        earlyEv = earlyEv || sim.events.find(e => e.type === 'parryEarly') || null;
+        for (const e of sim.events) { if (e.type === 'parry') out.parry = e; if (e.type === 'parryEarly') out.early = true; }
+        if (L.state === 'parrywhiff') out.whiffT = L.whiffT;
+        if (out.parry) break;
       }
-      return { pressedU, ev, earlyEv };
+      return out;
     };
-    const good = third(false), bad = third(true);
-    ok(good.pressedU && !!good.ev && good.ev.type === 'parry' && good.ev.move === 'light3' && good.ev.route === 'hitstun', `U pressed on the 3rd hit's rhythm should parry it (got ${good.ev ? good.ev.type + ' ' + good.ev.move : 'none'})`);
-    ok(bad.pressedU && !!bad.ev && bad.ev.type === 'hit' && !!bad.earlyEv, `U pressed right as the 2nd hit lands is too early: the 3rd hit lands, flagged 过早 (got ${bad.ev ? bad.ev.type : 'none'}, early ${!!bad.earlyEv})`);
-    const gap23 = (MV.light2.active * 0.6 + MV.light3.startup) / 1.12;   // 第二段打中 → 第三段打中（武力 100 出招最快）
-    ok(PR.HS_K * D.parryWindow(100) < gap23 - 0.03, `the hitstun parry must be timed: its window (${(PR.HS_K * D.parryWindow(100)).toFixed(3)}s) should be clearly shorter than the 2nd→3rd hit gap (${gap23.toFixed(3)}s)`);
-    // 只打两段
-    const sim2 = stage('刘备', '关羽', 1.5), L2 = sim2.f[0], R2 = sim2.f[1];
-    const tick2 = combo(sim2, R2, 2);
-    let pressed2 = false, whiff = false;
-    for (let i = 0; i < 90; i++) {
-      tick2();
-      if (!pressed2 && R2.state === 'light2' && R2.hitIdx > 0 && L2.state === 'hitstun') { L2.ctrl.taps.parry++; pressed2 = true; }
-      sim2.step();
-      if (L2.state === 'parrywhiff') { whiff = true; break; }
-    }
-    ok(pressed2 && whiff && L2.whiffT < PR.WHIFF, 'a hitstun parry that never meets a 3rd hit should leave a short whiff when the hitstun ends');
-    // 第一段挨打后按 U 不能格开第二段（连段前两段只能硬吃或格挡）
-    const sim3 = stage('刘备', '关羽', 1.5), L3 = sim3.f[0], R3 = sim3.f[1];
-    const tick3 = combo(sim3, R3, 2);
-    let p3 = false, parried = false;
-    for (let i = 0; i < 60; i++) {
-      tick3();
-      if (!p3 && R3.state === 'light1' && R3.hitIdx > 0 && L3.state === 'hitstun') { L3.ctrl.taps.parry++; p3 = true; }
-      sim3.events.length = 0; sim3.step();
-      if (sim3.events.some(e => e.type === 'parry')) parried = true;
-    }
-    ok(p3 && !parried, 'a hitstun parry should not parry the 2nd hit of a combo');
+    const s2 = hs(2, 8);
+    ok(!s2.parry && s2.early, `a hitstun parry right after step 1 can never parry step 2 (parry ${!!s2.parry}, 过早 ${s2.early})`);
+    const stop = hs(3, 2);
+    ok(!stop.parry && near(stop.whiffT, CO.HS_WHIFF, 1e-6), `a hitstun parry that meets no further step leaves a ${CO.HS_WHIFF}s whiff (got ${stop.whiffT})`);
   }
-  // D. 挡下一击后格开连段的下一击（举防 → 格开 → 反击）
+  // D. 挡下一步后格开连段的下一步（举防 → 格开 → 反击）：全窗口
   {
     const sim = stage('关羽', '刘备', 1.5), L = sim.f[0], R = sim.f[1];
     L.ctrl.held.guard = true;
     run(sim, 0.05);
-    R.ctrl.taps.light++;
-    let chained = false, pressed = false, ev = null;
-    for (let i = 0; i < 60 && !ev; i++) {
-      if (!chained && R.state === 'light1' && R.hitIdx > 0) { R.ctrl.taps.light++; chained = true; }
+    const tick = driver(sim, R, { upto: 3 });
+    let pressed = false, ev = null;
+    for (let i = 0; i < 90 && !ev; i++) {
+      tick();
       if (!pressed && L.state === 'guardstun') { L.ctrl.taps.parry++; pressed = true; }
       sim.events.length = 0; sim.step();
       ev = sim.events.find(e => e.type === 'parry') || null;
     }
-    ok(!!ev && ev.move === 'light2', `blocking the 1st hit then pressing U should parry the 2nd (got ${ev ? ev.move : 'none'})`);
+    ok(!!ev && ev.move === 'str' && ev.step === 1 && ev.route === 'guard', `blocking string step 1 then pressing U should parry step 2 (got ${ev ? ev.move + ' step ' + ev.step + ' ' + ev.route : 'none'})`);
   }
   // E. 绝技不可格开；重击可格开
   {
@@ -407,7 +414,6 @@ section('(4) parry rules (scripted)', () => {
   }
   // F. 电脑抓格开落空的破绽：武力高者多半抓到，武力低者少
   {
-    // 只统计真正落空的格开（电脑恰好打进窗口的算格开成功，不计）：落空破绽中（或刚恢复的一瞬）挨打 = 抓到
     const punish = (ai, me, n) => {
       let got = 0, whiffs = 0;
       for (let i = 0; i < n * 3 && whiffs < n; i++) {
@@ -432,7 +438,7 @@ section('(4) parry rules (scripted)', () => {
 });
 
 // ---------------------------------------------------------------- (5) 胜率表 --
-section('(5) parry bot / parry-spam bot vs AI across war gaps', () => {
+section(5, 'parry bot / parry-spam bot vs AI across war gaps', () => {
   const n = Math.max(10, N >> 1);
   const PAIRS = [['孙乾', '孙乾'], ['刘备', '刘备'], ['曹操', '曹操'], ['郭汜', '潘凤'], ['关羽', '关羽'], ['吕布', '吕布'], ['刘备', '吕布'], ['张飞', '刘备']];
   const KINDS = ['masher', 'spam', 'guard', 'parry'];
@@ -446,32 +452,28 @@ section('(5) parry bot / parry-spam bot vs AI across war gaps', () => {
     console.log(`  ${(p + '(' + gens[p].war + ') vs ' + a + '(' + gens[a].war + ')').padEnd(22, '　')}` + KINDS.map(k => (row[k].pct.toFixed(0) + '%').padStart(7)).join('') +
       `   ${pr.parries.toFixed(1)}/${pr.tries.toFixed(1)}, ${pr.aiParries.toFixed(1)}`);
   }
-  const avg = (k, keys) => keys.reduce((s, x) => s + T[x][k].pct, 0) / keys.length;
+  const av = (k, keys) => keys.reduce((s, x) => s + T[x][k].pct, 0) / keys.length;
   const mid = ['刘备>刘备', '曹操>曹操', '郭汜>潘凤'], strong = ['关羽>关羽', '吕布>吕布'];
-  const spamMid = avg('spam', mid), mashMid = avg('masher', mid), spamStrong = avg('spam', strong);
-  const parryMid = avg('parry', mid), guardMid = avg('guard', mid), parryStrong = avg('parry', strong), guardStrong = avg('guard', strong);
+  const spamMid = av('spam', mid), mashMid = av('masher', mid), spamStrong = av('spam', strong);
+  const parryMid = av('parry', mid), guardMid = av('guard', mid), parryStrong = av('parry', strong), guardStrong = av('guard', strong);
   console.log(`  mid (72-76) avg: masher ${mashMid.toFixed(0)}%, spam ${spamMid.toFixed(0)}%, guard ${guardMid.toFixed(0)}%, parry ${parryMid.toFixed(0)}%;` +
     ` strong (98-100) avg: spam ${spamStrong.toFixed(0)}%, guard ${guardStrong.toFixed(0)}%, parry ${parryStrong.toFixed(0)}%`);
-  // 连按格开不占便宜
   ok(spamMid <= 45, `parry-spam should not beat equal mid AIs (got ${spamMid.toFixed(0)}%, want <= 45%)`);
   ok(spamMid <= mashMid + 15, `parry-spam should not be much better than plain mashing (${spamMid.toFixed(0)}% vs ${mashMid.toFixed(0)}%)`);
   ok(spamStrong <= 30, `parry-spam vs war 98-100 should be hard (got ${spamStrong.toFixed(0)}%)`);
   ok(T['孙乾>孙乾'].spam.pct >= 70, 'weak generals stay easy even for the parry-spammer');
-  // 格开对熟练玩家有用，但强将仍难、弱将仍易
   const parryUse = mid.concat(strong).reduce((s, x) => s + T[x].parry.parries, 0) / 5;
   ok(parryUse >= 0.5, `the parry bot should actually land parries (got ${parryUse.toFixed(2)} per match)`);
   ok(parryMid >= guardMid - 5 && parryStrong >= guardStrong - 5, `parrying should help a skilled player (mid ${parryMid.toFixed(0)}% vs ${guardMid.toFixed(0)}%, strong ${parryStrong.toFixed(0)}% vs ${guardStrong.toFixed(0)}%)`);
   ok(parryStrong <= 90, `even a skilled parry player should not always beat war 98-100 mirrors (got ${parryStrong.toFixed(0)}%)`);
   ok(T['刘备>吕布'].parry.pct <= 40, `刘备(76) should rarely beat 吕布(100) even with parries (got ${T['刘备>吕布'].parry.pct.toFixed(0)}%)`);
   ok(T['孙乾>孙乾'].parry.pct >= 80 && T['张飞>刘备'].parry.pct >= 80, 'a skilled player should beat weak / much weaker AIs');
-  // 格开途径分类（parry 机器人 = 人的反应与节奏误差）：确实是按节奏 / 看准才格开的，而电脑看准格开重击有上限
   const by = {}, hv = { P: 0, PFull: 0, AI: 0, AIFull: 0 };
   for (const x of mid.concat(strong)) { const r = T[x].parry; for (const k in r.by) by[k] = (by[k] || 0) + r.by[k]; for (const k in hv) hv[k] += r.heavies[k]; }
   console.log('  parry bot, mid + strong mirrors, parries by route/move: ' + Object.keys(by).sort().map(k => `${k} ${by[k]}`).join(', '));
   console.log(`  heavies released: bot ${hv.P} (full ${hv.PFull}), AI ${hv.AI} (full ${hv.AIFull})`);
   const sum = re => Object.keys(by).filter(k => re.test(k)).reduce((t, k) => t + by[k], 0);
-  ok(sum(/^P hitstun\/light3$/) > 0, 'the human-latency bot should land some timed 3rd-hit parries');
-  // heavy 机器人（同 parry，试探多用重击，一半满蓄）对强将：电脑格开重击的次数有上限（满蓄至多约一半，轻点几乎没有）
+  ok(sum(/^P hitstun\/str$/) > 0, 'the human-latency bot should land some timed string-step parries from hitstun');
   const hb = {}, hh = { P: 0, PFull: 0, AI: 0, AIFull: 0 }, hw = [];
   for (const [p, a] of [['关羽', '关羽'], ['吕布', '吕布'], ['张飞', '张辽'], ['刘备', '刘备']]) {
     const r = play('heavy', p, a, n); hw.push(`${p}>${a} ${r.pct.toFixed(0)}%`);
@@ -483,19 +485,23 @@ section('(5) parry bot / parry-spam bot vs AI across war gaps', () => {
 });
 
 // ---------------------------------------------------------------- (6) 重击与反应 --
-// 玩家（左，手动）从重击距离松开重击，右方为真实电脑：电脑看重击与看其他来招同样慢（this.react），轻点重击来不及格开，
-// 满蓄重击来得及但至多一半；人的反应（0.22 ± 0.04 秒）也能格开满蓄重击
-section('(6) heavy release: reaction parries are fair for both sides', () => {
-  // 全体武将中出招最快 / 最慢者：轻点重击（蓄力 0.15）松手到打中、满蓄重击松手到打中（实际秒数）
+section(6, 'heavy / overhead release: reaction parries and guards are fair for both sides', () => {
   let sMin = 9, sMax = 0;
   for (const g of Object.values(gens)) { const sp = new D._Sim(g, g, D.lookOf(g), D.lookOf(g)).f[0].spd; sMin = Math.min(sMin, sp); sMax = Math.max(sMax, sp); }
   const rt = (c, sp) => D.heavySU(c, sp) / sp;
-  console.log(`  heavy release → impact: tap ${rt(0.15, sMax).toFixed(3)}–${rt(0.15, sMin).toFixed(3)}s, full charge ${rt(1, sMax).toFixed(3)}–${rt(1, sMin).toFixed(3)}s`);
+  console.log(`  heavy release → impact: tap ${rt(0.15, sMax).toFixed(3)}–${rt(0.15, sMin).toFixed(3)}s, full charge ${rt(1, sMax).toFixed(3)}–${rt(1, sMin).toFixed(3)}s; K+L 跃劈 startup ${D.OVH_SU.toFixed(2)}s real at any speed`);
   ok(rt(0.15, sMin) < 0.17, `a tap heavy should be too fast to react to (${rt(0.15, sMin).toFixed(3)}s)`);
   ok(rt(1, sMax) >= 0.24, `a full-charge heavy should be reactable by a human (${rt(1, sMax).toFixed(3)}s >= 0.24s)`);
-  // 电脑（右）对玩家松开的重击。格开的比例按「电脑看清了这一记重击、来得及决定」的次数算（电脑在重击距离内、格开已就绪、
-  // 起手结束前看清：AI.hvSeq 记下这一记）——这才是每一记重击的决定概率。只数「打到了的」会高估（没掷中格开的那些常被
-  // 电脑退开躲掉、被剔除），把退开的也算进分母又会低估（多半是电脑根本没看这一记）
+  // 跃劈：武力 100 也 ≥ 0.30 秒（实测：K+L 到打中）
+  {
+    const sim = stage('吕布', '吕布', 1.7), L = sim.f[0], R = sim.f[1];
+    R.ctrl.held.guard = true;
+    L.ctrl.taps.ovh++;
+    const t0 = sim.clock;
+    const h = until(sim, (s, ev) => ev && ev.type === 'hit' && ev.att === 0, 1);
+    const dt = sim.clock - t0;
+    ok(!!h && dt >= 0.30, `K+L overhead startup at war 100 should be >= 0.30 s real (measured ${dt.toFixed(3)}s)`);
+  }
   const vsAI = (p, ai, chg, n) => {
     const out = { parried: 0, hit: 0, guarded: 0, gbreak: 0, avoid: 0 }, lat = [];
     let looked = 0, lookedParried = 0;
@@ -509,10 +515,9 @@ section('(6) heavy release: reaction parries are fair for both sides', () => {
       let rel = -1, res = null, press = -1, hSeq = -1, saw = false;
       for (let k = 0; k < 150 && !res; k++) {
         if (L.state === 'charge' && L.charge >= chg) L.ctrl.held.heavy = false;
-        const hv0 = A.hvSeq, d0 = Math.abs(L.x - R.x);   // 电脑在步首决定（此时的距离）
+        const hv0 = A.hvSeq, d0 = Math.abs(L.x - R.x);
         sim.events.length = 0; sim.step();
         if (L.state === 'heavy' && hSeq < 0) hSeq = L.seq;
-        // 这一步电脑看清了这一记重击：当时在格开够得着的距离内、离打中还有时间 → 计入分母
         if (hSeq >= 0 && hv0 !== hSeq && A.hvSeq === hSeq && L.state === 'heavy' && L.phase === 'startup')
           saw = d0 <= L.reach * MV.heavy.reachK + 0.2 + 0.6;
         for (const e of sim.events) {
@@ -534,7 +539,7 @@ section('(6) heavy release: reaction parries are fair for both sides', () => {
       other: out.parried - lookedParried, minLat: lat.length ? Math.min(...lat) : null, react };
   };
   for (const [p, ai] of [['关羽', '吕布'], ['关羽', '关羽'], ['张飞', '张辽'], ['刘备', '曹操']]) {
-    const t = vsAI(p, ai, 0.15, 40), f = vsAI(p, ai, 0.95, 200);   // 满蓄：电脑看清的 200 记
+    const t = vsAI(p, ai, 0.15, 40), f = vsAI(p, ai, 0.95, QUICK ? 120 : 200);
     console.log(`  ${p} heavy vs AI ${ai}(${gens[ai].war}): tap parried ${t.pct.toFixed(0)}% of ${t.n} seen; full parried ${f.pct.toFixed(0)}% of ${f.n} seen` +
       ` (${f.reachedPct.toFixed(0)}% of those that reached it; ${f.other} parried unseen) ${JSON.stringify(f.out)}` +
       (f.minLat !== null ? `; AI press ≥ ${(f.minLat * 1000).toFixed(0)}ms after release (react ${(f.react * 1000).toFixed(0)}ms)` : ''));
@@ -543,17 +548,16 @@ section('(6) heavy release: reaction parries are fair for both sides', () => {
     ok(f.other === 0, `AI ${ai} should parry full heavies only on reaction (${f.other} parried without seeing the release)`);
     ok(f.minLat === null || f.minLat >= f.react - 1e-6, `AI ${ai} must not react to a heavy faster than to other attacks (${f.minLat !== null ? (f.minLat * 1000).toFixed(0) : '-'}ms < ${(f.react * 1000).toFixed(0)}ms)`);
   }
-  // 人的反应：看到松手 0.22 ± 0.04 秒后按 U
   const human = (def, att, chg, n) => {
     let par = 0, tot = 0;
     for (let i = 0; i < n; i++) {
       const sim = stage(def, att, 2.1), L = sim.f[0], R = sim.f[1];
       R.ctrl.taps.heavy++; R.ctrl.held.heavy = true;
-      const rt = 0.22 + 0.04 * ((SG.Random.value() + SG.Random.value() + SG.Random.value() + SG.Random.value() - 2) * 1.732);
+      const rt2 = 0.22 + 0.04 * ((SG.Random.value() + SG.Random.value() + SG.Random.value() + SG.Random.value() - 2) * 1.732);
       let rel = -1, res = null, pressed = false;
       for (let k = 0; k < 150 && !res; k++) {
         if (R.state === 'charge' && R.charge >= chg) R.ctrl.held.heavy = false;
-        if (rel >= 0 && sim.clock >= rel + rt && !pressed) { L.ctrl.taps.parry++; pressed = true; }
+        if (rel >= 0 && sim.clock >= rel + rt2 && !pressed) { L.ctrl.taps.parry++; pressed = true; }
         sim.events.length = 0; sim.step();
         for (const e of sim.events) {
           if (e.type === 'heavyGo' && e.who === 1) rel = sim.clock;
@@ -572,27 +576,24 @@ section('(6) heavy release: reaction parries are fair for both sides', () => {
 });
 
 // ---------------------------------------------------------------- (7) 防守试探型打法 --
-section('(7) guard-and-poke / cautious / turtle bots vs AI; war-gap ladder', () => {
+section(7, 'guard-and-poke / cautious / turtle bots vs AI; war-gap ladder', () => {
   const n = Math.max(20, N >> 1);
   const MID8 = [['刘备', '刘备'], ['曹操', '曹操'], ['郭汜', '潘凤'], ['王平', '王平'], ['李傕', '刘备'], ['张济', '曹操'], ['祖茂', '黄祖'], ['孟达', '潘凤']];
   const res = {};
   for (const k of ['guard', 'parry', 'cautious', 'turtle', 'turtleP', 'backstepper']) {
     const rs = MID8.map(([p, a]) => play(k, p, a, n));
-    const avg = rs.reduce((t, r) => t + r.pct, 0) / rs.length;
+    const a = avg(rs.map(r => r.pct));
     const full = rs.reduce((t, r) => t + r.heavies.AIFull, 0) / (rs.length * n), aiP = rs.reduce((t, r) => t + r.aiParries, 0) / rs.length;
-    res[k] = { avg, full, aiP };
-    console.log(`  ${k.padEnd(8)} vs equal mid AI: ${avg.toFixed(0)}%  [${rs.map(r => r.pct.toFixed(0)).join(' ')}]  AI full-charge heavies ${full.toFixed(2)}/match, AI parries ${aiP.toFixed(2)}/match`);
+    res[k] = { avg: a, full, aiP };
+    console.log(`  ${k.padEnd(8)} vs equal mid AI: ${a.toFixed(0)}%  [${rs.map(r => r.pct.toFixed(0)).join(' ')}]  AI full-charge heavies ${full.toFixed(2)}/match, AI parries ${aiP.toFixed(2)}/match`);
   }
-  ok(res.guard.avg <= 50, `guard-and-poke bot should not beat equal mid AIs (got ${res.guard.avg.toFixed(0)}%, want <= 50%; v3 before the AI refine: 73-81%)`);
+  ok(res.guard.avg <= 50, `guard-and-poke bot should not beat equal mid AIs (got ${res.guard.avg.toFixed(0)}%, want <= 50%)`);
   ok(res.parry.avg >= 25 && res.parry.avg <= 70, `a skilled parry player should keep a fair chance against equal mid AIs (got ${res.parry.avg.toFixed(0)}%, want 25-70%)`);
-  ok(res.cautious.avg >= 25 && res.cautious.avg <= 65, `a cautious player (blocks / parries after his poke is blocked) should keep a fair chance (got ${res.cautious.avg.toFixed(0)}%)`);
+  ok(res.cautious.avg >= 25 && res.cautious.avg <= 65, `a cautious player should keep a fair chance (got ${res.cautious.avg.toFixed(0)}%)`);
   ok(res.turtle.avg <= 70, `pure turtling should not beat equal mid AIs (got ${res.turtle.avg.toFixed(0)}%, want <= 70%)`);
   ok(res.turtle.full >= 1, `the AI should break a turtle with full-charge heavies from out of his reach (got ${res.turtle.full.toFixed(2)} per match)`);
-  // 龟缩 + 见满蓄重击就格开：电脑记住他会格开 → 佯攻骗格开、趁格开冷却再真打（原先约 92%：满蓄重击八成被格开反击）
-  ok(res.turtleP.avg <= 70, `turtling and parrying every charged heavy should not beat equal mid AIs (got ${res.turtleP.avg.toFixed(0)}%, want <= 70%; before this fix about 92%)`);
-  // 被挡就后撤、再抓电脑挥空：电脑记住他会退开 → 冲刺追击（原先约 62–69%：抢回合那一刀九成挥空）
-  ok(res.backstepper.avg <= 55, `poke-and-backstep should not beat equal mid AIs (got ${res.backstepper.avg.toFixed(0)}%, want <= 55%; before this fix about 62-69%)`);
-  // 武力差阶梯：玩家 刘备(76) / 曹操(72) 对 电脑 简雍 30 · 刘表 50 · 徐庶 64 · 樊稠 78 · 董卓 86 · 吕布 100
+  ok(res.turtleP.avg <= 70, `turtling and parrying every charged heavy should not beat equal mid AIs (got ${res.turtleP.avg.toFixed(0)}%, want <= 70%)`);
+  ok(res.backstepper.avg <= 55, `poke-and-backstep should not beat equal mid AIs (got ${res.backstepper.avg.toFixed(0)}%, want <= 55%)`);
   const L = ['简雍', '刘表', '徐庶', '樊稠', '董卓', '吕布'];
   for (const k of ['guard', 'parry']) {
     const row = L.map(a => (play(k, '刘备', a, n).pct + play(k, '曹操', a, n).pct) / 2);
@@ -600,17 +601,573 @@ section('(7) guard-and-poke / cautious / turtle bots vs AI; war-gap ladder', () 
     ok(row.every((x, i) => i === 0 || x <= row[i - 1] + 12), `${k} win rate should fall as the AI's war rises (${row.map(x => x.toFixed(0)).join(' ')})`);
     ok(row[0] >= 85 && row[L.length - 1] <= 15, `${k}: war 30 AI should be easy and war 100 AI hard for a war 72-76 player (${row[0].toFixed(0)}% / ${row[L.length - 1].toFixed(0)}%)`);
   }
-  // 熟练玩家（parry 机器人）在武力相近（±6）时仍有一搏，对武力低 6–12 的电脑多半能赢——弱将与名将的玩家都如此
-  // （名将一组取 张辽 94 / 关羽 98：对 吕布 100 只有约 25%，作为「相近」的下限太贴边）
   for (const [ps, below, near6] of [[['刘表', '张鲁'], ['陆康'], ['糜芳']], [['关羽', '马超'], ['董卓', '华雄'], ['张辽', '关羽']]]) {
-    const avg = as => as.reduce((t, a) => t + ps.reduce((u, p) => u + play('parry', p, a, n).pct, 0) / ps.length, 0) / as.length;
-    const lo = avg(below), hi = avg(near6);
+    const a2 = as => as.reduce((t, a) => t + ps.reduce((u, p) => u + play('parry', p, a, n).pct, 0) / ps.length, 0) / as.length;
+    const lo = a2(below), hi = a2(near6);
     console.log(`  parry bot as ${ps.join('/')}(${gens[ps[0]].war}): vs AI ${below.map(a => a + gens[a].war).join('/')} ${lo.toFixed(0)}%, vs AI ${near6.map(a => a + gens[a].war).join('/')} ${hi.toFixed(0)}%`);
     ok(lo >= 65, `a skilled player should usually beat an AI 6-12 war below (${ps[0]}: ${lo.toFixed(0)}%)`);
     ok(hi >= 25, `a skilled player should keep a fair chance within +6 war (${ps[0]}: ${hi.toFixed(0)}%)`);
   }
 });
 
-console.log(`${checks} checks`);
-console.log(fails === 0 ? 'ALL OK' : 'FAILURES: ' + fails);
+// ---------------------------------------------------------------- (8) 后退格挡 --
+section(8, 'hold-back guard (proximity guard, hit-time blocking, cross-up, air)', () => {
+  const n = Math.max(20, N >> 1);
+  const MID8 = [['刘备', '刘备'], ['曹操', '曹操'], ['郭汜', '潘凤'], ['王平', '王平'], ['李傕', '刘备'], ['张济', '曹操'], ['祖茂', '黄祖'], ['孟达', '潘凤']];
+  const STR = [['关羽', '关羽'], ['吕布', '吕布']];
+  const g = MID8.map(([p, a]) => play('guard', p, a, n).pct), hb = MID8.map(([p, a]) => play('hbguard', p, a, n).pct);
+  const gS = STR.map(([p, a]) => play('guard', p, a, n).pct), hbS = STR.map(([p, a]) => play('hbguard', p, a, n).pct);
+  console.log(`  equal mid AI: guard (防键) ${avg(g).toFixed(0)}% vs hbguard (后退) ${avg(hb).toFixed(0)}%; strong mirrors ${avg(gS).toFixed(0)}% vs ${avg(hbS).toFixed(0)}%`);
+  ok(Math.abs(avg(g) - avg(hb)) <= 6, `hold-back guard should play like stationary guard on the MID set (|Δ| ${Math.abs(avg(g) - avg(hb)).toFixed(1)} pp)`);
+  ok(Math.abs(avg(gS) - avg(hbS)) <= 6, `... and against strong mirrors (|Δ| ${Math.abs(avg(gS) - avg(hbS)).toFixed(1)} pp)`);
+  // 近身判定：有威胁时后退不动（Δx = 0）；没有威胁时照常后退
+  {
+    const sim = stage('刘备', '关羽', 3.0), L = sim.f[0], R = sim.f[1];
+    L.ctrl.held.x = -1; run(sim, 0.3);
+    const walked = L.x < -1.5 - 0.3;
+    ok(walked && L.state === 'walk', `holding back with no threat walks backward (x ${L.x.toFixed(2)}, state ${L.state})`);
+    const sim2 = stage('刘备', '关羽', 2.0), L2 = sim2.f[0], R2 = sim2.f[1];
+    L2.ctrl.held.x = -1; R2.ctrl.taps.heavy++; R2.ctrl.held.heavy = true;
+    let x0 = null, moved = 0, guardSeen = false;
+    for (let i = 0; i < 60; i++) {
+      sim2.events.length = 0; sim2.step();
+      if (sim2.events.some(e => e.type === 'hit')) break;
+      if (sim2.threat(L2, R2)) { if (x0 === null) x0 = L2.x; moved = Math.max(moved, Math.abs(L2.x - x0)); guardSeen = guardSeen || L2.state === 'guard'; }
+    }
+    ok(guardSeen && moved < 1e-9, `while threatened (foe charging in range), holding back raises the guard and never moves (Δx ${moved.toFixed(4)}, guard ${guardSeen})`);
+  }
+  // 命中那一步才按后退：照样挡住
+  {
+    const findStep = () => { const sim = stage('刘备', '关羽', 1.6); sim.f[1].ctrl.taps.light++; for (let i = 0; i < 60; i++) { sim.events.length = 0; sim.step(); if (sim.events.some(e => e.type === 'hit')) return i; } return -1; };
+    const K = findStep();
+    const sim = stage('刘备', '关羽', 1.6), L = sim.f[0], R = sim.f[1];
+    R.ctrl.taps.light++;
+    let hit = null;
+    for (let i = 0; i <= K; i++) { if (i === K) L.ctrl.held.x = -1; sim.events.length = 0; sim.step(); hit = sim.events.find(e => e.type === 'hit') || hit; }
+    ok(K > 0 && !!hit && hit.guarded, `a back press on the very step the hit lands blocks it (step ${K}, guarded ${hit && hit.guarded})`);
+  }
+  // 越身：0.10 秒内两个方向都算后退；之后只认正确方向（直接查 guardOf，命中判定用的同一函数）
+  {
+    const sim = stage('刘备', '关羽', 1.4), L = sim.f[0], R = sim.f[1];
+    const h = { mv: MV.L, name: 'str' };
+    const test = (since, x) => { L.xAt = sim.clock - since; L.ctrl.held.x = x; L.h = L.ctrl.held; return sim.guardOf(L, R, h); };
+    // R 在 L 右侧：背向 = −1。越身 0.05 秒前：+1 / −1 都挡；0.15 秒前：只有 −1
+    ok(test(0.05, 1) && test(0.05, -1), 'within 0.10 s after a cross-up, either direction blocks');
+    ok(!test(0.15, 1) && test(0.15, -1), 'after 0.10 s only the direction away from the attacker blocks');
+  }
+  // 空中不能挡
+  {
+    const sim = stage('刘备', '关羽', 1.4), L = sim.f[0], R = sim.f[1];
+    L.ctrl.taps.up++; run(sim, 0.12);
+    L.ctrl.held.guard = true; L.ctrl.held.x = -1;
+    ok(!L.grounded && !sim.guardOf(L, R, { mv: MV.cH, name: 'cH' }), 'an airborne fighter can never guard');
+  }
+});
+
+// ---------------------------------------------------------------- (9) 下段与上段 --
+section(9, 'lows and overheads', () => {
+  // 规则矩阵：下段只能蹲挡、上段只能站挡、中段都能挡
+  {
+    const sim = stage('刘备', '关羽', 1.4), L = sim.f[0], R = sim.f[1];
+    L.ctrl.held.guard = true; run(sim, 0.03);
+    const res = {};
+    for (const low of [false, true]) {
+      L.ctrl.held.down = low; L.h = L.ctrl.held;
+      for (const mv of ['L', 'cL', 'cM', 'ovh', 'air']) res[mv + (low ? '/c' : '/s')] = sim.guardOf(L, R, { mv: MV[mv], name: mv });
+    }
+    ok(res['L/s'] && res['L/c'], 'mids are blocked standing and crouching');
+    ok(!res['cL/s'] && res['cL/c'] && !res['cM/s'] && res['cM/c'], 'lows are blocked only crouching');
+    ok(res['ovh/s'] && !res['ovh/c'] && res['air/s'] && !res['air/c'], 'overheads (K+L, air attacks) are blocked only standing');
+    // 削血 ×0.2（不按连击递减）
+    const s2 = stage('刘备', '刘备', 1.5), A = s2.f[0], B = s2.f[1];
+    B.ctrl.held.guard = true; run(s2, 0.05);
+    A.ctrl.taps.medium++;
+    const h = until(s2, (s, ev) => ev && ev.type === 'hit', 0.5);
+    const raw = D.damage(MV.M.dmg * A.pow * (A.seqStr[0] === 'M' ? A.kStr : 1), A.war, B.war);
+    ok(!!h && h.guarded && h.dmg >= Math.floor(raw * 0.2 * 0.92) && h.dmg <= Math.ceil(raw * 0.2 * 1.08), `chip is ×0.2 of the unscaled damage (got ${h && h.dmg}, raw ${raw.toFixed(1)})`);
+  }
+  // 人的反应：蹲挡中看见跃劈起手（0.22 ± 0.04 秒后）站起 → 至少 80% 挡住
+  {
+    let blocked = 0, total = 0;
+    for (let i = 0; i < 100; i++) {
+      const sim = stage('刘备', '关羽', 1.7), L = sim.f[0], R = sim.f[1];
+      L.ctrl.held.x = -1; L.ctrl.held.down = true;
+      run(sim, 0.05 + 0.01 * (i % 5));
+      R.ctrl.taps.ovh++;
+      const rt = 0.22 + 0.04 * gz();
+      let t0 = -1, res = null;
+      for (let k = 0; k < 60 && !res; k++) {
+        if (t0 >= 0 && sim.clock >= t0 + rt) L.ctrl.held.down = false;
+        sim.events.length = 0; sim.step();
+        for (const e of sim.events) { if (e.type === 'ovhGo' && e.who === 1) t0 = sim.clock; if (e.type === 'hit' && e.att === 1) res = e; }
+      }
+      if (res) { total++; if (res.guarded) blocked++; }
+    }
+    console.log(`  human reaction (0.22 ± 0.04 s) stand-blocks ${blocked}/${total} K+L overheads seen from crouch`);
+    ok(total >= 80 && blocked >= 0.8 * total, `a human-latency player should stand-block >= 80% of overheads seen from crouch (${blocked}/${total})`);
+  }
+  // 电脑看跃劈：蹲挡（惯于防下段）中看见跃劈 → 站挡；武力 ≥ 70 ≥ 70%，≤ 35 ≤ 40%
+  const aiOvh = (ai, n) => {
+    let blocked = 0, total = 0;
+    for (let i = 0; i < n * 3 && total < n; i++) {
+      const sim = stage('刘备', ai, 1.75), L = sim.f[0], R = sim.f[1];
+      const A = new D._AI(R); R.ctrl = A; A.lowP = 1; A.gLow = true;
+      run(sim, 0.4 + 0.02 * (i % 9));
+      if (!sim.actionable(L)) continue;
+      L.ctrl.taps.ovh++;
+      let res = null;
+      for (let k = 0; k < 60 && !res; k++) { sim.events.length = 0; sim.step(); for (const e of sim.events) if (e.type === 'hit' && e.att === 0) res = e; else if (e.type === 'hit' || e.type === 'parry') res = 'skip'; }
+      if (!res || res === 'skip') continue;
+      total++; if (res.guarded) blocked++;
+    }
+    return total ? 100 * blocked / total : 0;
+  };
+  const sOvh = ['关羽', '张辽', '夏侯惇'].map(a => aiOvh(a, 80)), wOvh = ['孙乾', '简雍'].map(a => aiOvh(a, 80));
+  console.log(`  AI stand-blocks K+L overheads (crouch-guarding beforehand): war >= 70 ${sOvh.map(x => x.toFixed(0)).join('/')}%, war <= 35 ${wOvh.map(x => x.toFixed(0)).join('/')}%`);
+  ok(avg(sOvh) >= 70, `AI war >= 70 should stand-block >= 70% of overheads (got ${avg(sOvh).toFixed(0)}%)`);
+  ok(avg(wOvh) <= 40, `AI war <= 35 should stand-block <= 40% of overheads (got ${avg(wOvh).toFixed(0)}%)`);
+  // mixup 机器人 vs 电脑：电脑挡下段 35–75%（≤ 80%：0.10 秒的下段看不及）；换挡不早于反应时间（诚实）
+  {
+    const MIDm = [['刘备', '刘备'], ['曹操', '曹操'], ['郭汜', '潘凤'], ['王平', '王平']];
+    let lows = 0, lowsBlocked = 0, early = 0, wins = [];
+    for (const [p, a] of MIDm) {
+      const r = play('mixup', p, a, Math.max(20, N >> 1), {
+        onEvent(sim, e) {
+          if (e.type === 'hit' && e.att === 0 && e.line === 'low') { lows++; if (e.guarded) lowsBlocked++; }
+        },
+        onStep(sim) {
+          const A = sim.f[1].ctrl;
+          // 诚实：电脑因看见来招的高度而换挡，所据的快照至少是 react 秒以前的，且换挡再晚 hand 秒才生效
+          if (A.gLowTo !== null && A._lowChk !== A.gLowAt) {
+            A._lowChk = A.gLowAt;
+            if (A.gLowAt - A.hand - A.gLowSrc < A.react - 1e-6) early++;
+          }
+        },
+      });
+      wins.push(r.pct);
+    }
+    const pctLow = lows ? 100 * lowsBlocked / lows : 0;
+    console.log(`  mixup bot vs equal mid AI: ${avg(wins).toFixed(0)}% [${wins.map(x => x.toFixed(0)).join(' ')}]; AI blocked ${lowsBlocked}/${lows} lows (${pctLow.toFixed(0)}%); height switches before react: ${early}`);
+    ok(pctLow >= 35 && pctLow <= 75, `AI should block 35-75% of the mixup bot's lows (got ${pctLow.toFixed(0)}%)`);
+    ok(early === 0, `the AI must never switch guard height sooner than its reaction time (${early} early)`);
+    ok(avg(wins) <= 60, `mixup bot should not beat equal mid AIs (got ${avg(wins).toFixed(0)}%, want <= 60%)`);
+  }
+});
+
+// ---------------------------------------------------------------- (10) 连段规则 --
+section(10, 'strings: rules (scripted, deterministic)', () => {
+  const C = SG.Combos;
+  // a. 全体 499 人：同武力 76 对站着不动的木人打满一整串（踩准节拍），20 次平均 → 1 / 2 / 3 个重步 28.0 / 29.1 / 30.2 ± 1.5（按兵器威力折算）
+  {
+    const bad = [], byH = { 1: [], 2: [], 3: [] };
+    let incomplete = 0;
+    const names = Object.keys(worldGens);
+    D.critEnabled = false;      // 归一化的是基础伤害（会心另算，见 (13)）
+    for (const name of names) {
+      const g = war76(worldGens[name]);
+      let tot = 0, runs = QUICK ? 4 : 20;
+      for (let r = 0; r < runs; r++) {
+        const sim = stage(g, war76(gens['刘备']), 1.5);
+        const f = sim.f[0];
+        const out = playString(sim, f, sim.f[1]);
+        if (out.hits !== 8) { incomplete++; break; }
+        tot += out.dmg;
+      }
+      const e = C.of(name), nH = e.nH;
+      const per = tot / runs / (sim0Pow(name) || 1);
+      byH[nH].push(per);
+      const want = 28 * (1 + 0.04 * (nH - 1));
+      if (Math.abs(per - want) > 1.5) bad.push(`${name} ${e.seq} ${per.toFixed(1)}/${want.toFixed(1)}`);
+    }
+    D.critEnabled = true;
+    console.log(`  full on-beat strings at equal war 76 (÷ weapon pow): 1 H ${avg(byH[1]).toFixed(1)} (n${byH[1].length}), 2 H ${avg(byH[2]).toFixed(1)} (n${byH[2].length}), 3 H ${avg(byH[3]).toFixed(1)} (n${byH[3].length}); incomplete ${incomplete}`);
+    ok(incomplete === 0, `every general's on-beat string lands 8/8 on a standing dummy (${incomplete} did not)`);
+    ok(bad.length === 0, `every string deals 28.0 / 29.1 / 30.2 ± 1.5 HP (${bad.length} outside: ${bad.slice(0, 4).join(', ')})`);
+  }
+  // b. 真连段：30 串 × 攻方武力 {30, 100} × 守方武力 {30, 100}：第一击打中后 8/8 全中，即使守方按住后退并狂按 J
+  {
+    const all = C.all(), pick = [];
+    for (let i = 0; i < 30; i++) pick.push(all[(i * 97) % all.length]);
+    let failed = [];
+    for (const e of pick) for (const wa of [30, 100]) for (const wd of [30, 100]) {
+      const sim = stage(Object.assign({}, worldGens[e.name], { war: wa }), Object.assign({}, gens['刘备'], { war: wd }), 1.4);
+      const o = sim.f[1], bj = D.scriptBot('dummyBackJ', 1);
+      // 守方一直按住后退；第一击打中后才开始狂按 J（第一击之前按 J 会抢先打断起手，那不是本项要量的）
+      o.ctrl = { held: bj.held, taps: bj.taps, update: (dt, s) => { if (s.f[0].stats.unguarded > 0) bj.update(dt, s); else { bj.held.x = -o.face; } } };
+      const out = playString(sim, sim.f[0], o);
+      const first = out.events.find(x => x.type === 'hit');
+      if (first && first.att === 0 && !first.guarded && out.hits !== 8) failed.push(`${e.name} ${e.seq} ${wa}v${wd}: ${out.hits}`);
+    }
+    ok(failed.length === 0, `on-beat strings are true combos against back + J mashing (${failed.length} broke: ${failed.slice(0, 4).join(', ')})`);
+  }
+  // c. 迟按 +0.06 秒仍连上；+0.12 秒放人（按住后退的木人挡下下一步）；重步迟滞 0.10 秒被按住后退的木人挡下
+  {
+    const seq = 'LMLHMLMH';
+    const lateRun = (late, lateAt, hold) => {
+      const sim = stage('刘备', '关羽', 1.4), f = withSeq(sim, 0, seq), o = sim.f[1];
+      o.ctrl.update = (dt, s) => { o.ctrl.held.x = f.stats.unguarded > 0 ? -o.face : 0; };     // 挨了第一击后一直按住后退
+      const out = playString(sim, f, o, { late, lateAt, hold, holdAt: lateAt });
+      const ev = out.events.filter(x => x.type === 'hit' && x.att === 0);
+      return ev.find(x => x.step === lateAt) || null;
+    };
+    const ok06 = lateRun(0.06, 3), ok12 = lateRun(0.12, 3), hold10 = lateRun(0, 4, 0.10), hold05 = lateRun(0, 4, 0.05);
+    ok(!!ok06 && !ok06.guarded, `a step pressed 0.06 s late still combos (step 3 ${ok06 ? (ok06.guarded ? 'blocked' : 'hit') : 'none'})`);
+    ok(!!ok12 && ok12.guarded, `a step pressed 0.12 s late releases the defender, who blocks it by holding back (step 3 ${ok12 ? (ok12.guarded ? 'blocked' : 'hit') : 'none'})`);
+    ok(!!hold10 && hold10.guarded, `an H step delayed 0.10 s is blocked by a defender holding back (step 4 ${hold10 ? (hold10.guarded ? 'blocked' : 'hit') : 'none'})`);
+    ok(!!hold05 && !hold05.guarded, `an H step delayed 0.05 s (≤ 0.08) still combos (step 4 ${hold05 ? (hold05.guarded ? 'blocked' : 'hit') : 'none'})`);
+  }
+  // d. 防连按：randmash 起的连段 ≤ 1% 打完；只按 J 的连按至多打到招式谱开头那几个 L（≤ 2）
+  {
+    let started = 0, completed = 0;
+    for (let i = 0; i < 80 && started < 400; i++) {
+      const r = play('randmash', '刘备', '刘备', 1, { setup: sim => { sim.f[1].ctrl = D.scriptBot('dummy', 1); } });
+      started += r.agg.P.strings || 0; completed += r.agg.P.fullStrings || 0;
+    }
+    console.log(`  randmash: ${completed}/${started} strings completed`);
+    ok(started >= 400 && completed <= 0.01 * started, `button mashing completes <= 1% of the strings it starts (${completed}/${started})`);
+    let maxRun = 0, badJ = [];
+    for (const name of ['张飞', '赵云', '甘宁', '刘备', '曹操', '夏侯渊']) {
+      const sim = stage(name, '刘备', 1.4), f = sim.f[0], o = sim.f[1];
+      o.ctrl = D.scriptBot('dummy', 1);
+      const lead = (f.seqStr.match(/^L*/) || [''])[0].length;
+      let maxStep = 0;
+      for (let k = 0; k < 60 * 4; k++) { if (k % 6 === 0) f.ctrl.taps.light++; sim.events.length = 0; sim.step(); for (const e of sim.events) if (e.type === 'strStep' && e.who === 0) maxStep = Math.max(maxStep, e.step + 1); }
+      maxRun = Math.max(maxRun, maxStep);
+      if (maxStep > Math.max(lead, 0) || maxStep > 2) badJ.push(`${name} ${f.seqStr} ${maxStep}`);
+    }
+    ok(badJ.length === 0 && maxRun <= 2, `J-only mashing never exceeds the string's leading run of L, at most 2 (${badJ.join(', ')})`);
+  }
+  // e. 按错键：本串到此为止；那一键只在收招结束前 BUFFER（0.16 秒）以内按下时才变成单出招（按得早就作废）
+  {
+    const wrong = atFrac => {
+      const sim = stage('刘备', '关羽', 1.4), f = withSeq(sim, 0, 'LMLHMLMH'); sim.f[1].ctrl = D.scriptBot('dummy', 1);
+      f.ctrl.taps.light++;
+      until(sim, () => f.state === 'str' && f.strIdx === 0 && f.t >= f.winOpen + (f.winClose - f.winOpen) * atFrac, 0.5);
+      const left = (f.mv.startup + f.mv.active + f.mv.recovery - f.t) / f.spd;
+      f.ctrl.taps.heavy++;     // 应为 M
+      let miss = false, next = false, fired = false;
+      for (let k = 0; k < 50; k++) { sim.events.length = 0; sim.step(); for (const e of sim.events) { if (e.type === 'strMiss') miss = true; if (e.type === 'strStep' && e.who === 0) next = true; } if (f.state === 'charge' || f.state === 'heavy') { fired = true; break; } }
+      return { miss, next, fired, left };
+    };
+    const late = wrong(0.8), early = wrong(0.0);
+    console.log(`  wrong press ${late.left.toFixed(3)}s before recovery end → standalone ${late.fired}; ${early.left.toFixed(3)}s before → ${early.fired}`);
+    ok(late.miss && !late.next && early.miss && !early.next, 'a wrong button ends the string');
+    ok(late.left <= 0.16 && late.fired, 'a wrong press within BUFFER of the recovery end fires as the standalone move');
+    ok(early.left > 0.16 && !early.fired, 'a wrong press older than BUFFER at the recovery end is dropped');
+  }
+  // f. 挡串：L / M → L / M 无空隙（防御硬直一结束按 J 的木人被下一步打中）；重步前留 0.10 ± 0.02 秒（那一刀破绽击中重步）
+  {
+    const gapRun = seq => {
+      const sim = stage('刘备', '刘备', 1.4), f = withSeq(sim, 0, seq), o = sim.f[1];
+      let jab = false, gsEnd = -1, res = null;
+      o.ctrl.update = (dt, s) => {
+        const H = o.ctrl.held; H.guard = true;
+        // 防御硬直在这一步结束（o.t 推进一步后 ≥ stun）就按 J（同一步即出招）
+        if (o.state === 'guardstun' && f.strIdx === 1 && !jab && o.t + dt >= o.stun - 1e-9) { jab = true; H.guard = false; o.ctrl.taps.light++; }
+        if (jab) H.guard = false;
+      };
+      const out = playString(sim, f, o, { stop: (s) => !!res });
+      for (const e of out.events) if (e.type === 'hit' && e.step === 3 && e.att === 0) res = { by: 'next', guarded: e.guarded }; else if (e.type === 'hit' && e.att === 1 && !res) res = { by: 'jab', counter: e.counter };
+      const bs = D.stepGap(seq, 1) / f.spd + (seq[2] === 'H' ? -CO.TRAP : CO.BLOCK_PAD);
+      return { res, bs, gap: D.stepGap(seq, 1) / f.spd };
+    };
+    const lm = gapRun('LMLLMHMH'), mh = gapRun('LMHLMLMH');
+    ok(!!lm.res && lm.res.by === 'next', `L/M → L/M blockstrings leave no gap: a jab at blockstun end is hit by the next step (${JSON.stringify(lm.res)})`);
+    ok(!!mh.res && mh.res.by === 'jab' && mh.res.counter, `the gap before an H step lets a jab at blockstun end counter-hit it (${JSON.stringify(mh.res)})`);
+    ok(near(mh.gap - mh.bs, CO.TRAP, 0.02), `the gap before H is ${CO.TRAP} ± 0.02 s (${(mh.gap - mh.bs).toFixed(3)})`);
+  }
+  // g. 被挡后的优劣（攻方停手）：单出招与 §7.1 一致（±0.02 秒，武力 76）；连段步与 §8.4 的公式一致；武力 30 与 100 同号
+  {
+    const advOf = (war, setup, mvName) => {
+      const g = Object.assign({}, gens['王平'], { war }), sim = stage(g, Object.assign({}, gens['刘备'], { war }), 1.3), f = sim.f[0], o = sim.f[1];
+      o.ctrl.held.guard = true; o.ctrl.held.down = mvName === 'cL' || mvName === 'cM'; run(sim, 0.03);
+      setup(sim, f);
+      let tHit = -1, fFree = -1, oFree = -1;
+      for (let k = 0; k < 120; k++) {
+        sim.events.length = 0; sim.step();
+        if (tHit < 0 && sim.events.some(e => e.type === 'hit' && e.att === 0)) { tHit = sim.clock; o.ctrl.held.guard = false; o.ctrl.held.down = false; f.ctrl.held.down = false; }
+        if (tHit >= 0) {
+          if (fFree < 0 && (sim.actionable(f) || f.state === 'crouch')) fFree = sim.clock;
+          if (oFree < 0 && (sim.actionable(o) || o.state === 'crouch')) oFree = sim.clock;
+          if (fFree >= 0 && oFree >= 0) break;
+        }
+      }
+      return fFree - oFree;   // > 0 → 守方先能动 → 攻方负
+    };
+    const rows = [], badG = [];
+    const single = { L: k => { k.ctrl.taps.light++; }, M: k => { k.ctrl.taps.medium++; }, cL: k => { k.ctrl.held.down = true; k.ctrl.taps.light++; }, cM: k => { k.ctrl.held.down = true; k.ctrl.taps.medium++; }, ovh: k => { k.ctrl.taps.ovh++; } };
+    for (const name in single) {
+      const vals = [30, 76, 100].map(w => -advOf(w, (s, f) => { withSeq(s, 0, name === 'L' ? 'MLMLHLML' : name === 'M' ? 'LMLMHLMH' : 'LMLMHLMH'); single[name](f); }, name));
+      const want = MV[name].adv;
+      rows.push(`${name} ${vals.map(v => v.toFixed(3)).join('/')} (want ${want})`);
+      if (!near(vals[1], want, 0.02 + 1 / 60) || Math.sign(vals[0]) !== Math.sign(want) || Math.sign(vals[2]) !== Math.sign(want)) badG.push(name);
+    }
+    for (const seq of ['LLMHMLMH', 'MLMHLMLM', 'LHMLMLMH']) {
+      const vals = [30, 76, 100].map(w => -advOf(w, (s, f) => { withSeq(s, 0, seq); s.f[0].ctrl.taps[TK[seq[0]]]++; }, seq));
+      const f76 = new D._Sim(Object.assign({}, gens['王平'], { war: 76 }), gens['刘备'], D.lookOf(gens['王平']), D.lookOf(gens['刘备'])).f[0];
+      const mv = D.stepMove(seq, 0), bs = D.stepGap(seq, 0) / f76.spd + (seq[1] === 'H' ? -CO.TRAP : CO.BLOCK_PAD);
+      const want = bs - (mv.active + mv.recovery) / f76.spd;
+      rows.push(`stop after step 1 of ${seq} ${vals.map(v => v.toFixed(3)).join('/')} (want ${want.toFixed(3)})`);
+      if (!near(vals[1], want, 0.02 + 1 / 60) || Math.sign(vals[0]) !== Math.sign(want) || Math.sign(vals[2]) !== Math.sign(want)) badG.push(seq);
+    }
+    console.log('  on-block advantage (war 30/76/100): ' + rows.join('; '));
+    ok(badG.length === 0, `on-block advantages match the frame data at war 76 (±0.02 s + 1 frame) with the same sign at 30 and 100 (${badG.join(', ')})`);
+  }
+  // h. 压制破防：恰好连挡 5 步后终结技破防；4 步不破（守方一直按防键；第 lateAt 步迟按 0.12 秒放人，此后每步都被挡）
+  {
+    const crush = lateAt => {
+      const sim = stage('刘备', '关羽', 1.4), f = withSeq(sim, 0, 'LMLMLHMH'), o = sim.f[1];
+      o.ctrl.update = () => { o.ctrl.held.guard = f.stats.unguarded > 0; };      // 挨了第一击就一直按防键（真连段里按也没用）
+      const out = playString(sim, f, o, { late: 0.10, lateAt });
+      return { crush: out.events.some(e => e.type === 'guardcrush'), blocked: out.guarded };
+    };
+    const c5 = crush(3), c4 = crush(4);
+    ok(c5.crush && c5.blocked === 6 && !c4.crush && c4.blocked === 5, `a blocked finisher crushes the guard after exactly 5 blocked steps, not after 4 (${JSON.stringify(c5)} ${JSON.stringify(c4)})`);
+  }
+  // i. 绝技取消：打中 / 被挡时可取消，挥空不行；绝技的伤害按连击递减（下限 0.6）；任何一串 + 取消 ≤ 50 HP（武力同为 100）
+  {
+    const cancel = (guard, whiff) => {
+      const sim = stage(Object.assign({}, gens['吕布'], { war: 100 }), Object.assign({}, gens['吕布'], { war: 100 }), whiff ? 9 : 1.4), f = sim.f[0], o = sim.f[1];
+      f.rage = 100; o.ctrl.held.guard = guard;
+      let cancelled = false, tot = 0;
+      const tick = driver(sim, f, { upto: 7 });
+      for (let k = 0; k < 60 * 4; k++) {
+        tick();
+        if (f.state === 'str' && f.strIdx === 6 && f.t >= f.cp) f.ctrl.taps.special++;
+        sim.events.length = 0; sim.step();
+        for (const e of sim.events) { if (e.type === 'strCancel') cancelled = true; if (e.type === 'hit' && e.att === 0) tot += e.dmg; }
+        if (cancelled && f.state !== 'special' && k > 30) break;
+      }
+      return { cancelled, tot, hp: o.hp };
+    };
+    const ch = cancel(false, false), cb = cancel(true, false), cw = cancel(false, true);
+    console.log(`  special cancel: on hit ${ch.cancelled} (${ch.tot} HP total), on block ${cb.cancelled}, on whiff ${cw.cancelled}`);
+    ok(ch.cancelled && cb.cancelled && !cw.cancelled, 'a string can be cancelled into the special on hit and on block, not on whiff');
+    let worst = 0;
+    D.critEnabled = false;
+    for (const e of SG.Combos.all().filter((x, i) => i % 7 === 0)) {
+      const sim = stage(Object.assign({}, worldGens[e.name], { war: 100 }), Object.assign({}, gens['吕布'], { war: 100 }), 1.4), f = sim.f[0];
+      f.rage = 100;
+      let sum = 0;
+      for (let r = 0; r < 4; r++) {
+        const sim2 = r ? stage(Object.assign({}, worldGens[e.name], { war: 100 }), Object.assign({}, gens['吕布'], { war: 100 }), 1.4) : sim, f2 = sim2.f[0];
+        f2.rage = 100;
+        const tick = driver(sim2, f2, { upto: 7 });
+        let tot = 0, done = false;
+        for (let k = 0; k < 60 * 4 && !done; k++) {
+          tick();
+          if (f2.state === 'str' && f2.strIdx === 6 && f2.t >= f2.cp) f2.ctrl.taps.special++;
+          sim2.events.length = 0; sim2.step();
+          for (const ev of sim2.events) { if (ev.type === 'hit' && ev.att === 0) tot += ev.dmg; }
+          if (f2.state === 'idle' && k > 60) done = true;
+        }
+        sum += tot;
+      }
+      worst = Math.max(worst, sum / 4);      // 每串 4 次的平均（伤害浮动 ±8 %）
+    }
+    D.critEnabled = true;
+    console.log(`  worst 7 steps + special cancel at equal war 100 (mean of 4): ${worst.toFixed(1)} HP`);
+    ok(worst <= 50, `any string + special cancel deals <= 50 HP at equal war 100 (worst ${worst})`);
+  }
+  // j. 格开后以连段起手反击：第一击 ×1.5、不可挡，之后正常递减
+  {
+    const sim = stage('刘备', '关羽', 1.6), L = withSeq(sim, 0, 'LMLMHLMH'), R = sim.f[1];
+    R.ctrl.taps.light++; run(sim, 0.03);
+    L.ctrl.taps.parry++;
+    until(sim, (s, ev) => ev && ev.type === 'parry', 0.5);
+    R.ctrl.held.guard = true;
+    const out = playString(sim, L, R, { upto: 3 });
+    const hits = out.events.filter(e => e.type === 'hit' && e.att === 0);
+    ok(hits.length >= 2 && hits[0].riposte && !hits[0].guarded && hits[0].step === 1 && hits[0].scale === 1, `the riposte may start the string: step 1 is ×1.5 and unblockable (${hits.map(h => h.step + (h.riposte ? 'R' : '') + (h.guarded ? 'g' : '')).join(' ')})`);
+    ok(hits.length >= 3 && !hits[1].riposte && hits[2].scale === CO.SCALE[2], 'later steps scale normally');
+  }
+  // k. 击倒（空中被打）结束连段；攻方被打（相打）结束连段
+  {
+    const sim = stage('刘备', '关羽', 1.4), f = withSeq(sim, 0, 'LMLMHLMH'), o = sim.f[1];
+    const tick = driver(sim, f);
+    let k3 = false, after = 0;
+    for (let k = 0; k < 200; k++) {
+      tick();
+      if (f.strIdx === 2 && f.state === 'str' && !k3 && f.t < 0.02) { o.y = 0.6; o.vy = 2; k3 = true; }   // 第 3 步打中前把守方抛到空中
+      sim.events.length = 0; sim.step();
+      for (const e of sim.events) if (e.type === 'strStep' && e.who === 0 && k3 && e.step >= 3) after++;
+    }
+    ok(k3 && after === 0, `knocking the defender down mid-string ends the string (${after} steps after the knockdown)`);
+    const sim2 = stage('刘备', '关羽', 1.4), f2 = withSeq(sim2, 0, 'LMLMHLMH'), o2 = sim2.f[1];
+    const tick2 = driver(sim2, f2);
+    let hitBack = false, after2 = 0;
+    for (let k = 0; k < 200; k++) {
+      tick2();
+      if (f2.strIdx === 1 && !hitBack) { sim2.setState(f2, 'hitstun'); f2.stun = 0.3; hitBack = true; }
+      sim2.events.length = 0; sim2.step();
+      for (const e of sim2.events) if (e.type === 'strStep' && e.who === 0 && hitBack) after2++;
+    }
+    ok(hitBack && after2 === 0, `getting hit mid-string ends the attacker's string (${after2} steps after)`);
+  }
+});
+function sim0Pow(name) { const g = worldGens[name]; const f = new D._Sim(g, g, D.lookOf(g), D.lookOf(g)).f[0]; return f.pow; }
+
+// ---------------------------------------------------------------- (11) 看破连段 --
+section(11, 'strings: parry breaks (scripted)', () => {
+  // 受击硬直中按 U：第 1–2 步永远不成功；第 3 步起，当且仅当按在 parryW × 类型系数（并不超过上一间隔 − 0.03）之内
+  const trial = (seq, target, before, defWar) => {
+    const sim = stage('刘备', Object.assign({}, gens['关羽'], { war: defWar || 76 }), 1.4), f = withSeq(sim, 0, seq), o = sim.f[1];
+    const tick = driver(sim, f);
+    let res = null, early = false, armed = false, hitAt = -1;
+    // 先跑一遍找到第 target 步打中的时刻
+    return { sim, f, o, tick };
+  };
+  const hitTime = (seq, target, defWar) => {
+    const sim = stage('刘备', Object.assign({}, gens['关羽'], { war: defWar || 76 }), 1.4), f = withSeq(sim, 0, seq);
+    const tick = driver(sim, f);
+    for (let k = 0; k < 200; k++) { tick(); sim.events.length = 0; sim.step(); for (const e of sim.events) if (e.type === 'hit' && e.att === 0 && e.step === target) return sim.clock; }
+    return -1;
+  };
+  const press = (seq, target, before, defWar) => {
+    const T = hitTime(seq, target, defWar);
+    const sim = stage('刘备', Object.assign({}, gens['关羽'], { war: defWar || 76 }), 1.4), f = withSeq(sim, 0, seq), o = sim.f[1];
+    const tick = driver(sim, f);
+    let res = null, early = false, pressed = false, prevHit = target <= 1;
+    for (let k = 0; k < 200 && !res; k++) {
+      tick();
+      if (!pressed && prevHit && sim.clock + 1 / 60 >= T - before - 1e-9) { o.ctrl.taps.parry++; pressed = true; }
+      sim.events.length = 0; sim.step();
+      for (const e of sim.events) { if (e.type === 'parry') res = e; if (e.type === 'parryEarly') early = true; if (e.type === 'hit' && e.att === 0 && e.step === target) res = res || e; if (e.type === 'hit' && e.att === 0 && e.step === target - 1) prevHit = true; }
+    }
+    return { res, early, cd: sim.parryCd(o), o, f, sim, T };
+  };
+  const seq = 'LMLMHLMH';
+  // （第 1 步打到前守方不在硬直中：那是站立格开，不在此列）
+  for (const t of [2]) {
+    const r = press(seq, t, 0.03);
+    ok(!!r.res && r.res.type === 'hit' && r.early, `a hitstun parry can never break step ${t} (got ${r.res && r.res.type}, 过早 ${r.early})`);
+  }
+  const rows = [], bad = [];
+  for (const [target, type] of [[3, 'L'], [4, 'M'], [5, 'H'], [8, 'F']]) {
+    const sim0 = stage('刘备', '关羽', 1.4), f0 = withSeq(sim0, 0, seq), o0 = sim0.f[1];
+    const win = Math.min(o0.parryW * CO.HS_K_TYPE[type], D.stepGap(seq, target - 2) / f0.spd - CO.HS_CAP_PAD);
+    // 按键时刻按逻辑步取整（晚至多 1/60 秒）：内侧取 win − 0.02，外侧取 win + 0.005（都在上一击之后）
+    const inside = press(seq, target, win - 0.02), outside = press(seq, target, win + 0.005);
+    rows.push(`step ${target} (${type}) window ${win.toFixed(3)}s: inside ${inside.res && inside.res.type}, outside ${outside.res && outside.res.type}${outside.early ? ' 过早' : ''}`);
+    if (!(inside.res && inside.res.type === 'parry' && inside.res.route === 'hitstun')) bad.push('inside ' + target);
+    if (!(outside.res && outside.res.type === 'hit' && outside.early && outside.cd > 1.5)) bad.push('outside ' + target);
+  }
+  console.log('  ' + rows.join('; '));
+  ok(bad.length === 0, `hitstun parries from step 3 succeed iff pressed within parryW × K_type before the hit; early → 过早 with the cooldown spent (${bad.join(', ')})`);
+  // 举防中格开下一步：全窗口
+  {
+    const sim0 = stage('刘备', '关羽', 1.4), o0 = sim0.f[1];
+    const sim = stage('刘备', '关羽', 1.4), f = withSeq(sim, 0, seq), o = sim.f[1];
+    o.ctrl.held.guard = true;
+    const tick = driver(sim, f);
+    let res = null, pressed = false;
+    for (let k = 0; k < 200 && !res; k++) {
+      tick();
+      // 挡下第 2 步后，在第 3 步打到前约 0.9 × 全窗口按下（超出受击硬直窗口 0.55 × parryW）
+      if (!pressed && o.state === 'guardstun' && f.strIdx === 2 && f.state === 'str') {
+        const T = sim.clock + Math.max(0, (D.stepMove(seq, 2).startup - f.t) / f.spd);
+        if (sim.clock + 1 / 60 >= T - o0.parryW * 0.9) { o.ctrl.taps.parry++; pressed = true; }
+      }
+      sim.events.length = 0; sim.step();
+      for (const e of sim.events) if (e.type === 'parry' || (e.type === 'hit' && e.att === 0 && e.step === 3)) res = e;
+    }
+    ok(!!res && res.type === 'parry' && res.route === 'guard', `a guardstun parry of the next step uses the full window (got ${res && res.type + '/' + res.route})`);
+  }
+  // 看破之后：攻方硬直 0.6 秒（重步 0.7）、守方 0.7 秒反击窗口，并可以本人连段起手反击
+  {
+    const r = press(seq, 5, 0.05);
+    ok(!!r.res && r.res.type === 'parry' && r.f.state === 'parried' && near(r.f.stun, PR.STAGGER + 0.1, 1e-6), `breaking an H step staggers the attacker ${PR.STAGGER + 0.1}s (state ${r.f.state}, ${r.f.stun})`);
+    ok(r.o.state === 'parryok' && near(r.o.counterUntil - r.sim.clock, PR.COUNTER_WIN, 0.03), 'the defender gets the 0.7 s counter window');
+    const r2 = press(seq, 3, 0.05);
+    ok(!!r2.res && r2.res.type === 'parry' && near(r2.f.stun, PR.STAGGER, 1e-6), `breaking an L step staggers ${PR.STAGGER}s`);
+    r2.o.ctrl.taps[TK[r2.o.seqStr[0]]]++;
+    const h = until(r2.sim, (s, ev) => ev && ev.type === 'hit' && ev.att === 1, 0.6);
+    ok(!!h && h.riposte && (r2.o.seqStr[0] === 'L' || r2.o.seqStr[0] === 'M') && (h.step === 1 || h.step === 0), `the riposte starts with the defender's own string step 1 (${h && h.step})`);
+  }
+});
+
+// ---------------------------------------------------------------- (13) 单挑会心 --
+section(13, 'duel crits', () => {
+  // 电脑同将（中等武力）：会心占未被挡命中的 4–12%，会心伤害占 ≤ 15%
+  const MIDc = [['刘备', '刘备'], ['曹操', '曹操'], ['郭汜', '潘凤'], ['王平', '王平']];
+  let crits = 0, ung = 0, cdmg = 0, dmg = 0;
+  for (const [a, b] of MIDc) for (let i = 0; i < Math.max(20, N >> 1); i++) { const r = D.simulate(gens[a], gens[b]); for (const s of r.stats) { crits += s.crits; ung += s.unguarded; cdmg += s.critDmg; dmg += s.dmg; } }
+  console.log(`  AI mid mirrors: crits ${crits}/${ung} unguarded hits (${(100 * crits / ung).toFixed(1)}%), crit damage share ${(100 * cdmg / dmg).toFixed(1)}%`);
+  ok(crits / ung >= 0.04 && crits / ung <= 0.12, `crit share of unguarded hits should be 4-12% (${(100 * crits / ung).toFixed(1)}%)`);
+  ok(cdmg / dmg <= 0.15, `crit damage share should be <= 15% (${(100 * cdmg / dmg).toFixed(1)}%)`);
+  ok(D.critBase(100) / D.critBase(50) >= 1.6, `base crit ratio war 100 / war 50 >= 1.6 (${(D.critBase(100) / D.critBase(50)).toFixed(2)})`);
+  // 脚本：被挡、反击、绝技、箭不会心；破绽 +15%、终结 +10% 生效（固定种子 2000 次强制判定，±1.5 pp）
+  {
+    const forced = (setup, n) => {
+      let c = 0, k = 0;
+      for (let i = 0; i < n; i++) {
+        const sim = stage('刘备', '刘备', 1.4), f = sim.f[0], o = sim.f[1];
+        const r = setup(sim, f, o);
+        if (r === null) continue;
+        k++; if (r) c++;
+      }
+      return k ? c / k : 0;
+    };
+    const hitOnce = (sim, f, o, mvName, prep) => {
+      if (prep) prep(sim, f, o);
+      if (mvName === 'L') f.ctrl.taps.light++;
+      const e = until(sim, (s, ev) => ev && ev.type === 'hit' && ev.att === 0, 0.6);
+      return e && e.type === 'hit' ? e : null;
+    };
+    // 中立轻击（刘备 武力 76 → 3 + 4 × 0.52 = 5.08%）
+    const base = D.critBase(76);
+    const neutral = forced((sim, f, o) => { withSeq(sim, 0, 'MLMLHLML'); const e = hitOnce(sim, f, o, 'L'); return e && !e.guarded ? e.crit : null; }, 2000);
+    const counter = forced((sim, f, o) => { withSeq(sim, 0, 'MLMLHLML'); o.ctrl.taps.heavy++; o.ctrl.held.heavy = true; run(sim, 0.03); const e = hitOnce(sim, f, o, 'L'); return e && !e.guarded && e.counter ? e.crit : null; }, 2000);
+    console.log(`  forced rolls: neutral ${(100 * neutral).toFixed(1)}% (want ${(100 * base).toFixed(1)}), counter-hit ${(100 * counter).toFixed(1)}% (want ${(100 * (base + CR.COUNTER)).toFixed(1)})`);
+    ok(Math.abs(neutral - base) <= 0.015, 'neutral crit rate matches the formula within ±1.5 pp');
+    ok(Math.abs(counter - (base + CR.COUNTER)) <= 0.03, 'counter-hits add +15% (within ±3 pp at n = 2000)');
+    // 终结技
+    let fc = 0, fn = 0;
+    for (let i = 0; i < 600; i++) {
+      const sim = stage('刘备', '刘备', 1.4), f = withSeq(sim, 0, 'LMLMHLMM');
+      const out = playString(sim, f, sim.f[1]);
+      const fin = out.events.find(e => e.type === 'hit' && e.step === 8 && !e.guarded);
+      if (fin) { fn++; if (fin.crit) fc++; }
+    }
+    console.log(`  finisher crit ${(100 * fc / fn).toFixed(1)}% of ${fn} (want ${(100 * (base + CR.FINISHER)).toFixed(1)} … +8 if a tip hit)`);
+    ok(fn >= 500 && fc / fn >= base + CR.FINISHER - 0.03, 'finishers add +10% crit chance');
+    // 被挡 / 反击 / 绝技 / 箭 永不会心
+    let bad = 0;
+    for (let i = 0; i < 300; i++) {
+      const sim = stage('刘备', '刘备', 1.4), f = sim.f[0], o = sim.f[1];
+      o.ctrl.held.guard = true; run(sim, 0.03); f.ctrl.taps.medium++;
+      const e = until(sim, (s, ev) => ev && ev.type === 'hit', 0.5); if (e && e.crit) bad++;
+    }
+    for (let i = 0; i < 200; i++) {
+      const sim = stage('关羽', '关羽', 1.6), L = sim.f[0], R = sim.f[1];
+      R.ctrl.taps.light++; run(sim, 0.03); L.ctrl.taps.parry++;
+      until(sim, (s, ev) => ev && ev.type === 'parry', 0.5);
+      L.ctrl.taps.light++;
+      const e = until(sim, (s, ev) => ev && ev.type === 'hit' && ev.att === 0, 0.5); if (e && e.crit) bad++;
+    }
+    for (const who of ['关羽', '黄忠']) for (let i = 0; i < 40; i++) {
+      const sim = stage(who, '刘备', 1.6), f = sim.f[0];
+      f.rage = 100; f.ctrl.taps.special++;
+      for (let k = 0; k < 150; k++) { sim.events.length = 0; sim.step(); for (const e of sim.events) if (e.type === 'hit' && e.att === 0 && e.crit) bad++; }
+    }
+    ok(bad === 0, `no crits on guarded hits, ripostes, specials or arrows (${bad})`);
+    // 关掉会心：照样取随机数（随机数流与开着时相同）
+    const streamAt = on => { D.critEnabled = on; SG.Random.seed(99); const sim = stage('刘备', '刘备', 1.4); sim.f[0].ctrl.taps.light++; until(sim, (s, ev) => ev && ev.type === 'hit', 0.5); D.critEnabled = true; return SG.Random.value(); };
+    ok(streamAt(false) === streamAt(true), 'switching duel crits off keeps the random stream (one draw per unguarded hit)');
+  }
+});
+
+// ---------------------------------------------------------------- (14) 性能 --
+section(14, 'performance', () => {
+  for (let i = 0; i < 3; i++) D.simulate(gens['吕布'], gens['吕布']);
+  const t0 = process.hrtime.bigint(); let steps = 0;
+  const M2 = 20;
+  for (let i = 0; i < M2; i++) { const r = D.simulate(gens['吕布'], gens['吕布']); steps += r.time * 60; }
+  const ms = Number(process.hrtime.bigint() - t0) / 1e6 / M2;
+  console.log(`  D.simulate 吕布 mirror: ${ms.toFixed(1)} ms per duel (${(steps / M2).toFixed(0)} steps)`);
+  ok(ms <= 15, `an AI 吕布 mirror simulates in <= 15 ms (${ms.toFixed(1)} ms)`);
+});
+
+console.log(`${checks} checks, ${((Date.now() - T0) / 1000).toFixed(0)} s`);
+console.log(fails === 0 ? "ALL OK" : "FAILURES: " + fails);
 process.exitCode = fails;

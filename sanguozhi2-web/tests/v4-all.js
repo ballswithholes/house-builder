@@ -7,8 +7,12 @@
      另有一致性检查：全关时第四版流程（endMonthV4）与第三版（无 js/econ.js 的 endMonthV3）的整局 JSON 逐位相同。
      还没有落地的模块不在场时，「全开」= 「全关」（门槛自然通过，报告里会写明哪些模块在场）。
    B 原型（--proto）：设计原型 design-v4/integration/v4-all-proto.js（ITEMS / TITLES / ENGAGEMENT / TOURNAMENT 的规则原型）
-     在子进程里运行，但 SG.Mods / SG.Econ / SG.AIBudget 换成 js/econ.js + js/battle-math.js —— 即用真实的整合核心量
-     §16 的门槛（战役存活、首个大势力、叛逃、世界存活、电脑支出份额、跌破 0 的城、人望上限、战术、和平玩家、王道、指令分级）。
+     在子进程里运行，量 §16 的门槛（战役存活、首个大势力、叛逃、世界存活、电脑支出份额、跌破 0 的城、人望上限、战术、
+     和平玩家、王道、指令分级）。缺省（W0_PIPE=1）这些原型模块跑在**真正的整合流程**上（INTEGRATION §6.3）：
+     js/econ.js + js/battle-math.js 载入原型的游戏，月末是 endMonthV4 的 0–9 相（原型各自的月末工作登记为相钩子与
+     onSpend，出奔因此排在 ITEMS 与 ENGAGEMENT 之后），指令是 model.js 的 Commands（副作用经 Commands.onCommand），
+     SG.AIBudget 是真的单例（钱袋随局）。W0_PIPE=0 则保留原型自己的月序与指令包装（B0 的逐位对照用它）。
+     B0 另查：原型 econ-proto.js 与 js/econ.js 打印的每个数逐位相同；整合流程全关时与原型的「全关」逐位相同（= v3）。
      这是在各工作流的真模块落地之前，整合核心对平衡门槛的验证；模块落地后 A 部分接手。
    用法：
      node tests/v4-all.js                 快速档（≤ 2 分钟）：A 经典 12 种子 × 6 年、世界 4 × 6 年 + B 经典 12 × 6、世界 4 × 6、
@@ -475,6 +479,13 @@ function protoChild(mode, scen, a, b) {
     create(SGp, P, opts) {
       const core = own.EconCore.create(SGp, P, { share: opts && opts.share, capMonths: opts && opts.capMonths, injury: false, purse: 'map' });
       own.BattleMathCore.extend(core.Mods, SGp, P);
+      // W0_PURSE_PER_GAME=1 (diagnostic): the prototype's purse Map lives per variant, so every new game inherits the purses its
+      // faction ids held at the end of the previous game; the shipped purse lives in G.aiBudget (per game). This empties the Map
+      // whenever a new game starts, to measure how much of a gate the carried-over purse explains.
+      if (process.env.W0_PURSE_PER_GAME === '1') {
+        let lastG = null; const acc = core.AIBudget.accrue;
+        core.AIBudget.accrue = function (f, income) { if (SGp.G !== lastG) { lastG = SGp.G; core.AIBudget.purse.clear(); } return acc.call(this, f, income); };
+      }
       return core;
     },
   };

@@ -158,14 +158,14 @@
       }
     },
     isCaptive(gen) { return Conquest.pendingCaptives.has(gen.id); },
-    // 第四版：势力 f 现在不能出征 target 的原因（中文）或 null —— 玩家的出征目标列表与电脑用同一套条件：
-    //   自己的城、同盟（含 ENGAGEMENT 的盟约）、提供者 noAttack（互不侵犯）、cityProtected（武林大会东道主停战，TOURNAMENT Q12）
+    // 第四版：势力 f 现在不能出征 target 的原因（中文）或 null —— 玩家的出征列表用（电脑另有自己的筛选，见 actCity）：
+    //   自己的城、同盟（含 ENGAGEMENT 的盟约，GameState.allied）、cityProtected（武林大会东道主停战，TOURNAMENT Q12）。
+    //   互不侵犯（提供者 noAttack：联姻、纳贡、停战）不在此列：玩家可以背约出征，后果由 ENGAGEMENT 结算（背约的德 / 声望）。
     attackBlocked(f, target) {
       const g = G();
       if (!target) return '没有目标。';
       if (target.owner === f) return target.name + '是己方城池。';
       if (target.owner >= 0 && g.allied(target.owner, f)) return '与' + g.factions[target.owner].name + '有同盟，不能出征。';
-      if (noAttack(target.owner, f)) return '与' + g.factions[target.owner].name + '有互不侵犯之约，不能出征。';
       if (cityProtected(target, f)) return '武林大会期间停战，' + target.name + '本月不受攻击。';
       return null;
     },
