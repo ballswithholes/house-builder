@@ -41,7 +41,9 @@
      mood=noon | morning | golden | dusk | night   时间氛围（缺省 noon）
      cols=3                        每行格数；size=1.2 城的尺寸（地图上 0.9–1.5）
      view=fit | map | close        相机：全部、地图视角（约同游戏中层镜头）、近看第一座；yaw / pitch / dist / focus=第 n 格
-     shot=1                        截图模式（隐藏界面）；nolab=1 不画标签 */
+     shot=1                        截图模式（隐藏界面）；nolab=1 不画标签
+     scatter=1                     用 SG.CultureArt.scatter 实例化（战略地图的接法：同模型实例化 + 墨线实例化 + 远近景按块切换 + 灯位）
+     perf=200                      性能模式：200 座随机文化 / 档次的城排成网格（间距 spacing=5），配合 scatter=1 比较绘制次数与帧时 */
 (function () {
   if (THREE.ColorManagement) THREE.ColorManagement.enabled = false;
   const SG = window.SG, LP = SG.LP, CA = SG.CultureArt;
@@ -51,7 +53,9 @@
   if (Q.has('nolab')) document.body.classList.add('nolab');
   const size = +qv('size', 1.2), MOOD = qv('mood', 'noon'), LOD = qv('lod', 'both'), COLS = +qv('cols', 3);
   const tiers = qv('tiers', '0,1,2').split(',').map(Number);
-  const list = Q.has('only') ? Q.get('only').split(',') : ['han'].concat(CA.cultures, ['africa:meroe', 'sarmatian:panticapaeum']);
+  const SCATTER = Q.has('scatter'), PERF = +qv('perf', 0);
+  const allEntries = ['han'].concat(CA.cultures, ['africa:meroe', 'sarmatian:panticapaeum']);
+  const list = Q.has('only') ? Q.get('only').split(',') : allEntries;
   const cv = document.getElementById('cv');
   const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
   renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
@@ -63,9 +67,10 @@
   const scene = new THREE.Scene();
   const fogBase = [0.78, 0.85, 0.92];
   scene.background = new THREE.Color(...fogBase);
-  const cellW = 3 * 3.3 * size, cellH = (LOD === 'both' ? 2 : 1) * 3.3 * size + 1.4 * size;
-  const rows = Math.ceil(list.length / COLS);
-  const W = COLS * cellW, D = rows * cellH;
+  const SP = +qv('spacing', 5), PC = Math.ceil(Math.sqrt(PERF || 1));
+  const cellW = PERF ? SP : 3 * 3.3 * size, cellH = PERF ? SP : (LOD === 'both' && !SCATTER ? 2 : 1) * 3.3 * size + 1.4 * size;
+  const rows = PERF ? PC : Math.ceil(list.length / COLS);
+  const W = (PERF ? PC : COLS) * cellW, D = rows * cellH;
   scene.fog = new THREE.Fog(scene.background, Math.max(W, D) * 1.2, Math.max(W, D) * 3);
   const mood = new LP.Mood(scene, { center: [0, 0, 0], extent: Math.max(W, D) * 0.62, shadowSize: 4096, fog: { base: fogBase }, maxLamps: 8 });
   // 地面：草地（不描墨线），格下一块浅土色
@@ -75,14 +80,27 @@
     M.quad([-gx, 0, -gz], [gx, 0, -gz], [gx, 0, gz], [-gx, 0, gz], [0, 1, 0], [0.55, 0.64, 0.36]);
     scene.add(LP.mesh(M.toGeometry(), { outline: false, castShadow: false }));
   }
-  const labels = [], objs = [], cities = [];
+  const labels = [], objs = [], cities = [], items = [];
   let tris = 0, maxTris = 0, maxName = '', farMax = 0, farName = '', ms = 0;
   const TIER = ['', '大', '都'];
-  list.forEach((entry, i) => {
+  if (PERF) {
+    // 性能模式：随机文化 / 档次的城排成网格
+    let s = 12345; const rnd = () => ((s = (s * 1103515245 + 12345) >>> 0) / 4294967296);
+    for (let i = 0; i < PERF; i++) {
+      const entry = allEntries[Math.floor(rnd() * allEntries.length)], cult = entry.split(':')[0], key = entry.split(':')[1] || ('c' + i);
+      const tier = rnd() < 0.08 ? 2 : rnd() < 0.3 ? 1 : 0, sz = tier === 2 ? 1.45 : tier === 1 ? 1.3 : 0.9 + rnd() * 0.3;
+      const x = (i % PC - (PC - 1) / 2) * SP, z = (Math.floor(i / PC) - (PC - 1) / 2) * SP, city = { key, town: tier ? 480 : 260, culture: cult };
+      const t0 = performance.now();
+      if (SCATTER) items.push({ x, y: 0, z, yaw: (i * 37 % 20 - 10) * Math.PI / 180, size: sz, culture: cult, capital: tier === 2, city });
+      else { const obj = CA.object(sz, cult, tier === 2, city, {}); obj.position.set(x, 0, z); obj.rotation.y = (i * 37 % 20 - 10) * Math.PI / 180; scene.add(obj); objs.push(obj); tris += obj.userData.tris; }
+      ms += performance.now() - t0;
+    }
+  }
+  if (!PERF) list.forEach((entry, i) => {
     const cult = entry.split(':')[0], key = entry.split(':')[1] || '';
     const col = i % COLS, row = Math.floor(i / COLS);
     const cx = (col - (COLS - 1) / 2) * cellW, cz = (row - (rows - 1) / 2) * cellH;
-    const lods = LOD === 'both' ? ['near', 'far'] : [LOD];
+    const lods = SCATTER ? ['near'] : LOD === 'both' ? ['near', 'far'] : [LOD];
     tiers.forEach((tier, ti) => {
       const cap = tier === 2, sz = tier === 1 ? Math.max(size, 1.3) : tier === 2 ? Math.max(size, 1.45) : Math.min(size, 1.15);
       const city = { key, town: tier === 1 ? 480 : tier === 2 ? 560 : 260, culture: cult };
@@ -92,9 +110,12 @@
         ms += performance.now() - t0;
         const x = cx + (ti - (tiers.length - 1) / 2) * 3.3 * size, z = cz + (li - (lods.length - 1) / 2) * 3.3 * size;
         obj.position.set(x, 0, z);
-        scene.add(obj);
-        obj.updateMatrixWorld(true);
-        SG.LPProps.addLamps(obj, mood);
+        if (SCATTER) items.push({ x, y: 0, z, yaw: 0, size: sz, culture: cult, capital: cap, city });
+        else {
+          scene.add(obj);
+          obj.updateMatrixWorld(true);
+          SG.LPProps.addLamps(obj, mood);
+        }
         objs.push(obj);
         // 旗帜位置（map-view：本地 Unity (0.9s, 0, 0.9s) → three (0.9s, 0, −0.9s)）
         const pole = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.2, 0.06), new THREE.MeshBasicMaterial({ color: 0x6a5030 }));
@@ -113,8 +134,17 @@
       });
     });
   });
+  let SC = null;
+  if (SCATTER) {
+    const t0 = performance.now();
+    SC = CA.scatter(items, { chunk: +qv('chunk', 30), lodDist: +qv('lodDist', 60) });
+    ms += performance.now() - t0;
+    scene.add(SC.group);
+    for (const l of SC.lamps) mood.addLamp(l.pos, l);
+    if (PERF) tris = SC.scatter.stats.copies;
+  } else if (PERF) for (const obj of objs) { obj.updateMatrixWorld(true); SG.LPProps.addLamps(obj, mood); }
   const statEl = document.getElementById('stat');
-  const statBase = '共 ' + objs.length + ' 座，三角形 ' + tris + '（近景最多 ' + maxTris + '：' + maxName + '；远景最多 ' + farMax + '：' + farName + '）· 建模 ' + ms.toFixed(0) + ' ms · ' + MOOD;
+  const statBase = (PERF ? 'perf ' + PERF + (SCATTER ? ' scatter（实例 ' + tris + '）' : ' objects') + ' · ' : '') + '共 ' + objs.length + ' 座，三角形 ' + tris + '（近景最多 ' + maxTris + '：' + maxName + '；远景最多 ' + farMax + '：' + farName + '）· 建模 ' + ms.toFixed(0) + ' ms · ' + MOOD;
   statEl.textContent = statBase;
   window.cityStats = cities;
 
@@ -164,10 +194,11 @@
   function frame() {
     place();
     LP.setTime(clock.getElapsedTime());
+    if (SC) { scene.updateMatrixWorld(); SC.update(cam); }
     mood.update && mood.update(cam);
     renderer.render(scene, cam);
     const now = performance.now(); if (frames > 2) fsum += now - last; last = now; frames++;
-    if (frames === 30) statEl.textContent += ' · ' + renderer.info.render.calls + ' draws · ' + (fsum / 27).toFixed(0) + ' ms/frame';
+    if (frames === 30) { statEl.textContent += ' · ' + renderer.info.render.calls + ' draws · ' + renderer.info.render.triangles + ' tris drawn · ' + (fsum / 27).toFixed(0) + ' ms/frame'; window.__perf = { calls: renderer.info.render.calls, tris: renderer.info.render.triangles, ms: +(fsum / 27).toFixed(1) }; }
     const w = innerWidth, h = innerHeight, v = new THREE.Vector3();
     for (const l of labels) {
       v.copy(l.pos).project(cam);

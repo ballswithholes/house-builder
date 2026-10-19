@@ -1,113 +1,76 @@
 'use strict';
 /* ==========================================================================
-   三国志-霸王的世界 · 网页版 · 人物 / 士兵 / 战马 / 兵器模型库（DESIGN-V3 §1、§8）
+   三国志-霸王的世界 · 网页版 · 人物 / 士兵 / 战马 / 兵器模型库（第四版美术：DESIGN-V4，低多边形 Lanternvale 风格）
 
-   光滑、细致、真三国无双式的程序化模型（不下载任何素材）：
-   · 每名人物 = 一个 SkinnedMesh（合并的平滑网格 + 蒙皮权重），标准人形骨架；
-     名将另有一个头部网格（按头像外貌参数生成的面部贴图）与一个兵器网格 → 每名武将 3 次绘制，
-     每名士兵 1 次绘制（头、兵器、盾都并入同一蒙皮网格）。
-   · 共用一套「装具材质」：MeshStandardMaterial + 程序生成的图集（反照率 / 法线 / AO-粗糙度-金属度），
-     顶点色染色（图集 alpha = 染色遮罩：1 → 乘顶点色（势力色、金属色、肤色），0 → 保留贴图原色，
-     用于金线刺绣、彩绘盾面、面部五官等），程序生成的环境贴图（金属反光），轮廓光（rim）。
-   · 平滑法线（索引网格 + 同位顶点法线焊接），无平面着色。
-   · 坐标：单位米；人物脚底中心为原点，面朝 +Z，上为 +Y，人物右手在 −X 一侧。武将身高约 1.86 米
-     （约 7.5 头身，不含盔缨）。战马同样面朝 +Z。集成时按场景比例缩放 fig.root 即可。
-   · 本文件不依赖 art.js；只需要 THREE（r158）与 SG 命名空间。头像模块（SG.Portrait）已载入时，
-     名将外貌取自 SG.Portrait.spec(gen)（与头像一致）；否则用内置的简化外貌。
+   画风（玩家批准的试点 js/lp-pilot.js：关羽、汉军枪兵、战马）：
+   · 风格化低多边形 —— 温暖、吉卜力式的配色，粗壮易读的剪影；平面（分面）着色，顶点色（不画贴图），每面亮度抖动 0.04–0.08；
+     Lanternvale 的柔和绘画式光照（SG.LP 着色器：读取场景的太阳 / 天光 / 灯，黄金时刻提亮、夜色调、灯池、雾）；
+     人物描墨线（反向外壳，逐顶点线宽：眼、鼻、嘴等五官细线，高光无线）；布带、缨、鬃、尾、长发随风轻摆。
+   · 真实成人比例（玩家指定）：约 7.5 头身（英武的名将最多约 7.8，女性 7.3）；脸靠粗眉、带高光的眼、楔形鼻、胡须、
+     发髻与冠帽的剪影来读，而不是大头。
+   · FFX 式层叠衣甲：衣、甲排、腰带、束带 / 腰结、前后垂、护肩叠片、披风、飘带；18 种文化的衣冠、发须，名将专属造型与兵器。
+   · 刚性蒙皮：每个部件在一根骨上；铰接部件（袍裙侧片、披风、胡须、长发、鬃尾）按顶点位置分骨。
+   · 几何由 SG.LP（js/lowpoly.js）的 MeshBuilder 生成；材质为 SG.LP.material（共用一个程序）+ 墨线外壳 SG.LP.outlineMaterial。
+     游戏里 lowpoly.js 在本文件之前载入；单独的测试页没载入时本文件按自身路径就近异步载入，preload() 等它完成。
+   · 单个人物：势力色烘进顶点色（模板按 外观 × LOD × 势力色 缓存）；士兵群（实例化）：势力色为实例属性，只乘在势力色部件上
+     （几何体的 lpTeam 遮罩），同一模板任意势力共用一次绘制 + 一次墨线绘制。
+   · 坐标：单位米；人物脚底中心为原点，面朝 +Z，上为 +Y，人物右手在 −X 一侧。武将身高约 1.86 米 × 体型系数。战马同样面朝 +Z。
+   · 色彩：游戏采用 Gamma 工作流（ColorManagement 关闭、线性输出、无色调映射）；LP 着色器自行编码 sRGB。
 
-   公开接口
+   公开接口（第三版起不变；第四版的变化在【】里）
    --------------------------------------------------------------------------
-   SG.Figure.preload(opts?)  → Promise。分片生成共用贴图图集、环境贴图、士兵模板（不阻塞主线程，
-                               单片预算 12ms，最大单步实测约 35ms / SwiftShader）。opts：{ cultures: [...]（缺省全部 15 种）,
-                               types: [...], lods: ['low'], seeds: [0], generals: [gen...]（预生成名将模板与面部贴图）,
-                               generalLod, renderer（缺省 SG.Gfx.renderer：提前上传图集贴图）,
-                               crowd: [{ type, culture, seed, mounted }]（或 true：cultures × types，骑兵带马）—— 预先烘焙士兵群动作贴图,
-                               crowdLod（缺省 'low'）}。单步通常 ≤ 35ms（SwiftShader，CPU 空闲时）。
-                               不调用也能用（首次用到时同步生成图集，约 0.3–1 秒；士兵群模板首次 add 时同步烘焙约 0.1 秒/模板）。
+   SG.Figure.preload(opts?)  → Promise。分片生成士兵模板、名将模板与士兵群动作烘焙（不阻塞主线程，单片预算 12ms）。
+                               【先等 js/lowpoly.js 就绪】opts：{ cultures: [...]（缺省全部 18 种）, types: [...], lods: ['low'], seeds: [0],
+                               generals: [gen...], generalLod, crowd: [{ type, culture, seed, mounted }]（或 true）, crowdLod（缺省 'low'）, budget }。
+                               【不再生成贴图图集 / 环境贴图 / 面部贴图】
    SG.Figure.general(gen, opts) → Figure（名将 / 任意武将）
        gen：{ name, war, intel, pol, culture?, sex?, ... }（或姓名字符串）
-       opts：{ culture, color（势力色 '#rrggbb'）, lod: 'high' | 'mid' | 'low'（缺省 'high'）,
-               weapon（兵器名，缺省按名将设定 / 外貌 / 能力值）, shield（true / false / 盾名，缺省按文化与兵器）,
-               mounted（true：姿势按骑乘，配合 SG.Figure.horse 使用）, shadow（缺省 true）}
+       opts：{ culture, color（势力色 '#rrggbb'）, lod: 'high' | 'mid' | 'low'（缺省 'high'）, weapon, shield（true / false / 盾名）,
+               mounted, shadow（投影，缺省 true）, blob（脚下的柔和圆影，缺省 false：有太阳阴影的场景不需要） }
    SG.Figure.soldier(opts)   → Figure（士兵）
-       opts：{ type: 'spear' | 'sword' | 'archer' | 'cavalry'（骑兵本人；马另建）, culture, color,
-               lod: 'low' | 'mid'（缺省 'low'）, seed（同一模板内的外观变体：脸、盔缨、兵器细节）, shadow }
-       同 (type, culture, color, lod, 变体) 的士兵共用几何体与材质，只各自持有骨架。
-   SG.Figure.horse(opts)     → Horse（战马；也是 Figure 的一种，有 setPose / bones / attach / dispose）
-       opts：{ color（马衣 / 马铠的势力色）, coat（毛色 '#hex'，缺省按 seed 选栗 / 枣 / 黑 / 白 / 青）,
-               lod, armor: 'cloth' | 'scale' | 'none'（缺省 cloth；安息 / 萨尔马提亚具装用 scale）, culture, seed }
-       horse.mount(fig)：把人物放上马鞍（fig.root 成为鞍座骨的子节点，人物自动用骑乘下肢姿势）；
-       horse.dismount(fig)。
-   SG.Figure.crowd(opts)     → Crowd（实例化士兵群：攻击画面 / 战场的大批士兵用它，绘制次数 = 模板组数，与人数无关）
-       opts：{ lod: 'low' | 'mid'（缺省 'low'）, shadow（缺省 true；阴影每组再加一次绘制）, capacity（每组初始容量，自动扩容）,
-               renderer（缺省 SG.Gfx.renderer；非 WebGL2 时自动回退为逐个 SkinnedMesh，接口不变）}
-       crowd.root                       THREE.Group，加入场景
-       const id = crowd.add({ type, culture, color, seed, mounted, horse: { coat, armor, seed } })
-                                        mounted: true = 骑兵连马（骑手与战马各一组，同一实例矩阵）
-       crowd.setTransform(id, x, y, z, yaw, scale) / crowd.setMatrix(id, m4)    —— crowd.root 局部坐标
-       crowd.play(id, clip, { t0, phase, speed })   步兵片段：SG.Figure.crowdClips
-                                        （idle walk run light1 light2 heavy block hit knockdown down die cheer bowDraw bowShoot）；
-                                        骑兵：SG.Figure.crowdMountClips（idle walk trot gallop attack charge hit die）。
-                                        非循环片段播完停在最后一帧（如 die / down 停在倒地）。
-       crowd.setTime(seconds)           全局时钟，每帧调用一次（片段时间 = (time − t0) × speed）
-       crowd.setColor(id, hex) / crowd.remove(id) / crowd.count / crowd.drawCalls / crowd.triangles / crowd.stats() / crowd.dispose()
-       crowd.prepare(specs) → Promise   分片预烘焙（同 preload 的 crowd 项）
-       实现：动作按 24fps 烘焙为半精度骨骼矩阵贴图（每帧一行，帧间由纹理单元线性插值），顶点着色器蒙皮；
-       势力色为实例属性；站立的士兵贴地压平。每模板烘焙约 0.1 秒、贴图约 0.25MB。
-   SG.Figure.shield(name, opts) → THREE.Mesh（独立的盾：scutum / round / oval / pai / wa / rattan；+Z 为盾面）
-   SG.Figure.teamMaterial(hex) → 该势力色的共用材质（换势力：fig.mesh.material = teamMaterial(新色)，兵器网格同理）
+       opts：{ type: 'spear' | 'sword' | 'archer' | 'cavalry', culture, color, lod: 'low' | 'mid'（缺省 'low'）, seed, shadow, blob }
+       同 (type, culture, color, lod, 变体) 的士兵共用几何体，只各自持有骨架。
+   SG.Figure.horse(opts)     → Horse（战马；setPose / bones / attach / mount / dispose）
+       opts：{ color（马衣 / 具装镶边的势力色）, coat（毛色 '#hex'）, mane, lod, armor: 'cloth' | 'scale' | 'none', culture, seed,
+               name（名马：赤兔 的卢 绝影 爪黄飞电 白龙驹）, general（面帘 + 大红缨）, metal, plume, blob }
+       horse.mount(fig) / horse.dismount(fig)。
+   SG.Figure.crowd(opts)     → Crowd（实例化士兵群：绘制次数 = 模板组数 × 2（本体 + 墨线），与人数无关；投影每组再一次）
+       opts：{ lod: 'low' | 'mid'（缺省 'low'）, shadow（缺省 true）, capacity, renderer }
+       crowd.root · crowd.add({ type, culture, color, seed, mounted, horse: { coat, armor, seed } }) → id
+       crowd.setTransform(id, x, y, z, yaw, scale) / crowd.setMatrix(id, m4) · crowd.play(id, clip, { t0, phase, speed })
+       （步兵片段 SG.Figure.crowdClips；骑兵 SG.Figure.crowdMountClips）· crowd.setTime(seconds) · crowd.setColor(id, hex) ·
+       crowd.remove(id) · crowd.count / drawCalls / triangles / stats() / dispose() · crowd.prepare(specs) → Promise
+       实现：动作按 24fps 烘焙为半精度骨骼矩阵贴图，顶点着色器蒙皮（LP 光照着色器 + 实例化墨线，同一贴图）；站立的士兵贴地压平。
+   SG.Figure.shield(name, opts) → THREE.Mesh（独立的盾：scutum / round / oval / pai / wa / rattan / long / hide；+Z 为盾面；带墨线）
+   SG.Figure.teamMaterial(hex) → 【LP 共用材质（势力色已烘进顶点色；换势力色请重建人物）】
    SG.Figure.clearCache()    释放无人使用的模板几何体
-   SG.Figure.weapon(name, opts) → THREE.Mesh（独立兵器，原点为右手握点，杆 / 刃沿 +Y，刃口朝 +Z）
-       mesh.userData.weapon = { id, name（中文名）, style: 'pole'|'one'|'dual'|'bow'|'fan', len, tip: Vector3,
-                                off: Vector3（左手握点，双手兵器）}。opts：{ lod, color }。
-       兵器名：guandao 青龙偃月刀 · snake 丈八蛇矛 · halberd 方天画戟 · swords 双股剑 · twinji 典韦双铁戟 ·
-       bigblade 许褚斩马大刀 · fengzui 黄忠凤嘴刀 · huangbow 黄忠宝雕弓 · shortji 太史慈短戟 · bawang 孙策霸王枪 ·
-       yajiao 赵云涯角枪 · hutou 马超虎头湛金枪 · yitian 倚天剑 · guding 古锭刀 · fan 羽扇 · bigaxe 开山大斧 ·
-       spear pilum lance(kontos) poleblade axe trident dao jian gladius spatha tachi mace handaxe twindao bow
-       （完整列表：SG.Figure.weapons）
+   SG.Figure.weapon(name, opts) → THREE.Mesh（独立兵器，原点为右手握点，杆 / 刃沿 +Y，刃口朝 +Z；带墨线）
+       mesh.userData.weapon = { id, name, style: 'pole'|'one'|'dual'|'bow'|'fan', len, tip, base, off }。opts：{ lod, shadow }
+       兵器名：guandao 青龙偃月刀 · snake 丈八蛇矛 · halberd 方天画戟 · swords 双股剑 · twinji 典韦双铁戟 · bigblade 许褚斩马大刀 ·
+       fengzui 黄忠凤嘴刀 · huangbow 黄忠宝雕弓 · shortji 太史慈短戟 · bawang 孙策霸王枪 · yajiao 赵云涯角枪 · hutou 马超虎头湛金枪 ·
+       yitian 倚天剑 · guding 古锭刀 · fan 羽扇 · bigaxe 开山大斧 · spear pilum lance poleblade axe trident dao jian gladius spatha
+       tachi mace handaxe twindao bow khanda longbow staff（完整列表：SG.Figure.weapons）
    Figure（人物 / 士兵 / 马的实例）
-       fig.root            THREE.Group，放进场景、设置位置 / 朝向 / 缩放
-       fig.mesh            SkinnedMesh（主体）；fig.head（名将的头部 Mesh 或 null）；fig.weaponMesh / fig.weaponMesh2
-       fig.bones           { root, pelvis, spine, chest, neck, head, clavL, upperArmL, foreArmL, handL, clavR, upperArmR,
-                             foreArmR, handR, thighL, shinL, footL, thighR, shinR, footR, cape1, cape2, cape3,
-                             skirtF, skirtB, plume1, plume2, hair1, shL, shR, dlL, dlR } —— THREE.Bone，可直接改 rotation / quaternion
-                           （shL / shR：护肩挂点，自动取上臂旋转的 85%；dlL / dlR：三角肌过渡，50%。由 setPose 维护）
-       fig.sockets         { gripR, gripL, shieldL, back, headTop } —— 挂点（Object3D，骨骼的子节点）；马：horse.sockets.saddle
-       fig.setPose(clip, t, opts?)
-                           按名称采样程序化动作片段（t 为片段内秒数，循环片段自动取模），直接写骨骼；
-                           不需要 AnimationMixer，调用方自带时钟。opts：
-                             { lower: 片段名（下半身另用一个片段，如骑乘 'ride'）, lowerT, blend: { clip, t, w }（与另一片段混合，
-                               w = 0..1 为本片段的权重）, ik: false（不做双手 IK，远处士兵可省 CPU）, gallop: true（骑乘时下半身用疾驰）,
-                               clamp: false（关闭贴地）}
-                           贴地：未骑乘时，任何姿势下躯干 / 头 / 四肢 / 披风都不穿入 fig.root 的 y = 0 平面（必要时抬高 root 骨）；
-                           倒地 / 跪地片段让最低点正好落在地面上，兵器脱手平放在身体右侧；披风、腰裙、盔缨、长发等蒙皮顶点
-                           若仍低于地面，着色器把它们压平在地面上（fig.groundClamp = false 可关闭）。两端兵器不插入地面。
-                           双手长兵：左手每帧取杆上左臂够得着的点（两手间距 ≥ 0.2 米），整根杆都够不到时把兵器向左肩平移。
-       fig.blendPose(clipA, tA, clipB, tB, w)   两个片段线性混合（w = clipB 的权重）
-       fig.update(dt)      可选：披风、飘带、盔缨的弹簧随动（每帧调用一次；不调用时按片段时间做程序化摆动）
-       fig.clipInfo(clip)  → { dur, loop }
-       fig.ikHand(side, pos, quat?)   双骨 IK：把 'R' / 'L' 手腕移到 fig.root 局部坐标 pos（quat 为手的朝向，可缺）
-       fig.grip(pos, dirOrQuat, roll?)  把右手兵器的握点放在 pos、杆指向 dir（root 局部坐标），双手兵器左手自动握杆
-       fig.attach(obj, boneOrSocket)    把任意 Object3D 挂到骨骼 / 挂点上；fig.detach(obj)
-       fig.setWeapon(name) / fig.weaponInfo / fig.style（'pole' | 'one' | 'dual' | 'bow' | 'fan' | 'none'）
-       fig.weaponTip(out)  → 兵器尖端的世界坐标（刀光拖尾用）；fig.weaponBase(out)
-       fig.setTint(hex, k) 受击闪光等（以轮廓为主的辉光，正面 0.2；k = 0 关闭）
-       fig.triangles / fig.drawCalls / fig.spec（解析后的外观）/ fig.dispose()
-   SG.Figure.clips           { name: { dur, loop, desc } } 动作片段目录：
-       idle walk run light1 light2 light3 heavy charge block parry hit hitB knockdown down getup victory defeat
-       bowDraw bowShoot ride gallop cheer die dash jump special guardbreak
-       （武器流派自动适配：同名片段对 pole / one / dual / bow / fan / none 有不同的关键帧）
-   SG.Figure.horseClips      idle walk trot gallop rear die
-   SG.Figure.toAnimationClip(fig, clip, fps = 30) → THREE.AnimationClip（需要 AnimationMixer 时使用）
-   SG.Figure.stats()         → { built, templates, textures, atlasMs, envMs, buildMs, lastBuildMs, tris: {...} }
-   SG.Figure.material        共用装具材质（只读）；SG.Figure.setRim(color, strength) 调整轮廓光
-   SG.Figure.lookOf(gen, opts) → 解析后的服饰 / 兵器设定（调试用）
-   SG.Figure.cultures / SG.Figure.weapons / SG.Figure.soldierTypes
+       fig.root            THREE.Group（骨架、本体网格、兵器都在它下面）
+       fig.mesh            SkinnedMesh（LP 材质；子网格 'outline' = 墨线外壳）；fig.head = null【头并入本体】；
+                           fig.weaponMesh / fig.weaponMesh2（名将：独立兵器网格，各带墨线；士兵的兵器烘进本体）
+       fig.meshes          本体、兵器及其墨线外壳（drawCalls = meshes.length）
+       fig.bones           { root, pelvis, spine, chest, neck, head, clavL … handR, thighL … footR, cape1–3, skirtF, skirtB, plume1, plume2,
+                             hair1, shL, shR, dlL, dlR }（头关节在寰椎处）
+       fig.sockets         { gripR, gripL, shieldL, back, headTop }；马：horse.sockets.saddle
+       fig.setPose(clip, t, opts?)   opts：{ lower, lowerT, blend: { clip, t, w }, ik, gallop, clamp, lean（false：不做长兵外倾） }
+                           静止 / 行进片段里长兵向外、向后倾，杆子不挡脸（Lanternvale PoleHold；SG.Figure.POLE_LEAN）。
+       fig.blendPose(clipA, tA, clipB, tB, w) · fig.update(dt)（披风 / 盔缨 / 长发的弹簧）· fig.clipInfo(clip)
+       fig.ikHand(side, pos, quat?) · fig.grip(pos, dirOrQuat, roll?) · fig.attach(obj, boneOrSocket) · fig.detach(obj)
+       fig.setWeapon(name) / fig.weaponInfo / fig.style · fig.weaponTip(out) · fig.weaponBase(out)
+       fig.setTint(hex, k) 受击闪光等：【LP 外观（SG.LP.setLook）：墨线变色加粗为主的辉光 + 少量整体闪色；k = 0 关闭】
+       fig.triangles / fig.drawCalls / fig.spec / fig.dispose()
+   SG.Figure.clips · SG.Figure.horseClips · SG.Figure.toAnimationClip(fig, clip, fps) · SG.Figure.stats()
+   SG.Figure.material【= LP 共用材质】· SG.Figure.setRim(color, strength) · SG.Figure.lookOf(gen, opts) · SG.Figure.soldierLook(opts)
+   SG.Figure.cultures / weapons / soldierTypes / boneNames / horseBoneNames · SG.Figure.budgets（三角形预算）
 
-   多边形预算（DESIGN-V3 §1）：high ≤ 15k 三角形（单挑、特写），mid ≤ 4k（战场主将、攻击画面将领），
-   low ≤ 900（士兵）。超出预算的模板按 SQUEEZE 逐级减少分段 / 边数后重建（fig.tpl.squeeze = 0..3 为所用级别）。
-   SG.Figure.stats().tris 记录各模板实测值。
-   色彩：游戏采用 Gamma 工作流（ColorManagement 关闭、线性输出、无色调映射），本模块的颜色与贴图按此调校。
+   多边形预算（第四版，含兵器与盾，墨线外壳不计）：high ≤ 3.1k（名将 ≤ 3.6k），mid ≤ 1.8k，low（士兵）≤ 900；
+   战马 high ≈ 2.5k，mid ≈ 1.6k，low ≤ 900。超出时按 SQUEEZE 逐级降低细节重建（tpl.squeeze）。SG.Figure.stats().tris 记录实测值。
    ========================================================================== */
 (function () {
   const SG = (window.SG = window.SG || {});
@@ -181,672 +144,8 @@
   // 统计
   const STATS = { built: 0, templates: 0, textures: 0, atlasMs: 0, envMs: 0, buildMs: 0, lastBuildMs: 0, tris: {} };
 
-  // ======================================================== 程序贴图图集 ==
-  // 1024² 图集，128px 为一格。每个区域在 5 个画布通道上绘制：反照率（RGB）、染色遮罩、高度、粗糙度、金属度，
-  // 合成为三张贴图：map（RGB + alpha = 染色遮罩）、normalMap（由高度求得）、ORM（R = AO、G = 粗糙度、B = 金属度）。
-  // 约定：区域局部坐标 s（0 左 → 1 右）、t（0 下 → 1 上）。对称部件的 s = 0 为中线（镜像轴），故边饰只画在右、上、下三边。
-  const ATLAS_N = 1024, CELL = 128;
-  const SKIN_EXP = 0.8;
-  const REGION_DEFS = [
-    ['metal', 2, 2], ['lamellar', 2, 2], ['lamLace', 2, 2], ['scutum', 2, 2], ['shieldRound', 2, 2],
-    ['cloth', 2, 1], ['hem', 2, 1], ['brocade', 2, 1], ['plaid', 2, 1], ['fur', 2, 1], ['hair', 2, 1], ['goldEngr', 2, 1],
-    ['horse', 2, 1], ['scale', 2, 1], ['tiger', 2, 1],
-    ['feather', 1, 2], ['blade', 1, 2],
-    ['skin', 1, 1], ['faceA', 1, 1], ['faceB', 1, 1], ['faceC', 1, 1], ['faceD', 1, 1], ['brushed', 1, 1], ['mail', 1, 1],
-    ['leather', 1, 1], ['wood', 1, 1], ['wrap', 1, 1], ['tassel', 1, 1], ['gold', 1, 1], ['rattan', 1, 1], ['white', 1, 1],
-    ['rivet', 1, 1], ['buckle', 1, 1], ['mirror', 1, 1], ['lion', 1, 1], ['leopard', 1, 1],
-  ];
-  let ATLAS = null;         // { R: {name: region}, map, normalMap, ormMap }
-  function packRegions() {
-    const G = ATLAS_N / CELL, used = new Uint8Array(G * G), R = {};
-    for (const [name, cw, ch] of REGION_DEFS) {
-      let done = false;
-      for (let y = 0; y <= G - ch && !done; y++) for (let x = 0; x <= G - cw && !done; x++) {
-        let free = true;
-        for (let j = 0; j < ch && free; j++) for (let i = 0; i < cw && free; i++) if (used[(y + j) * G + x + i]) free = false;
-        if (!free) continue;
-        for (let j = 0; j < ch; j++) for (let i = 0; i < cw; i++) used[(y + j) * G + x + i] = 1;
-        const px = x * CELL, py = y * CELL, pw = cw * CELL, ph = ch * CELL, ins = 3;
-        R[name] = { name, px, py, pw, ph, u0: (px + ins) / ATLAS_N, u1: (px + pw - ins) / ATLAS_N, vb: 1 - (py + ph - ins) / ATLAS_N, vt: 1 - (py + ins) / ATLAS_N };
-        done = true;
-      }
-      if (!done) throw new Error('figure atlas full: ' + name);
-    }
-    return R;
-  }
-  // 区域局部坐标 → 图集 UV
-  function ruv(r, s, t) { return [r.u0 + clamp01(s) * (r.u1 - r.u0), r.vb + clamp01(t) * (r.vt - r.vb)]; }
 
-  // 值噪声（装饰用，确定性）
-  function h2(i, j, seed) {
-    let h = (Math.imul(i, 374761393) + Math.imul(j, 668265263) + Math.imul(seed | 0, 1442695041)) | 0;
-    h = Math.imul(h ^ (h >>> 13), 1274126177);
-    return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
-  }
-  function vnoise(x, y, seed) {
-    const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
-    const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
-    const a = h2(xi, yi, seed), b = h2(xi + 1, yi, seed), c = h2(xi, yi + 1, seed), d = h2(xi + 1, yi + 1, seed);
-    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
-  }
-  function fbm(x, y, oct, seed) { let s = 0, a = 0.5, f = 1, n = 0; for (let i = 0; i < oct; i++) { s += a * vnoise(x * f, y * f, seed + i * 17); n += a; a *= 0.5; f *= 2.03; } return s / n; }
-
-  function grey(v) { const c = Math.round(clamp01(v) * 255); return 'rgb(' + c + ',' + c + ',' + c + ')'; }
-  function cssOf(a) { return typeof a === 'string' ? a : Array.isArray(a) ? hex(a) : a; }
-
-  // 在 5 个通道上绘制同一路径。vals：{ a: 颜色, m: 遮罩, h: 高度, r: 粗糙度, mt: 金属度 }，
-  // 每项可为数值 / 颜色，或 (ctx) => CanvasGradient
-  function Painter(ctxs, r) {
-    const P = {
-      x: r.px, y: r.py, w: r.pw, h: r.ph, r,
-      _each(vals, fn) {
-        for (const k of ['a', 'm', 'h', 'r', 'mt']) {
-          const v = vals[k];
-          if (v === undefined) continue;
-          const ctx = ctxs[k];
-          if (!ctx) continue;
-          ctx.save();
-          ctx.beginPath(); ctx.rect(P.x, P.y, P.w, P.h); ctx.clip();
-          const st = typeof v === 'function' ? v(ctx, k) : (k === 'a' ? cssOf(v) : grey(v));
-          fn(ctx, st);
-          ctx.restore();
-        }
-      },
-      fill(path, vals) { P._each(vals, (ctx, st) => { ctx.fillStyle = st; ctx.beginPath(); path(ctx); ctx.fill(); }); },
-      stroke(path, vals, lw) { P._each(vals, (ctx, st) => { ctx.strokeStyle = st; ctx.lineWidth = lw || 1; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); path(ctx); ctx.stroke(); }); },
-      rect(x, y, w, h, vals) { P.fill(ctx => ctx.rect(P.x + x, P.y + y, w, h), vals); },
-      all(vals) { P.rect(-2, -2, P.w + 4, P.h + 4, vals); },
-      // 局部坐标的线性 / 径向渐变（在每个通道上分别给定端点值）
-      lin(x0, y0, x1, y1, stops) {
-        return (ctx, k) => {
-          const g = ctx.createLinearGradient(P.x + x0, P.y + y0, P.x + x1, P.y + y1);
-          for (const s of stops) g.addColorStop(s[0], k === 'a' ? cssOf(s[1]) : grey(s[1]));
-          return g;
-        };
-      },
-      rad(cx, cy, r0, r1, stops) {
-        return (ctx, k) => {
-          const g = ctx.createRadialGradient(P.x + cx, P.y + cy, r0, P.x + cx, P.y + cy, r1);
-          for (const s of stops) g.addColorStop(s[0], k === 'a' ? cssOf(s[1]) : grey(s[1]));
-          return g;
-        };
-      },
-    };
-    return P;
-  }
-  // 对每个区域的像素做后处理（噪声等）：fn(lx, ly, I) 其中 I 为该像素在 RGBA 数组中的下标
-  function postRegion(R, D, name, fn) {
-    const r = R[name];
-    for (let y = 0; y < r.ph; y++) for (let x = 0; x < r.pw; x++) fn(x, y, ((r.py + y) * ATLAS_N + r.px + x) * 4, D);
-  }
-  function addV(arr, I, d) { arr[I] = clamp(arr[I] + d, 0, 255); arr[I + 1] = clamp(arr[I + 1] + d, 0, 255); arr[I + 2] = clamp(arr[I + 2] + d, 0, 255); }
-  function mulV(arr, I, k) { arr[I] = clamp(arr[I] * k, 0, 255); arr[I + 1] = clamp(arr[I + 1] * k, 0, 255); arr[I + 2] = clamp(arr[I + 2] * k, 0, 255); }
-
-  // ---------------------------------------------------------- 各区域绘制 --
-  const GOLDTHREAD = '#e4bc5c';
-  const PAINT = {
-    metal(P) {
-      P.all({ a: '#d2d4d8', m: 1, h: 0.5, r: 0.3, mt: 1 });
-      // 边缘磨亮
-      P.all({ a: P.lin(P.w, 0, P.w - 30, 0, [[0, 'rgba(255,255,255,0.35)'], [1, 'rgba(255,255,255,0)']]) });
-      // 三边（右、上、下）凸起包边 + 錾刻线 + 卷云纹带
-      const W = P.w, H = P.h;
-      const edge = (o, lw, vals) => P.stroke(ctx => { ctx.moveTo(P.x - 4, P.y + o); ctx.lineTo(P.x + W - o, P.y + o); ctx.lineTo(P.x + W - o, P.y + H - o); ctx.lineTo(P.x - 4, P.y + H - o); }, vals, lw);
-      edge(4, 6, { a: '#e8eaee', h: 0.68, r: 0.22 });
-      edge(9, 1.6, { a: '#8a8c92', h: 0.36, r: 0.5 });
-      edge(25, 1.6, { a: '#8a8c92', h: 0.36, r: 0.5 });
-      // 卷云纹：沿三边排列的小涡旋
-      const curl = (cx, cy, s, rot) => P.stroke(ctx => {
-        for (let i = 0; i <= 24; i++) {
-          const a = rot + i / 24 * TAU * 1.1, rr = s * (1 - i / 30);
-          const x = P.x + cx + Math.cos(a) * rr, y = P.y + cy + Math.sin(a) * rr;
-          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        }
-      }, { a: '#94969c', h: 0.38, r: 0.5 }, 1.3);
-      for (let x = 6; x < W - 26; x += 16) { curl(x, 17, 5, (x / 16) % 2 ? 0 : PI); curl(x, H - 17, 5, (x / 16) % 2 ? PI : 0); }
-      for (let y = 26; y < H - 26; y += 16) curl(W - 17, y, 5, (y / 16) % 2 ? PI / 2 : -PI / 2);
-      // 划痕
-      const rr = Rng(11);
-      for (let i = 0; i < 60; i++) {
-        const x = rr.range(0, W), y = rr.range(30, H - 30), l = rr.range(6, 26), a = rr.range(-0.6, 0.6) + (rr.chance(0.5) ? 0 : PI / 2);
-        P.stroke(ctx => { ctx.moveTo(P.x + x, P.y + y); ctx.lineTo(P.x + x + Math.cos(a) * l, P.y + y + Math.sin(a) * l); },
-          rr.chance(0.6) ? { a: 'rgba(250,252,255,0.5)', r: 0.2 } : { a: 'rgba(60,62,70,0.35)', r: 0.5, h: 0.46 }, rr.range(0.5, 1.1));
-      }
-    },
-    brushed(P) { P.all({ a: '#d0d2d6', m: 1, h: 0.5, r: 0.34, mt: 1 }); },
-    lamellar(P) { lamellarPaint(P, false); },
-    lamLace(P) { lamellarPaint(P, true); },
-    scale(P) {
-      P.all({ a: '#2a2a2e', m: 1, h: 0.3, r: 0.6, mt: 1 });
-      const sw = 16, step = 10;
-      for (let row = Math.ceil(P.h / step) + 1; row >= -1; row--) {
-        const y = row * step, off = (row % 2) ? sw / 2 : 0;
-        for (let x = -sw; x < P.w + sw; x += sw) {
-          const cx = x + off;
-          const path = ctx => { ctx.moveTo(P.x + cx - sw / 2, P.y + y - 6); ctx.lineTo(P.x + cx + sw / 2, P.y + y - 6); ctx.lineTo(P.x + cx + sw / 2, P.y + y + 2); ctx.arc(P.x + cx, P.y + y + 2, sw / 2, 0, PI); ctx.closePath(); };
-          P.fill(path, { a: P.rad(cx - 2, y + 2, 1, sw * 0.8, [[0, '#eef0f2'], [1, '#9a9ca2']]), h: P.rad(cx, y + 3, 1, sw * 0.7, [[0, 0.78], [1, 0.5]]), r: 0.3, mt: 1, m: 1 });
-          P.stroke(ctx => { ctx.moveTo(P.x + cx, P.y + y - 4); ctx.lineTo(P.x + cx, P.y + y + sw / 2); }, { h: 0.66, a: '#f2f4f6' }, 1);
-        }
-      }
-    },
-    mail(P) {
-      P.all({ a: '#3a3c42', m: 1, h: 0.3, r: 0.5, mt: 1 });
-      for (let y = 0; y < P.h + 8; y += 5) for (let x = 0; x < P.w + 8; x += 6) {
-        const cx = x + ((y / 5) % 2 ? 3 : 0);
-        P.stroke(ctx => ctx.arc(P.x + cx, P.y + y, 2.6, 0, TAU), { a: '#c8cad0', h: 0.7, r: 0.35 }, 1.3);
-      }
-    },
-    cloth(P) { P.all({ a: '#d6d6d6', m: 1, h: 0.5, r: 0.88, mt: 0 }); },
-    hem(P) {
-      P.all({ a: '#d6d6d6', m: 1, h: 0.5, r: 0.88, mt: 0 });
-      const H = P.h, b0 = H - 50, b1 = H - 8;
-      P.rect(-2, b0, P.w + 4, b1 - b0, { a: '#9a9a9a', h: 0.48 });
-      const g = { a: GOLDTHREAD, m: 0, h: 0.66, r: 0.45, mt: 0.55 };
-      P.rect(-2, b0, P.w + 4, 3, g); P.rect(-2, b1 - 3, P.w + 4, 3, g); P.rect(-2, H - 5, P.w + 4, 5, g);
-      // 卷云纹（如意云头）
-      for (let x = 0; x < P.w + 32; x += 32) {
-        const cy = (b0 + b1) / 2;
-        P.stroke(ctx => {
-          ctx.moveTo(P.x + x - 14, P.y + cy + 6);
-          ctx.bezierCurveTo(P.x + x - 14, P.y + cy - 10, P.x + x + 2, P.y + cy - 12, P.x + x + 2, P.y + cy - 2);
-          ctx.bezierCurveTo(P.x + x + 2, P.y + cy + 6, P.x + x - 6, P.y + cy + 4, P.x + x - 5, P.y + cy - 1);
-          ctx.moveTo(P.x + x + 2, P.y + cy - 2);
-          ctx.bezierCurveTo(P.x + x + 4, P.y + cy + 12, P.x + x + 18, P.y + cy + 10, P.x + x + 18, P.y + cy);
-        }, g, 2.2);
-        P.fill(ctx => ctx.arc(P.x + x + 9, P.y + cy - 11, 2.4, 0, TAU), g);
-      }
-    },
-    brocade(P) {
-      P.all({ a: '#c4c4c4', m: 1, h: 0.5, r: 0.82, mt: 0 });
-      for (let row = 0; row < 3; row++) for (let x = -32; x < P.w + 64; x += 64) {
-        const cx = x + (row % 2 ? 32 : 0), cy = 16 + row * 48;
-        P.stroke(ctx => ctx.arc(P.x + cx, P.y + cy, 16, 0, TAU), { a: '#e8e8e8', h: 0.6 }, 2.5);
-        for (let k = 0; k < 6; k++) {
-          const a = k / 6 * TAU;
-          P.fill(ctx => ctx.ellipse(P.x + cx + Math.cos(a) * 9, P.y + cy + Math.sin(a) * 9, 5, 2.6, a, 0, TAU), { a: '#e2e2e2', h: 0.58 });
-        }
-        P.fill(ctx => ctx.arc(P.x + cx, P.y + cy, 3, 0, TAU), { a: GOLDTHREAD, m: 0, h: 0.62, mt: 0.5, r: 0.5 });
-      }
-    },
-    plaid(P) {
-      P.all({ a: '#9a9a9a', m: 1, h: 0.5, r: 0.92, mt: 0 });
-      for (let i = 0; i < 4; i++) {
-        const o = i * 64;
-        P.rect(o + 6, -2, 22, P.h + 4, { a: 'rgba(30,30,30,0.45)' });
-        P.rect(-2, (o % 128) + 10, P.w + 4, 22, { a: 'rgba(30,30,30,0.45)' });
-        P.rect(o + 40, -2, 8, P.h + 4, { a: 'rgba(255,255,255,0.4)' });
-        P.rect(-2, (o % 128) + 46, P.w + 4, 6, { a: 'rgba(255,255,255,0.4)' });
-        P.rect(o + 52, -2, 2, P.h + 4, { a: '#d8b040', m: 0 });
-        P.rect(-2, (o % 128) + 56, P.w + 4, 2, { a: '#b83028', m: 0 });
-      }
-    },
-    fur(P) {
-      P.all({ a: '#a8a8a8', m: 1, h: 0.5, r: 1, mt: 0 });
-      const rr = Rng(5);
-      for (let i = 0; i < 1600; i++) {
-        const x = rr.range(-4, P.w + 4), y = rr.range(-8, P.h + 4), l = rr.range(6, 15), a = PI / 2 + rr.range(-0.5, 0.5);
-        const v = rr.range(0.45, 1);
-        P.stroke(ctx => { ctx.moveTo(P.x + x, P.y + y); ctx.quadraticCurveTo(P.x + x + Math.cos(a) * l * 0.5 + 2, P.y + y + Math.sin(a) * l * 0.5, P.x + x + Math.cos(a) * l, P.y + y + Math.sin(a) * l); },
-          { a: grey(v * 0.9), h: v * 0.7 }, rr.range(1, 2.2));
-      }
-    },
-    hair(P) {
-      P.all({ a: '#8a8a8a', m: 1, h: 0.5, r: 0.5, mt: 0 });
-      const rr = Rng(7);
-      for (let i = 0; i < 700; i++) {
-        const x = rr.range(-4, P.w + 4), w = rr.range(-6, 6), v = rr.range(0.55, 1.05);
-        P.stroke(ctx => { ctx.moveTo(P.x + x, P.y - 2); ctx.bezierCurveTo(P.x + x + w, P.y + P.h * 0.33, P.x + x - w, P.y + P.h * 0.66, P.x + x + w * 0.5, P.y + P.h + 2); },
-          { a: grey(v * 0.88), h: v * 0.6 }, rr.range(0.6, 1.4));
-      }
-      P.all({ a: P.lin(0, P.h * 0.2, 0, P.h * 0.55, [[0, 'rgba(255,255,255,0)'], [0.5, 'rgba(255,255,255,0.28)'], [1, 'rgba(255,255,255,0)']]), r: P.lin(0, P.h * 0.2, 0, P.h * 0.55, [[0, 0.5], [0.5, 0.36], [1, 0.5]]) });
-    },
-    goldEngr(P) {
-      P.all({ a: '#e6e6e6', m: 1, h: 0.5, r: 0.26, mt: 1 });
-      P.rect(-2, 0, P.w + 4, 9, { a: '#f4f4f4', h: 0.7 }); P.rect(-2, P.h - 9, P.w + 4, 9, { a: '#f4f4f4', h: 0.7 });
-      P.rect(-2, 9, P.w + 4, 2, { a: '#8a8a8a', h: 0.35 }); P.rect(-2, P.h - 11, P.w + 4, 2, { a: '#8a8a8a', h: 0.35 });
-      const cy = P.h / 2;
-      for (let x = -20; x < P.w + 40; x += 40) {
-        P.stroke(ctx => {
-          ctx.moveTo(P.x + x, P.y + cy);
-          ctx.bezierCurveTo(P.x + x + 8, P.y + cy - 38, P.x + x + 26, P.y + cy - 30, P.x + x + 22, P.y + cy - 10);
-          ctx.bezierCurveTo(P.x + x + 19, P.y + cy + 2, P.x + x + 8, P.y + cy - 4, P.x + x + 12, P.y + cy - 14);
-          ctx.moveTo(P.x + x, P.y + cy);
-          ctx.bezierCurveTo(P.x + x - 8, P.y + cy + 38, P.x + x - 26, P.y + cy + 30, P.x + x - 22, P.y + cy + 10);
-          ctx.bezierCurveTo(P.x + x - 19, P.y + cy - 2, P.x + x - 8, P.y + cy + 4, P.x + x - 12, P.y + cy + 14);
-        }, { a: '#8c8c8c', h: 0.32, r: 0.45 }, 3);
-        P.fill(ctx => ctx.arc(P.x + x + 20, P.y + cy + 24, 4, 0, TAU), { h: 0.72, a: '#f8f8f8' });
-        P.fill(ctx => ctx.arc(P.x + x - 20 + 40, P.y + cy - 24, 4, 0, TAU), { h: 0.72, a: '#f8f8f8' });
-      }
-    },
-    horse(P) { P.all({ a: '#d2d2d2', m: 1, h: 0.5, r: 0.62, mt: 0 }); },
-    tiger(P) {
-      P.all({ a: '#d88a2a', m: 0, h: 0.5, r: 0.95, mt: 0 });
-      P.rect(-2, P.h - 30, P.w + 4, 32, { a: P.lin(0, P.h - 30, 0, P.h - 14, [[0, 'rgba(240,228,200,0)'], [1, '#f0e4c8']]) });
-      const rr = Rng(13);
-      for (let x = 0; x < P.w + 20; x += rr.range(14, 22)) {
-        const w = rr.range(3, 6), sk = rr.range(-10, 10), len = rr.range(50, 100);
-        P.fill(ctx => { ctx.moveTo(P.x + x, P.y - 4); ctx.quadraticCurveTo(P.x + x + sk + w, P.y + len * 0.5, P.x + x + sk * 0.3, P.y + len); ctx.quadraticCurveTo(P.x + x + sk - w, P.y + len * 0.5, P.x + x - w, P.y - 4); }, { a: '#1a1410', h: 0.46 });
-      }
-    },
-    leopard(P) {
-      P.all({ a: '#d4a85a', m: 0, h: 0.5, r: 0.95, mt: 0 });
-      const rr = Rng(17);
-      for (let i = 0; i < 46; i++) {
-        const x = rr.range(0, P.w), y = rr.range(0, P.h), s = rr.range(4, 7);
-        P.stroke(ctx => ctx.ellipse(P.x + x, P.y + y, s, s * 0.8, rr.range(0, PI), 0.3, TAU - 0.6), { a: '#2a1a10' }, 2.2);
-        P.fill(ctx => ctx.ellipse(P.x + x, P.y + y, s * 0.5, s * 0.4, 0, 0, TAU), { a: '#b07a38' });
-      }
-    },
-    feather(P) {
-      P.all({ a: '#c8a060', m: 0, h: 0.5, r: 0.6, mt: 0 });
-      for (let y = -10; y < P.h + 20; y += 22) {
-        P.fill(ctx => { ctx.moveTo(P.x - 2, P.y + y + 14); ctx.lineTo(P.x + P.w / 2, P.y + y); ctx.lineTo(P.x + P.w + 2, P.y + y + 14); ctx.lineTo(P.x + P.w + 2, P.y + y + 22); ctx.lineTo(P.x + P.w / 2, P.y + y + 8); ctx.lineTo(P.x - 2, P.y + y + 22); ctx.closePath(); }, { a: '#3a2618', h: 0.46 });
-        P.fill(ctx => { ctx.moveTo(P.x - 2, P.y + y + 12); ctx.lineTo(P.x + P.w / 2, P.y + y - 2); ctx.lineTo(P.x + P.w + 2, P.y + y + 12); ctx.lineTo(P.x + P.w + 2, P.y + y + 14); ctx.lineTo(P.x + P.w / 2, P.y + y); ctx.lineTo(P.x - 2, P.y + y + 14); ctx.closePath(); }, { a: '#f0dcb0' });
-      }
-      P.all({ a: P.lin(0, 0, P.w, 0, [[0, 'rgba(40,24,10,0.5)'], [0.25, 'rgba(40,24,10,0)'], [0.75, 'rgba(40,24,10,0)'], [1, 'rgba(40,24,10,0.5)']]) });
-      P.rect(P.w / 2 - 2, -2, 4, P.h + 4, { a: '#f4ecd8', h: 0.64 });
-    },
-    blade(P) {
-      const W = P.w, H = P.h;
-      P.all({ a: '#ccd2d8', m: 0.15, h: 0.5, r: 0.16, mt: 1 });
-      P.all({ a: P.lin(0, 0, W, 0, [[0, '#f6f8fa'], [0.1, '#e6eaee'], [0.16, '#b8bec6'], [0.5, '#d4dae0'], [0.84, '#b8bec6'], [0.9, '#e6eaee'], [1, '#f6f8fa']]),
-        r: P.lin(0, 0, W, 0, [[0, 0.08], [0.12, 0.12], [0.3, 0.2], [0.5, 0.14], [0.7, 0.2], [0.88, 0.12], [1, 0.08]]) });
-      // 刃纹（波浪）
-      P.stroke(ctx => { for (let y = 0; y <= H; y += 4) { const x = W * 0.2 + Math.sin(y * 0.12) * 3 + Math.sin(y * 0.31) * 1.5; if (y === 0) ctx.moveTo(P.x + x, P.y + y); else ctx.lineTo(P.x + x, P.y + y); } }, { a: 'rgba(255,255,255,0.5)' }, 2);
-      P.stroke(ctx => { for (let y = 0; y <= H; y += 4) { const x = W * 0.8 - Math.sin(y * 0.12) * 3 - Math.sin(y * 0.31) * 1.5; if (y === 0) ctx.moveTo(P.x + x, P.y + y); else ctx.lineTo(P.x + x, P.y + y); } }, { a: 'rgba(255,255,255,0.5)' }, 2);
-      P.rect(W / 2 - 1, -2, 2, H + 4, { h: 0.62, a: '#eef2f6' });
-      // 刃根金错纹（下端 = t 小）
-      const g = { a: '#d8b050', m: 0, h: 0.58, r: 0.3, mt: 1 };
-      const y0 = H - 46;
-      P.stroke(ctx => { ctx.moveTo(P.x + W * 0.3, P.y + y0); ctx.bezierCurveTo(P.x + W * 0.8, P.y + y0 + 8, P.x + W * 0.2, P.y + y0 + 18, P.x + W * 0.7, P.y + y0 + 28); ctx.bezierCurveTo(P.x + W * 0.9, P.y + y0 + 34, P.x + W * 0.5, P.y + y0 + 40, P.x + W * 0.5, P.y + H); }, g, 2.4);
-      P.fill(ctx => ctx.arc(P.x + W * 0.5, P.y + y0 - 6, 4, 0, TAU), g);
-    },
-    // 肤色反照率按 SKIN_EXP 压低（游戏光照下浅肤色不再过曝发白）；名将面部贴图用同一系数，脸与身体一致
-    skin(P) { P.all({ a: grey(SKIN_EXP), m: 1, h: 0.5, r: 0.7, mt: 0 }); },
-    faceA(P) { paintFaceInto(P, GENERIC_FACES[0]); },
-    faceB(P) { paintFaceInto(P, GENERIC_FACES[1]); },
-    faceC(P) { paintFaceInto(P, GENERIC_FACES[2]); },
-    faceD(P) { paintFaceInto(P, GENERIC_FACES[3]); },
-    leather(P) {
-      P.all({ a: '#bcbcbc', m: 1, h: 0.5, r: 0.72, mt: 0 });
-      const st = { a: '#6a6a6a', h: 0.4 };
-      P.stroke(ctx => { ctx.setLineDash([4, 3]); ctx.moveTo(P.x - 2, P.y + 6); ctx.lineTo(P.x + P.w - 6, P.y + 6); ctx.lineTo(P.x + P.w - 6, P.y + P.h - 6); ctx.lineTo(P.x - 2, P.y + P.h - 6); }, st, 1.4);
-    },
-    wood(P) { P.all({ a: '#c4c4c4', m: 1, h: 0.5, r: 0.66, mt: 0 }); },
-    wrap(P) {
-      P.all({ a: '#5a5a5a', m: 1, h: 0.3, r: 0.85, mt: 0 });
-      for (let x = -P.h; x < P.w + P.h; x += 14) {
-        P.fill(ctx => { ctx.moveTo(P.x + x, P.y + P.h + 2); ctx.lineTo(P.x + x + 10, P.y + P.h + 2); ctx.lineTo(P.x + x + 10 + P.h + 4, P.y - 2); ctx.lineTo(P.x + x + P.h + 4, P.y - 2); ctx.closePath(); },
-          { a: P.lin(0, 0, 14, 0, [[0, '#a0a0a0'], [0.5, '#e8e8e8'], [1, '#a0a0a0']]), h: 0.7 });
-      }
-    },
-    tassel(P) {
-      P.all({ a: '#c8c8c8', m: 1, h: 0.5, r: 0.85, mt: 0 });
-      const rr = Rng(19);
-      for (let i = 0; i < 260; i++) { const x = rr.range(0, P.w), v = rr.range(0.55, 1); P.stroke(ctx => { ctx.moveTo(P.x + x, P.y - 2); ctx.lineTo(P.x + x + rr.range(-3, 3), P.y + P.h + 2); }, { a: grey(v), h: v * 0.7 }, rr.range(0.7, 1.6)); }
-    },
-    gold(P) {
-      P.all({ a: '#eaeaea', m: 1, h: 0.5, r: 0.26, mt: 1 });
-      const rr = Rng(23);
-      for (let i = 0; i < 14; i++) {
-        const cx = rr.range(0, P.w), cy = rr.range(0, P.h), s = rr.range(8, 16);
-        P.stroke(ctx => { for (let k = 0; k <= 30; k++) { const a = k / 30 * TAU * 1.5, r0 = s * (1 - k / 34); const x = P.x + cx + Math.cos(a) * r0, y = P.y + cy + Math.sin(a) * r0; if (!k) ctx.moveTo(x, y); else ctx.lineTo(x, y); } }, { a: '#9a9a9a', h: 0.35 }, 2);
-        P.fill(ctx => ctx.arc(P.x + cx, P.y + cy, 2.5, 0, TAU), { h: 0.75, a: '#ffffff' });
-      }
-    },
-    rattan(P) {
-      P.all({ a: '#7a7a7a', m: 1, h: 0.3, r: 0.6, mt: 0 });
-      const s = 12;
-      for (let y = 0; y < P.h; y += s) for (let x = 0; x < P.w; x += s) {
-        const hor = ((x + y) / s) % 2 === 0;
-        P.fill(ctx => ctx.rect(P.x + x + 1, P.y + y + 1, s - 2, s - 2), { a: P.lin(hor ? 0 : x, hor ? y : 0, hor ? 0 : x + s, hor ? y + s : 0, [[0, '#b8b8b8'], [0.5, '#f0f0f0'], [1, '#b0b0b0']]), h: 0.72 });
-      }
-    },
-    white(P) { P.all({ a: '#ffffff', m: 1, h: 0.5, r: 0.6, mt: 0 }); },
-    rivet(P) {
-      P.all({ a: '#cfd1d6', m: 1, h: 0.5, r: 0.34, mt: 1 });
-      P.rect(-2, 0, P.w + 4, 4, { a: '#eeeeee', h: 0.66 }); P.rect(-2, P.h - 4, P.w + 4, 4, { a: '#eeeeee', h: 0.66 });
-      for (const y of [12, P.h - 12]) for (let x = 6; x < P.w; x += 20) P.fill(ctx => ctx.arc(P.x + x, P.y + y, 4.5, 0, TAU), { a: P.rad(x - 1.5, y - 1.5, 0.5, 5, [[0, '#ffffff'], [1, '#8a8c92']]), h: P.rad(x, y, 0, 5, [[0, 0.9], [1, 0.52]]) });
-    },
-    buckle(P) {
-      const c = P.w / 2, R0 = P.w / 2 - 4;
-      P.all({ a: '#d8d8d8', m: 1, h: 0.45, r: 0.3, mt: 1 });
-      P.fill(ctx => ctx.arc(P.x + c, P.y + c, R0, 0, TAU), { a: P.rad(c - 14, c - 14, 4, R0 * 1.3, [[0, '#ffffff'], [1, '#a8a8a8']]), h: P.rad(c, c, R0 * 0.2, R0, [[0, 0.62], [0.85, 0.66], [1, 0.5]]) });
-      P.stroke(ctx => ctx.arc(P.x + c, P.y + c, R0 - 6, 0, TAU), { a: '#808080', h: 0.4 }, 2);
-      // 鬃毛花瓣
-      for (let k = 0; k < 18; k++) { const a = k / 18 * TAU; P.fill(ctx => ctx.ellipse(P.x + c + Math.cos(a) * (R0 - 15), P.y + c + Math.sin(a) * (R0 - 15), 7, 3.2, a, 0, TAU), { a: '#f0f0f0', h: 0.72 }); }
-      // 兽面：眉、眼、鼻、獠牙口环
-      const F = { a: '#a0a0a0', h: 0.36 }, B = { a: '#ffffff', h: 0.8 };
-      for (const sx of [-1, 1]) {
-        P.fill(ctx => ctx.ellipse(P.x + c + sx * 13, P.y + c - 8, 7, 5, sx * 0.3, 0, TAU), B);
-        P.fill(ctx => ctx.arc(P.x + c + sx * 13, P.y + c - 8, 2.6, 0, TAU), F);
-        P.stroke(ctx => { ctx.moveTo(P.x + c + sx * 4, P.y + c - 16); ctx.quadraticCurveTo(P.x + c + sx * 16, P.y + c - 26, P.x + c + sx * 24, P.y + c - 14); }, B, 3);
-      }
-      P.fill(ctx => { ctx.moveTo(P.x + c, P.y + c - 6); ctx.lineTo(P.x + c + 7, P.y + c + 8); ctx.lineTo(P.x + c - 7, P.y + c + 8); ctx.closePath(); }, B);
-      P.stroke(ctx => ctx.arc(P.x + c, P.y + c + 18, 9, 0.15 * PI, 0.85 * PI), F, 2.5);
-      P.stroke(ctx => ctx.arc(P.x + c, P.y + c + 22, 7, 0, TAU), B, 2.4);
-    },
-    mirror(P) {
-      const c = P.w / 2, R0 = P.w / 2 - 3;
-      P.all({ a: '#d0d0d0', m: 1, h: 0.45, r: 0.3, mt: 1 });
-      P.fill(ctx => ctx.arc(P.x + c, P.y + c, R0, 0, TAU), { a: '#e2e2e2', h: P.rad(c, c, 0, R0, [[0, 0.6], [0.92, 0.62], [1, 0.48]]) });
-      P.fill(ctx => ctx.arc(P.x + c, P.y + c, R0 * 0.58, 0, TAU), { a: P.rad(c - 12, c - 14, 2, R0 * 0.7, [[0, '#ffffff'], [1, '#c4c8cc']]), r: 0.07, h: P.rad(c, c, 0, R0 * 0.58, [[0, 0.68], [1, 0.6]]) });
-      for (const k of [0.62, 0.8]) P.stroke(ctx => ctx.arc(P.x + c, P.y + c, R0 * k, 0, TAU), { a: '#8a8a8a', h: 0.42 }, 2);
-      for (let i = 0; i < 24; i++) { const a = i / 24 * TAU; P.fill(ctx => ctx.arc(P.x + c + Math.cos(a) * R0 * 0.9, P.y + c + Math.sin(a) * R0 * 0.9, 2.4, 0, TAU), { a: '#f6f6f6', h: 0.75 }); }
-    },
-    lion(P) {
-      const c = P.w / 2;
-      P.all({ a: '#d6d6d6', m: 1, h: 0.45, r: 0.3, mt: 1 });
-      for (let k = 0; k < 26; k++) { const a = k / 26 * TAU, r0 = 30 + (k % 2) * 8; P.stroke(ctx => { ctx.moveTo(P.x + c + Math.cos(a) * 20, P.y + c + Math.sin(a) * 20); ctx.quadraticCurveTo(P.x + c + Math.cos(a + 0.2) * r0, P.y + c + Math.sin(a + 0.2) * r0, P.x + c + Math.cos(a + 0.1) * (r0 + 18), P.y + c + Math.sin(a + 0.1) * (r0 + 18)); }, { a: '#f2f2f2', h: 0.72 }, 6); }
-      P.fill(ctx => ctx.ellipse(P.x + c, P.y + c + 4, 26, 30, 0, 0, TAU), { a: P.rad(c - 8, c - 8, 2, 34, [[0, '#ffffff'], [1, '#a8a8a8']]), h: P.rad(c, c, 2, 30, [[0, 0.78], [1, 0.55]]) });
-      for (const sx of [-1, 1]) { P.fill(ctx => ctx.ellipse(P.x + c + sx * 11, P.y + c - 6, 6, 3.5, sx * 0.35, 0, TAU), { a: '#6a6a6a', h: 0.35 }); }
-      P.fill(ctx => ctx.ellipse(P.x + c, P.y + c + 10, 7, 5, 0, 0, TAU), { a: '#8a8a8a', h: 0.85 });
-      P.stroke(ctx => { ctx.moveTo(P.x + c - 12, P.y + c + 22); ctx.quadraticCurveTo(P.x + c, P.y + c + 30, P.x + c + 12, P.y + c + 22); }, { a: '#6a6a6a', h: 0.35 }, 2.5);
-    },
-    scutum(P) {
-      const W = P.w, H = P.h, g = { a: '#e0b444', m: 0, h: 0.62, r: 0.4, mt: 0.8 };
-      P.all({ a: '#e8e8e8', m: 1, h: 0.5, r: 0.7, mt: 0 });
-      P.stroke(ctx => ctx.rect(P.x + 7, P.y + 7, W - 14, H - 14), g, 6);
-      P.stroke(ctx => ctx.rect(P.x + 16, P.y + 16, W - 32, H - 32), g, 1.6);
-      const cx = W / 2, cy = H / 2;
-      // 雷纹与鹰翼
-      for (const sy of [-1, 1]) for (const sx of [-1, 1]) {
-        P.stroke(ctx => { ctx.moveTo(P.x + cx + sx * 24, P.y + cy + sy * 6); ctx.bezierCurveTo(P.x + cx + sx * 60, P.y + cy + sy * 10, P.x + cx + sx * 80, P.y + cy + sy * 50, P.x + cx + sx * 96, P.y + cy + sy * 84); }, g, 4);
-        for (let k = 0; k < 4; k++) P.stroke(ctx => { ctx.moveTo(P.x + cx + sx * (34 + k * 14), P.y + cy + sy * (8 + k * 9)); ctx.lineTo(P.x + cx + sx * (30 + k * 14), P.y + cy + sy * (30 + k * 14)); }, g, 3);
-        P.stroke(ctx => { ctx.moveTo(P.x + cx + sx * 6, P.y + cy + sy * 26); ctx.lineTo(P.x + cx + sx * 16, P.y + cy + sy * 46); ctx.lineTo(P.x + cx + sx * 4, P.y + cy + sy * 52); ctx.lineTo(P.x + cx + sx * 14, P.y + cy + sy * 80); }, g, 3);
-      }
-      P.rect(cx - 4, 18, 8, H - 36, g);
-      P.fill(ctx => ctx.arc(P.x + cx, P.y + cy, 26, 0, TAU), { a: P.rad(cx - 8, cy - 8, 2, 30, [[0, '#f4f6f8'], [1, '#8a8e96']]), m: 0, mt: 1, r: 0.28, h: P.rad(cx, cy, 0, 26, [[0, 0.9], [1, 0.6]]) });
-    },
-    shieldRound(P) {
-      const c = P.w / 2, R0 = c - 3, g = { a: '#d8ac44', m: 0, h: 0.62, r: 0.4, mt: 0.8 };
-      P.all({ a: '#e4e4e4', m: 1, h: 0.5, r: 0.75, mt: 0 });
-      // 木板纹（染色）
-      for (let x = 0; x < P.w; x += 22) P.rect(x, -2, 1.5, P.h + 4, { a: 'rgba(0,0,0,0.18)', h: 0.42 });
-      P.stroke(ctx => ctx.arc(P.x + c, P.y + c, R0 - 4, 0, TAU), { a: '#b8b8b8', m: 0, mt: 1, r: 0.35, h: 0.7 }, 8);
-      for (let i = 0; i < 20; i++) { const a = i / 20 * TAU; P.fill(ctx => ctx.arc(P.x + c + Math.cos(a) * (R0 - 4), P.y + c + Math.sin(a) * (R0 - 4), 2.6, 0, TAU), { a: '#f0f0f0', m: 0, mt: 1, h: 0.85 }); }
-      P.stroke(ctx => ctx.arc(P.x + c, P.y + c, R0 * 0.74, 0, TAU), g, 3);
-      for (let i = 0; i < 8; i++) {
-        const a = i / 8 * TAU;
-        P.stroke(ctx => { ctx.moveTo(P.x + c + Math.cos(a) * 34, P.y + c + Math.sin(a) * 34); ctx.quadraticCurveTo(P.x + c + Math.cos(a + 0.35) * 62, P.y + c + Math.sin(a + 0.35) * 62, P.x + c + Math.cos(a + 0.1) * 84, P.y + c + Math.sin(a + 0.1) * 84); }, g, 3);
-      }
-      P.fill(ctx => ctx.arc(P.x + c, P.y + c, 30, 0, TAU), { a: P.rad(c - 9, c - 9, 2, 34, [[0, '#f6f6f6'], [1, '#8a8e96']]), m: 0, mt: 1, r: 0.28, h: P.rad(c, c, 0, 30, [[0, 0.95], [1, 0.6]]) });
-    },
-  };
-  function lamellarPaint(P, lace) {
-    const plateCol = lace ? '#a6aab2' : '#d8dadf', plateM = lace ? 0 : 1;
-    const cord = lace ? { a: '#f0f0f0', m: 1, mt: 0, r: 0.85, h: 0.62 } : { a: '#7a2a22', m: 0, mt: 0, r: 0.85, h: 0.62 };
-    P.all({ a: '#26262a', m: plateM, h: 0.28, r: 0.7, mt: 0.5 });
-    const pw = 24, step = 27, ph = 34;
-    for (let row = Math.ceil(P.h / step); row >= -1; row--) {
-      const y = row * step - 4, off = (row % 2) ? pw / 2 : 0;
-      for (let x = -pw; x < P.w + pw; x += pw) {
-        const x0 = x + off + 0.8, w = pw - 1.6;
-        const path = ctx => {
-          const X = P.x + x0, Y = P.y + y, r = 5;
-          ctx.moveTo(X, Y); ctx.lineTo(X + w, Y); ctx.lineTo(X + w, Y + ph - r); ctx.quadraticCurveTo(X + w, Y + ph, X + w - r, Y + ph);
-          ctx.lineTo(X + r, Y + ph); ctx.quadraticCurveTo(X, Y + ph, X, Y + ph - r); ctx.closePath();
-        };
-        P.fill(path, { a: P.lin(x0, 0, x0 + w, 0, [[0, shade(plateCol, -0.28)], [0.35, shade(plateCol, 0.18)], [1, shade(plateCol, -0.34)]]), m: plateM, mt: 1, r: 0.32,
-          h: P.lin(x0, 0, x0 + w, 0, [[0, 0.52], [0.4, 0.76], [1, 0.5]]) });
-        P.fill(ctx => ctx.arc(P.x + x0 + w / 2, P.y + y + ph - 7, 2, 0, TAU), { a: '#f4f4f4', h: 0.85, m: plateM });
-        P.stroke(ctx => { ctx.moveTo(P.x + x0 + 3, P.y + y + 6); ctx.lineTo(P.x + x0 + w - 3, P.y + y + 6); }, { a: 'rgba(40,40,46,0.5)', h: 0.45 }, 1);
-      }
-      // 甲片之间的编绳
-      P.stroke(ctx => { for (let x = -pw; x < P.w + pw; x += 6) { const yy = P.y + y + 4 + ((x / 6) % 2 ? 3 : -3); if (x === -pw) ctx.moveTo(P.x + x, yy); else ctx.lineTo(P.x + x, yy); } }, cord, 3.2);
-    }
-  }
-
-  // 后处理：噪声、拉丝、木纹等
-  function* postAtlas(R, D) {
-    const A = D.a, Hh = D.h, Ro = D.r;
-    postRegion(R, D, 'metal', (x, y, I) => { const n = fbm(x * 0.6, y * 0.03, 2, 3) - 0.5; addV(A, I, n * 18); addV(Ro, I, -n * 26 + (h2(x, y, 9) - 0.5) * 8); }); yield;
-    postRegion(R, D, 'brushed', (x, y, I) => { const n = fbm(x * 0.7, y * 0.035, 2, 4) - 0.5; addV(A, I, n * 22); addV(Ro, I, -n * 30); }); yield;
-    postRegion(R, D, 'rivet', (x, y, I) => { const n = fbm(x * 0.6, y * 0.04, 2, 5) - 0.5; addV(A, I, n * 16); }); yield;
-    for (const nm of ['cloth', 'hem', 'brocade', 'plaid']) {
-      postRegion(R, D, nm, (x, y, I) => {
-        const w = ((x + y) & 1) ? 1 : -1, th = (x % 3 === 0 ? -1 : 0) + (y % 3 === 0 ? -1 : 0);
-        const n = fbm(x * 0.05, y * 0.05, 3, 6) - 0.5;
-        addV(A, I, w * 3 + th * 4 + n * 22); addV(Hh, I, w * 6 + th * 6);
-      });
-      yield;
-    }
-    postRegion(R, D, 'skin', (x, y, I) => { const n = fbm(x * 0.08, y * 0.08, 3, 7) - 0.5, p = h2(x, y, 8) - 0.5; A[I] = clamp(A[I] + n * 10 + 2, 0, 255); A[I + 1] = clamp(A[I + 1] + n * 8, 0, 255); A[I + 2] = clamp(A[I + 2] + n * 6 - 2, 0, 255); addV(Hh, I, p * 1.5); }); yield;
-    postRegion(R, D, 'leather', (x, y, I) => { const n = fbm(x * 0.25, y * 0.25, 3, 10) - 0.5; addV(A, I, n * 36); addV(Hh, I, n * 40); addV(Ro, I, n * 30); }); yield;
-    postRegion(R, D, 'wood', (x, y, I) => { const g = Math.sin((x + fbm(x * 0.03, y * 0.01, 3, 11) * 40) * 0.55); addV(A, I, g * 16 + (fbm(x * 0.2, y * 0.02, 2, 12) - 0.5) * 30); addV(Hh, I, g * 12); }); yield;
-    postRegion(R, D, 'horse', (x, y, I) => { const n = fbm(x * 0.02, y * 0.3, 2, 13) - 0.5, d = fbm(x * 0.04, y * 0.06, 3, 14) - 0.5; addV(A, I, n * 14 + d * 18); addV(Hh, I, n * 16); }); yield;
-    postRegion(R, D, 'gold', (x, y, I) => { addV(A, I, (fbm(x * 0.1, y * 0.1, 2, 15) - 0.5) * 16); }); yield;
-    postRegion(R, D, 'goldEngr', (x, y, I) => { addV(A, I, (fbm(x * 0.4, y * 0.05, 2, 16) - 0.5) * 12); }); yield;
-    postRegion(R, D, 'blade', (x, y, I) => { const n = fbm(x * 0.5, y * 0.02, 2, 18) - 0.5; addV(A, I, n * 10); }); yield;
-    postRegion(R, D, 'tiger', (x, y, I) => { const n = fbm(x * 0.15, y * 0.4, 2, 19) - 0.5; addV(A, I, n * 30); addV(Hh, I, n * 30); }); yield;
-    postRegion(R, D, 'leopard', (x, y, I) => { const n = fbm(x * 0.15, y * 0.4, 2, 20) - 0.5; addV(A, I, n * 26); addV(Hh, I, n * 26); }); yield;
-    postRegion(R, D, 'scutum', (x, y, I) => { const n = fbm(x * 0.04, y * 0.04, 3, 21) - 0.5; addV(A, I, n * 16); }); yield;
-    postRegion(R, D, 'shieldRound', (x, y, I) => { const n = fbm(x * 0.04, y * 0.04, 3, 22) - 0.5; addV(A, I, n * 18); }); yield;
-  }
-
-  // 图集生成（生成器：每步 yield，便于 preload 分片执行）
-  function* genAtlas() {
-    const t0 = now();
-    const R = packRegions();
-    const mk = () => { const c = document.createElement('canvas'); c.width = c.height = ATLAS_N; return c; };
-    const cv = { a: mk(), m: mk(), h: mk(), r: mk(), mt: mk() };
-    const ctxs = {};
-    for (const k in cv) { ctxs[k] = cv[k].getContext('2d', { willReadFrequently: true }); ctxs[k].fillStyle = k === 'a' ? '#808080' : grey(k === 'm' ? 1 : k === 'h' ? 0.5 : k === 'r' ? 0.7 : 0); ctxs[k].fillRect(0, 0, ATLAS_N, ATLAS_N); }
-    yield;
-    for (const name in R) {
-      PAINT[name](Painter(ctxs, R[name]));
-      yield;
-    }
-    const D = {};
-    // 分条读回（单次读回整张 1024² 画布在忙碌的页面里可能超过 50ms）
-    for (const k in cv) {
-      const out = new Uint8ClampedArray(ATLAS_N * ATLAS_N * 4), st = ATLAS_N / 4;
-      for (let y = 0; y < ATLAS_N; y += st) { out.set(ctxs[k].getImageData(0, y, ATLAS_N, st).data, y * ATLAS_N * 4); yield; }
-      D[k] = out; cv[k].width = 1;
-    }
-    yield* postAtlas(R, D);
-    // 高度 → 法线、AO
-    const N = ATLAS_N, NN = N * N;
-    const hgt = new Float32Array(NN);
-    for (let i = 0; i < NN; i++) { hgt[i] = D.h[i * 4] / 255; if ((i & 262143) === 262143) yield; }
-    // 分片的可分离盒式模糊
-    function* blur(src, rad, out) {
-      const tmp = new Float32Array(NN), k = 1 / (2 * rad + 1);
-      for (let y = 0; y < N; y++) { let s = 0; const o = y * N; for (let x = -rad; x <= rad; x++) s += src[o + clamp(x, 0, N - 1)]; for (let x = 0; x < N; x++) { tmp[o + x] = s * k; s += src[o + Math.min(N - 1, x + rad + 1)] - src[o + Math.max(0, x - rad)]; } if ((y & 255) === 255) yield; }
-      for (let x = 0; x < N; x++) { let s = 0; for (let y = -rad; y <= rad; y++) s += tmp[clamp(y, 0, N - 1) * N + x]; for (let y = 0; y < N; y++) { out[y * N + x] = s * k; s += tmp[Math.min(N - 1, y + rad + 1) * N + x] - tmp[Math.max(0, y - rad) * N + x]; } if ((x & 255) === 255) yield; }
-    }
-    const hs = new Float32Array(NN), hb = new Float32Array(NN);
-    yield* blur(hgt, 1, hs);
-    yield* blur(hgt, 5, hb);
-    const map = new Uint8Array(NN * 4), nrm = new Uint8Array(NN * 4), orm = new Uint8Array(NN * 4);
-    const S = 10;
-    for (let y = 0; y < N; y++) {
-      const ty = N - 1 - y;                    // DataTexture 第 0 行 = v 0（画布底边）
-      for (let x = 0; x < N; x++) {
-        const i = y * N + x, I = i * 4, O = (ty * N + x) * 4;
-        map[O] = D.a[I]; map[O + 1] = D.a[I + 1]; map[O + 2] = D.a[I + 2]; map[O + 3] = D.m[I];
-        const xl = x > 0 ? i - 1 : i, xr = x < N - 1 ? i + 1 : i, yu = y > 0 ? i - N : i, yd = y < N - 1 ? i + N : i;
-        const dx = (hs[xr] - hs[xl]) * S, dy = (hs[yd] - hs[yu]) * S;
-        const inv = 1 / Math.sqrt(dx * dx + dy * dy + 1);
-        nrm[O] = (-dx * inv * 0.5 + 0.5) * 255; nrm[O + 1] = (dy * inv * 0.5 + 0.5) * 255; nrm[O + 2] = (inv * 0.5 + 0.5) * 255; nrm[O + 3] = 255;
-        const cav = Math.max(0, hb[i] - hs[i]);
-        orm[O] = clamp(1 - cav * 4, 0.35, 1) * 255; orm[O + 1] = D.r[I]; orm[O + 2] = D.mt[I]; orm[O + 3] = 255;
-      }
-      if ((y & 63) === 63) yield;
-    }
-    const tex = (data, srgb) => {
-      const t = new THREE.DataTexture(data, N, N, THREE.RGBAFormat, THREE.UnsignedByteType);
-      t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter;
-      t.anisotropy = 4; t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; t.needsUpdate = true;
-      return t;
-    };
-    ATLAS = { R, map: tex(map), normalMap: tex(nrm), ormMap: tex(orm) };
-    STATS.textures += 3;
-    STATS.atlasMs = Math.round(now() - t0);
-  }
-  function runSync(gen) { for (const _ of gen) { void _; /* 同步跑完 */ } }
-  function atlas() { if (!ATLAS) runSync(genAtlas()); return ATLAS; }
-  function REG(name) { const A = atlas(); const r = A.R[name]; if (!r) throw new Error('no atlas region ' + name); return r; }
-
-  // ======================================================== 环境贴图与材质 ==
-  let ENV = null;
-  function envMap() {
-    if (ENV) return ENV;
-    const t0 = now();
-    const W = 256, H = 128;
-    const c = document.createElement('canvas'); c.width = W; c.height = H;
-    const g = c.getContext('2d');
-    const sky = g.createLinearGradient(0, 0, 0, H / 2);
-    sky.addColorStop(0, '#4a6aa0'); sky.addColorStop(0.65, '#a8b8cc'); sky.addColorStop(1, '#e6dccb');
-    g.fillStyle = sky; g.fillRect(0, 0, W, H / 2);
-    const gr = g.createLinearGradient(0, H / 2, 0, H);
-    // 地面一侧不要太暗：刀刃 / 金属朝下的面反射地面，过暗会变成黑色剪影
-    // 第三版修订：地面一侧再亮一些（刀刃、枪头不再映成暗褐色的「铜器」）
-    gr.addColorStop(0, '#b4a78e'); gr.addColorStop(0.25, '#9a8c74'); gr.addColorStop(1, '#8a7c66');
-    g.fillStyle = gr; g.fillRect(0, H / 2, W, H / 2);
-    // 云带
-    const rr = Rng(31);
-    for (let i = 0; i < 26; i++) {
-      const x = rr.range(0, W), y = rr.range(H * 0.18, H * 0.44), w = rr.range(20, 60), h = rr.range(3, 8);
-      g.fillStyle = 'rgba(255,250,240,' + rr.range(0.15, 0.4).toFixed(2) + ')';
-      g.beginPath(); g.ellipse(x, y, w, h, 0, 0, TAU); g.fill();
-    }
-    // 太阳（方位约 40°，仰角约 35°）+ 一侧较暗的天空，让金属有明暗对比
-    const sx = W * 0.62, sy = H * 0.3;
-    const sun = g.createRadialGradient(sx, sy, 0, sx, sy, 34);
-    sun.addColorStop(0, 'rgba(255,252,236,1)'); sun.addColorStop(0.18, 'rgba(255,240,200,0.9)'); sun.addColorStop(1, 'rgba(255,230,180,0)');
-    g.fillStyle = sun; g.fillRect(0, 0, W, H);
-    const dark = g.createLinearGradient(0, 0, W, 0);
-    dark.addColorStop(0, 'rgba(20,24,40,0.35)'); dark.addColorStop(0.3, 'rgba(20,24,40,0)'); dark.addColorStop(0.9, 'rgba(20,24,40,0)'); dark.addColorStop(1, 'rgba(20,24,40,0.35)');
-    g.fillStyle = dark; g.fillRect(0, 0, W, H);
-    // 地平线一道亮带（金属轮廓更清楚）+ 两三道柔光箱式的细亮带（刃面上的高光条）
-    g.fillStyle = 'rgba(255,244,220,0.5)'; g.fillRect(0, H / 2 - 2, W, 3);
-    g.fillStyle = 'rgba(255,252,244,0.55)'; g.fillRect(W * 0.08, H * 0.4, W * 0.3, 2); g.fillRect(W * 0.55, H * 0.43, W * 0.25, 2);
-    g.fillStyle = 'rgba(255,252,244,0.4)'; g.fillRect(W * 0.3, H * 0.16, W * 0.35, 2);
-    const t = new THREE.CanvasTexture(c);
-    t.mapping = THREE.EquirectangularReflectionMapping;
-    t.needsUpdate = true;
-    ENV = t;
-    STATS.textures++;
-    STATS.envMs = Math.round(now() - t0);
-    return ENV;
-  }
-
-  // 轮廓光（所有人物材质共用的 uniform）
-  // 第三版修订：轮廓光改为有方向（镜头空间的右上后方 uRimDir），只在朝向这一侧的边缘出现，并按粗糙度减弱——
-  // 侧看的大片披风 / 战袍不再整片发亮成「霓虹纸片」；强度 0.55 → 0.42（四次方衰减更集中在轮廓上）
-  const RIM = { color: { value: null }, k: { value: 0.42 }, dir: { value: new THREE.Vector3(0.55, 0.62, -0.56).normalize() } };
-  const RIM_GLSL = [
-    '  { float sgR = 1.0 - clamp( dot( normal, normalize( vViewPosition ) ), 0.0, 1.0 );',
-    '    float sgL = clamp( dot( normal, uRimDir ) * 0.5 + 0.5, 0.0, 1.0 );',
-    '    float sgR2 = sgR * sgR;',
-    '    totalEmissiveRadiance += uRimColor * ( sgR2 * sgR2 * uRimK * sgL * sgL * 1.6 ) * ( 0.2 + 0.6 * diffuseColor.rgb ) * mix( 1.0, 0.45, roughnessFactor ); }'].join('\n');
-  // 受击 / 格开 / 反击的着色（setTint）：不再是整件材质一层平涂的自发光（人物发白、失去明暗），
-  // 而是以轮廓为主的辉光，正面只有一点（0.2）——仍看得出体积与布料明暗
-  const TINT_GLSL = '  { float sgT = pow( 1.0 - clamp( dot( normal, normalize( vViewPosition ) ), 0.0, 1.0 ), 1.6 ); totalEmissiveRadiance += uTint * ( 0.2 + 0.8 * sgT ); }';
-  function patchMaterial(mat, tag) {
-    if (!RIM.color.value) RIM.color.value = new THREE.Color(1.0, 0.9, 0.78);
-    if (!mat.userData.team) mat.userData.team = { value: new THREE.Color(1, 1, 1) };
-    if (!mat.userData.tint) mat.userData.tint = { value: new THREE.Color(0, 0, 0) };
-    mat.onBeforeCompile = function (sh) {
-      // 地面贴合：蒙皮后低于地面的顶点（倒地时的披风、腰裙、盔缨、长发）压平在地面上，不穿地。
-      // 每个人物的开关与地面高度写在骨骼贴图的空余位置（第 GROUND_SLOT 个「骨骼」矩阵，没有顶点引用它；
-      // 骨骼贴图按 2 的幂分配，34 骨的贴图可容 64 个矩阵），由 Figure 包装的 skeleton.update 每帧写入
-      // → 共用材质、不增加绘制与程序，CPU 端的 getVertexPosition / 射线检测不受影响。
-      sh.vertexShader = sh.vertexShader.replace('#include <skinning_vertex>', [
-        '#include <skinning_vertex>',
-        '#ifdef USE_SKINNING',
-        '  { mat4 sgG = getBoneMatrix( ' + GROUND_SLOT.toFixed(1) + ' ); if ( sgG[0][0] > 0.5 ) transformed.y = max( transformed.y, sgG[0][1] ); }',
-        '#endif'].join('\n'));
-      sh.uniforms.uRimColor = RIM.color;
-      sh.uniforms.uRimK = RIM.k;
-      sh.uniforms.uRimDir = RIM.dir;
-      sh.uniforms.uTeam = mat.userData.team;
-      sh.uniforms.uTint = mat.userData.tint;
-      sh.fragmentShader = 'uniform vec3 uRimColor;\nuniform float uRimK;\nuniform vec3 uRimDir;\nuniform vec3 uTeam;\nuniform vec3 uTint;\n' + sh.fragmentShader
-        .replace('#include <map_fragment>', [
-          '#ifdef USE_MAP',
-          '  vec4 sgTex = texture2D( map, vMapUv );',
-          '  diffuseColor.rgb *= sgTex.rgb;',
-          '#endif'].join('\n'))
-        .replace('#include <color_fragment>', [
-          '#if defined( USE_COLOR_ALPHA )',
-          '  vec3 sgVC = mix( vColor.rgb, vColor.rgb * uTeam, vColor.a );',
-          '#elif defined( USE_COLOR )',
-          '  vec3 sgVC = vColor.rgb;',
-          '#endif',
-          '#if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA )',
-          '  #ifdef USE_MAP',
-          '  diffuseColor.rgb *= mix( vec3( 1.0 ), sgVC, sgTex.a );',
-          '  #else',
-          '  diffuseColor.rgb *= sgVC;',
-          '  #endif',
-          '#endif'].join('\n'))
-        .replace('#include <emissivemap_fragment>', [
-          '#include <emissivemap_fragment>',
-          RIM_GLSL, TINT_GLSL].join('\n'));
-    };
-    mat.customProgramCacheKey = function () { return 'sgfig-' + (tag || 'kit'); };
-    return mat;
-  }
-  let KIT = null, HEADTEX = null;
-  // 共用装具材质：顶点色染色 + 图集
-  function kitMaterial() {
-    if (KIT) return KIT;
-    const A = atlas();
-    KIT = patchMaterial(new THREE.MeshStandardMaterial({
-      map: A.map, normalMap: A.normalMap, normalScale: new THREE.Vector2(1, 1),
-      roughnessMap: A.ormMap, metalnessMap: A.ormMap, aoMap: A.ormMap, aoMapIntensity: 0.8,
-      roughness: 1, metalness: 1, envMap: envMap(), envMapIntensity: 0.85, vertexColors: true,
-    }), 'kit');
-    KIT.name = 'SG.Figure.kit';
-    return KIT;
-  }
-  // 头部（面部贴图）用的平坦法线 / ORM 小贴图：与装具材质同一套着色器特性，共用程序
-  function headTextures() {
-    if (HEADTEX) return HEADTEX;
-    const flat = new Uint8Array(16 * 4), orm = new Uint8Array(16 * 4);
-    for (let i = 0; i < 16; i++) { flat.set([128, 128, 255, 255], i * 4); orm.set([255, 178, 0, 255], i * 4); }
-    const mk = d => { const t = new THREE.DataTexture(d, 4, 4, THREE.RGBAFormat); t.needsUpdate = true; t.magFilter = t.minFilter = THREE.LinearFilter; return t; };
-    HEADTEX = { normal: mk(flat), orm: mk(orm) };
-    STATS.textures += 2;
-    return HEADTEX;
-  }
-  function faceMaterial(tex) {
-    const H = headTextures();
-    const m = patchMaterial(new THREE.MeshStandardMaterial({
-      map: tex, normalMap: H.normal, roughnessMap: H.orm, metalnessMap: H.orm, aoMap: H.orm, aoMapIntensity: 0.8,
-      roughness: 1, metalness: 1, envMap: envMap(), envMapIntensity: 0.85, vertexColors: true,
-    }), 'kit');
-    m.name = 'SG.Figure.face';
-    return m;
-  }
-  // 势力色材质（按颜色缓存；共用同一着色器程序，只有 uTeam 不同）
-  const TEAM_MATS = new Map();
-  function teamMaterial(hexc) {
-    const key = hexc ? hex(col(hexc)) : '#ffffff';
-    let m = TEAM_MATS.get(key);
-    if (m) return m;
-    const base = kitMaterial();
-    if (key === '#ffffff') { TEAM_MATS.set(key, base); return base; }
-    m = base.clone();
-    m.userData = {};
-    patchMaterial(m, 'kit');
-    const c = col(key);
-    m.userData.team.value.setRGB(c[0], c[1], c[2]);
-    m.name = 'SG.Figure.kit' + key;
-    TEAM_MATS.set(key, m);
-    return m;
-  }
-  function setRim(color, strength) {
-    if (!RIM.color.value) RIM.color.value = new THREE.Color(1.0, 0.9, 0.78);
-    if (color != null) { const c = col(color); RIM.color.value.setRGB(c[0], c[1], c[2]); }
-    if (strength != null) RIM.k.value = strength;
-  }
-
-  // ======================================================== 网格构建器 ==
-  // 索引网格：位置、UV（图集）、顶点色、蒙皮（4 骨）。构建后计算平滑法线，并在同一平滑组内焊接同位顶点的法线。
-  // 权重 w：骨骼下标（数字）或 [[骨, 权重], ...]。
+  // 向量小工具
   const _v3 = () => new THREE.Vector3();
   function v3add(a, b) { return [a[0] + b[0], a[1] + b[1], a[2] + b[2]]; }
   function v3sub(a, b) { return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; }
@@ -863,335 +162,107 @@
     return [v[0] * c + cr[0] * s + axis[0] * k * (1 - c), v[1] * c + cr[1] * s + axis[1] * k * (1 - c), v[2] * c + cr[2] * s + axis[2] * k * (1 - c)];
   }
 
-  class GB {
-    constructor() {
-      this.P = []; this.UV = []; this.C = []; this.SI = []; this.SW = []; this.I = []; this.G = [];
-      this.grp = 0; this.xf = null; this.nv = 0;
-    }
-    group() { return ++this.grp; }
-    // 当前变换（仅作用于位置）：{ m: THREE.Matrix4 }
-    v(p, uv, c, w, g) {
-      let x = p[0], y = p[1], z = p[2];
-      if (this.xf) {
-        const e = this.xf.elements;
-        const X = e[0] * x + e[4] * y + e[8] * z + e[12], Y = e[1] * x + e[5] * y + e[9] * z + e[13], Z = e[2] * x + e[6] * y + e[10] * z + e[14];
-        x = X; y = Y; z = Z;
-      }
-      this.P.push(x, y, z);
-      this.UV.push(uv[0], uv[1]);
-      c = c ? (Array.isArray(c) ? c : col(c)) : [1, 1, 1];
-      this.C.push(c[0], c[1], c[2], c[3] || 0);
-      if (typeof w === 'number') { this.SI.push(w, 0, 0, 0); this.SW.push(1, 0, 0, 0); }
-      else if (!w || !w.length) { this.SI.push(0, 0, 0, 0); this.SW.push(1, 0, 0, 0); }
-      else {
-        // 取权重最大的 4 个并归一化
-        const ws = w.length > 4 ? w.slice().sort((a, b) => b[1] - a[1]).slice(0, 4) : w;
-        let s = 0; for (const e of ws) s += e[1];
-        s = s || 1;
-        for (let i = 0; i < 4; i++) { const e = ws[i]; this.SI.push(e ? e[0] : 0); this.SW.push(e ? e[1] / s : 0); }
-      }
-      this.G.push(g || 0);
-      return this.nv++;
-    }
-    tri(a, b, c) { this.I.push(a, b, c); }
-    quad(a, b, c, d) { this.I.push(a, b, c, a, c, d); }
-    // 合并另一个构建器（偏移索引）
-    append(o) {
-      const base = this.nv;
-      this.P.push(...o.P); this.UV.push(...o.UV); this.C.push(...o.C); this.SI.push(...o.SI); this.SW.push(...o.SW);
-      for (const g of o.G) this.G.push(g ? g + this.grp + 1000 : 0);
-      for (const i of o.I) this.I.push(i + base);
-      this.nv += o.nv; this.grp += o.grp + 1001;
-    }
-    get tris() { return this.I.length / 3; }
-    build(opts) {
-      opts = opts || {};
-      const g = new THREE.BufferGeometry();
-      const pos = new Float32Array(this.P);
-      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-      g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(this.UV), 2));
-      g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(this.C), 4));
-      if (opts.skin !== false) {
-        g.setAttribute('skinIndex', new THREE.BufferAttribute(new Uint16Array(this.SI), 4));
-        g.setAttribute('skinWeight', new THREE.BufferAttribute(new Float32Array(this.SW), 4));
-      }
-      const idx = this.nv > 65535 ? new Uint32Array(this.I) : new Uint16Array(this.I);
-      g.setIndex(new THREE.BufferAttribute(idx, 1));
-      g.computeVertexNormals();
-      this.weld(g);
-      g.computeBoundingBox();
-      g.computeBoundingSphere();
-      return g;
-    }
-    // 同一平滑组内、位置相同的顶点：法线取平均（消除接缝）
-    weld(g) {
-      const pos = g.attributes.position.array, nrm = g.attributes.normal.array;
-      const map = new Map();
-      const q = 1e4;
-      for (let i = 0; i < this.nv; i++) {
-        const gr = this.G[i];
-        if (!gr) continue;
-        const k = gr + ':' + Math.round(pos[i * 3] * q) + ',' + Math.round(pos[i * 3 + 1] * q) + ',' + Math.round(pos[i * 3 + 2] * q);
-        let l = map.get(k);
-        if (!l) map.set(k, (l = []));
-        l.push(i);
-      }
-      for (const l of map.values()) {
-        if (l.length < 2) continue;
-        let x = 0, y = 0, z = 0;
-        for (const i of l) { x += nrm[i * 3]; y += nrm[i * 3 + 1]; z += nrm[i * 3 + 2]; }
-        const n = Math.sqrt(x * x + y * y + z * z) || 1;
-        for (const i of l) { nrm[i * 3] = x / n; nrm[i * 3 + 1] = y / n; nrm[i * 3 + 2] = z / n; }
-      }
-    }
-  }
 
-  // ---------------------------------------------------------------- 放样 --
-  // 截面序列：{ c: 中心, X: 截面局部 x 轴, Z: 截面局部 z 轴（θ = 0 的方向）, rx, rz, sq（超椭圆指数，2 = 椭圆）,
-  //             t: 纵向贴图坐标 0..1, w: 权重（或 wf(p) 函数）, col: 颜色, pole: true（收为一点）, off(θ) → 额外径向偏移(米) }
-  // o：{ n: 环向分段, reg: 图集区域, mirror: true（u = |θ|/π，前后对称、无接缝）, u0, u1（贴图 u 范围）,
-  //      col: 颜色 或 (θ, sec, k) → 颜色, flip: 反转绕序, wf(p, θ, k): 权重函数, arc: [θ0, θ1]（只做一段弧，开放）}
-  function superE(s, e) { return Math.sign(s) * Math.pow(Math.abs(s), 2 / e); }
-  function loft(gb, secs, o) {
-    const n = o.n, reg = o.uvc ? null : REG(o.reg || 'white');
-    const grp = o.group || gb.group();
-    const arc = o.arc;
-    const ring = [];
-    const cnt = arc ? n + 1 : n;
-    for (let k = 0; k < secs.length; k++) {
-      const s = secs[k];
-      const row = [];
-      const t = s.t != null ? s.t : k / (secs.length - 1);
-      if (s.pole) {
-        const p = s.c;
-        const uv = o.uvc || ruv(reg, o.u0 != null ? (o.u0 + o.u1) / 2 : 0.5, t);
-        const w = o.wf ? o.wf(p, 0, k) : (s.w !== undefined ? s.w : o.w);
-        const c = typeof o.col === 'function' ? o.col(0, s, k) : (s.col || o.col);
-        const id = gb.v(p, uv, c, w, grp);
-        for (let i = 0; i < cnt; i++) row.push(id);
-        ring.push(row);
-        continue;
-      }
-      const sq = s.sq || o.sq || 2;
-      for (let i = 0; i < cnt; i++) {
-        const th = arc ? lerp(arc[0], arc[1], i / n) : -PI + (i / n) * TAU;
-        const sn = Math.sin(th), cs = Math.cos(th);
-        const ex = sq === 2 ? sn : superE(sn, sq), ez = sq === 2 ? cs : superE(cs, sq);
-        let rx = s.rx, rz = s.rz;
-        let ox = ex * rx, oz = ez * rz;
-        if (s.off || o.off) {
-          const d = (s.off ? s.off(th, s, k) : 0) + (o.off ? o.off(th, s, k) : 0);
-          // 近似法线方向
-          const nx = sn / (rx || 1e-4), nz = cs / (rz || 1e-4), nl = Math.sqrt(nx * nx + nz * nz) || 1;
-          ox += nx / nl * d; oz += nz / nl * d;
-        }
-        const p = o.ptf ? o.ptf(th, s, k) : [s.c[0] + s.X[0] * ox + s.Z[0] * oz, s.c[1] + s.X[1] * ox + s.Z[1] * oz, s.c[2] + s.X[2] * ox + s.Z[2] * oz];
-        let u;
-        if (arc) u = i / n;
-        else u = o.mirror === false ? i / n : Math.abs(th) / PI;
-        if (o.u0 != null) u = lerp(o.u0, o.u1, u);
-        const uv = o.uvc || ruv(reg, u, t);
-        const w = o.wf ? o.wf(p, th, k) : (s.w !== undefined ? s.w : o.w);
-        const c = typeof o.col === 'function' ? o.col(th, s, k) : (s.col || o.col);
-        row.push(gb.v(p, uv, c, w, grp));
-      }
-      ring.push(row);
-    }
-    const flip = !!o.flip;
-    for (let k = 0; k < ring.length - 1; k++) {
-      const A = ring[k], B = ring[k + 1];
-      const lim = arc ? n : n;
-      for (let i = 0; i < lim; i++) {
-        const i1 = arc ? i + 1 : (i + 1) % n;
-        const a = A[i], b = A[i1], c = B[i1], d = B[i];
-        if (a === b && c === d) continue;
-        if (a === b) { flip ? gb.tri(a, d, c) : gb.tri(a, c, d); continue; }
-        if (c === d) { flip ? gb.tri(a, c, b) : gb.tri(a, b, c); continue; }
-        if (flip) gb.quad(a, d, c, b); else gb.quad(a, b, c, d);
-      }
-    }
-    // 端面
-    if (o.capStart && !secs[0].pole) capRing(gb, ring[0], secs[0], reg, grp, !flip, o);
-    if (o.capEnd && !secs[secs.length - 1].pole) capRing(gb, ring[ring.length - 1], secs[secs.length - 1], reg, grp, flip, o);
-    return ring;
-  }
-  function capRing(gb, row, s, reg, grp, flip, o) {
-    const cg = gb.group();
-    const P = gb.P;
-    // 端面中心 = 环上顶点的平均（已是变换后的坐标）；端面用独立顶点（硬边），添加时暂时关闭变换
-    let cx = 0, cy = 0, cz = 0;
-    for (const i of row) { cx += P[i * 3]; cy += P[i * 3 + 1]; cz += P[i * 3 + 2]; }
-    cx /= row.length; cy /= row.length; cz /= row.length;
-    const sx = gb.xf; gb.xf = null;
-    const wOf = q => (o.wf ? o.wf(q, 0, 0) : (s.w !== undefined ? s.w : o.w));
-    const ci = row[0];
-    const id = gb.v([cx, cy, cz], [gb.UV[ci * 2], gb.UV[ci * 2 + 1]], [gb.C[ci * 4], gb.C[ci * 4 + 1], gb.C[ci * 4 + 2], gb.C[ci * 4 + 3]], wOf([cx, cy, cz]), cg);
-    const ids = row.map(i => gb.v([P[i * 3], P[i * 3 + 1], P[i * 3 + 2]], [gb.UV[i * 2], gb.UV[i * 2 + 1]], [gb.C[i * 4], gb.C[i * 4 + 1], gb.C[i * 4 + 2], gb.C[i * 4 + 3]], wOf([P[i * 3], P[i * 3 + 1], P[i * 3 + 2]]), cg));
-    gb.xf = sx;
-    for (let i = 0; i < ids.length; i++) {
-      const a = ids[i], b = ids[(i + 1) % ids.length];
-      if (flip) gb.tri(id, b, a); else gb.tri(id, a, b);
-    }
-  }
-  // 沿折线 / 曲线的管（平行移动标架）：pts 点列，r(i, s) 半径（或数组），o 同 loft（另有 rz 比例、twist）
-  function frames(pts, up) {
-    const N = pts.length, T = [], X = [], Z = [];
-    for (let i = 0; i < N; i++) {
-      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(N - 1, i + 1)];
-      T.push(v3norm(v3sub(b, a)));
-    }
-    let ref = up || [0, 0, 1];
-    if (Math.abs(v3dot(ref, T[0])) > 0.95) ref = [1, 0, 0];
-    let x = v3norm(v3cross(ref, T[0]));
-    for (let i = 0; i < N; i++) {
-      if (i > 0) {
-        // 平行移动
-        const ax = v3cross(T[i - 1], T[i]), l = v3len(ax);
-        if (l > 1e-6) x = v3rot(x, v3mul(ax, 1 / l), Math.asin(clamp(l, -1, 1)) * (v3dot(T[i - 1], T[i]) < 0 ? -1 : 1));
-        x = v3norm(v3sub(x, v3mul(T[i], v3dot(x, T[i]))));
-      }
-      X.push(x);
-      Z.push(v3norm(v3cross(x, T[i])));
-    }
-    return { T, X, Z };
-  }
-  function tube(gb, pts, o) {
-    const F = frames(pts, o.up);
-    const secs = [];
-    const N = pts.length;
-    for (let i = 0; i < N; i++) {
-      const s = N > 1 ? i / (N - 1) : 0;
-      const r = typeof o.r === 'function' ? o.r(s, i) : Array.isArray(o.r) ? o.r[i] : o.r;
-      const rz = r * (o.rz != null ? (typeof o.rz === 'function' ? o.rz(s, i) : o.rz) : 1);
-      let X = F.X[i], Z = F.Z[i];
-      if (o.twist) { const a = o.twist * s; X = v3rot(X, F.T[i], a); Z = v3rot(Z, F.T[i], a); }
-      const sec = { c: pts[i], X, Z, rx: r, rz, t: o.t ? o.t(s) : s, w: typeof o.w === 'function' ? o.w(s, pts[i]) : (o.w || 0) };
-      if (r <= 1e-5 && (i === 0 || i === N - 1)) sec.pole = true;
-      if (o.col && typeof o.col !== 'function') sec.col = o.col;
-      if (o.colS) sec.col = o.colS(s);
-      secs.push(sec);
-    }
-    return loft(gb, secs, o);
-  }
-  // 绕 Y 轴的旋转体：prof = [[r, y], ...]（自下而上），中心 c，o 同 loft（可给 axis 改变朝向：{ X, Y, Z } 三轴）
-  function lathe(gb, prof, o) {
-    const c = o.c || [0, 0, 0], AX = o.axes || { X: [1, 0, 0], Y: [0, 1, 0], Z: [0, 0, 1] };
-    const secs = prof.map((p, k) => {
-      const r = p[0], rz = p[2] != null ? p[2] : r;
-      const s = { c: v3madd(c, AX.Y, p[1]), X: AX.X, Z: AX.Z, rx: r * (o.sx || 1), rz: rz * (o.sz || 1), t: p[3] != null ? p[3] : k / (prof.length - 1), w: o.w };
-      if (r <= 1e-5 && (k === 0 || k === prof.length - 1)) s.pole = true;
-      return s;
+  // ===================================================== 低多边形工具包接入 ==
+  // 几何体由 SG.LP（js/lowpoly.js）的 MeshBuilder 生成，材质为 LP 的 Lanternvale 光照着色器 + 墨线外壳。
+  // 游戏里 lowpoly.js 在 figure.js 之前载入；单独的测试页没载入时，本文件按自身路径就近载入一次（异步），
+  // preload() 会等它载入完成（battle-view / clash / duel 都先 preload 再建人物）。
+  const FIG_SRC = (typeof document !== 'undefined' && document.currentScript && document.currentScript.src) || '';
+  let LP_WAIT = null;
+  function ensureLP() {
+    if (SG.LP && SG.LP.MeshBuilder) return Promise.resolve(true);
+    if (LP_WAIT) return LP_WAIT;
+    LP_WAIT = new Promise(res => {
+      if (typeof document === 'undefined') { res(false); return; }
+      const s = document.createElement('script');
+      s.src = FIG_SRC ? FIG_SRC.replace(/figure\.js(\?.*)?$/, 'lowpoly.js') : 'js/lowpoly.js';
+      s.onload = () => res(!!(SG.LP && SG.LP.MeshBuilder));
+      s.onerror = () => res(false);
+      (document.head || document.documentElement).appendChild(s);
     });
-    return loft(gb, secs, o);
+    return LP_WAIT;
   }
-  // 椭球（沿 Y 的纬圈放样），def(p, θ, φ) → 新位置（变形）
-  function ellipsoid(gb, c, r, o) {
-    const nl = o.nl || 8, secs = [];
-    const AX = o.axes || { X: [1, 0, 0], Y: [0, 1, 0], Z: [0, 0, 1] };
-    for (let k = 0; k <= nl; k++) {
-      const ph = -PI / 2 + PI * (k / nl);
-      const y = Math.sin(ph) * r[1], rr = Math.cos(ph);
-      const s = { c: v3madd(c, AX.Y, y), X: AX.X, Z: AX.Z, rx: r[0] * rr, rz: r[2] * rr, t: k / nl, w: o.w };
-      if (k === 0 || k === nl) s.pole = true;
-      secs.push(s);
+  if (typeof document !== 'undefined' && !(SG.LP && SG.LP.MeshBuilder)) ensureLP();
+  let LP_READY = false;
+  function LPX() {
+    const L = SG.LP;
+    if (!L || !L.MeshBuilder) throw new Error('SG.Figure：需要先载入 js/lowpoly.js（SG.LP）');
+    if (!LP_READY) {
+      LP_READY = true;
+      // 游戏是 Gamma 工作流（渲染器线性输出）：LP 着色器自行编码 sRGB（SG.Gfx 也会设；单独的测试页靠这里）
+      L.setOutputEncoded(true);
     }
-    return loft(gb, secs, o);
+    return L;
   }
 
-  // ------------------------------------------------------- 双面布片 / 甲片 --
-  // fn(s, t) → [x, y, z]（s 横向 0..1，t 纵向 0..1）；构建正反两面（厚度 th，沿曲面法线），并封边。
-  // o：{ nu, nv, th, reg, col, colB（背面色）, w: 权重函数 (p, s, t) → w, mirrorS: true（贴图 u = |2s − 1|）,
-  //      uv(s, t) → [u, v]（区域内局部坐标）, edge: 封边 }
-  function panel(gb, fn, o) {
-    const nu = o.nu, nv = o.nv, th = o.th || 0.006, reg = REG(o.reg || 'cloth');
-    const P = [], Nn = [];
-    for (let j = 0; j <= nv; j++) for (let i = 0; i <= nu; i++) P.push(fn(i / nu, j / nv));
-    const at = (i, j) => P[clamp(j, 0, nv) * (nu + 1) + clamp(i, 0, nu)];
-    for (let j = 0; j <= nv; j++) for (let i = 0; i <= nu; i++) {
-      const du = v3sub(at(i + 1, j), at(i - 1, j)), dv = v3sub(at(i, j + 1), at(i, j - 1));
-      let n = v3cross(du, dv);
-      if (v3len(n) < 1e-9) n = [0, 0, 1];
-      Nn.push(v3norm(n));
-    }
-    const uvOf = (s, t) => {
-      let lc = o.uv ? o.uv(s, t) : [o.mirrorS ? Math.abs(2 * s - 1) : s, t];
-      return ruv(reg, lc[0], lc[1]);
+  // 带势力色遮罩的 MeshBuilder：颜色数组带 .t = 1 的部件（势力色衣甲、旗、缨……）逐顶点记 1，
+  // toGeometry 多一个 lpTeam 属性（士兵群的实例势力色只乘在这些顶点上；单个人物直接把势力色烘进顶点色）
+  let _FB = null;
+  function FigBuilder() {
+    if (_FB) return _FB;
+    const Base = LPX().MeshBuilder;
+    _FB = class FigMeshBuilder extends Base {
+      constructor(seed) { super(seed); this.TM = []; this._lock = -1; }
+      // LP 的 lathe（及以它为基础的 segment / sphere / cylinder / band …）在内部用 Paint.mix 重设颜色（不带 .t）：
+      // 期间锁住进入时的势力色遮罩
+      set color(c) { this._c = c; this._tm = this._lock >= 0 ? this._lock : c && c.t ? 1 : 0; }
+      lathe(...a) { const keep = this._lock; this._lock = this._tm || 0; try { super.lathe(...a); } finally { this._lock = keep; this._tm = this._c && this._c.t ? 1 : 0; } }
+      get color() { return this._c; }
+      addVertex(p, n, c) { const i = super.addVertex(p, n, c); this.TM.push(this._tm || 0); return i; }
+      append(o) { super.append(o); while (this.TM.length < this.P.length / 3) this.TM.push(0); }
+      toGeometry(o) {
+        const g = super.toGeometry(o), T = this.T, n = T.length;
+        let any = 0;
+        const tm = new Uint8Array(n);
+        for (let t = 0; t < n; t++) { const v = this.TM[T[t]] ? 255 : 0; tm[t] = v; any |= v; }
+        if (any) g.setAttribute('lpTeam', new THREE.BufferAttribute(tm, 1, true));
+        return g;
+      }
     };
-    const gF = gb.group(), gBk = gb.group();
-    const F = [], B = [];
-    const colF = o.col || [1, 1, 1], colB = o.colB || shade(colF, -0.25);
-    for (let j = 0; j <= nv; j++) for (let i = 0; i <= nu; i++) {
-      const k = j * (nu + 1) + i, p = P[k], n = Nn[k], s = i / nu, t = j / nv;
-      const w = typeof o.w === 'function' ? o.w(p, s, t) : (o.w || 0);
-      const cf = typeof colF === 'function' ? colF(s, t) : colF;
-      const cb = typeof colB === 'function' ? colB(s, t) : colB;
-      F.push(gb.v(v3madd(p, n, th / 2), uvOf(s, t), cf, w, gF));
-      B.push(gb.v(v3madd(p, n, -th / 2), uvOf(s, t), cb, w, gBk));
-    }
-    for (let j = 0; j < nv; j++) for (let i = 0; i < nu; i++) {
-      const a = j * (nu + 1) + i, b = a + 1, c = a + nu + 2, d = a + nu + 1;
-      gb.quad(F[a], F[b], F[c], F[d]);
-      gb.quad(B[a], B[d], B[c], B[b]);
-    }
-    if (o.edge !== false && !gb.noEdges) {
-      // 封边：沿四条边连接正反面
-      const gE = gb.group();
-      const edgeLoop = [];
-      for (let i = 0; i <= nu; i++) edgeLoop.push(i);
-      for (let j = 1; j <= nv; j++) edgeLoop.push(j * (nu + 1) + nu);
-      for (let i = nu - 1; i >= 0; i--) edgeLoop.push(nv * (nu + 1) + i);
-      for (let j = nv - 1; j >= 1; j--) edgeLoop.push(j * (nu + 1));
-      const ef = [], eb = [];
-      for (const k of edgeLoop) {
-        const pf = gb.P.slice(F[k] * 3, F[k] * 3 + 3), pb = gb.P.slice(B[k] * 3, B[k] * 3 + 3);
-        const uv = [gb.UV[F[k] * 2], gb.UV[F[k] * 2 + 1]];
-        const w = typeof o.w === 'function' ? o.w(P[k], 0, 0) : (o.w || 0);
-        const ce = typeof colF === 'function' ? colF(0, 0) : (o.colE || colF);
-        // 位置已经是变换后的；临时关闭变换
-        const sx = gb.xf; gb.xf = null;
-        ef.push(gb.v(pf, uv, ce, w, gE)); eb.push(gb.v(pb, uv, ce, w, gE));
-        gb.xf = sx;
-      }
-      const L = edgeLoop.length;
-      for (let i = 0; i < L; i++) { const i1 = (i + 1) % L; gb.quad(ef[i], eb[i], eb[i1], ef[i1]); }
-    }
-    return { F, B, P, N: Nn };
+    return _FB;
   }
+  // 颜色（sRGB 0..1 数组）· 势力色（.t = 1 的数组）
+  const C3 = c => { const a = col(c); return [a[0], a[1], a[2]]; };
+  function tcol(base, k) { const a = [clamp01(base[0] * k), clamp01(base[1] * k), clamp01(base[2] * k)]; a.t = 1; return a; }
+  // 很深的颜色在 LP 光照下成一团墨：提到暖深色（Lanternvale BipedKit.HairTone 的做法），floor = 最低亮度
+  function lift(c, floor, warm) {
+    c = C3(c);
+    const v = Math.max(c[0], c[1], c[2]);
+    if (v >= floor) return c;
+    const k = floor / Math.max(0.02, v), w = warm == null ? 0.3 : warm;
+    const up = c.map(x => clamp01(x * k));
+    return [lerp(up[0], floor, w * (1 - v / floor)), lerp(up[1], floor * 0.82, w * (1 - v / floor)), lerp(up[2], floor * 0.68, w * (1 - v / floor))];
+  }
+  function hairTone(c) {
+    c = C3(c);
+    const v = Math.max(c[0], c[1], c[2]), lifted = 0.22 + 0.5 * v;
+    if (v >= lifted) return c;
+    const k = lifted / Math.max(0.02, v);
+    const up = c.map(x => clamp01(x * k));
+    const t = 0.36 * (lifted - v) / lifted;
+    return [lerp(up[0], lifted, t), lerp(up[1], lifted * 0.8, t), lerp(up[2], lifted * 0.66, t)];
+  }
+  // 势力色：Lanternvale 的柔和饱和度（略降饱和、略提亮），单个人物与士兵群用同一换算
+  function teamTone(hexc) {
+    const L = SG.LP, c = C3(hexc || '#8a2a24');
+    const t = L ? L.Paint.hsv(c, 0, 0.9, 1.12) : c;
+    return lift(t, 0.3, 0.1);
+  }
+  const PALF = {
+    gold: '#D9A441', goldDark: '#9A6A2A', goldLight: '#EDC46A', bronze: '#B98A4E', silver: '#D6DCE4',
+    iron: '#68707E', ironDark: '#4E5562', ironSeam: '#3A3F4A', steel: '#C9D2DA', bladeBack: '#A9B9C6',
+    leather: '#6E3B2C', leatherDark: '#4A3426', boots: '#45302A', sole: '#2E211C', cream: '#EADFC4', wood: '#8C6A48', woodDark: '#5A3E2A',
+    red: '#C24E34', tassel: '#D2402E', jade: '#8FD4A8', white: '#EEEAE0', black: '#2A2426', fur: '#8A6A4A', furLight: '#B09070',
+    rattan: '#C8A060', rattanDark: '#9A7440', lining: '#3A3236', eyeDark: '#2A2024', catch: '#FFFFF6', gauntlet: '#4A3426',
+  };
 
-  // ------------------------------------------------------------- 刀刃 --
-  // 刃沿 stations 逐段放样，每个面一条带（刃口与脊线为硬边，沿长度方向平滑）。
-  // st：[{ p: 中心点, e: 刃口方向（单位）, n: 厚度方向（单位）, we: 向刃口的宽度, wb: 向刃背的宽度, th: 半厚, dbl: 双刃 }]
-  function blade(gb, st, o) {
-    const reg = REG(o.reg || 'blade');
-    const prof = (gb.noEdges || gb.detail === 1) ? (s => s.dbl ? [[s.we, 0], [0, s.th * 1.2], [-s.wb, 0], [0, -s.th * 1.2]] : [[s.we, 0], [-s.wb * 0.8, s.th], [-s.wb, 0], [-s.wb * 0.8, -s.th]]) : s => s.dbl
-      ? [[s.we, 0], [s.we * 0.42, s.th * 0.85], [0, s.th], [-s.wb * 0.42, s.th * 0.85], [-s.wb, 0], [-s.wb * 0.42, -s.th * 0.85], [0, -s.th], [s.we * 0.42, -s.th * 0.85]]
-      : [[s.we, 0], [s.we * 0.3, s.th * 0.75], [-s.wb * 0.85, s.th], [-s.wb, s.th * 0.55], [-s.wb, -s.th * 0.55], [-s.wb * 0.85, -s.th], [s.we * 0.3, -s.th * 0.75]];
-    const rows = st.map(s => prof(s).map(q => v3add(v3add(s.p, v3mul(s.e, q[0])), v3mul(s.n, q[1]))));
-    const np = rows[0].length, N = st.length;
-    const col = o.col || [1, 1, 1];
-    // 绕序：(e, n, 长度方向) 为右手系时需要反转
-    const sg = v3dot(v3cross(st[0].e, st[0].n), v3sub(st[N - 1].p, st[0].p)) > 0;
-    for (let f = 0; f < np; f++) {
-      const g = gb.group(), f1 = (f + 1) % np;
-      const ids = [];
-      for (let k = 0; k < N; k++) {
-        const t = k / (N - 1);
-        // u：刃口 → 刃背映射到 0..1
-        const uA = f / np, uB = (f + 1) / np;
-        ids.push([gb.v(rows[k][f], ruv(reg, uA, t), col, o.w, g), gb.v(rows[k][f1], ruv(reg, uB, t), col, o.w, g)]);
-      }
-      for (let k = 0; k < N - 1; k++) {
-        if (sg) gb.quad(ids[k][0], ids[k][1], ids[k + 1][1], ids[k + 1][0]);
-        else gb.quad(ids[k][0], ids[k + 1][0], ids[k + 1][1], ids[k][1]);
-      }
-    }
-    // 根部封口
-    if (o.capBase !== false) {
-      const g = gb.group();
-      const c = gb.v(st[0].p, ruv(reg, 0.5, 0), col, o.w, g);
-      const ids = rows[0].map(p => gb.v(p, ruv(reg, 0.5, 0), col, o.w, g));
-      for (let i = 0; i < np; i++) { if (sg) gb.tri(c, ids[(i + 1) % np], ids[i]); else gb.tri(c, ids[i], ids[(i + 1) % np]); }
-    }
+  // 共用材质（LP.material / LP.outlineMaterial 按选项缓存，所有人物共用一个程序）
+  function teamMaterial() { return LPX().material({}); }
+  function setRim(color, strength) {
+    const L = LPX(), g = L.globals && L.globals.lpRim;
+    if (!g) return;
+    const c = col(color || '#ffd8a8'), k = strength == null ? 1 : strength;
+    g.value.set(c[0] * k, c[1] * k, c[2] * k, g.value.w);       // 场景的氛围（LP.Mood）每次渲染前会重设
   }
 
   // ======================================================== 人形骨架 ==
@@ -1219,24 +290,92 @@
   const GROUND_SLOT = BONES.length;
   const ARM_A = 40 * D2R;      // 绑定姿势的手臂外展角
 
+
+  // ----------------------------------------------------------- 头部比例 --
+  // 真实成人的头身比（玩家指定）：头顶 → 下巴 = 身高 / 头身数（士兵 7.5，英武的名将最多约 7.8，女性 7.3），头宽约 0.155 米、
+  // 深约 0.19 米（蛋形，不是球）；脸靠五官（粗眉、带高光的眼、楔形鼻、胡须、发髻与冠帽的剪影）而不是大头来读。
+  // 单位头：球的下半收窄成下颌（q = 环的球面高度，下巴 −1 → 头顶 +1），按 (θ, 环) 塑出方下颌、前突的下巴、颧骨、眉弓、
+  // 略平的太阳穴（与 js/lp-pilot.js 的试点同一算法）。列每 360/S 度一条（θf = 90° − j·360/S，0 = 正前）。
+  const HEAD_TILT = -12, JAW_FROM = 0.3, JAW_DROP = 0.12, EYE_TURN = 30;
+  const HEAD_QS = {
+    12: [-1, -0.95, -0.84, -0.68, -0.47, -0.26, -0.06, 0.14, 0.42, 0.68, 0.9, 1],
+    9: [-1, -0.92, -0.74, -0.47, -0.2, 0.1, 0.44, 0.78, 1],
+    7: [-1, -0.86, -0.56, -0.2, 0.2, 0.62, 1],
+  };
+  function headGrid(chin, shape, nq, S) {
+    const Q = HEAD_QS[nq] || HEAD_QS[12];
+    const narrow = clamp(0.2 - (chin - 1) * 0.3, 0.06, 0.4), sh = Object.assign({ jaw: 0.1, chin: 0.06, cheek: 0.05, brow: 0.04, temple: 0.04 }, shape || {});
+    const ys = [], rad = [];
+    for (const q of Q) {
+      let y = q, r = Math.sqrt(Math.max(0, 1 - q * q));
+      if (q < 0) { const t = clamp01((-q - JAW_FROM) / (1 - JAW_FROM)); r *= 1 - narrow * t * t * (3 - 2 * t); y = q * (1 + JAW_DROP * q * q); }
+      ys.push(y);
+      const row = [];
+      for (let j = 0; j < S; j++) {
+        let tf = 90 - j * 360 / S; tf = ((tf + 540) % 360) - 180;
+        const at = Math.abs(tf);
+        const g = 1 + sh.jaw * gauss(q, -0.72, 0.17) * gauss(at, 75, 32) + sh.chin * gauss(q, -0.9, 0.11) * gauss(tf, 0, 24)
+          + sh.cheek * gauss(q, -0.24, 0.15) * gauss(at, 55, 22) + sh.brow * gauss(q, 0.12, 0.1) * gauss(at, 20, 36)
+          - sh.temple * gauss(q, 0.36, 0.2) * gauss(at, 90, 24);
+        row.push(r > 0 ? r * g : 0);
+      }
+      rad.push(row);
+    }
+    return { ys, rad, S, Q };
+  }
+  // 单位头经过前倾（HEAD_TILT）后的范围（按轴缩放之前）
+  function headExtents(G) {
+    const a = HEAD_TILT * D2R, ca = Math.cos(a), sa = Math.sin(a), S = G.S;
+    const e = { x0: 1e9, x1: -1e9, y0: 1e9, y1: -1e9, z0: 1e9, z1: -1e9 };
+    G.ys.forEach((y, i) => G.rad[i].forEach((r, j) => {
+      const t = j * 2 * PI / S, x = Math.cos(t) * r, z = Math.sin(t) * r;
+      const yy = y * ca - z * sa, zz = y * sa + z * ca;
+      e.x0 = Math.min(e.x0, x); e.x1 = Math.max(e.x1, x); e.y0 = Math.min(e.y0, yy); e.y1 = Math.max(e.y1, yy); e.z0 = Math.min(e.z0, zz); e.z1 = Math.max(e.z1, zz);
+    }));
+    return e;
+  }
+  // 外貌 → 头的尺寸与形状
+  function headSpec(look, H, fem) {
+    const sp = look.spec || {}, F = sp.face || {};
+    const war = sp.war != null ? sp.war : 60, intel = sp.intel != null ? sp.intel : 50;
+    let tall = look.kind === 'soldier' ? 7.5 : fem ? 7.3 : 7.42 + 0.38 * clamp((war - 72) / 26, 0, 1) - (intel > war + 15 ? 0.04 : 0);
+    if ((look.age || 30) >= 60) tall -= 0.05;
+    const sz = 1 + 0.3 * (H / 1.8 - 1), fat = look.fat || 0;
+    const jaw = F.jaw || 1;
+    return {
+      tall,
+      W: (fem ? 0.146 : 0.155) * sz * clamp(F.w || 1, 0.92, 1.08) * (1 + 0.07 * fat),
+      D: 0.19 * sz * (fem ? 0.96 : 1) * clamp(F.len || 1, 0.96, 1.05),
+      chin: clamp((fem ? 1.0 : 1.25) + (jaw - 1) * 1.3 + 0.15 * fat, 0.85, 1.65),
+      shape: { jaw: clamp(0.1 + (jaw - 1) * 0.25 + 0.05 * fat, 0.02, 0.2), chin: 0.06 * clamp(F.chin || 1, 0.7, 1.3), cheek: 0.05 + 0.03 * (F.cheek || 0) - 0.04 * (F.hollow || 0) + 0.04 * fat,
+        brow: 0.04 + 0.025 * (F.brow || 0), temple: 0.04 },
+    };
+  }
+
   // 体型 → 关节位置（人物坐标，米）
   function makeProps(look) {
     const fem = look.sex === 'f';
     const h = (look.height || 1) * (fem ? 0.94 : 1);
     const k = h;
     const build = clamp(look.build || 1, 0.82, 1.3), fat = clamp(look.fat || 0, 0, 1);
-    // 体格差异要拉开（真三国无双式：许褚、典韦、张飞一眼可辨）：肩宽约 ±20%、四肢粗细、髋宽随 build / fat
+    // 体格差异要拉开（许褚、典韦、张飞一眼可辨）：肩宽约 ±20%、四肢粗细、髋宽随 build / fat
     const bk = fem ? (build - 0.9) * 0.35 : (build - 1) * 0.85;
     const sw = (fem ? 0.86 : 1) * (1 + bk) * (1 + fat * 0.06);                      // 肩宽
     const hw = (fem ? 1.04 : 1) * (1 + bk * 0.4) * (1 + fat * 0.14);                // 髋宽
     const limb = (fem ? 0.86 : 1) * (1 + bk * 1.05) * (1 + fat * 0.22);             // 四肢粗细
+    const H = 1.86 * k;
     const J = {};
     J.root = [0, 0, 0];
     J.pelvis = [0, 0.995 * k, 0];
     J.spine = [0, 1.09 * k, -0.006];
     J.chest = [0, 1.27 * k, -0.012];
     J.neck = [0, 1.5 * k, -0.022];
-    J.head = [0, 1.585 * k, -0.01];
+    // 头关节在寰椎处（头内、约耳垂高）：头部绕它点头 / 转头，不会离开脖子
+    const hs = headSpec(look, H, fem);
+    const G = headGrid(hs.chin, hs.shape, 12, 12), ex = headExtents(G);
+    const headH = H / hs.tall, Ry = headH / (ex.y1 - ex.y0), Rz = hs.D / (ex.z1 - ex.z0), Rx = hs.W / (ex.x1 - ex.x0);
+    const headC = [0, H - ex.y1 * Ry, 0.004];
+    J.head = [0, headC[1] - 0.5 * Ry, headC[2] - 0.15 * Rz];
     const ad = [Math.sin(ARM_A), -Math.cos(ARM_A), 0];
     const upL = 0.3 * k, foL = 0.265 * k;
     for (const s of [1, -1]) {
@@ -1255,11 +394,12 @@
     J.cape3 = [0, 0.7 * k, -0.22 * sw];
     J.skirtF = [0, 1.02 * k, 0.12 * hw];
     J.skirtB = [0, 1.02 * k, -0.13 * hw];
-    J.plume1 = [0, 1.86 * k, -0.01];
-    J.plume2 = [0, 2.0 * k, -0.07];
-    J.hair1 = [0, 1.71 * k, -0.1];
+    J.plume1 = [0, H + 0.01, headC[2] - 0.02];
+    J.plume2 = [0, H + 0.14 * k, headC[2] - 0.08];
+    J.hair1 = [0, headC[1] - 0.3 * Ry, headC[2] - 0.92 * Rz];
     J.shL = J.upperArmL.slice(); J.shR = J.upperArmR.slice(); J.dlL = J.upperArmL.slice(); J.dlR = J.upperArmR.slice();
-    return { J, k, sw, hw, limb, fat, fem, build, armDirL: ad, upL, foL, H: 1.86 * k };
+    const head = { tall: hs.tall, H: headH, W: hs.W, D: hs.D, chin: hs.chin, shape: hs.shape, Rx, Ry, Rz, c: headC, pivot: J.head.slice() };
+    return { J, k, sw, hw, limb, fat, fem, build, armDirL: ad, upL, foL, H, head };
   }
 
   // 握点挂点：右手握点在手腕沿前臂方向 7cm 处；挂点 +Y = 兵器杆方向（拇指一侧，绑定时朝前 +Z），
@@ -1281,66 +421,6 @@
     return m;
   }
 
-  // ------------------------------------------------------------ 权重 --
-  // 链式权重：沿关节链（点列）投影，在关节附近 ±blend 米内平滑过渡
-  function chainW(p, chain, blend) {
-    // chain: [[boneIdx, startJoint], ..., [null, endPoint]]
-    let best = 0, bestD = 1e9, bestT = 0;
-    for (let i = 0; i < chain.length - 1; i++) {
-      const a = chain[i][1], b = chain[i + 1][1], ab = v3sub(b, a), l2 = v3dot(ab, ab) || 1e-9;
-      const t = clamp(v3dot(v3sub(p, a), ab) / l2, 0, 1);
-      const q = v3madd(a, ab, t), d = v3len(v3sub(p, q));
-      if (d < bestD - 1e-6) { bestD = d; best = i; bestT = t; }
-    }
-    const segs = chain.length - 1;
-    const a = chain[best][1], b = chain[best + 1][1], L = v3len(v3sub(b, a)) || 1e-6;
-    const dist0 = bestT * L, dist1 = (1 - bestT) * L;
-    const bi = chain[best][0];
-    if (dist0 < blend && best > 0) {
-      const k = 0.5 + 0.5 * (dist0 / blend);
-      return [[bi, k], [chain[best - 1][0], 1 - k]];
-    }
-    if (dist1 < blend && best < segs - 1 && chain[best + 1][0] != null) {
-      const k = 0.5 + 0.5 * (dist1 / blend);
-      return [[bi, k], [chain[best + 1][0], 1 - k]];
-    }
-    return [[bi, 1]];
-  }
-  // 身体各部位的权重函数
-  function weightsFor(pr) {
-    const J = pr.J;
-    const spineChain = [[B.pelvis, [0, J.pelvis[1] - 0.2, 0]], [B.spine, J.spine], [B.chest, J.chest], [B.neck, J.neck], [B.head, J.head], [null, [0, J.head[1] + 0.3, 0]]];
-    const arm = S => [[B['clav' + S], J['clav' + S]], [B['upperArm' + S], J['upperArm' + S]], [B['foreArm' + S], J['foreArm' + S]], [B['hand' + S], J['hand' + S]], [null, v3madd(J['hand' + S], [pr.armDirL[0] * (S === 'L' ? 1 : -1), pr.armDirL[1], 0], 0.2)]];
-    const leg = S => [[B.pelvis, [J['thigh' + S][0] * 0.5, J.pelvis[1] + 0.1, 0]], [B['thigh' + S], J['thigh' + S]], [B['shin' + S], J['shin' + S]], [B['foot' + S], J['foot' + S]], [null, v3add(J['foot' + S], [0, -0.05, 0.25])]];
-    const AL = arm('L'), AR = arm('R'), LL = leg('L'), LR = leg('R');
-    return {
-      torso: p => {
-        const w = chainW(p, spineChain, 0.07);
-        // 肩部：靠近肩关节的躯干顶点带一点锁骨 / 上臂权重
-        for (const S of ['L', 'R']) {
-          const d = v3len(v3sub(p, J['upperArm' + S]));
-          if (d < 0.12 && Math.abs(p[0]) > 0.09) { const k = (1 - d / 0.12) * 0.6; w.forEach(e => (e[1] *= 1 - k)); w.push([B['clav' + S], k * 0.45], [B['dl' + S], k * 0.55]); }
-        }
-        return w;
-      },
-      // 臂：袖根（肩关节内外约 7cm）经由肩部辅助骨过渡到上臂，避免高举时肩部撕裂
-      arm: S => p => {
-        const sg = S === 'L' ? 1 : -1, d = [pr.armDirL[0] * sg, pr.armDirL[1], 0];
-        const s = v3dot(v3sub(p, J['upperArm' + S]), d);
-        if (s < 0.08) {
-          const k1 = sstep(-0.075, -0.015, s), k2 = sstep(-0.01, 0.08, s);
-          return [[B['clav' + S], 1 - k1], [B['dl' + S], k1 * (1 - k2)], [B['upperArm' + S], k1 * k2]];
-        }
-        return chainW(p, S === 'L' ? AL : AR, 0.05);
-      },
-      leg: S => p => {
-        const w = chainW(p, S === 'L' ? LL : LR, 0.06);
-        return w;
-      },
-      neck: p => chainW(p, spineChain, 0.05),
-    };
-  }
-
   // 每个模板共用的骨骼绑定逆矩阵（绑定旋转为单位 → 逆矩阵只有平移）
   function makeBoneInverses(pr) {
     return BONES.map(n => new THREE.Matrix4().makeTranslation(-pr.J[n][0], -pr.J[n][1], -pr.J[n][2]));
@@ -1356,345 +436,6 @@
     return bones;
   }
 
-  // ======================================================== 头部与面部 ==
-  // 头部局部坐标：原点 = 头骨（颈顶），面朝 +Z。头部在球面参数 (θ 经度：0 = 正前，φ 纬度：0 = 头中心高度) 上变形；
-  // 面部贴图按同一参数映射（经度方向做非线性拉伸，让脸部占更多像素），五官位置在参数空间里定义，几何与贴图严格对齐。
-  const HEAD_C = [0, 0.115, 0.0];
-  const FEAT = { eyeT: 0.42, eyeP: 0.07, browP: 0.25, noseP: -0.22, mouthP: -0.5, chinP: -1.0, hairP: 0.78 };
-  // 纬度参数 φ → 头部局部高度 y（米）。五官锚点：发际、眉、眼、鼻尖、口、下巴
-  const PHI_Y = [[-PI / 2, -0.022], [-1.45, -0.012], [-1.2, -0.002], [-1.0, 0.01], [-0.5, 0.045], [-0.22, 0.074], [0.07, 0.112], [0.25, 0.13], [0.78, 0.185], [1.2, 0.222], [PI / 2, 0.236]];
-  const Y_BOT = -0.022, Y_TOP = 0.236;
-  function Yph(ph) {
-    if (ph <= PHI_Y[0][0]) return PHI_Y[0][1];
-    for (let i = 0; i < PHI_Y.length - 1; i++) { const a = PHI_Y[i], b = PHI_Y[i + 1]; if (ph <= b[0]) return lerp(a[1], b[1], (ph - a[0]) / (b[0] - a[0])); }
-    return Y_TOP;
-  }
-  function headUV(th, ph) {
-    const x = clamp(th / PI, -1, 1);
-    const u = 0.5 + 0.5 * Math.sign(x) * Math.pow(Math.abs(x), 0.7);
-    return [u, clamp01((Yph(ph) - Y_BOT) / (Y_TOP - Y_BOT))];
-  }
-  function headParams(sp) {
-    sp = sp || {};
-    const f = sp.face || {}, fem = sp.sex === 'f', nose = sp.nose || {}, ears = sp.ears || {};
-    return {
-      fem, fat: sp.fat || 0,
-      w: (f.w || 1) * (fem ? 0.95 : 1), len: f.len || 1, jaw: (f.jaw || 1) * (fem ? 0.85 : 1), chin: f.chin || 1, cheek: f.cheek || 0, brow: f.brow != null ? f.brow : 0.4, hollow: f.hollow || 0,
-      noseLen: (nose.len || 1) * (nose.size || 1) * (fem ? 0.8 : 1), noseW: (nose.w || 1) * (nose.shape === 'broad' || nose.shape === 'flat' ? 1.3 : nose.shape === 'small' || nose.shape === 'button' ? 0.85 : 1),
-      bridge: nose.bridge != null ? nose.bridge : 0.5, aquiline: nose.shape === 'aquiline' ? 1 : 0, flat: nose.shape === 'flat' ? 1 : 0, bulb: nose.shape === 'bulb' ? 1 : 0,
-      ear: (ears.size || 1), lips: (sp.mouth && sp.mouth.lips) || 1, size: fem ? 1.03 : 1.07, lodF: 1,
-    };
-  }
-  // 头部截面（y, 半宽, 前缘 z, 后缘 z, 前半部方度）
-  const HPROF = [
-    [-0.022, 0.0, 0.0, 0.0, 2], [-0.014, 0.034, 0.03, -0.03, 2], [-0.004, 0.042, 0.066, -0.035, 2.1], [0.008, 0.05, 0.09, -0.041, 2.1],
-    [0.022, 0.058, 0.093, -0.05, 2.15], [0.04, 0.066, 0.098, -0.063, 2.3], [0.058, 0.071, 0.101, -0.076, 2.42], [0.078, 0.076, 0.098, -0.088, 2.52],
-    [0.098, 0.079, 0.096, -0.097, 2.55], [0.118, 0.08, 0.097, -0.104, 2.5], [0.132, 0.08, 0.104, -0.107, 2.5], [0.155, 0.08, 0.1, -0.108, 2.4],
-    [0.18, 0.074, 0.088, -0.1, 2.3], [0.205, 0.062, 0.068, -0.084, 2.2], [0.222, 0.045, 0.045, -0.062, 2.1], [0.232, 0.025, 0.022, -0.036, 2], [0.236, 0, 0, 0, 2],
-  ];
-  function hprofAt(y) {
-    const R = HPROF;
-    if (y <= R[0][0]) return R[0];
-    if (y >= R[R.length - 1][0]) return R[R.length - 1];
-    let i = 0;
-    while (i < R.length - 2 && R[i + 1][0] < y) i++;
-    const a = R[Math.max(0, i - 1)], b = R[i], c = R[i + 1], d = R[Math.min(R.length - 1, i + 2)];
-    const t = (y - b[0]) / (c[0] - b[0]), t2 = t * t, t3 = t2 * t;
-    const cr = k => 0.5 * (2 * b[k] + (-a[k] + c[k]) * t + (2 * a[k] - 5 * b[k] + 4 * c[k] - d[k]) * t2 + (-a[k] + 3 * b[k] - 3 * c[k] + d[k]) * t3);
-    return [y, Math.max(0, cr(1)), Math.max(0, cr(2)), Math.min(0, cr(3)), lerp(b[4], c[4], t)];
-  }
-  function headPoint(th, ph, Hp) {
-    let y = Yph(ph);
-    // 下半脸长度（以眼线为界）
-    const eyeY = 0.112;
-    const yy = y < eyeY ? eyeY - (eyeY - y) / (0.94 + 0.06 * Hp.len) : y;
-    const pr = hprofAt(yy);
-    const fat = Hp.fat || 0;
-    let xw = pr[1] * Hp.w * (1 + fat * 0.08 * (1 - sstep(0.06, 0.14, y)));
-    const zf = pr[2], zb = pr[3];
-    // 下颌：越往下越收（方下巴收得少）
-    const low = 1 - sstep(0.0, 0.075, y);
-    const jawK = clamp(1.25 - 0.45 * Hp.jaw + fat * 0.3, 0.6, 1.2);
-    xw *= 1 + 0.08 * low * (Hp.jaw - 1);
-    const sn = Math.sin(th), cs = Math.cos(th);
-    let x, z;
-    if (cs >= 0) {
-      const sq = pr[4];
-      const ex = superE(sn, sq), ez = superE(cs, sq);
-      const tap = 1 - 0.46 * low * jawK * Math.pow(cs, 1.2);
-      x = ex * xw * tap; z = ez * zf;
-    } else { x = sn * xw; z = -cs * zb; }
-    // 五官起伏（大多沿 +z）
-    const ax = Math.abs(x);
-    let dz = 0, dn = 0;
-    if (cs > 0) {
-      // 细部起伏按 LOD 取舍：高精度（lodF = 1）用细致的鼻、唇、眼窝；中低精度顶点太稀，细部会变成尖刺 / 折痕，
-      // 只保留宽缓的鼻梁与眉骨隆起，五官交给面部贴图
-      const F = Hp.lodF != null ? Hp.lodF : 1;
-      // 鼻：鼻根 → 鼻尖 → 鼻底（特征宽度不小于顶点间距的约 2 倍）
-      const tipY = 0.074, rootY = 0.122;
-      let nh = 0, sig = 0.016;
-      if (y >= tipY && y <= rootY + 0.01) { const t = clamp01((y - tipY) / (rootY - tipY)); nh = lerp(0.024, 0.003 + 0.006 * Hp.bridge, Math.pow(t, 0.85)); sig = lerp(0.0165, 0.0115, t); if (Hp.aquiline) nh += 0.004 * gauss(y, 0.1, 0.01); }
-      else if (y < tipY) { nh = 0.024 * (1 - sstep(tipY, tipY - 0.015, y)); sig = 0.0165; }
-      if (Hp.flat) nh *= 0.65;
-      sig *= Hp.noseW * (1 + Hp.bulb * 0.35 * gauss(y, tipY, 0.01));
-      const broad = 0.009 * gauss(x, 0, 0.026) * gauss(y, 0.088, 0.024);
-      dz += F * nh * Hp.noseLen * Math.exp(-(x * x) / (sig * sig)) + (1 - F) * broad * Hp.noseLen;
-      // 鼻翼
-      dz += F * 0.006 * gauss(ax, 0.018 * Hp.noseW, 0.008) * gauss(y, 0.068, 0.008);
-      // 眼窝与眼球
-      dz += lerp(0.4, 1, F) * (-0.01 * gauss(ax, 0.034, 0.018) * gauss(y, 0.112, 0.012)) + F * 0.004 * gauss(ax, 0.034, 0.011) * gauss(y, 0.111, 0.007);
-      // 眉弓
-      dz += lerp(0.6, 1, F) * (0.003 + 0.004 * Hp.brow) * gauss(y, 0.129, 0.009) * (1 - sstep(0.05, 0.07, ax)) * (1 - 0.3 * gauss(x, 0, 0.01));
-      // 唇、口角、下巴、人中、法令
-      const lp = Hp.lips * (Hp.fem ? 1.25 : 1) * F;
-      dz += 0.0028 * lp * gauss(x, 0, 0.02) * gauss(y, 0.054, 0.0068) + 0.0038 * lp * gauss(x, 0, 0.018) * gauss(y, 0.037, 0.0075);
-      dz += F * (-0.0016 * gauss(x, 0, 0.024) * gauss(y, 0.0455, 0.004) - 0.0024 * gauss(ax, 0.026, 0.008) * gauss(y, 0.046, 0.008));
-      dz += 0.006 * (0.6 + 0.4 * Hp.chin) * gauss(x, 0, 0.022) * gauss(y, 0.013, 0.011);
-      dz += -0.002 * F * gauss(ax, 0.029, 0.009) * gauss(y, 0.06, 0.013);
-      // 颧骨、胖瘦、两颊凹陷（沿截面法线）
-      dn += (0.004 + 0.005 * Hp.cheek) * gauss(ax, 0.056, 0.016) * gauss(y, 0.095, 0.012);
-      dn += 0.014 * fat * gauss(ax, 0.055, 0.022) * gauss(y, 0.05, 0.025) - 0.006 * Hp.hollow * gauss(ax, 0.052, 0.012) * gauss(y, 0.062, 0.013);
-    }
-    if (dn) { x += sn * dn; z += cs * dn; }
-    const hsz = Hp.size || 1;
-    return [x * hsz, y * hsz, (z + dz) * hsz];
-  }
-
-  // 头部网格（头部局部坐标）。o：{ nLat, nLon, reg（图集区域：士兵的通用脸）, col, w（权重）}
-  function buildHead(gb, Hp, o) {
-    const nl = o.nLat, nn = o.nLon, grp = gb.group();
-    const reg = o.reg ? REG(o.reg) : null;
-    const uvOf = (th, ph) => { const q = headUV(th, ph); return reg ? ruv(reg, q[0], q[1]) : q; };
-    const rows = [];
-    // 经度分布：高精度时正面加密（θ = π·(a·u + (1 − a)·u³)，正脸列距约为背面的 1/3.5），侧面轮廓仍够圆
-    const wa = nn >= 24 ? 0.55 : nn >= 14 ? 0.8 : 1;
-    const thOf = i => { const u = -1 + 2 * i / nn; return PI * (wa * u + (1 - wa) * u * u * u); };
-    for (let k = 0; k <= nl; k++) {
-      // 纬度分布：脸部（-1.2..0.5）加密
-      const s = k / nl;
-      const ph = -PI / 2 + PI * (s + 0.06 * Math.sin(s * TAU));
-      const row = [];
-      if (k === 0 || k === nl) {
-        const p = headPoint(0, ph, Hp);
-        const id = gb.v(p, uvOf(0, ph), o.col, o.w, grp);
-        for (let i = 0; i <= nn; i++) row.push(id);
-      } else {
-        for (let i = 0; i <= nn; i++) {
-          const th = thOf(i);
-          row.push(gb.v(headPoint(th, ph, Hp), uvOf(th, ph), o.col, o.w, grp));
-        }
-      }
-      rows.push(row);
-    }
-    for (let k = 0; k < nl; k++) for (let i = 0; i < nn; i++) {
-      const a = rows[k][i], b = rows[k][i + 1], c = rows[k + 1][i + 1], d = rows[k + 1][i];
-      if (a === b) gb.tri(a, c, d); else if (c === d) gb.tri(a, b, c); else gb.quad(a, b, c, d);
-    }
-    // 耳朵：扁椭球，贴图取面部贴图耳旁的肤色
-    if (o.ears !== false) {
-      for (const sd of [1, -1]) {
-        const th = sd * PI / 2 * 0.95, ph = -0.07;
-        const base = headPoint(th, ph, Hp);
-        const sz = 0.023 * Hp.ear;
-        ellipsoid(gb, [base[0] - sd * 0.002, base[1] - 0.006 * (Hp.ear - 1), base[2] - 0.012], [0.007, sz * (1 + 0.5 * (Hp.ear - 1)), sz * 0.58],
-          { nl: o.nLon >= 24 ? 6 : 4, n: o.nLon >= 24 ? 10 : 6, uvc: uvOf(th, ph), col: o.col, w: o.w });
-      }
-    }
-  }
-
-  // ---------------------------------------------------------- 面部绘制 --
-  // F：{ skin, eye: { shape, color, size }, brow: { shape, thick, color }, mouth, beard（胡须样式）, beardColor, hair: { style, color },
-  //      marks: [...], acc: [...], expr, age, fem, generic（通用脸：皮肤为白、交给顶点色染色）}
-  function paintFaceInto(P, F) {
-    const W = P.w, Ht = P.h;
-    const E = (th, ph) => { const q = headUV(th, ph); return [P.x + q[0] * W, P.y + (1 - q[1]) * Ht]; };
-    const sxAt = th => { const d = 0.01; return (E(th + d, 0)[0] - E(th - d, 0)[0]) / (2 * d); };
-    const sy = Math.abs(E(0, FEAT.eyeP + 0.02)[1] - E(0, FEAT.eyeP - 0.02)[1]) / 0.04;
-    const skin = F.generic ? grey(SKIN_EXP) : hex(col(F.skin || '#e8c09a').map(v => v * SKIN_EXP));
-    const fem = !!F.fem, age = F.age || 30;
-    const sk = col(skin);
-    const dark = (k, a) => 'rgba(' + Math.round(sk[0] * 255 * k) + ',' + Math.round(sk[1] * 255 * k * 0.92) + ',' + Math.round(sk[2] * 255 * k * 0.88) + ',' + a + ')';
-    P.all({ a: skin, m: 1, h: 0.5, r: 0.68, mt: 0 });
-    // 暖色：双颊、鼻、耳；冷色：眼窝；下巴下方阴影
-    // 第三版修订：渐变随椭圆缩放（单位圆渐变 + 平移缩放），椭圆的长轴边上不再被硬切成一条竖线（脸颊上的「接缝」）
-    const blob = (th, ph, rw, rh, color) => { const c = E(th, ph); const g = (ctx) => { const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, 1); gr.addColorStop(0, color); gr.addColorStop(1, color.replace(/[\d.]+\)$/, '0)')); return gr; }; P.fill(ctx => { ctx.translate(c[0], c[1]); ctx.scale(Math.max(1e-3, rw), Math.max(1e-3, rh)); ctx.arc(0, 0, 1, 0, TAU); }, { a: g }); };
-    const bl = (F.blush || 1) * (fem ? 1.4 : 1);
-    for (const s of [1, -1]) {
-      blob(s * 0.75, -0.25, sxAt(0.75) * 0.32, sy * 0.2, 'rgba(210,90,80,' + (0.16 * bl).toFixed(3) + ')');
-      blob(s * FEAT.eyeT, FEAT.eyeP, sxAt(FEAT.eyeT) * 0.26, sy * 0.12, dark(0.7, 0.35));
-      blob(s * PI / 2, -0.06, sxAt(1.5) * 0.25, sy * 0.25, 'rgba(200,90,80,0.16)');
-    }
-    blob(0, FEAT.noseP + 0.02, sxAt(0.05) * 0.08, sy * 0.1, 'rgba(210,100,90,0.14)');
-    // 下巴下方阴影：女性与深肤色减弱（深色皮肤上这块阴影会读成胡子）
-    const skinL = (() => { const c = col(skin); return 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2]; })();
-    blob(0, -1.2, sxAt(0.3) * 0.9, sy * 0.25, dark(0.75, fem ? 0.12 : skinL < 0.4 ? 0.22 : 0.4));
-    // 胡茬 / 须根
-    const bs = F.beard || 'none';
-    if (!fem && bs !== 'none') {
-      const amt = bs === 'stubble' ? 0.32 : 0.2;
-      const bc = col(F.beardColor || '#2a2020');
-      const bcs = 'rgba(' + Math.round(bc[0] * 160 + 40) + ',' + Math.round(bc[1] * 160 + 50) + ',' + Math.round(bc[2] * 160 + 70) + ',' + amt + ')';
-      P.fill(ctx => {
-        const pts = [[-1.25, -0.25], [-0.9, -0.42], [-0.45, -0.38], [-0.2, -0.33], [0, -0.32], [0.2, -0.33], [0.45, -0.38], [0.9, -0.42], [1.25, -0.25], [1.4, -0.7], [0.8, -1.3], [0, -1.45], [-0.8, -1.3], [-1.4, -0.7]];
-        pts.forEach((q, i) => { const c = E(q[0], q[1]); if (i) ctx.lineTo(c[0], c[1]); else ctx.moveTo(c[0], c[1]); });
-        ctx.closePath();
-      }, { a: bcs });
-    }
-    // 头发（发际线以上；髡发只留两侧与后脑）
-    const hs = (F.hair && F.hair.style) || 'topknot', hcol = F.hair && F.hair.color ? hex(F.hair.color) : '#1c1816';
-    if (hs !== 'bald') {
-      const front = hs === 'kunfa' ? 1.2 : FEAT.hairP - ((F.hair && F.hair.recede) || 0) * -0.25;
-      const line = th => {
-        const a = Math.abs(th);
-        if (a < 0.95) return front + (hs === 'kunfa' ? 0 : 0.06 * Math.cos(th * 5) * gauss(a, 0.5, 0.3));      // 美人尖 / 额角
-        if (a < 1.45) return lerp(front - 0.15, 0.08, sstep(0.95, 1.45, a));
-        if (a < 1.75) return lerp(0.08, 0.15, sstep(1.45, 1.75, a));      // 鬓角
-        return lerp(0.1, -0.55, sstep(1.75, 2.6, a));
-      };
-      P.fill(ctx => {
-        const N = 48;
-        for (let i = 0; i <= N; i++) { const th = -PI + TAU * i / N; const c = E(th, line(th)); if (i) ctx.lineTo(c[0], c[1]); else ctx.moveTo(c[0], c[1]); }
-        const c1 = E(PI, PI / 2), c0 = E(-PI, PI / 2);
-        ctx.lineTo(c1[0], c1[1]); ctx.lineTo(c0[0], c0[1]); ctx.closePath();
-      }, { a: hcol, m: F.generic ? 0 : 1, r: 0.5 });
-      // 发丝
-      const rr = Rng(hashStr(hcol));
-      for (let i = 0; i < (W > 200 ? 260 : 60); i++) {
-        const th = rr.range(-PI, PI), ph0 = line(th), l = rr.range(0.08, 0.25);
-        const a = E(th, ph0 + l), b = E(th + rr.range(-0.05, 0.05), ph0 + 0.01);
-        P.stroke(ctx => { ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); }, { a: rr.chance(0.5) ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.25)' }, W > 200 ? 1 : 0.6);
-      }
-    }
-    // 皱纹（年长）
-    if (age > 44) {
-      const k = clamp01((age - 44) / 25);
-      for (const q of [0.5, 0.58]) P.stroke(ctx => { const a = E(-0.45, q), b = E(0, q + 0.02), c = E(0.45, q); ctx.moveTo(a[0], a[1]); ctx.quadraticCurveTo(b[0], b[1], c[0], c[1]); }, { a: dark(0.6, 0.35 * k) }, W > 200 ? 1.4 : 0.8);
-      for (const s of [1, -1]) {
-        P.stroke(ctx => { const a = E(s * 0.17, FEAT.noseP - 0.02), b = E(s * 0.27, -0.42), c = E(s * 0.25, -0.58); ctx.moveTo(a[0], a[1]); ctx.quadraticCurveTo(b[0], b[1], c[0], c[1]); }, { a: dark(0.6, 0.45 * k) }, W > 200 ? 1.6 : 0.8);
-        for (let j = 0; j < 3; j++) P.stroke(ctx => { const a = E(s * 0.6, FEAT.eyeP + 0.02 - j * 0.04), b = E(s * 0.7, FEAT.eyeP + 0.03 - j * 0.06); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); }, { a: dark(0.6, 0.3 * k) }, W > 200 ? 1 : 0.6);
-      }
-    }
-    // 眼睛
-    const ey = F.eye || {}, shape = ey.shape || 'normal', esz = ey.size || 1;
-    const patch = (F.acc || []).includes('eyepatch');
-    const lineC = '#1c120e';
-    const SH = { normal: [1, 1, 0.05, 1], sharp: [1.05, 0.8, 0.12, 1.15], phoenix: [1.1, 0.78, 0.2, 1.2], round: [0.95, 1.35, 0, 0.9], narrow: [1.05, 0.6, 0.06, 1.1], gentle: [1, 1, -0.06, 0.85], big: [1.08, 1.25, 0, 0.95], sleepy: [1, 0.68, -0.04, 1] };
-    const sh = SH[shape] || SH.normal;
-    for (const s of [1, -1]) {
-      const cx = s * FEAT.eyeT, cy = FEAT.eyeP;
-      const hw = 0.19 * sh[0] * esz, hh = 0.05 * sh[1] * esz * (fem ? 1.12 : 1), tilt = sh[2];
-      const inner = E(s * (FEAT.eyeT - hw), cy - 0.01), outer = E(s * (FEAT.eyeT + hw), cy + tilt * 0.5 + 0.005);
-      const top = E(cx + s * hw * 0.1, cy + hh), bot = E(cx, cy - hh * 0.7);
-      if (patch && s > 0) {
-        P.fill(ctx => ctx.ellipse(E(cx, cy)[0], E(cx, cy)[1], sxAt(cx) * hw * 1.45, sy * hh * 2.6, 0.1, 0, TAU), { a: '#141214', m: 0, r: 0.4 });
-        continue;
-      }
-      const almond = ctx => { ctx.moveTo(inner[0], inner[1]); ctx.quadraticCurveTo(top[0], top[1] - sy * hh * 0.9 * sh[3], outer[0], outer[1]); ctx.quadraticCurveTo(bot[0], bot[1] + sy * hh * 0.6, inner[0], inner[1]); ctx.closePath(); };
-      P.fill(almond, { a: '#e6ddd0', m: 0, r: 0.25 });
-      const ic = E(cx + s * hw * 0.05, cy + 0.005), ir = Math.min(sxAt(cx) * hw * 0.5, sy * hh * 1.25);
-      P._each({ a: hex(ey.color || '#3a2618'), m: 0, r: 0.2 }, (ctx, st) => { ctx.save(); ctx.beginPath(); almond(ctx); ctx.clip(); ctx.fillStyle = st; ctx.beginPath(); ctx.arc(ic[0], ic[1], ir, 0, TAU); ctx.fill(); ctx.restore(); });
-      P._each({ a: '#0c0808' }, (ctx, st) => { ctx.save(); ctx.beginPath(); almond(ctx); ctx.clip(); ctx.fillStyle = st; ctx.beginPath(); ctx.arc(ic[0], ic[1], ir * 0.45, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(ic[0] - ir * 0.3, ic[1] - ir * 0.35, ir * 0.22, 0, TAU); ctx.fill(); ctx.restore(); });
-      // 上眼睑粗线 + 下眼睑细线 + 双眼皮线
-      const lw = Math.max(1, W / 170);
-      P.stroke(ctx => { ctx.moveTo(inner[0], inner[1]); ctx.quadraticCurveTo(top[0], top[1] - sy * hh * 0.9 * sh[3], outer[0] + s * lw, outer[1] - lw * 0.4); }, { a: lineC, m: 0 }, lw * 1.8);
-      P.stroke(ctx => { ctx.moveTo(inner[0], inner[1]); ctx.quadraticCurveTo(bot[0], bot[1] + sy * hh * 0.6, outer[0], outer[1]); }, { a: 'rgba(60,30,24,0.6)', m: 0 }, lw * 0.7);
-      P.stroke(ctx => { const a = E(s * (FEAT.eyeT - hw * 0.6), cy + hh * 1.5), b = E(cx, cy + hh * 2.2), c = E(s * (FEAT.eyeT + hw * 0.85), cy + hh * 1.2 + tilt * 0.4); ctx.moveTo(a[0], a[1]); ctx.quadraticCurveTo(b[0], b[1], c[0], c[1]); }, { a: dark(0.55, 0.6) }, lw * 0.7);
-      if (fem) P.stroke(ctx => { ctx.moveTo(top[0], top[1] - sy * hh * 0.5); ctx.lineTo(outer[0] + s * lw * 3, outer[1] - lw * 2.5); }, { a: lineC, m: 0 }, lw);
-    }
-    if (patch) {
-      // 眼罩系带：从左眼斜过额头绕到脑后
-      P.stroke(ctx => { const a = E(-PI, 0.55), b = E(-0.9, 0.62), c = E(0.1, 0.5), d = E(FEAT.eyeT, FEAT.eyeP), e = E(1.2, -0.05), f = E(PI, 0.0); ctx.moveTo(a[0], a[1]); ctx.quadraticCurveTo(b[0], b[1], c[0], c[1]); ctx.lineTo(d[0], d[1]); ctx.quadraticCurveTo(e[0], e[1], f[0], f[1]); }, { a: '#141214', m: 0 }, Math.max(1.5, W / 90));
-    }
-    // 眉
-    const bw = F.brow || {}, bshape = bw.shape || 'straight', bth = (bw.thick || 1), bcol = hex(bw.color || hcol);
-    const expr = F.expr || 'neutral';
-    const BR = { straight: [0, 0, 0, 1], arched: [0.03, 0.05, 0, 0.9], angled: [-0.02, 0.0, 0.1, 1.05], bushy: [0, 0.02, 0.03, 1.5], thin: [0.01, 0.03, 0.01, 0.55], knit: [-0.04, -0.02, 0.09, 1.15],
-      silkworm: [0.02, 0.06, 0.05, 1.5], sword: [-0.015, -0.01, 0.13, 1.15], worried: [0.06, 0.0, -0.05, 0.95] };
-    const br = BR[bshape] || BR.straight;
-    const fierce = expr === 'fierce' ? 0.035 : expr === 'stern' ? 0.015 : 0;
-    for (const s of [1, -1]) {
-      const by = FEAT.browP + (bw.y || 0);
-      const i0 = E(s * 0.12, by - br[0] * 0 + 0.0 - fierce + (br[0] < 0 ? br[0] : 0)), m0 = E(s * 0.38, by + br[1] + 0.03), o0 = E(s * 0.66, by + br[2] - 0.02);
-      const t = sy * 0.035 * bth * br[3] * (fem ? 0.7 : 1);
-      P.fill(ctx => {
-        ctx.moveTo(i0[0], i0[1] - t * 0.9); ctx.quadraticCurveTo(m0[0], m0[1] - t * 1.4, o0[0], o0[1] - t * 0.25);
-        ctx.quadraticCurveTo(m0[0], m0[1] + t * 0.15, i0[0], i0[1] + t * 0.7); ctx.closePath();
-      }, { a: bcol, m: 0, r: 0.6 });
-      if (br[3] > 1.1 && W > 200) {
-        const rr = Rng(hashStr(bshape) + s);
-        for (let i = 0; i < 26; i++) { const k = rr.f(), a = [lerp(i0[0], o0[0], k), lerp(i0[1], o0[1], k) - t * 0.5 - Math.sin(k * PI) * t * 0.6]; P.stroke(ctx => { ctx.moveTo(a[0], a[1] + t * 0.6); ctx.lineTo(a[0] + s * rr.range(2, 6), a[1] - t * rr.range(0.2, 0.9)); }, { a: bcol, m: 0 }, 1.2); }
-      }
-    }
-    // 鼻孔与鼻梁阴影
-    // 鼻孔：小而淡（远看不成「猪鼻」）；鼻翼两侧一抹阴影勾出鼻形（中低精度几何没有鼻翼时靠它）
-    for (const s of [1, -1]) {
-      const c = E(s * 0.11, FEAT.noseP - 0.065); P.fill(ctx => ctx.ellipse(c[0], c[1], sxAt(0.11) * 0.034, sy * 0.014, s * 0.45, 0, TAU), { a: dark(0.45, 0.5) });
-      blob(s * 0.2, FEAT.noseP + 0.02, sxAt(0.2) * 0.06, sy * 0.1, dark(0.7, 0.22));
-    }
-    P.stroke(ctx => { const a = E(-0.1, 0.18), b = E(-0.11, FEAT.noseP + 0.02); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); }, { a: dark(0.75, 0.35) }, Math.max(1, W / 120));
-    // 嘴
-    const mo = F.mouth || {}, mw = 0.3 * (mo.w || 1) * (fem ? 0.85 : 1);
-    const smile = expr === 'smile' ? 0.03 : expr === 'sly' ? 0.015 : expr === 'fierce' || expr === 'stern' ? -0.02 : 0;
-    const my = FEAT.mouthP + (mo.y || 0);
-    const lc = fem ? '#a8323c' : mix(skin, '#8a3a32', 0.55);
-    P.fill(ctx => { const a = E(-mw, my + smile * 0.6), b = E(0, my - 0.075 * (mo.lips || 1)), c = E(mw, my + smile * (expr === 'sly' ? 1.6 : 0.6)); ctx.moveTo(a[0], a[1]); ctx.quadraticCurveTo(b[0], b[1], c[0], c[1]); ctx.quadraticCurveTo(E(0, my)[0], E(0, my)[1], a[0], a[1]); }, { a: fem ? lc : hex(mix(lc, skin, 0.35)), m: 0, r: 0.4 });
-    P.fill(ctx => { const a = E(-mw, my + smile * 0.6), b = E(0, my + 0.055), c = E(mw, my + smile * 0.6); ctx.moveTo(a[0], a[1]); ctx.quadraticCurveTo(b[0], b[1], c[0], c[1]); ctx.quadraticCurveTo(E(0, my + 0.01)[0], E(0, my + 0.01)[1], a[0], a[1]); }, { a: hex(mix(lc, skin, fem ? 0.1 : 0.45)), m: 0, r: 0.4 });
-    P.stroke(ctx => { const a = E(-mw * 1.05, my + smile), b = E(0, my - 0.005), c = E(mw * 1.05, my + smile * (expr === 'sly' ? 2 : 1)); ctx.moveTo(a[0], a[1]); ctx.quadraticCurveTo(b[0], b[1], c[0], c[1]); }, { a: '#3a1a16', m: 0 }, Math.max(1, W / 140));
-    // 面部标记
-    const marks = F.marks || [];
-    const mk = (color, lw, pts) => P.stroke(ctx => pts.forEach((q, i) => { const c = E(q[0], q[1]); if (i) ctx.lineTo(c[0], c[1]); else ctx.moveTo(c[0], c[1]); }), { a: color, m: 0 }, lw);
-    const L = Math.max(1, W / 110);
-    if (marks.includes('scar')) mk('rgba(150,60,55,0.85)', L, [[-0.85, 0.2], [-0.55, -0.15], [-0.4, -0.38]]);
-    if (marks.includes('scars')) { mk('rgba(150,60,55,0.8)', L, [[0.5, 0.35], [0.8, -0.2]]); mk('rgba(150,60,55,0.8)', L, [[-0.3, -0.6], [-0.65, -0.85]]); }
-    if (marks.includes('mole')) { const c = E(0.32, -0.36); P.fill(ctx => ctx.arc(c[0], c[1], L * 1.2, 0, TAU), { a: '#3a2218', m: 0 }); }
-    if (marks.includes('woad')) for (const s of [1, -1]) { mk('rgba(40,70,160,0.85)', L * 1.6, [[s * 0.25, 0.42], [s * 0.6, 0.2], [s * 0.85, -0.25]]); mk('rgba(40,70,160,0.8)', L * 1.2, [[s * 0.45, -0.3], [s * 0.7, -0.55], [s * 0.5, -0.8]]); }
-    if (marks.includes('warpaint')) for (const s of [1, -1]) { mk('rgba(190,40,30,0.85)', L * 2.5, [[s * 0.2, -0.05], [s * 0.85, -0.12]]); mk('rgba(240,235,220,0.85)', L * 1.4, [[s * 0.25, -0.18], [s * 0.8, -0.26]]); }
-    if (marks.includes('tattoo-wa')) for (const s of [1, -1]) { for (let j = 0; j < 3; j++) mk('rgba(40,40,60,0.75)', L, [[s * (0.55 + j * 0.08), 0.05], [s * (0.62 + j * 0.08), -0.35]]); }
-    if (marks.includes('tattoo-yi')) { for (let j = 0; j < 4; j++) mk('rgba(30,40,70,0.75)', L, [[-0.4 + j * 0.25, 0.55], [-0.4 + j * 0.25, 0.4]]); mk('rgba(30,40,70,0.75)', L, [[-0.3, -0.75], [0, -0.85], [0.3, -0.75]]); }
-    if (marks.includes('freckles')) { const rr = Rng(5); for (let i = 0; i < 30; i++) { const c = E(rr.range(-0.7, 0.7), rr.range(-0.35, 0.0)); P.fill(ctx => ctx.arc(c[0], c[1], L * 0.6, 0, TAU), { a: 'rgba(150,80,40,0.45)' }); } }
-    if (marks.includes('scales')) { for (let i = 0; i < 12; i++) { const c = E(-0.9 + (i % 4) * 0.12, 0.3 - Math.floor(i / 4) * 0.12); P.stroke(ctx => ctx.arc(c[0], c[1], L * 2, 0, PI), { a: 'rgba(60,90,70,0.6)', m: 0 }, L * 0.8); } }
-  }
-  // 士兵用的 4 张通用脸（图集）
-  const GENERIC_FACES = [
-    { generic: true, eye: { shape: 'normal' }, brow: { shape: 'straight', thick: 1.1, color: '#2a221e' }, beard: 'none', expr: 'stern', hair: { style: 'topknot', color: '#1c1816' } },
-    { generic: true, eye: { shape: 'sharp' }, brow: { shape: 'angled', thick: 1.2, color: '#2a221e' }, beard: 'short', beardColor: '#2a2020', expr: 'fierce', hair: { style: 'topknot', color: '#1c1816' } },
-    { generic: true, eye: { shape: 'narrow' }, brow: { shape: 'bushy', thick: 1.2, color: '#2a221e' }, beard: 'full', beardColor: '#2a2020', expr: 'stern', age: 46, hair: { style: 'topknot', color: '#1c1816' } },
-    { generic: true, eye: { shape: 'round' }, brow: { shape: 'knit', thick: 1.3, color: '#2a221e' }, beard: 'stubble', beardColor: '#2a2020', expr: 'fierce', marks: ['scar'], hair: { style: 'topknot', color: '#1c1816' } },
-  ];
-  // 名将面部贴图（按外貌缓存）
-  const FACE_CACHE = new Map();
-  function faceTexture(sp, size) {
-    const key = (sp.key || sp.name || '?') + '|' + size;
-    let t = FACE_CACHE.get(key);
-    if (t) { t.userData.refs++; return t; }
-    const c = document.createElement('canvas'); c.width = c.height = size;
-    const ctx = c.getContext('2d');
-    const P = Painter({ a: ctx }, { px: 0, py: 0, pw: size, ph: size });
-    paintFaceInto(P, faceDesc(sp));
-    t = new THREE.CanvasTexture(c);
-    t.anisotropy = 4;
-    t.userData = { refs: 1, key };
-    FACE_CACHE.set(key, t);
-    STATS.textures++;
-    return t;
-  }
-  function releaseFace(t) {
-    if (!t || !t.userData || !t.userData.key) return;
-    if (--t.userData.refs <= 0) { FACE_CACHE.delete(t.userData.key); t.dispose(); STATS.textures--; }
-  }
-  // 外貌参数 → 面部绘制描述
-  function faceDesc(sp) {
-    return {
-      skin: sp.skin, fem: sp.sex === 'f', age: sp.age, expr: sp.expr, blush: sp.blush,
-      eye: { shape: sp.eyes && sp.eyes.shape, color: sp.eyes && sp.eyes.color, size: sp.eyes && sp.eyes.size },
-      brow: { shape: sp.brows && sp.brows.shape, thick: sp.brows && sp.brows.thick, color: sp.brows && sp.brows.color, y: sp.brows && sp.brows.y ? sp.brows.y * 0.4 : 0 },
-      mouth: sp.mouth, beard: sp.beard && sp.beard.style, beardColor: sp.beard && sp.beard.color,
-      hair: { style: sp.hair && sp.hair.style, color: sp.hair && sp.hair.color, recede: sp.hair && sp.hair.recede },
-      marks: sp.marks || [], acc: sp.acc || [],
-    };
-  }
-
   // ======================================================== 外观设定 ==
   // 外貌参数（头像）→ 三维服饰层：躯干甲、腰裙、袖、护肩、护臂、腿、胫甲、靴、披风、前垂、领巾、腰带、冠帽、兵器、盾。
   // 第三版加 india（天竺）、africa（阿克苏姆、库施）、moor（毛里）；表里没有的文化按 SG.cultureBase（core.js）回退
@@ -1706,7 +447,8 @@
   const OUTFIT = {
     lamellar: { torso: 'lamLace', skirt: 'lamellar', skirtLen: 0.58, sleeves: 'cloth', pauldron: 'lamellar', bracer: 'metal', legs: 'trousers', greave: 'none', boots: 'boot', tabard: true, collar: 'scarf', belt: true, mirror: true },
     plate: { torso: 'plate', skirt: 'lamellar', skirtLen: 0.6, sleeves: 'cloth', pauldron: 'plate', bracer: 'metal', legs: 'trousers', greave: 'metal', boots: 'boot', tabard: true, collar: 'scarf', belt: true, mirror: true },
-    robearmor: { torso: 'cloth', chest: 'plate', skirt: 'robe', skirtLen: 0.86, sleeves: 'cloth', pauldron: 'plate', bracer: 'metal', legs: 'trousers', boots: 'boot', tabard: true, collar: 'scarf', belt: true },
+    // 袍甲（试点关羽）：札甲 + 护心镜，外罩前襟敞开的袍（米色镶边的领襟、立领），袍裙开衩到膝、两侧甲裙，袍袖到肘、护臂与皮手套，朱红束带打结垂下
+    robearmor: { torso: 'lamellar', openRobe: true, chest: 'plate', skirt: 'splitrobe', skirtLen: 0.62, sleeves: 'elbow', pauldron: 'plate', bracer: 'metal', legs: 'trousers', boots: 'boot', tabard: false, collar: 'stand', belt: true, sashKnot: true },
     robe: { torso: 'robe', skirt: 'robe', skirtLen: 0.95, sleeves: 'wide', pauldron: 'none', bracer: 'none', legs: 'trousers', boots: 'shoe', belt: 'sash', collar: 'cross' },
     pelt: { torso: 'bare', pelt: 'tiger', skirt: 'kilt', skirtLen: 0.45, sleeves: 'bare', pauldron: 'none', bracer: 'gold', legs: 'bare', boots: 'sandal', belt: true },
     rattan: { torso: 'rattan', skirt: 'rattan', skirtLen: 0.5, sleeves: 'bare', pauldron: 'rattan', bracer: 'leather', legs: 'bare', boots: 'sandal', belt: true },
@@ -1738,14 +480,14 @@
   const HAT_MAP = {
     none: 'none', helmet: 'helmet', ze: 'ze', jinxian: 'jinxian', futou: 'futou', turban: 'turban', headband: 'headband', lunjin: 'lunjin', wuguan: 'ze',
     crown: 'crown', pheasant: 'pheasant', daoist: 'crown', feathers: 'feathers', chief: 'chief', wahelm: 'wahelm', shaman: 'shaman', yiband: 'headband',
-    jeolpung: 'jeolpung', birdfeather: 'jeolpung', goldcrown: 'goldcrown', felt: 'felt', fur: 'furhat', furcap: 'furhat', tallcrown: 'tallcrown',
+    jinze: 'jinze', jeolpung: 'jeolpung', birdfeather: 'jeolpung', goldcrown: 'goldcrown', felt: 'felt', fur: 'furhat', furcap: 'furhat', tallcrown: 'tallcrown',
     flowerwrap: 'turban', pointcap: 'pointcap', tallhat: 'tallhat', diadem: 'diadem', tiara: 'tiara', phrygian: 'phrygian', keffiyeh: 'keffiyeh',
     arabturban: 'turban', hatra: 'tallhat', laurel: 'laurel', galea: 'galea', celthelm: 'celthelm', spangen: 'spangen', conical: 'conical',
     pagri: 'pagri', mukuta: 'mukuta', jewelband: 'diadem', sinhalacrown: 'bellcrown', kushcrown: 'kushcrown', aksumcrown: 'aksumcrown', featherband: 'featherband',
   };
   // 名将：三维专属设定（兵器、披风、前垂、饰物）
   const SIG = {
-    '关羽': { weapon: 'guandao', cape: '#24653b', tabard: '#2f7d4a', metal: '#c8a050', beardLen: 1.35 },
+    '关羽': { weapon: 'guandao', metal: '#D9A441', beardLen: 1.35, hat: 'jinze', cloth: '#3F7F4A', skin: '#B9483A' },
     '张飞': { weapon: 'snake', tabard: '#2a2a30', cape: '#3a1f1a', metal: '#4a4c56' },
     '吕布': { weapon: 'halberd', cape: '#b02a24', tabard: '#b02a24', metal: '#d8a848', ribbons: '#d03028', pauldron: 'lion' },
     '赵云': { weapon: 'yajiao', cape: '#eef0f4', tabard: '#f4f4f8', metal: '#c8ced8', ribbons: '#e8eef8' },
@@ -1881,6 +623,9 @@
     }
     if (sig.sleeves) L.sleeves = sig.sleeves;
     if (sig.pauldron) L.pauldron = sig.pauldron;
+    if (sig.hat) look.hat.type = sig.hat;
+    if (sig.cloth) look.C.cloth = sig.cloth;
+    if (sig.skin) { look.skin = sig.skin; look.C.skin = sig.skin; }
     // 披风 / 前垂颜色
     const capeSpec = sig.cape || of.cape || (L.cape ? 'faction' : null);
     // 自带披挂的第三版衣装（帔帛、白麻披巾、流苏披肩、斗篷）不再加君主的势力色披风（与头像一致）
@@ -1911,7 +656,8 @@
   // --------------------------------------------------------- 士兵外观 --
   // 各文化士兵：躯干 / 腰裙 / 冠帽 / 腿 / 盾；按兵种（枪 spear、刀盾 sword、弓 archer、骑 cavalry）微调
   const SOLDIER = {
-    han: { outfit: 'lamellar', hat: { type: 'helmet', variant: 'round' }, archer: { outfit: 'jacket', hat: { type: 'ze' } }, skin: '#e2b48c', hair: '#1c1816', metal: '#5c626e' },
+    // 汉：枪兵 = 试点的汉军枪兵（红抹额、发髻，札甲护肩，米色裤与褐色绑腿）；刀盾手与骑兵戴盔；弓手着短衣、帻
+    han: { outfit: 'lamellar', hat: { type: 'helmet', variant: 'round' }, spear: { outfit: 'lamellar', hat: { type: 'headband', color: '#C2402E' } }, archer: { outfit: 'jacket', hat: { type: 'ze' } }, skin: '#e2b48c', hair: '#1c1816', metal: '#5c626e' },
     nanman: { outfit: 'rattan', hat: { type: 'feathers' }, archer: { outfit: 'bare', hat: { type: 'headband' } }, skin: '#a8714c', hair: '#141012', hairStyle: 'mallet', marks: ['warpaint'] },
     wa: { outfit: 'tanko', hat: { type: 'wahelm' }, archer: { outfit: 'kantoui', hat: { type: 'none' } }, skin: '#e6bd96', hair: '#16131a', hairStyle: 'mizura', metal: '#4a4e58' },
     yi: { outfit: 'yivest', hat: { type: 'headband' }, skin: '#c99666', hair: '#141012', hairStyle: 'long', marks: ['tattoo-yi'] },
@@ -1979,21 +725,8 @@
     return look;
   }
 
-  // ======================================================== 身体与衣甲 ==
-  const LODP = {
-    high: { torN: 22, torK: 20, limbN: 16, armK: 14, legK: 16, head: [24, 32], pn: 6, pv: 9, hand: [7, 10], foot: 12, ring: 20, tube: 10, detail: 2 },
-    mid: { torN: 12, torK: 8, limbN: 8, armK: 6, legK: 6, head: [12, 14], pn: 3, pv: 4, hand: [4, 6], foot: 6, ring: 14, tube: 6, detail: 1 },
-    low: { torN: 10, torK: 6, limbN: 8, armK: 4, legK: 4, head: [6, 10], pn: 2, pv: 2, hand: [3, 4], foot: 4, ring: 12, tube: 4, detail: 0 },
-  };
-  // 预算（DESIGN-V3 §1）与超预算时的逐级压缩：先减纵向分段 / 甲片网格，再减环向边数
-  const TRI_BUDGET = { high: 15000, mid: 4000, low: 900 };
-  const SQUEEZE = {
-    high: [{ armK: 12, legK: 14, pv: 8 }, { armK: 11, legK: 12, pn: 5, pv: 7, limbN: 14 }, { armK: 10, legK: 11, pn: 5, pv: 7, limbN: 12, torN: 20 }],
-    mid: [{ armK: 5, legK: 5, pn: 2, pv: 3, torK: 7, ring: 12, hand: [3, 5] }, { armK: 4, legK: 4, pn: 2, pv: 3, torK: 7, ring: 12, hand: [3, 5], limbN: 7, torN: 11, head: [10, 12] },
-      { armK: 4, legK: 4, pn: 2, pv: 3, torK: 6, ring: 10, hand: [3, 5], limbN: 6, torN: 10, head: [9, 12], tube: 5 }],
-    low: [{ legK: 3, head: [6, 9], ring: 10 }, { legK: 3, head: [6, 8], ring: 10, limbN: 7, torN: 9 }, { legK: 3, head: [6, 8], ring: 8, limbN: 6, torN: 8, foot: 4 }],
-  };
-  // 躯干截面（y, 半宽, 半厚, 中心 z, 方度）
+
+  // 躯干截面（y, 半宽, 半厚, 中心 z, 方度）：双手 IK 的身体避让用（_avoidBody）
   function torsoProfile(pr) {
     const base = [
       [0.84, 0.112, 0.094, 0.000, 2.1], [0.9, 0.146, 0.11, -0.004, 2.3], [0.97, 0.166, 0.118, -0.008, 2.4], [1.04, 0.16, 0.112, -0.004, 2.3],
@@ -2022,1161 +755,1749 @@
     const cr = (p0, p1, p2, p3) => { const t2 = t * t, t3 = t2 * t; return 0.5 * (2 * p1 + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3); };
     return { y, rx: cr(a.rx, b.rx, c.rx, d.rx), rz: cr(a.rz, b.rz, c.rz, d.rz), zc: cr(a.zc, b.zc, c.zc, d.zc), sq: lerp(b.sq, c.sq, t) };
   }
-  // 躯干表面点：θ = 0 正前，off 为沿法线的外扩（米），mus 为肌肉起伏强度
-  function torsoPt(R, y, th, off, mus, fem) {
-    const r = ringAt(R, y), sn = Math.sin(th), cs = Math.cos(th);
-    const ex = superE(sn, r.sq), ez = superE(cs, r.sq);
-    let nx = sn / r.rx, nz = cs / r.rz;
-    const nl = Math.sqrt(nx * nx + nz * nz) || 1; nx /= nl; nz /= nl;
-    let d = off || 0;
-    if (mus) {
-      const yk = y;
-      const a = Math.abs(th);
-      d += mus * (0.011 * gauss(a, 0.48, 0.32) * gauss(yk, 1.335, 0.05)                 // 胸肌
-        - 0.004 * gauss(a, 0.5, 0.35) * gauss(yk, 1.27, 0.012)                          // 胸肌下缘
-        + 0.004 * gauss(a, 0.13, 0.1) * (0.5 + 0.5 * Math.cos((yk - 1.08) / 0.05 * PI)) * sstep(1.0, 1.06, yk) * (1 - sstep(1.2, 1.26, yk))   // 腹肌
-        - 0.005 * gauss(a, 0, 0.05) * sstep(1.0, 1.05, yk) * (1 - sstep(1.24, 1.28, yk))  // 腹白线
-        + 0.006 * gauss(a, 2.55, 0.35) * gauss(yk, 1.37, 0.06)                          // 肩胛
-        - 0.005 * gauss(a, PI, 0.12) * sstep(1.0, 1.1, yk)                              // 脊沟
-        + 0.006 * gauss(a, 1.25, 0.3) * gauss(yk, 1.2, 0.07));                          // 腹外斜
-    }
-    if (fem) d += 0.032 * gauss(Math.abs(th), 0.46, 0.3) * gauss(y, 1.33, 0.055);
-    return [ex * r.rx + nx * d, y, r.zc + ez * r.rz + nz * d];
-  }
-  function torsoNormal(R, y, th) { const r = ringAt(R, y); let nx = Math.sin(th) / r.rx, nz = Math.cos(th) / r.rz; const l = Math.hypot(nx, nz) || 1; return [nx / l, 0, nz / l]; }
 
-  // 构建上下文
-  function makeCtx(look) {
-    const lod = look._lodP || LODP[look.lod] || LODP.high;
-    const pr = makeProps(look);
-    const W = weightsFor(pr);
-    const R = torsoProfile(pr);
-    return { look, lod, pr, W, R, gb: new GB(), C: look.C, L: look.L, hi: lod.detail };
-  }
-  // 链式权重（按参数 t）：list = [[bone, t0], [bone, t1], ...]
-  function wT(t, list) {
-    if (t <= list[0][1]) return [[list[0][0], 1]];
-    for (let i = 0; i < list.length - 1; i++) {
-      const a = list[i], b = list[i + 1];
-      if (t <= b[1]) { const k = smooth((t - a[1]) / (b[1] - a[1])); return [[a[0], 1 - k], [b[0], k]]; }
+  // ======================================================== 低多边形人形工具（Kit） ==
+  // 按《Lanternvale》BipedKit 的做法（经 js/lp-pilot.js 的试点调定）在本文件的人形骨架上建模：每个部件刚性蒙皮在一根骨上，
+  // 铰接部件（袍裙侧片、披风、胡须、长发）按顶点位置分骨（MeshBuilder.boneBy）；面朝 +Z、Y 向上、人物左侧为 +X（右手在 −X）。
+  // 绑定姿势：A 字（双臂外展 40°，肘直），全部骨骼绑定旋转为单位。
+  // LOD：high（单挑、特写；≤ 3.1k 三角形，名将 ≤ 3.6k）、mid（战场主将、攻击画面将领；≤ 1.8k）、low（士兵；≤ 900）。
+  const LODK = {
+    high: { lim: 7, thigh: 8, tor: 8, hq: 12, hs: 12, eye: 2, ears: 1, pan: 3, det: 2, rnd: 8, fist: [7, 4], sph: [7, 4] },
+    mid: { lim: 6, thigh: 6, tor: 8, hq: 9, hs: 10, eye: 1, ears: 1, pan: 2, det: 1, rnd: 6, fist: [5, 2], sph: [5, 2] },
+    low: { lim: 5, thigh: 5, tor: 6, hq: 7, hs: 8, eye: 1, ears: 0, pan: 2, det: 0, rnd: 6, fist: [5, 2], sph: [5, 2] },
+  };
+  const TRI_BUDGET = { high: 3100, hero: 3600, mid: 1800, low: 900 };
+  // 超出预算时逐级压缩（细节层次降级，边数减少）
+  const SQUEEZE = {
+    high: [{ eye: 2, det: 2, pan: 2, rnd: 7 }, { lim: 6, thigh: 6, det: 1, rnd: 7, sph: [6, 3] }, { hq: 9, hs: 10, lim: 6, thigh: 6, det: 1, pan: 2, rnd: 6, sph: [6, 3], fist: [6, 3] }],
+    mid: [{ lim: 5, thigh: 5, tor: 7, sph: [5, 2], fist: [5, 2] }, { hq: 8, hs: 9, lim: 5, thigh: 5, tor: 6, rnd: 5, sph: [4, 2], fist: [4, 2] },
+      { hq: 7, hs: 8, lim: 4, thigh: 5, tor: 6, rnd: 5, pan: 1, ears: 0, sph: [4, 2], fist: [4, 2] }, { hq: 7, hs: 8, lim: 5, thigh: 5, tor: 6, det: 0, rnd: 5, sph: [4, 2], fist: [4, 2] }],
+    low: [{ rnd: 5, sph: [4, 2], fist: [4, 2] }, { lim: 4, thigh: 5, rnd: 5, sph: [4, 2], fist: [4, 2], tor: 6 }, { lim: 4, thigh: 4, tor: 6, rnd: 5, pan: 1, sph: [4, 2], fist: [4, 2], hs: 8, hq: 7 }],
+  };
+
+  class Kit {
+    constructor(look, pr, D, team, seed) {
+      const L = LPX();
+      this.L = L; this.P = L.Paint; this.V = L.V;
+      this.look = look; this.pr = pr; this.D = D;
+      this.team = team;
+      const FB = FigBuilder();
+      const M = this.M = new FB(seed || 1);
+      M.jitter = 0.05;
+      const J = this.J = pr.J, k = this.k = pr.k;
+      this.BI = B;
+      const b = this.bulk = clamp(pr.build * (pr.fem ? 0.9 : 1), 0.84, 1.3), fat = this.fat = pr.fat;
+      this.fem = pr.fem;
+      // 头：按 pr.head 的尺寸（与 LOD 无关），网格按 LOD 取环 / 列数
+      const HS = pr.head;
+      this.headG = headGrid(HS.chin, HS.shape, D.hq, D.hs);
+      const ex = headExtents(this.headG);
+      this.headH = HS.H;
+      this.Rx = HS.W / (ex.x1 - ex.x0); this.Ry = HS.H / (ex.y1 - ex.y0); this.Rz = HS.D / (ex.z1 - ex.z0);
+      this.Rzu = this.Rz / 0.96;
+      this.R = this.Rx * (look.kind === 'soldier' ? 1 : 1.02);
+      this.crownY = pr.H;
+      this.headC = [0, this.crownY - ex.y1 * this.Ry, 0.004];
+      this.headCY = this.headC[1] - 0.03 * this.Ry;
+      this.headPivot = HS.pivot;
+      this.upL = pr.upL; this.foL = pr.foL;
+      this.hipY = J.thighL[1]; this.pelvisY = J.pelvis[1] + 0.03 * k; this.spineY = J.spine[1]; this.chestY = J.chest[1];
+      this.shoulderY = J.upperArmL[1]; this.shoulderX = Math.abs(J.upperArmL[0]); this.neckY = J.neck[1];
+      this.waistR = 0.13 * k * b * (1 + 0.5 * fat) * (pr.fem ? 0.88 : 1);
+      this.chestR = 0.165 / 0.188 * this.shoulderX * lerp(1, b, 0.35) * (1 + 0.12 * fat);
+      this.shoulderR = 0.9 * this.shoulderX;
+      this.hipR = 0.138 * k * pr.hw * Math.pow(b, 0.3);
+      this.depthK = 0.74 + 0.1 * fat;
+      const lk = pr.limb / (pr.fem ? 0.86 : 1);
+      this.armR = 0.054 * k * lk * (pr.fem ? 0.84 : 1); this.foreR = 0.045 * k * lk * (pr.fem ? 0.86 : 1);
+      this.thighR = 0.08 * k * lk * (pr.fem ? 0.92 : 1); this.shinR = 0.057 * k * lk * (pr.fem ? 0.9 : 1);
+      this.footLen = 0.25 * k * lerp(1, b, 0.4) * (pr.fem ? 0.9 : 1); this.footW = 0.1 * k * lerp(1, b, 0.5) * (pr.fem ? 0.9 : 1);
+      this.parts = {}; this._last = 0;
     }
-    return [[list[list.length - 1][0], 1]];
+    bone(n) { this.M.bone = B[n]; return this; }
+    /** Tapered limb a → b with optional end caps (caps are fans of `n` triangles: the low LOD leaves hidden ends open). */
+    seg(a, b, ra, rb, n, capA = true, capB = true) {
+      const M = this.M, axis = this.V.sub(b, a), len = this.V.len(axis);
+      if (len < 1e-5) return;
+      M.aim(a, axis); M.lathe([[ra, 0], [rb, len]], n, false, capA, capB); M.pop();
+    }
+    /** Inward-facing lining of an open tube around Y (sleeve openings): profile [[r, y]…]; no ink (the hull's inner wall stays hidden). */
+    innerTube(prof, n, col) {
+      const M = this.M, keepInk = M.ink, P = (r, y, a) => [Math.cos(a) * r, y, Math.sin(a) * r];
+      M.ink = 0; M.color = col;
+      for (let i = 0; i < prof.length - 1; i++) for (let j = 0; j < n; j++) {
+        const a0 = j * TAU / n, a1 = (j + 1) * TAU / n, am = (a0 + a1) / 2, [r0, y0] = prof[i], [r1, y1] = prof[i + 1];
+        M.quad(P(r0, y0, a0), P(r0, y0, a1), P(r1, y1, a1), P(r1, y1, a0), [-Math.cos(am), 0, -Math.sin(am)]);
+      }
+      M.ink = keepInk;
+    }
+    /** Cloth / trim strip: with thickness at high detail, one outward quad (2 triangles, no ink) below that. */
+    strap(a, b, w0, w1, facing, thick) {
+      const M = this.M, V = this.V;
+      if (this.D.det >= 2) { M.strip(a, b, w0, w1, facing, thick); return; }
+      const axis = V.sub(b, a); let side = V.cross(axis, facing);
+      if (V.dot(side, side) < 1e-12) return;
+      side = V.norm(side);
+      let n = V.norm(V.cross(side, axis)); if (V.dot(n, facing) < 0) n = V.neg(n);
+      const lift = V.mul(n, (thick || 0.01) * 0.5), keepInk = M.ink;
+      M.ink = 0;
+      M.quad(V.add(V.madd(a, side, -w0 / 2), lift), V.add(V.madd(a, side, w0 / 2), lift), V.add(V.madd(b, side, w1 / 2), lift), V.add(V.madd(b, side, -w1 / 2), lift), n);
+      M.ink = keepInk;
+    }
+    mark(name) { const t = this.M.triangleCount; this.parts[name] = (this.parts[name] || 0) + t - this._last; this._last = t; }
+    /** Arm frame: origin at the shoulder joint, the arm hanging along local −Y (A-pose). */
+    armFrame(s) { const S = s > 0 ? 'L' : 'R'; this.M.push().translate(this.J['upperArm' + S]).rotate(0, 0, s * 40); return this; }
+    sides(n) { return Math.max(3, Math.round(n)); }
+
+    // ------------------------------------------------ body
+    /** Torso radius profiles (pelvis / spine / chest), shared by armour bands, sashes and capes. */
+    torsoProfiles() {
+      const u = this.k;
+      const pel = [[this.hipR * 0.82, this.hipY - 0.085 * u], [this.hipR, this.hipY - 0.02 * u], [this.hipR * 0.98, this.pelvisY + 0.02 * u], [this.waistR * 0.98, this.pelvisY + 0.06 * u]];
+      const sp = [[this.waistR, this.pelvisY - 0.01 * u], [this.waistR * 1.04 * (1 + 0.25 * this.fat), (this.pelvisY + this.spineY) / 2 + 0.02 * u], [this.waistR * 1.02, this.spineY + 0.06 * u]];
+      const ch = [[this.waistR, this.spineY], [this.chestR, this.chestY], [this.chestR * 1.02, this.shoulderY - 0.07 * u], [this.shoulderR, this.shoulderY - 0.012 * u], [this.shoulderR * 0.84, this.shoulderY + 0.024 * u], [0.084 * u, this.neckY + 0.035 * u]];
+      return { pel, sp, ch };
+    }
+    /** Radius of the torso surface at height y (before the depth squash). */
+    torsoR(y) {
+      const T = this._prof || (this._prof = this.torsoProfiles());
+      const rIn = (pr, y2) => { if (y2 <= pr[0][1]) return pr[0][0]; for (let i = 0; i + 1 < pr.length; i++) if (y2 <= pr[i + 1][1]) return lerp(pr[i][0], pr[i + 1][0], clamp01((y2 - pr[i][1]) / (pr[i + 1][1] - pr[i][1]))); return pr[pr.length - 1][0]; };
+      if (y < this.pelvisY) return rIn(T.pel, y);
+      if (y < this.spineY) return rIn(T.sp, y);
+      return rIn(T.ch, y);
+    }
+    /** A point on the torso surface (θ degrees from the front towards +X), lifted `off` metres outwards. */
+    torsoPt(th, y, off = 0) {
+      const t = th * D2R, r = this.torsoR(y) * Math.cos(PI / this.D.tor) + off, dk = this.depthK;
+      return [Math.sin(t) * r, y, Math.cos(t) * r * dk + (y > this.spineY ? 0 : 0)];
+    }
+    torsoBone(y) { return y < this.pelvisY + 0.02 * this.k ? B.pelvis : y < this.spineY + 0.06 * this.k ? B.spine : B.chest; }
+    torso(top, pelvis, opts) {
+      const M = this.M, T = this._prof = this.torsoProfiles(), n = this.D.tor, o = opts || {};
+      // o.vested（甲排盖住腰到胸）：低细节层只建骨盆与肩颈两段（中段藏在甲排里面）
+      const hide = !!o.vested && this.D.det <= 1;
+      this.bone('pelvis'); M.color = pelvis;
+      M.body([0, 0, 0], T.pel, n, this.depthK * 1.06, true, false);
+      if (!hide) { this.bone('spine'); M.color = o.belly || top; M.body([0, 0, 0], T.sp, n, this.depthK, false, false); }
+      this.bone('chest'); M.color = top;
+      M.push().scale(1, 1, this.depthK);
+      M.lathe(hide ? T.ch.slice(2) : T.ch, n, false, false, true, o.ringCols || null, 180 / n);
+      M.pop();
+    }
+    /** Neck: from inside the shoulders up into the skull behind the jaw (top hidden in the head). */
+    neck(c, thick = 1) {
+      const k = this.k, fem = this.fem ? 0.84 : 1, sp = this.look.spec && this.look.spec.neck ? clamp(0.85 + 0.2 * this.look.spec.neck, 0.92, 1.25) : 1;
+      const rb = 0.062 * k * thick * fem * sp * lerp(1, this.bulk, 0.7), rt = 0.056 * k * thick * fem * sp * lerp(1, this.bulk, 0.5);
+      const top = [0, this.headPivot[1] + 0.03 * this.Ry, this.headPivot[2]];
+      this.bone('neck'); this.M.color = c;
+      this.seg([0, this.shoulderY - 0.03 * k, -0.02 * k], top, rb, rt, this.sides(this.D.lim), false, false);
+      this.neckTop = top;
+    }
+    /** Upper arm, forearm and fist (cols: [upper, lower, hand]). */
+    arm(s, upper, lower, hand, o) {
+      o = o || {};
+      const M = this.M, S = s > 0 ? 'L' : 'R', k = this.k, n = this.D.lim;
+      this.armFrame(s);
+      this.bone('upperArm' + S); M.color = upper;
+      const lean = this.D.det === 0;
+      if (!o.noShoulder && !(lean && o.covered)) M.sphere([0, -0.012 * k, 0], this.armR * 1.15, n, this.D.sph[1]);
+      if (!o.noUpper) this.seg([0, 0, 0], [0, -this.upL, 0], this.armR * (o.upK || 1), this.armR * 0.86 * (o.upK || 1), n, !lean && !!o.noShoulder, true);
+      this.bone('foreArm' + S); M.color = o.elbow || lower;
+      if (!o.noElbow && this.D.det >= 1) M.sphere([0, -this.upL, 0], this.foreR * 1.05, Math.max(4, n - 1), Math.max(2, this.D.sph[1] - 1));
+      M.color = lower;
+      this.seg([0, -this.upL, 0], [0, -this.upL - this.foL + 0.01 * k, 0], this.foreR * (o.foK || 1), this.foreR * 0.82 * (o.foK || 1), o.foreSides || n, !lean && (o.noElbow || this.D.det < 1), false);
+      M.pop();
+      this.fist(s, hand, o.fistK);
+    }
+    /** Fist and thumb. */
+    fist(s, hand, lowK) {
+      const M = this.M, S = s > 0 ? 'L' : 'R', k = this.k * 1.1 * lerp(1, this.bulk, 0.5) * (this.fem ? 0.88 : 1), F = this.D.fist;
+      this.armFrame(s);
+      this.bone('hand' + S); M.color = hand;
+      const wy = -this.upL - this.foL;
+      M.sphere([0, wy - 0.045 * k, 0.01 * k], [0.04 * k, 0.052 * k, 0.046 * k], lowK ? Math.max(4, F[0] - 1) : F[0], lowK ? Math.max(2, F[1] - 1) : F[1]);
+      if (this.D.det >= 2) M.sphere([-s * 0.024 * k, wy - 0.03 * k, 0.034 * k], [0.016 * k, 0.024 * k, 0.016 * k], Math.max(4, F[0] - 2), Math.max(2, F[1] - 1));
+      M.pop();
+    }
+    /** Ring on the forearm (bracer / cuff), from..to along it (0 elbow … 1 wrist). */
+    cuff(s, c, from, to, kk, sidesK) {
+      const M = this.M, S = s > 0 ? 'L' : 'R';
+      this.armFrame(s); this.bone('foreArm' + S); M.color = c;
+      const y0 = -this.upL - this.foL * from, y1 = -this.upL - this.foL * to;
+      M.segment([0, y0, 0], [0, y1, 0], lerp(this.foreR, this.foreR * 0.82, from) * kk, lerp(this.foreR, this.foreR * 0.82, to) * kk, sidesK || this.D.lim);
+      M.pop();
+    }
+    /** Ring on the upper arm (armlet / sleeve hem), at 0 (shoulder) … 1 (elbow). */
+    armRing(s, c, from, to, kk) {
+      const M = this.M, S = s > 0 ? 'L' : 'R';
+      this.armFrame(s); this.bone('upperArm' + S); M.color = c;
+      M.segment([0, -this.upL * from, 0], [0, -this.upL * to, 0], this.armR * lerp(1, 0.86, from) * kk, this.armR * lerp(1, 0.86, to) * kk, this.D.lim);
+      M.pop();
+    }
+    leg(s, thigh, shin, boot, bootTop = 0.55, sole, o) {
+      o = o || {};
+      const M = this.M, S = s > 0 ? 'L' : 'R', J = this.J, k = this.k, V = this.V;
+      const hip = [J['thigh' + S][0], this.hipY + 0.03 * k, J['thigh' + S][2]], knee = J['shin' + S], ankle = J['foot' + S];
+      const tk = o.thighK || 1, sk = o.shinK || 1;
+      this.bone('thigh' + S); M.color = thigh;
+      const lean = this.D.det === 0;
+      this.seg(hip, knee, this.thighR * tk, this.thighR * 0.76 * tk, o.thighSides || this.D.thigh, false, true);
+      this.bone('shin' + S); M.color = o.kneeCol || thigh;
+      if (o.knee !== false && this.D.det >= 1) M.sphere(V.add(knee, [0, 0, 0.004]), this.thighR * 0.78 * Math.max(tk * 0.9, sk), Math.max(4, this.D.lim - 1), Math.max(2, this.D.sph[1] - 1));
+      M.color = shin;
+      this.seg(knee, V.add(ankle, [0, 0.02 * k, 0]), this.shinR * sk, this.shinR * 0.78 * sk, this.D.lim, true, !lean && bootTop <= 0);
+      this.bootTop = null;
+      if (bootTop > 0) {
+        const top = V.lerp(ankle, knee, bootTop);
+        M.color = boot;
+        this.seg(top, V.add(ankle, [0, -0.005, 0]), this.shinR * 1.18 * Math.max(1, sk * 0.9), this.shinR * 1.02 * Math.max(1, sk * 0.9), this.D.lim, this.D.det >= 2, false);
+        this.bootTop = top;
+      }
+      this.bone('foot' + S);
+      this.shoe(ankle, this.footLen, this.footW, o.footCol || boot, sole || this.P.shade(o.footCol || boot, 0.6), o);
+    }
+    /** Boot / shoe (UnitMeshKit.Shoe): ankle at `ankle`, sole on y = 0, toe to +Z. */
+    shoe(ankle, len, width, color, sole, o) {
+      const M = this.M, keep = M.color;
+      const zb = ankle[2] - len * 0.28, zm = ankle[2] + len * 0.38, zt = ankle[2] + len * 0.72;
+      const h = Math.max(ankle[1] + width * 0.25, len * 0.36), hm = len * 0.26, ht = len * 0.2;
+      const w = width * 0.5, wt = width * 0.46, x = ankle[0];
+      M.color = color;
+      if (this.D.det === 0) {
+        // low: a tapered block for the foot and a toe cap
+        M.push().translate(x, 0.012, (zb + zm) / 2);
+        M.taperedBox([0, 0, 0], [width, h - 0.012, zm - zb], 0.12, 0.25);
+        M.pop();
+        M.box([x, ht * 0.45 + 0.012, (zm + zt) / 2], [wt * 2, ht * 0.9, zt - zm + 0.01], null, 'tfrl');
+      } else {
+        const b0 = [x - w, 0.012, zb], b1 = [x + w, 0.012, zb], b2 = [x + wt, 0.012, zm], b3 = [x - wt, 0.012, zm];
+        const t0 = [x - w * 0.92, h, zb + 0.01], t1 = [x + w * 0.92, h, zb + 0.01], t2 = [x + wt, hm, zm], t3 = [x - wt, hm, zm];
+        M.quad(t0, t1, t2, t3, [0, 1, 0.5]);
+        M.quad(b0, b1, t1, t0, [0, 0, -1]);
+        M.quad(b1, b2, t2, t1, [1, 0, 0]);
+        M.quad(b3, b0, t0, t3, [-1, 0, 0]);
+        M.sphere([x, ht * 0.62, (zm + zt) / 2], [wt * 1.02, ht * 0.75, (zt - zm) * 0.62 + 0.01], this.D.det >= 2 ? 6 : 5, 2, true);
+        M.box([x, hm * 0.45, zm - 0.004], [wt * 2, hm * 0.9, 0.012]);
+      }
+      if (!(o && o.noSole) && this.D.det >= 1) {
+        M.color = sole;
+        M.box([x, 0.012, (zb + zt) / 2 + 0.005], [width * 1.04, 0.024, zt - zb + 0.04], null, this.D.det >= 2 ? 'tbfkrl' : 'tfkrl');
+      }
+      M.color = keep;
+    }
+
+    // ------------------------------------------------ head & face
+    hv(x, y, z) { return [x * this.Rx, y * this.Ry, z * this.Rzu]; }
+    headAt(x, y, z) { return this.V.add(this.headC, this.hv(x, y, z)); }
+    headShape(c, cheekShade = 1) {
+      const M = this.M, G = this.headG, n = G.ys.length, S = G.S, V = this.V, P = this.P;
+      const P0 = G.ys.map((y, i) => G.rad[i].map((r, j) => { const t = j * 2 * PI / S; return [Math.cos(t) * r, y, Math.sin(t) * r]; }));
+      const N0 = P0.map(row => row.map(() => [0, 0, 0]));
+      const tris = [];
+      for (let i = 0; i < n - 1; i++) for (let j = 0; j < S; j++) {
+        const j1 = (j + 1) % S, A = [i, j], Bq = [i + 1, j], Cc = [i + 1, j1], Dd = [i, j1];
+        if (G.rad[i + 1][0] > 1e-5) tris.push([A, Bq, Cc]);
+        if (G.rad[i][0] > 1e-5) tris.push([A, Cc, Dd]);
+      }
+      for (const t of tris) {
+        const [a, b, cc] = t.map(([i, j]) => P0[i][j]), fn = V.cross(V.sub(b, a), V.sub(cc, a));
+        for (const [i, j] of t) { const s = N0[i][j]; s[0] += fn[0]; s[1] += fn[1]; s[2] += fn[2]; }
+      }
+      for (let j = 0; j < S; j++) { N0[0][j] = [0, -1, 0]; N0[n - 1][j] = [0, 1, 0]; }
+      const idx = [];
+      this.bone('head');
+      M.push().translate(this.headC).scale(this.Rx, this.Ry, this.Rz).rotate(HEAD_TILT, 0, 0);
+      M.color = c;
+      for (let i = 0; i < n; i++) {
+        const cc = P.shade(c, lerp(cheekShade, 1, sstep(-0.05, 0.25, G.ys[i])));
+        idx.push(P0[i].map((p, j) => M.addVertex(p, V.norm(N0[i][j]), cc)));
+      }
+      M.pop();
+      for (const t of tris) {
+        const [a, b, cc] = t.map(([i, j]) => P0[i][j]), fn = V.cross(V.sub(b, a), V.sub(cc, a));
+        const m = V.mul(V.add(V.add(a, b), cc), 1 / 3);
+        const ids = t.map(([i, j]) => idx[i][j]);
+        if (V.dot(fn, m) >= 0) M.addTri(ids[0], ids[1], ids[2]); else M.addTri(ids[0], ids[2], ids[1]);
+      }
+    }
+    headRadius(y, tf) {
+      const G = this.headG, ys = G.ys, S = G.S, n = ys.length;
+      if (y <= ys[0] || y >= ys[n - 1]) return 0;
+      let i = 0; while (i < n - 2 && y > ys[i + 1]) i++;
+      const u = (y - ys[i]) / (ys[i + 1] - ys[i]);
+      const step = 2 * PI / S, f = ((PI / 2 - tf) / step % S + S) % S, j0 = Math.floor(f) % S, j1 = (j0 + 1) % S;
+      const chord = (r0, r1) => {
+        const a0 = PI / 2 - j0 * step, a1 = PI / 2 - (j0 + 1) * step;
+        const p0 = [r0 * Math.sin(a0), r0 * Math.cos(a0)], p1 = [r1 * Math.sin(a1), r1 * Math.cos(a1)], ud = [Math.sin(tf), Math.cos(tf)];
+        const e = [p1[0] - p0[0], p1[1] - p0[1]], den = ud[0] * e[1] - ud[1] * e[0];
+        return Math.abs(den) < 1e-9 ? r0 : (p0[0] * e[1] - p0[1] * e[0]) / den;
+      };
+      return lerp(chord(G.rad[i][j0], G.rad[i][j1]), chord(G.rad[i + 1][j0], G.rad[i + 1][j1]), u);
+    }
+    insideHead(p) {
+      const c = this.headC;
+      const d = [(p[0] - c[0]) / this.Rx, (p[1] - c[1]) / this.Ry, (p[2] - c[2]) / this.Rz];
+      const a = -HEAD_TILT * D2R, ca = Math.cos(a), sa = Math.sin(a);
+      const y = d[1] * ca - d[2] * sa, z = d[1] * sa + d[2] * ca, rho = Math.hypot(d[0], z);
+      return rho <= this.headRadius(y, Math.atan2(d[0], z));
+    }
+    /** The point on the front of the face at x half-widths (Rx) and y half-heights (Ry, from headCY), lifted `lift` feature units. */
+    facePoint(x, y, lift = 0) {
+      const px = x * this.Rx, py = this.headCY + y * this.Ry;
+      let lo = this.headC[2], hi = lo + 1.5 * this.Rz;
+      if (!this.insideHead([px, py, lo])) return [px, py, lo + lift * this.R];
+      for (let i = 0; i < 20; i++) { const mid = (lo + hi) / 2; if (this.insideHead([px, py, mid])) lo = mid; else hi = mid; }
+      return [px, py, lo + lift * this.R];
+    }
+    /** A point on the side of the head at angle th (deg, 0 = front, + towards +X) and height y (Ry from headCY), lifted. */
+    sidePoint(th, y, lift = 0) {
+      const t = th * D2R, dir = [Math.sin(t), 0, Math.cos(t)], c = [0, this.headCY + y * this.Ry, this.headC[2]];
+      let lo = 0, hi = 1.6 * Math.max(this.Rx, this.Rz);
+      for (let i = 0; i < 20; i++) { const mid = (lo + hi) / 2; if (this.insideHead([c[0] + dir[0] * mid, c[1], c[2] + dir[2] * mid])) lo = mid; else hi = mid; }
+      return [c[0] + dir[0] * (lo + lift * this.R), c[1], c[2] + dir[2] * (lo + lift * this.R)];
+    }
+    ears(c, big) {
+      const M = this.M, R = this.R, D = this.D;
+      this.bone('head'); M.color = c;
+      const kk = big ? 1.35 : 1;
+      for (const s of [1, -1]) {
+        M.push().translate(this.headAt(s * 0.98, -0.2 - (big ? 0.08 : 0), -0.1)).rotate(-8, s * -18, 0);
+        M.sphere([0, 0, 0], [0.2 * R * kk, 0.36 * R * kk * (big ? 1.2 : 1), 0.24 * R], D.det >= 2 ? 6 : 5, D.det >= 2 ? 3 : 2, true);
+        M.pop();
+      }
+    }
+    /** Hair cap over the cranium (BipedKit.HairCap): hairline φ (deg from the top) at the forehead / ears / nape. */
+    hairCap(c, front = 58, side = 100, back = 122, puff = 1.08, lineFn = null, topFn = null, np = 2) {
+      const M = this.M;
+      this.bone('head'); M.color = c;
+      const C0 = this.headAt(0, 0.02, -0.01), RR = this.hv(puff, puff, puff * 0.98);
+      const line = lineFn || (th => { const a = Math.abs(th); if (a < 55) return lerp(front, front + 10, a / 55); if (a < 110) return lerp(front + 10, side, (a - 55) / 55); return lerp(side, back, (a - 110) / 70); });
+      M.shell(C0, RR, -180, 180, this.D.hs, topFn || 0, line, np);
+      this.hairC = C0; this.hairR = RR; this.hairLine = line;
+    }
+    hairPoint(th, ph, k = 1) {
+      const c = this.hairC, r = this.hairR, t = th * D2R, p = ph * D2R, s = Math.sin(p);
+      return [c[0] + r[0] * k * s * Math.sin(t), c[1] + r[1] * k * Math.cos(p), c[2] + r[2] * k * s * Math.cos(t)];
+    }
+    /** A shell over the head (caps, helmets, wraps): centre and radii in head units, hairline fn(θ) → φ. */
+    capShell(c, puff, line, np, topFn, opts) {
+      const M = this.M, o = opts || {};
+      this.bone('head'); M.color = c;
+      const C0 = this.headAt(0, 0.02 + (o.dy || 0), -0.01 + (o.dz || 0)), RR = this.hv(puff * (o.kx || 1), puff * (o.ky || 1), puff * 0.98 * (o.kz || 1));
+      M.shell(C0, RR, -180, 180, o.nt || this.D.hs, topFn || 0, line, np || 2);
+      this.capC = C0; this.capR = RR; this.capLine = line;
+      return { c: C0, r: RR, line };
+    }
+    capPoint(th, ph, k = 1) {
+      const c = this.capC, r = this.capR, t = th * D2R, p = ph * D2R, s = Math.sin(p);
+      return [c[0] + r[0] * k * s * Math.sin(t), c[1] + r[1] * k * Math.cos(p), c[2] + r[2] * k * s * Math.cos(t)];
+    }
+    /** Eyes: style 'round' | 'almond' | 'narrow'; a dark eye shape, the iris low in it and a bright catch-light (thin ink). */
+    eyes(iris, brow, style = 'round', browTilt = 0, y = -0.03, spread = 0.4, size = 1, eyeTilt = 0, browK = 1, o) {
+      const M = this.M, R = this.R, keepJ = M.jitter, keepE = M.emission, P = this.P, D = this.D;
+      o = o || {};
+      this.bone('head'); M.jitter = 0;
+      const h = style === 'narrow' ? 0.12 : style === 'almond' ? 0.145 : 0.2, wd = style === 'narrow' ? 0.17 : style === 'almond' ? 0.165 : 0.13;
+      for (const s of [1, -1]) {
+        const patch = o.patch && s === 1;          // 夏侯惇：左目
+        const p = this.facePoint(s * spread, y, 0);
+        M.push().translate(this.V.add(p, [0, 0, -0.036 * R])).rotate(0, s * EYE_TURN, s * eyeTilt);
+        if (patch) {
+          // 眼罩（夏侯惇）：深色皮罩盖住右眼
+          M.ink = 0.6; M.color = P.hex ? C3(PALF.black) : [0.16, 0.13, 0.14];
+          M.sphere([0, 0.01 * R, 0.02 * R], [0.28 * R, 0.22 * R, 0.09 * R], D.eye >= 2 ? 7 : 5, D.eye >= 2 ? 3 : 2);
+          M.ink = 1;
+        } else {
+          M.ink = 0.4;
+          M.color = P.shade(iris, 0.42);
+          M.sphere([0, 0, 0], [wd * R * size, h * R * size, 0.065 * R], D.eye >= 2 ? 7 : D.det >= 1 ? 5 : 4, D.eye >= 2 ? 3 : 2);
+          if (D.eye >= 2) { M.color = iris; M.sphere([0, -h * 0.35 * R * size, 0.012 * R], [wd * 0.75 * R * size, h * 0.45 * R * size, 0.06 * R], 6, 2); }
+          M.emission = 0.55; M.color = [1, 1, 0.97]; M.ink = 0;
+          if (D.det >= 1) M.sphere([s * 0.035 * R * size, h * 0.38 * R * size, 0.05 * R], 0.045 * R * size * (style === 'narrow' ? 0.85 : 1) * (D.eye >= 2 ? 1 : 1.25), D.eye >= 2 ? 4 : 3, 2);
+          M.emission = keepE; M.ink = 1;
+        }
+        M.pop();
+        if (brow) {
+          const dy = (style === 'narrow' ? 0.24 : style === 'almond' ? 0.27 : 0.3) * Math.max(1, size * 0.9) * R / this.Ry;
+          const bp = this.facePoint(s * spread * 1.04, y + dy + (o.browY || 0), 0.01);
+          M.color = brow; M.ink = 0.7;
+          M.push().translate(bp).rotate(0, s * EYE_TURN, s * browTilt);
+          M.box([0, 0, 0], [0.36 * R * browK * (o.browW || 1), 0.085 * R * browK * (o.browH || 1), 0.07 * R], null, D.det >= 2 ? 'tbfkrl' : D.det >= 1 ? 'tbfrl' : 'tf');
+          if (browK > 1.2 && D.det >= 2) M.box([s * 0.22 * R * browK, 0.03 * R * browK, -0.012 * R], [0.13 * R * browK, 0.055 * R * browK, 0.055 * R], null, 'tbfrl');
+          M.pop(); M.ink = 1;
+        }
+      }
+      M.jitter = keepJ;
+    }
+    nose(c, size = 1, y = -0.42, proj = 0.32, w = 0.2) {
+      const M = this.M, R = this.R, V = this.V;
+      this.bone('head'); M.color = c; M.ink = 0.6;
+      const root = this.facePoint(0, y + 0.42, 0.03);
+      const tip = this.facePoint(0, y, proj * size), base = this.facePoint(0, y - 0.1, 0.12 * size);
+      const wing = s => this.facePoint(s * w * size, y - 0.05, 0.05 * size);
+      const wl = wing(1), wr = wing(-1);
+      const out = (a, b, cc, hint) => { const n = V.cross(V.sub(b, a), V.sub(cc, a)); return V.dot(n, hint) >= 0 ? n : V.neg(n); };
+      M.triangleFacing(root, wl, tip, out(root, wl, tip, [1, 0.2, 1]));
+      M.triangleFacing(root, tip, wr, out(root, tip, wr, [-1, 0.2, 1]));
+      M.triangleFacing(wl, base, tip, out(wl, base, tip, [0.4, -1, 0.6]));
+      M.triangleFacing(tip, base, wr, out(tip, base, wr, [-0.4, -1, 0.6]));
+      if (this.D.det >= 1) M.sphere(V.add(tip, [0, -0.025 * R, -0.035 * R]), [0.1 * R * size, 0.085 * R * size, 0.08 * R * size], 5, 2);
+      M.ink = 1;
+    }
+    mouth(c, y = -0.68, width = 0.3, curve = 0.06) {
+      const M = this.M, R = this.R;
+      this.bone('head'); M.color = c; M.ink = 0.3;
+      const Pt = t => this.facePoint(t * width * 0.5, y + curve * t * t, 0.015);
+      if (this.D.det >= 2) {
+        this.seg(Pt(-1), Pt(-0.35), 0.024 * R, 0.028 * R, 4, true, false);
+        this.seg(Pt(-0.35), Pt(0.35), 0.028 * R, 0.028 * R, 4, false, false);
+        this.seg(Pt(0.35), Pt(1), 0.028 * R, 0.024 * R, 4, false, true);
+      } else this.seg(Pt(-1), Pt(1), 0.03 * R, 0.03 * R, 3, false, false);
+      M.ink = 1;
+    }
+
+    // ------------------------------------------------ garments
+    /** Skirt panel on a bone (hinged at the hip on a thigh bone: vertices above the hip joint stay on the pelvis). */
+    skirtPanel(bone, th0, th1, nt, prof, outer, lining, hem, hemH = 0.05, depthK = 0.86) {
+      const M = this.M, start = M.vertexCount;
+      this.bone(bone);
+      M.panel([0, 0, 0], th0, th1, Math.max(1, nt), prof, depthK, outer, lining, 0.01);
+      if (hem) {
+        const last = prof[prof.length - 1], prev = prof[prof.length - 2];
+        const t = hemH / Math.max(0.01, prev[1] - last[1]);
+        const top = [lerp(last[0], prev[0], t) + 0.006, last[1] + hemH], bot = [last[0] + 0.006, last[1] - 0.002];
+        M.panel([0, 0, 0], th0, th1, Math.max(1, nt), [top, bot], depthK, hem, null);
+      }
+      this.hinge(start, bone);
+    }
+    hinge(start, bone, dy = 0.0) {
+      if (!/^thigh/.test(bone)) return;
+      const yH = this.J[bone][1] + dy * this.k, bi = B[bone], bp = B.pelvis;
+      this.M.boneBy(start, p => (p[1] > yH ? bp : bi));
+    }
   }
-  // quilt（第三版絮甲）借用藤编区域：编格在布色染色后像菱格绗缝
-  const REG_OF = { lamLace: 'lamLace', lamellar: 'lamellar', plate: 'lamellar', scale: 'scale', segm: 'cloth', muscle: 'metal', tanko: 'cloth', rattan: 'rattan', cloth: 'cloth', robe: 'brocade', bare: 'skin', fur: 'fur', mail: 'mail', quilt: 'rattan' };
+
+  // ----------------------------------------------------------- 调色 --
+  // 外观颜色 → sRGB 数组；势力色（TEAM 占位，第 4 分量 = 1）→ 带 .t 的势力色（士兵群：白色 × 实例势力色）
+  function shT(c, k) { const a = [clamp01(c[0] * k), clamp01(c[1] * k), clamp01(c[2] * k)]; if (c.t) a.t = 1; return a; }
+  function paletteOf(kit) {
+    const look = kit.look, C = look.C, team = kit.team;
+    const res = (c, floor) => {
+      if (c == null) return null;
+      if (Array.isArray(c) && c.length >= 4 && c[3] === 1) return tcol(team, (c[0] + c[1] + c[2]) / 3);
+      return lift(c, floor == null ? 0.2 : floor);
+    };
+    const P = kit.P;
+    const metal0 = res(C.metal, 0.34);
+    // 金属偏冷（Lanternvale 的铁色：灰中带蓝），金色金属保持暖色
+    const warmMetal = metal0[0] > metal0[2] * 1.25;
+    const metal = warmMetal ? metal0 : P.mix(metal0, [0.42, 0.46, 0.53], 0.25);
+    const X = {
+      team: tcol(team, 1),
+      skin: C3(look.skin || '#e2b48c'),
+      cloth: res(C.cloth), cloth2: res(C.cloth2, 0.16) || null,
+      trim: res(C.trim || PALF.gold, 0.4),
+      metal, metalDark: shT(metal, 0.78), metalLight: shT(metal, 1.16), seam: shT(metal, 0.58),
+      leather: res(C.leather || PALF.leather, 0.22), leatherDark: C3(PALF.leatherDark),
+      boots: C3(PALF.boots), sole: C3(PALF.sole),
+      gold: C3(PALF.gold), goldDark: C3(PALF.goldDark), goldLight: C3(PALF.goldLight),
+      cream: C3(PALF.cream), white: C3(PALF.white), lining: C3(PALF.lining),
+      hair: hairTone(look.hair && look.hair.color ? look.hair.color : '#1c1816'),
+      cape: res(C.cape), tabard: res(C.tabard), plume: res(C.plume || PALF.tassel, 0.3),
+    };
+    if (!X.cloth2) X.cloth2 = shT(X.cloth, 0.62);
+    X.clothDark = shT(X.cloth, 0.8);
+    X.inner = shT(X.cloth, 0.82);
+    X.skinDark = P.shade(X.skin, 0.84);
+    X.beard = hairTone(look.beard && look.beard.color ? look.beard.color : (look.hair && look.hair.color) || '#1c1816');
+    X.trousers = C.trousers ? res(C.trousers) : look.kind === 'general' ? shT(X.cloth, 0.55) : shT(X.cloth2, 1.05);
+    if (X.cape) X.capeIn = shT(X.cape, 0.62);
+    if (X.tabard) X.tabardDark = shT(X.tabard, 0.72);
+    return X;
+  }
+
+  // ----------------------------------------------------------- 腿脚 --
+  function robeOverBare(L) { return (L.legs || 'trousers') === 'bare' && (L.skirt === 'robe' || L.skirt === 'coat' || L.skirt === 'sarong') && (L.skirtLen || 0) >= 0.58; }
+  function legsLP(kit, X) {
+    const M = kit.M, look = kit.look, L = look.L, k = kit.k, D = kit.D, V = kit.V, J = kit.J;
+    const lg = L.legs || 'trousers', bt = L.boots || 'boot', gen = look.kind === 'general';
+    const robeSk = robeOverBare(L);
+    const cult = look.culture;
+    // 汉 / 高句丽 / 倭的士兵：米色裤 + 褐色绑腿（试点的汉军枪兵）
+    const wraps = !gen && lg === 'trousers' && bt === 'boot' && (cult === 'han' || cult === 'korea' || cult === 'wa' || cult === 'yi' || cult === 'nanman');
+    for (const s of [1, -1]) {
+      const S = s > 0 ? 'L' : 'R';
+      let thighC, shinC, tk = 1, sk = 1;
+      if (lg === 'bare') { thighC = robeSk ? X.inner : X.skin; shinC = X.skin; }
+      else if (lg === 'hakama') { thighC = shinC = X.cloth2; tk = 1.45; sk = 1.6; }
+      else if (wraps) { thighC = shinC = X.cream; }
+      else { thighC = shinC = L.legsReg === 'plaid' ? X.cloth : X.trousers; tk = 1.06; sk = 1.06; }
+      const foot = bt === 'boot' ? X.boots : bt === 'shoe' ? C3('#3A2E2A') : X.skin;
+      const top = bt === 'boot' && !wraps ? (gen ? 0.62 : 0.56) : 0;
+      kit.leg(s, thighC, shinC, X.boots, top, bt === 'sandal' ? X.leather : bt === 'bare' ? X.skinDark : null,
+        { knee: D.det >= 2 || lg === 'bare', thighK: tk, shinK: sk, footCol: foot, noSole: bt === 'bare', thighSides: gen ? Math.max(5, D.thigh - 2) : D.thigh });
+      if (top > 0 && kit.bootTop && D.det >= 1) {
+        kit.bone('shin' + S); M.color = gen ? X.gold : shT(X.boots, 1.25);
+        M.band(kit.bootTop, kit.shinR * 1.26, kit.shinR * 1.24, -0.03 * k, 0.005 * k, D.lim);
+      }
+      if (wraps) {
+        kit.bone('shin' + S); M.color = C3('#8C6A4C');
+        const kn = J['shin' + S], an = J['foot' + S];
+        M.segment(V.lerp(an, kn, 0.72), V.add(an, [0, 0.01, 0]), kit.shinR * 1.18, kit.shinR * 1.06, D.lim);
+        if (D.det >= 1) { M.color = C3('#78593F'); M.band(V.lerp(an, kn, 0.4), kit.shinR * 1.18, kit.shinR * 1.18, -0.012, 0.012, D.lim); }
+      }
+      if (L.legsReg === 'plaid' && D.det >= 1) {
+        // 格纹：大腿与小腿上两道深色横带
+        kit.bone('thigh' + S); M.color = X.cloth2;
+        M.band(V.lerp(J['thigh' + S], J['shin' + S], 0.45), kit.thighR * 0.96 * tk, kit.thighR * 0.92 * tk, -0.025 * k, 0.025 * k, D.thigh);
+        kit.bone('shin' + S);
+        M.band(V.lerp(J['shin' + S], J['foot' + S], 0.35), kit.shinR * 1.1, kit.shinR * 1.08, -0.02 * k, 0.02 * k, D.lim);
+      }
+      if (lg === 'hakama' && D.det >= 1) {
+        kit.bone('shin' + S); M.color = shT(X.cloth2, 0.8);
+        M.band(V.lerp(J['foot' + S], J['shin' + S], 0.08), kit.shinR * 1.25, kit.shinR * 1.3, -0.01, 0.03 * k, D.lim);
+      }
+      if (bt === 'sandal' && D.det >= 1) {
+        kit.bone('shin' + S); M.color = X.leather;
+        for (const f of [0.12, 0.3]) M.band(V.lerp(J['foot' + S], J['shin' + S], f), kit.shinR * 0.98, kit.shinR * 0.98, -0.008, 0.008, D.lim);
+      }
+      if (L.greave === 'metal') {
+        kit.bone('shin' + S);
+        const kn = J['shin' + S], an = J['foot' + S];
+        const a = V.lerp(an, kn, 0.95), b = V.lerp(an, kn, 0.32);
+        M.color = X.metal;
+        M.push().translate(V.lerp(a, b, 0.5)).scale(1.18 * sk, 1, 1.1 * sk);
+        M.shell([0, 0, 0.004], [kit.shinR * 1.15, V.len(V.sub(a, b)) * 0.55, kit.shinR * 1.2], -80, 80, Math.max(3, D.pan + 1), 45, 135, 1);
+        M.pop();
+        if (D.det >= 1) { M.color = X.metalLight; M.sphere(V.add(kn, [0, 0.01, kit.thighR * 0.7]), [kit.thighR * 0.55, kit.thighR * 0.6, kit.thighR * 0.35], D.sph[0], D.sph[1]); }
+      }
+    }
+    kit.mark('legs');
+  }
 
   // ----------------------------------------------------------- 躯干 --
-  function buildTorso(X) {
-    const { gb, lod, pr, R, C, L, W } = X;
-    const t = L.torso || 'cloth';
-    const reg = REG_OF[t] || 'cloth';
-    const bare = t === 'bare', mus = (t === 'bare' ? 1 : t === 'muscle' ? 1.4 : 0) * (1 + clamp((pr.build - 1) * 4, 0, 0.9)) * (1 - pr.fat * 0.5);
-    const cc = t === 'bare' ? C.skin : t === 'lamLace' ? C.cloth : (t === 'lamellar' || t === 'plate' || t === 'scale' || t === 'muscle' || t === 'mail') ? C.metal
-      : t === 'rattan' ? '#c8a060' : t === 'fur' ? '#8a6a4a' : (t === 'segm' || t === 'tanko') ? (X.look.culture === 'roman' ? '#a02a24' : C.cloth) : C.cloth;
-    const y0 = R[0].y, y1 = R[R.length - 1].y + 0.01 * pr.k;
-    const n = lod.torK, secs = [];
-    // 赤膊外罩长袍 / 纱笼：腰下（裙内）的身体画成衬布色——两片裙在前中线分开时露出的是衬布，不是肤色（与 buildLeg 的衬布同色）
-    const lowIn = bare && robeOverBare(L) ? col(shade(C.cloth, -0.1)) : null;
-    for (let k = 0; k <= n; k++) {
-      const y = lerp(y0, y1, Math.pow(k / n, 0.95));
-      const r = ringAt(R, y);
-      secs.push({ c: [0, y, r.zc], X: [1, 0, 0], Z: [0, 0, 1], rx: r.rx, rz: r.rz, sq: r.sq, t: k / n, col: lowIn && y < 1.0 * pr.k ? lowIn : undefined });
+  // 甲片横排（札甲 / 鱼鳞 / 环片 / 短甲 / 藤 / 絮甲）：一圈圈带子，两色交替，排间暗缝；按顶点高度分在 spine / chest 上
+  function vestRows(kit, o) {
+    const M = kit.M, k = kit.k, D = kit.D;
+    const rows = Math.max(2, D.det >= 1 ? o.rows : Math.ceil(o.rows * 0.5));
+    const yH = o.yBot != null ? o.yBot : kit.pelvisY + 0.075 * k, yT = o.yTop != null ? o.yTop : kit.shoulderY - 0.03 * k;
+    // 低细节层：甲排之间不留缝（中段躯干不建，缝里会透空）
+    const seam = D.det <= 1 ? 0 : o.seam != null ? o.seam : 0.006, RK = o.RK || 1.085, n = o.sides || D.tor;
+    const v0 = M.vertexCount;
+    M.bone = B.chest;
+    const keepJ = M.jitterAll; if (o.jitterAll) M.jitterAll = true;
+    for (let i = 0; i < rows; i++) {
+      const y0 = lerp(yH, yT, i / rows) + seam, y1 = lerp(yH, yT, (i + 1) / rows) - seam;
+      M.color = typeof o.colorOf === 'function' ? o.colorOf(i) : (i % 2 ? o.a : o.b);
+      const r0 = kit.torsoR(y0) * RK * (o.flare ? 1 + o.flare * (1 - i / rows) : 1), r1 = kit.torsoR(y1) * RK;
+      if (o.arc) M.panel([0, 0, 0], o.arc[0], o.arc[1], o.arcN || 3, [[r1, y1], [r0, y0]], kit.depthK, M.color, null);
+      else M.band([0, 0, 0], r0, r1, y0, y1, n, kit.depthK);
     }
-    loft(gb, secs, { n: lod.torN, reg: (t === 'segm' || t === 'tanko') && X.hi === 0 ? 'rivet' : reg, col: col((t === 'segm' || t === 'tanko') && X.hi === 0 ? C.metal : cc), wf: W.torso, ptf: (th, s) => torsoPt(R, s.c[1], th, 0, mus, pr.fem), capStart: X.hi >= 1 });
-    // 环片甲 / 短甲：一圈圈叠压的金属带
-    if ((t === 'segm' || t === 'tanko') && X.hi >= 1) {
-      const bands = t === 'segm' ? [[1.04, 1.1], [1.1, 1.16], [1.16, 1.22], [1.22, 1.28], [1.29, 1.36], [1.37, 1.45]] : [[1.0, 1.08], [1.09, 1.17], [1.18, 1.26], [1.27, 1.35], [1.36, 1.44]];
-      for (const [a, b] of bands) bandRing(X, a * pr.k, b * pr.k, 0.012, 0.004, 'rivet', C.metal, mus * 0, W.torso);
-      if (t === 'segm') {
-        // 胸前搭扣板与肩带
-        for (const s of [1, -1]) shellPanel(X, { th0: s * 0.05, th1: s * 0.55, y0: 1.36, y1: 1.44, off: 0.02, reg: 'rivet', col: C.metal, th: 0.005 });
+    M.jitterAll = keepJ;
+    if (o.hem) { M.color = o.hem; M.band([0, 0, 0], kit.torsoR(yH) * (RK + 0.02), kit.torsoR(yH) * (RK + 0.02), yH - 0.026 * k, yH + seam, n, kit.depthK); }
+    if (o.lace && D.det >= 1) {
+      M.color = o.lace;
+      const fz = y => kit.torsoR(y) * RK * Math.cos(PI / n) * kit.depthK + 0.006;
+      const lys = [yH - 0.01 * k, kit.spineY + 0.06 * k, kit.chestY, yT];
+      for (let i = 0; i < lys.length - 1; i++) {
+        const w = 0.012 * k;
+        M.quad([-w, lys[i], fz(lys[i])], [w, lys[i], fz(lys[i])], [w, lys[i + 1], fz(lys[i + 1])], [-w, lys[i + 1], fz(lys[i + 1])], [0, 0, 1]);
       }
     }
-    // 明光铠：双圆护胸 + 背甲
-    if (t === 'plate' || L.chest === 'plate') chestPlates(X);
-    if (t === 'muscle') { bandRing(X, 1.0 * pr.k, 1.03 * pr.k, 0.016, 0.006, 'goldEngr', C.trim, 0, W.torso); bandRing(X, 1.47 * pr.k, 1.5 * pr.k, 0.012, 0.004, 'goldEngr', C.trim, 0, W.torso); }
-    // 护心镜（札甲）
-    if (L.mirror && t !== 'plate' && X.hi >= 1) mirrorDisc(X, 0, 1.33, 0.058, 0.026);
-    // 交领（袍服）
-    if (L.collar === 'cross' || t === 'robe') crossCollar(X);
-    // 胸前斜挎的虎皮 / 豹皮 / 绶带 / 托加
-    if (L.pelt) sashBand(X, L.pelt === 'leopard' ? 'leopard' : 'tiger', '#ffffff', 0.15, 0.016);
-    if (L.sash) sashBand(X, 'hem', C.cloth2, 0.07, 0.01);
-    if (L.toga) sashBand(X, 'hem', L.white ? C.cloth : '#ece6d8', 0.3, 0.02);
-    // 女性赤膊类衣装：加抹胸
-    if (pr.fem && (t === 'bare' || t === 'rattan')) bandRing(X, 1.25 * pr.k, 1.39 * pr.k, 0.01, 0.002, L.pelt ? (L.pelt === 'leopard' ? 'leopard' : 'tiger') : 'cloth', L.pelt ? '#ffffff' : (C.cloth2 || C.cloth), 0, W.torso);
-    if (L.vest) for (const s of [1, -1]) shellPanel(X, { th0: s * 0.35, th1: s * 2.9, y0: 1.06, y1: 1.47, off: 0.012, reg: 'cloth', col: C.cloth, th: 0.006 });
+    const ySplit = kit.spineY + 0.06 * k;
+    M.boneBy(v0, p => (p[1] < ySplit - 1e-4 ? B.spine : B.chest));
+    return { yH, yT };
   }
-  // 贴在躯干表面的甲片（双面布片）
-  function shellPanel(X, o) {
-    const { gb, lod, pr, R, W } = X;
-    const k = pr.k;
-    return panel(gb, (s, t) => {
-      const th = lerp(o.th0, o.th1, s), y = lerp(o.y0, o.y1, t) * k;
-      return torsoPt(R, y, th, (o.off || 0.01) + (o.bulge ? o.bulge * Math.sin(PI * s) * Math.sin(PI * t) : 0), o.mus || 0, pr.fem);
-    }, { nu: o.nu || Math.max(2, lod.pn), nv: o.nv || Math.max(2, Math.round(lod.pv * 0.6)), th: o.th || 0.006, reg: o.reg, col: col(o.col), colB: shade(o.col, -0.4), w: p => W.torso(p), mirrorS: o.mirrorS, uv: o.uv });
-  }
-  // 一圈带子（腰带、甲带、包边）：y0..y1，外扩 off，下缘多外扩 flare
-  function bandRing(X, y0, y1, off, flare, reg, colr, mus, wf) {
-    const { gb, lod, R, pr } = X;
-    const secs = [];
-    const low = X.hi === 0;
-    const yy = low ? [y0, y1] : [y0, y0 + (y1 - y0) * 0.15, y1 - (y1 - y0) * 0.15, y1];
-    const oo = low ? [off + flare * 0.6, off] : [off * 0.55 + flare, off + flare * 0.6, off, off * 0.55];
-    for (let i = 0; i < yy.length; i++) secs.push({ c: [0, yy[i], 0], X: [1, 0, 0], Z: [0, 0, 1], rx: 1, rz: 1, t: i / (yy.length - 1), off2: oo[i] });
-    loft(gb, secs, { n: lod.torN, reg, col: col(colr), wf: wf || X.W.torso, ptf: (th, s) => torsoPt(R, s.c[1], th, s.off2, 0, pr.fem) });
-  }
-  function chestPlates(X) {
-    const { C, hi } = X;
-    for (const s of [1, -1]) {
-      shellPanel(X, { th0: s * 0.06, th1: s * 1.2, y0: 1.2, y1: 1.43, off: 0.016, bulge: 0.008, reg: 'metal', col: C.metal, th: 0.008 });
-      if (hi >= 1) mirrorDisc(X, s * 0.55, 1.315, 0.05, 0.03);
+  // 沿躯干表面的一条带（交领、斜挎的皮 / 绶带 / 托加）：path = [[θ 度, y], …]，带宽 w，带色 cols（逐段可不同）
+  function torsoStrip(kit, path, w, col, off, thick) {
+    const M = kit.M, V = kit.V, k = kit.k, n = kit.D.tor;
+    const r0 = (y, th) => { const r = kit.torsoR(y), dk = kit.depthK; const rr = r * lerp(Math.cos(PI / n), 1, 0.55) + (off != null ? off : 0.012 * k); const t = th * D2R; return [Math.sin(t) * rr, y, Math.cos(t) * rr * dk + (1 - dk) * 0]; };
+    const v0 = M.vertexCount;
+    const pts = path.map(([th, y]) => r0(y, th));
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i + 1], mid = V.mul(V.add(a, b), 0.5);
+      const out = [mid[0], 0, mid[2]];
+      M.color = Array.isArray(col) && Array.isArray(col[0]) ? col[i % col.length] : col;
+      M.strip(a, b, w, w, out, thick || 0.012);
     }
-    // 背甲
-    shellPanel(X, { th0: 1.9, th1: TAU - 1.9, y0: 1.18, y1: 1.44, off: 0.014, reg: 'metal', col: C.metal, th: 0.008 });
-    // 胸前横带（束甲绊）
-    bandRing(X, 1.185 * X.pr.k, 1.215 * X.pr.k, 0.03, 0.002, 'leather', shade(C.cloth2 || C.cloth, -0.1), 0, X.W.torso);
+    M.boneBy(v0, p => kit.torsoBone(p[1]));
   }
-  // 圆镜：在躯干表面 (θ, y) 处的扁圆盘
-  function mirrorDisc(X, th, y, r, off) {
-    const { gb, lod, R, pr, C } = X;
-    const yy = y * pr.k;
-    const c = torsoPt(R, yy, th, off, 0, pr.fem), n = torsoNormal(R, yy, th);
-    const AX = axesFromY(n);
-    const prof = [[r, -0.008, null, 0.0], [r * 1.02, 0.0, null, 0.03], [r * 0.96, 0.006, null, 0.1], [r * 0.6, 0.009, null, 0.5], [0, 0.011, null, 1]];
-    const start = gb.nv;
-    lathe(gb, prof, { c, axes: AX, n: lod.ring, reg: 'mirror', col: col(C.trim === GOLD ? '#e8e0c8' : C.metal), w: X.W.torso(c) });
-    fixDiscUV(gb, REG('mirror'), c, AX, r, start);
-  }
-  // 由一个方向（作为 Y）构造正交轴，满足 Z × X = Y
-  function axesFromY(Y) {
-    Y = v3norm(Y);
-    let ref = Math.abs(Y[1]) < 0.9 ? [0, 1, 0] : [0, 0, 1];
-    const Xa = v3norm(v3cross(ref, Y)), Za = v3cross(Xa, Y);
-    return { X: Xa, Y, Z: Za };
-  }
-  // 把最近构建的圆盘顶点改为平面投影 UV
-  function fixDiscUV(gb, reg, c, AX, r, from) {
-    const start = from != null ? from : gb._lastLatheStart;
-    if (start == null) return;
-    for (let i = start; i < gb.nv; i++) {
-      const p = [gb.P[i * 3] - c[0], gb.P[i * 3 + 1] - c[1], gb.P[i * 3 + 2] - c[2]];
-      const u = 0.5 + 0.5 * v3dot(p, AX.X) / (r * 1.04), v = 0.5 + 0.5 * v3dot(p, AX.Z) / (r * 1.04);
-      const q = ruv(reg, u, v);
-      gb.UV[i * 2] = q[0]; gb.UV[i * 2 + 1] = q[1];
-    }
-  }
-  function crossCollar(X) {
-    const { C } = X;
-    // 左襟压右襟：从左肩斜到右腰
-    const path = [[0.55, 1.5], [0.25, 1.4], [-0.15, 1.27], [-0.55, 1.13]];
-    bandPath(X, path, 0.045, 0.014, 'hem', C.cloth2 || '#e8e0d0');
-    bandPath(X, [[-0.55, 1.5], [-0.3, 1.42], [-0.08, 1.36]], 0.04, 0.009, 'hem', C.cloth2 || '#e8e0d0');
-  }
-  // 沿躯干表面路径（[θ, y] 点列）的一条带子
-  function bandPath(X, path, width, off, reg, colr) {
-    const { gb, lod, R, pr, W } = X;
-    const k = pr.k;
-    const seg = Math.max(3, (path.length - 1) * (lod.detail + 1) * 2);
-    const at = s => { const f = s * (path.length - 1), i = Math.min(path.length - 2, Math.floor(f)), t = f - i; return [lerp(path[i][0], path[i + 1][0], t), lerp(path[i][1], path[i + 1][1], t) * k]; };
-    panel(gb, (s, t) => {
-      const a = at(t), b = at(Math.min(1, t + 0.02)), a2 = at(Math.max(0, t - 0.02));
-      // 横向：在 (θ, y) 平面中垂直于路径方向
-      const dth = b[0] - a2[0], dy = b[1] - a2[1];
-      const rr = ringAt(R, a[1]).rx;
-      const l = Math.hypot(dth * rr, dy) || 1;
-      const nth = -dy / l / rr * width, ny = dth * rr / l * width;
-      // 第三版修订：带子不超出肩顶（宽带搭过肩头时不再向上伸成头侧的一片白板）
-      const th = a[0] + (s - 0.5) * nth * 2, y = Math.min(a[1] + (s - 0.5) * ny * 2, 1.49 * k);
-      return torsoPt(R, y, th, off, 0, pr.fem);
-    }, { nu: 1, nv: seg, th: 0.005, reg, col: col(colr), w: p => W.torso(p), uv: (s, t) => [t, s] });
-  }
-  function sashBand(X, reg, colr, width, off) {
-    // 从右腰前 → 左肩 → 背后右腰（闭合一圈的斜带）
-    const path = [[-0.75, 1.05], [-0.1, 1.24], [0.45, 1.42], [1.1, 1.5], [1.7, 1.49], [2.4, 1.38], [2.95, 1.2], [3.6, 1.05]];
-    bandPath(X, path, width, off, reg, colr);
-  }
-
-  // ------------------------------------------------------------- 颈 --
-  function buildNeck(X) {
-    const { gb, lod, pr, W, C, look } = X;
-    const k = pr.k;
-    // 颈：上细（比下颌窄，不像柱子）、下接斜方肌；颈前略后移，下颌在前方悬出
-    const r = 0.056 * (look.spec && look.spec.neck ? clamp(0.82 + 0.22 * look.spec.neck, 0.92, 1.25) : 1) * (pr.fem ? 0.82 : 1) * (1 + (pr.sw - 1) * 0.35) * k;
-    const secs = [];
-    const ys = X.hi === 0 ? [1.5, 1.63] : [1.5, 1.545, 1.59, 1.63];
-    ys.forEach((y, i) => secs.push({ c: [0, y * k, (-0.02 + i * 0.004) * k], X: [1, 0, 0], Z: [0, 0, 1], rx: r * (i === 0 ? 1.3 : i === 1 ? 1.06 : 1), rz: r * (i === 0 ? 1.12 : 0.96), t: i / (ys.length - 1) }));
-    loft(gb, secs, { n: Math.max(6, lod.limbN), reg: 'skin', col: col(C.skin), wf: W.neck });
-    const cl = X.L.collar;
-    if ((cl === 'scarf' || cl === 'fur' || cl === 'gold') && X.hi >= 1) {
-      // 领巾 / 毛领 / 金项圈：贴着躯干颈根表面外扩（与躯干同一曲面 → 不再穿插出锯齿边），上缘一道圆边围住颈根
-      const reg = cl === 'fur' ? 'fur' : cl === 'gold' ? 'goldEngr' : 'cloth';
-      const cc = cl === 'fur' ? '#8a6a48' : cl === 'gold' ? GOLD : (X.look.kind === 'general' ? (C.tabard || C.faction) : C.faction);
-      const th = cl === 'fur' ? 0.022 : 0.012;
-      bandRing(X, (cl === 'gold' ? 1.44 : 1.462) * k, 1.545 * k, th, cl === 'gold' ? 0.01 : 0.006, reg, cc, 0, W.neck);
-      const top = ringAt(X.R, 1.545 * k);
-      tube(gb, ringPts([0, 1.545 * k, top.zc], [1, 0, 0], [0, 0, 1], top.rx + th, top.rz + th, Math.max(8, lod.limbN)), { r: (cl === 'fur' ? 0.014 : 0.008) * k, n: X.hi >= 2 ? 6 : 4, reg, col: col(cc), w: W.neck([0, 1.545 * k, 0]), closed: true });
-    }
-  }
-
-  // ------------------------------------------------------------- 臂 --
-  function armPt(pr, S, s) {
-    const sg = S === 'L' ? 1 : -1, J = pr.J;
-    const d = [pr.armDirL[0] * sg, pr.armDirL[1], 0], L = pr.upL + pr.foL;
-    return v3madd(J['upperArm' + S], d, s * L);
-  }
-  const ARM_R = [[-0.12, 0.0, 0.0], [-0.08, 0.05, 0.052], [-0.02, 0.064, 0.066], [0.08, 0.062, 0.064], [0.22, 0.055, 0.056], [0.35, 0.05, 0.054], [0.48, 0.043, 0.045],
-    [0.53, 0.04, 0.042], [0.6, 0.044, 0.045], [0.75, 0.039, 0.036], [0.9, 0.032, 0.03], [1.0, 0.029, 0.026]];
-  function armR(s) {
-    // 肩头：半球形收口（旧版为 2cm 的平锥，手臂下垂时露出平顶方角）
-    if (s < -0.02) { const q = Math.sqrt(Math.max(0, 1 - Math.pow((s + 0.02) / 0.1, 2))); return [0.064 * q, 0.066 * q]; }
-    for (let i = 0; i < ARM_R.length - 1; i++) {
-      const a = ARM_R[i], b = ARM_R[i + 1];
-      if (s <= b[0]) { const t = smooth((s - a[0]) / (b[0] - a[0])); return [lerp(a[1], b[1], t), lerp(a[2], b[2], t)]; }
-    }
-    return [ARM_R[ARM_R.length - 1][1], ARM_R[ARM_R.length - 1][2]];
-  }
-  function buildArm(X, S) {
-    const { gb, lod, pr, W, C, L } = X;
-    const sg = S === 'L' ? 1 : -1, k = pr.k * pr.limb;
-    const d = [pr.armDirL[0] * sg, pr.armDirL[1], 0], Z = [0, 0, 1], Xa = v3cross(d, Z);
-    const sl = L.sleeves || 'cloth';
-    const segs = sl === 'bare' || (X.hi === 0 && sl === 'short') ? [['skin', -0.12, 1, 1]] : sl === 'short' ? [['cloth', -0.12, 0.3, 1.28], ['skin', 0.3, 1, 1]] :
-      sl === 'mail' ? [['mail', -0.12, 0.62, 1.12], ['skin', 0.62, 1, 1]] : sl === 'wide' ? [['cloth', -0.12, 1, 1.35]] : [['cloth', -0.12, 1, 1.22]];
-    const musc = sl === 'bare' || sl === 'short' ? 1 : 0;
-    for (const [reg, s0, s1, sc] of segs) {
-      const n = X.hi === 0 ? Math.max(1, Math.round(3 * (s1 - s0))) : Math.max(2, Math.round(lod.armK * (s1 - s0)));
-      // 截面：肩头半球处加密，其余均匀
-      const cap = s0 <= -0.11 ? (X.hi >= 2 ? [-0.12, -0.112, -0.098, -0.078, -0.052, -0.02] : X.hi === 1 ? [-0.12, -0.1, -0.055, -0.02] : [-0.12, -0.06, -0.02]) : null;
-      const ss = [];
-      if (cap) { for (const c of cap) ss.push(c); const m = Math.max(1, Math.round(n * (s1 + 0.02) / (s1 - s0)) - (X.hi === 0 ? 1 : 0)); for (let i = 1; i <= m; i++) ss.push(lerp(-0.02, s1, i / m)); }
-      else for (let i = 0; i <= n; i++) ss.push(lerp(s0, s1, i / n));
-      const secs = [];
-      for (let i = 0; i < ss.length; i++) {
-        const s = ss[i];
-        let [rx, rz] = armR(s);
-        let c = armPt(pr, S, s);
-        let g = sc;
-        if (sl === 'wide' && reg === 'cloth') {
-          // 广袖：自肘起外张、下垂
-          const f = sstep(0.35, 1.0, s);
-          g = sc + f * 1.6;
-          c = v3add(c, [0, -f * 0.05 * pr.k, f * 0.01]);
-        }
-        if (reg === 'cloth' && i === ss.length - 1 && s1 < 1) g *= 1.1;
-        const pole = s <= -0.115;
-        secs.push({ c, X: Xa, Z, rx: pole ? 0 : rx * k * g, rz: pole ? 0 : rz * k * g, t: (s - s0) / (s1 - s0), pole });
-      }
-      const ccol = reg === 'skin' ? C.skin : reg === 'mail' ? C.metal : (sl === 'wide' ? C.cloth : (X.look.kind === 'general' ? C.cloth : shade(C.faction, -0.15)));
-      loft(gb, secs, { n: lod.limbN, reg, col: col(ccol), wf: W.arm(S),
-        off: musc && reg === 'skin' ? (th, sec) => { const s = (v3dot(v3sub(sec.c, pr.J['upperArm' + S]), d)) / (pr.upL + pr.foL); const mk = 1 + clamp((pr.build - 1) * 5, 0, 1); return k * mk * (0.008 * gauss(th, 0, 0.7) * gauss(s, 0.3, 0.1) + 0.006 * gauss(Math.abs(th), PI, 0.8) * gauss(s, 0.24, 0.12) + 0.01 * gauss(s, 0.04, 0.07) + 0.005 * gauss(s, 0.66, 0.08)); } : null });
-      if (reg === 'cloth' && s1 < 1) {
-        // 袖口包边
-        tube(gb, ringPts(armPt(pr, S, s1), Xa, Z, armR(s1)[0] * k * sc * 1.1, armR(s1)[1] * k * sc * 1.1, lod.limbN), { r: 0.006 * pr.k, n: 4, reg: 'goldEngr', col: col(C.trim), w: W.arm(S)(armPt(pr, S, s1)), closed: true });
-      }
-    }
-    // 臂钏（天竺、库施）：露臂时上臂一道金箍
-    if (L.armlet && X.hi >= 1 && (sl === 'bare' || sl === 'short')) {
-      const s = sl === 'short' ? 0.36 : 0.3, [rx, rz] = armR(s);
-      tube(gb, ringPts(armPt(pr, S, s), Xa, Z, rx * k * 1.08 + 0.003, rz * k * 1.08 + 0.003, lod.limbN), { r: 0.006 * pr.k, n: 4, reg: 'gold', col: col(GOLD), w: W.arm(S)(armPt(pr, S, s)), closed: true });
-    }
-    // 护臂
-    const br = X.hi === 0 ? 'none' : (L.bracer || 'none');
-    if (br !== 'none') {
-      const reg = br === 'leather' ? 'leather' : br === 'gold' ? 'gold' : 'metal';
-      const cc = br === 'leather' ? C.leather : br === 'gold' ? GOLD : C.metal;
-      const s0 = br === 'gold' ? 0.86 : 0.6, s1 = 0.97;
-      const n = Math.max(2, Math.round(lod.armK * 0.5));
-      const secs = [];
-      for (let i = 0; i <= n; i++) {
-        const s = lerp(s0, s1, i / n);
-        const [rx, rz] = armR(s);
-        const fl = br === 'gold' ? 1.15 : 1.18 + 0.12 * sstep(0.85, 0.97, s);
-        secs.push({ c: armPt(pr, S, s), X: Xa, Z, rx: rx * k * fl + 0.004, rz: rz * k * fl + 0.004, t: (s - s0) / (s1 - s0) });
-      }
-      loft(gb, secs, { n: lod.limbN, reg, col: col(cc), wf: W.arm(S), u0: 0, u1: 0.98 });
-      if (X.hi >= 1 && br === 'metal') for (const s of [s0, s1]) tube(gb, ringPts(armPt(pr, S, s), Xa, Z, armR(s)[0] * k * 1.24 + 0.005, armR(s)[1] * k * 1.24 + 0.005, lod.limbN), { r: 0.0045 * pr.k, n: 4, reg: 'goldEngr', col: col(C.trim), w: W.arm(S)(armPt(pr, S, s)), closed: true });
-    }
-    buildHand(X, S);
-  }
-  // 截面环的点列（闭合，用于包边管）
-  function ringPts(c, Xa, Z, rx, rz, n) {
+  // 贴着躯干的连续披带（托加、绶带、兽皮斜挎）：沿 [θ 度, y] 路径按 Catmull-Rom 细分，每个截面在躯干表面外 off 处取宽 w 的横线，
+  // 相邻截面连成一条不断的带（外面 + 深一点的里面），按顶点高度分骨。cols：逐段颜色（循环），sub：每段细分数
+  function drapeBand(kit, path, w, cols, off, sub) {
+    const M = kit.M, V = kit.V, k = kit.k, dk = kit.depthK, n = kit.D.tor;
+    const at = (th, y) => { const r = kit.torsoR(y) * lerp(Math.cos(PI / n), 1, 0.6) + off, t = th * D2R; return [Math.sin(t) * r, y, Math.cos(t) * r * dk]; };
+    const cr = (a, b, c, d, t) => { const t2 = t * t, t3 = t2 * t; return 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3); };
     const pts = [];
-    for (let i = 0; i <= n; i++) { const a = i / n * TAU; pts.push(v3add(c, v3add(v3mul(Xa, Math.sin(a) * rx), v3mul(Z, Math.cos(a) * rz)))); }
-    return pts;
-  }
-  function buildHand(X, S) {
-    const { gb, lod, pr, C, L, look } = X;
-    const m = socketRest(pr, S);
-    const save = gb.xf;
-    gb.xf = m;
-    const gloved = look.kind === 'general' && L.bracer === 'metal';
-    const reg = gloved ? 'leather' : 'skin', cc = gloved ? DLEATHER : C.skin;
-    const k = pr.k * (pr.fem ? 0.9 : 1) * (0.94 + 0.06 * pr.limb);
-    const w = B['hand' + S];
-    if (X.hi >= 2) {
-      // 高精度：握拳的手 = 手背 / 掌（圆角块）+ 四指（绕握柄卷曲的圆管，指根埋入掌块）+ 拇指（压在食指上）
-      // 握点坐标：握柄沿 +Y 穿过原点，+Z 沿前臂向指尖，手背在 −X（右手）/ +X（左手）一侧
-      const sb = S === 'L' ? 1 : -1;            // 手背所在的 X 符号
-      const R = 0.026 * k, fl = [0.0105, 0.0112, 0.0108, 0.0095];
-      ellipsoid(gb, [sb * 0.017 * k, -0.002 * k, -0.034 * k], [0.017 * k, 0.043 * k, 0.046 * k], { nl: 6, n: 10, reg, col: col(cc), w, sq: 3.4 });
-      for (let i = 0; i < 4; i++) {
-        const y = (0.03 - i * 0.02) * k, rf = fl[i] * k, pts = [];
-        const a0 = -0.95, a1 = 2.45 - i * 0.05;     // 自指根（手背前方）经 +Z 绕到掌心一侧
-        for (let j = 0; j <= 5; j++) { const a = lerp(a0, a1, j / 5), rr = R + rf * 0.25 * (1 - j / 5); pts.push([-sb * Math.sin(a) * rr, y, Math.cos(a) * rr - 0.002 * k]); }
-        pts[0] = [sb * 0.012 * k, y, -0.006 * k];
-        tube(gb, pts, { r: q => rf * (1 - 0.18 * q), n: 6, reg, col: col(cc), w, up: [0, 1, 0], capEnd: true });
-      }
-      // 拳心（空手时填住握柄留下的孔）
-      ellipsoid(gb, [0, -0.004 * k, 0], [0.016 * k, 0.036 * k, 0.016 * k], { nl: 4, n: 6, reg, col: col(cc), w });
-      // 拇指：自掌根（掌心侧、拇指侧）绕过握柄压在食指第二节上
-      const tp = [[-sb * 0.006 * k, 0.034 * k, -0.06 * k], [-sb * 0.024 * k, 0.04 * k, -0.034 * k], [-sb * 0.03 * k, 0.046 * k, -0.006 * k], [-sb * 0.018 * k, 0.047 * k, 0.016 * k]];
-      tube(gb, tp, { r: q => (0.012 - 0.002 * q) * k, n: 6, reg, col: col(cc), w, up: [0, 1, 0], capEnd: true });
-    } else {
-      ellipsoid(gb, [0, 0, -0.014 * k], [0.03 * k, 0.047 * k, 0.052 * k], { nl: lod.hand[0], n: lod.hand[1], reg, col: col(cc), w, sq: X.hi >= 1 ? 3.2 : 2 });
-      // 拇指压在握柄上
-      if (X.hi >= 1) tube(gb, [[0.018 * k, 0.03 * k, -0.045 * k], [0.03 * k, 0.04 * k, -0.012 * k], [0.022 * k, 0.046 * k, 0.012 * k]], { r: s => (0.013 - 0.003 * s) * k, n: 6, reg, col: col(cc), w });
+    sub = Math.max(1, sub || 2);
+    for (let i = 0; i < path.length - 1; i++) {
+      const p0 = path[Math.max(0, i - 1)], p1 = path[i], p2 = path[i + 1], p3 = path[Math.min(path.length - 1, i + 2)];
+      for (let j = 0; j < sub; j++) { const t = j / sub; pts.push(at(cr(p0[0], p1[0], p2[0], p3[0], t), cr(p0[1], p1[1], p2[1], p3[1], t))); }
     }
-    gb.xf = save;
+    const last = path[path.length - 1]; pts.push(at(last[0], last[1]));
+    const v0 = M.vertexCount, cs = Array.isArray(cols[0]) ? cols : [cols];
+    const L = [], R = [], Nn = [];
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i], tg = V.norm(V.sub(pts[Math.min(pts.length - 1, i + 1)], pts[Math.max(0, i - 1)]));
+      const out = V.norm([p[0], 0, p[2] / Math.max(0.3, dk)]);
+      const side = V.norm(V.cross(tg, out));
+      L.push(V.madd(p, side, -w / 2)); R.push(V.madd(p, side, w / 2)); Nn.push(out);
+    }
+    for (let i = 0; i < pts.length - 1; i++) {
+      const c = cs[Math.floor(i / sub) % cs.length], o = V.norm(V.add(Nn[i], Nn[i + 1]));
+      M.color = c;
+      M.quad(L[i], R[i], R[i + 1], L[i + 1], o);
+      if (kit.D.det >= 1) { const inn = V.mul(o, -0.006); M.quad(V.add(L[i], inn), V.add(R[i], inn), V.add(R[i + 1], inn), V.add(L[i + 1], inn), V.neg(o), shT(c, 0.7)); }
+    }
+    M.boneBy(v0, p => kit.torsoBone(p[1]));
   }
-
-  // ------------------------------------------------------------- 腿 --
-  const LEG_R = [[-0.05, 0.09, 0.09], [0.0, 0.098, 0.098], [0.12, 0.092, 0.094], [0.3, 0.08, 0.082], [0.45, 0.064, 0.066], [0.5, 0.058, 0.062], [0.58, 0.06, 0.064],
-    [0.68, 0.062, 0.068], [0.82, 0.05, 0.05], [1.0, 0.04, 0.042]];
-  function legR(s) {
-    for (let i = 0; i < LEG_R.length - 1; i++) { const a = LEG_R[i], b = LEG_R[i + 1]; if (s <= b[0]) { const t = smooth((s - a[0]) / (b[0] - a[0])); return [lerp(a[1], b[1], t), lerp(a[2], b[2], t)]; } }
-    return [LEG_R[LEG_R.length - 1][1], LEG_R[LEG_R.length - 1][2]];
-  }
-  function legPt(pr, S, s) {
-    const J = pr.J, h = J['thigh' + S], kn = J['shin' + S], an = J['foot' + S];
-    if (s <= 0.5) return v3lerp(h, kn, s / 0.5);
-    return v3lerp(kn, an, (s - 0.5) / 0.5);
-  }
-  function legFrame(pr, S, s) {
-    const J = pr.J;
-    const d = s <= 0.5 ? v3norm(v3sub(J['shin' + S], J['thigh' + S])) : v3norm(v3sub(J['foot' + S], J['shin' + S]));
-    const Z = v3norm(v3sub([0, 0, 1], v3mul(d, d[2])));
-    return { X: v3cross(d, Z), Z, d };
-  }
-  function buildLeg(X, S) {
-    const { gb, lod, pr, W, C, L, look } = X;
-    const k = pr.k * pr.limb;
-    const lg = L.legs || 'trousers';
-    const bootTop = L.boots === 'boot' ? 0.74 : 2;
-    const segs = [];
-    // 第三版修订：长袍 / 长裙（robe、coat、sarong，长过膝）下的赤腿——裙内一段画成同色的衬布（略收细），下摆以下才露肤色。
-    // 原来大腿在待机、行走、出招时穿出裙面，成一条肤色的「桨」（僧人、阿克苏姆与库施、孟获、天竺腰布）。分段不增加环数。
+  function torsoLP(kit, X) {
+    const M = kit.M, look = kit.look, L = look.L, k = kit.k, D = kit.D, V = kit.V, P = kit.P;
+    const t = L.torso || 'cloth', gen = look.kind === 'general';
     const robeSk = robeOverBare(L);
-    if (robeSk) {
-      const yHem = Math.max(L.skirt === 'robe' ? 0.1 : 0, 1.04 - L.skirtLen) * pr.k + 0.05 * pr.k;
-      let sH = 1;
-      for (let s = 0.4; s <= 1.0001; s += 0.02) if (legPt(pr, S, s)[1] <= yHem) { sH = s; break; }
-      // 纱笼（锦纹）用同一锦纹贴图，袍 / 长衣用素布。颜色取袍面实际显出的那一面：skirtPanel 朝外的是 colB 面（shade −0.4），
-      // 衬布再略暗（−0.44）。原来只压暗 −0.12，白袍（埃塞俄比亚披袍、库施王袍、托加）的腿前摆时比袍面亮得多，像一条白腿穿出袍子
-      const ir = L.skirt === 'sarong' ? 'brocade' : 'cloth';
-      const inner = shade(C.cloth, -0.1);
-      // 两段的环数之和 = 原来整条腿的环数（三角形不变；低精度士兵的预算只剩几个三角形）
-      const nT = Math.max(2, Math.round(lod.legK * 1.05)), n1 = clamp(Math.round(nT * (sH + 0.05) / 1.05), 1, nT - 1);
-      if (sH > 0.9) segs.push([ir, -0.05, 1, 0.97, inner]);
-      else { segs.push([ir, -0.05, sH, 0.97, inner, n1]); segs.push(['skin', sH, 1, 1, C.skin, nT - n1]); }
-    } else if (lg === 'bare') segs.push(['skin', -0.05, 1, 1, C.skin]);
-    else if (lg === 'hakama') { segs.push(['cloth', -0.05, 0.56, 1.45, C.cloth2]); segs.push(['skin', 0.56, 1, 1, C.skin]); }
-    else segs.push([L.legsReg || 'cloth', -0.05, Math.min(1, bootTop + 0.04), 1.28, L.legsReg === 'plaid' ? C.cloth : (look.kind === 'general' ? (C.trousers || shade(C.cloth, -0.55)) : shade(C.cloth2, 0.05))]);
-    for (const [reg, s0, s1, sc, cc, nFix] of segs) {
-      const n = nFix || Math.max(2, Math.round(lod.legK * (s1 - s0)));
-      const secs = [];
-      for (let i = 0; i <= n; i++) {
-        const s = lerp(s0, s1, i / n);
-        const F = legFrame(pr, S, s);
-        let [rx, rz] = legR(s);
-        let g = sc;
-        // 裤：大腿根贴身（不穿出腰裙），膝下宽松后收进靴
-        // 袍内衬布：大腿至膝收细（少穿出袍面；裆部露出的是同色的腰下衬布，见 buildTorso），近踝略收（凉鞋绑带露在外）
-        if (robeSk && reg !== 'skin') g = sc * lerp(0.78, 1, sstep(0.42, 0.72, s)) * (1 - 0.06 * sstep(0.7, 1, s));
-        else if (reg !== 'skin') g = lerp(1.02, sc, sstep(0.3, 0.6, s)) * (1 - 0.15 * sstep(0.55, 1, s)) + (lg === 'hakama' ? 0.15 * sstep(0.3, 0.5, s) * (1 - sstep(0.5, 0.56, s)) : 0);
-        secs.push({ c: legPt(pr, S, s), X: F.X, Z: F.Z, rx: rx * k * g, rz: rz * k * g, t: (s - s0) / (s1 - s0) });
+    const armour = { lamLace: 1, lamellar: 1, plate: 1, scale: 1, muscle: 1, mail: 1, segm: 1, tanko: 1, rattan: 1, quilt: 1, fur: 1 }[t];
+    // 底色：赤膊 = 肤色（裙内为衬布），布衣 = 衣色；甲衣下的衬衣在缝里露出
+    const top = t === 'bare' ? X.skin : t === 'muscle' ? X.metal : armour ? (t === 'segm' && look.culture === 'roman' ? C3('#A8402E') : X.seam) : X.cloth;
+    const pel = t === 'bare' ? (robeSk || L.skirt === 'kilt' || L.skirt === 'sarong' ? X.inner : X.cloth) : t === 'muscle' ? X.metal : armour ? X.clothDark : X.cloth;
+    const vested = { lamLace: 1, lamellar: 1, plate: 1, scale: 1, tanko: 1, rattan: 1, quilt: 1, fur: 1 }[t] === 1;
+    kit.torso(top, pel, { belly: t === 'bare' && kit.fat > 0.3 ? P.shade(X.skin, 0.97) : null, vested });
+    kit._torsoTop = top;
+    const RK = 1.085;
+    if (L.openRobe) {
+      // 敞襟里露出的甲：金 / 铁的横排（试点关羽的金札甲）
+      const cs = [X.metalDark, X.metal, X.metal, X.metalLight, X.metal, shT(X.metalDark, 0.85)];
+      vestRows(kit, { rows: D.det >= 2 ? 6 : 4, colorOf: i => cs[i % cs.length], hem: D.det >= 2 ? X.metalDark : null, seam: 0.003, arc: D.det >= 2 ? null : [-48, 48], yBot: D.det >= 2 ? null : kit.pelvisY + 0.05 * k });
+    } else if (t === 'lamLace' || t === 'lamellar') {
+      vestRows(kit, { rows: 6, a: t === 'lamLace' ? shT(X.metal, 0.92) : X.metal, b: t === 'lamLace' ? X.metalLight : X.metalDark, hem: gen ? X.trim : X.cream, lace: t === 'lamLace' ? shT(X.cloth, 0.95) : X.seam });
+    } else if (t === 'plate') {
+      vestRows(kit, { rows: 4, a: X.metal, b: X.metalDark, hem: X.trim, lace: null, seam: 0.004 });
+    } else if (t === 'scale') {
+      vestRows(kit, { rows: 8, a: X.metal, b: X.metalLight, hem: X.trim, seam: 0.004, RK: 1.09 });
+    } else if (t === 'segm') {
+      vestRows(kit, { rows: 6, a: X.metalLight, b: X.metal, seam: 0.008, RK: 1.1, yBot: kit.pelvisY + 0.06 * k, yTop: kit.chestY + 0.06 * k });
+      // 胸前与肩上的护板
+      M.color = X.metal;
+      for (const s of [1, -1]) {
+        const y0 = kit.chestY + 0.07 * k, y1 = kit.shoulderY - 0.005 * k;
+        M.bone = B.chest;
+        M.panel([0, 0, 0], s > 0 ? 8 : -62, s > 0 ? 62 : -8, D.pan, [[kit.torsoR(y1) * 1.1, y1], [kit.torsoR(y0) * 1.1, y0]], kit.depthK, X.metal, null);
       }
-      loft(gb, secs, { n: lod.limbN, reg, col: col(cc), wf: W.leg(S), off: reg === 'skin' ? (th, sec, i) => { const s = lerp(s0, s1, i / n); return k * (0.008 * gauss(s, 0.66, 0.08) * gauss(Math.abs(th), PI * 0.75, 0.7) + 0.006 * gauss(s, 0.22, 0.12) * gauss(th, 0, 0.8)); } : null });
-    }
-    // 靴
-    if (L.boots === 'boot') {
-      const n = X.hi === 0 ? 1 : Math.max(2, Math.round(lod.legK * 0.3)), secs = [];
-      for (let i = 0; i <= n; i++) {
-        const s = lerp(bootTop, 1.0, i / n), F = legFrame(pr, S, s);
-        const [rx, rz] = legR(s);
-        const g = 1.18 + (i === 0 ? 0.08 : 0);
-        secs.push({ c: legPt(pr, S, s), X: F.X, Z: F.Z, rx: rx * k * g + 0.004, rz: rz * k * g + 0.004, t: i / n });
+    } else if (t === 'tanko') {
+      vestRows(kit, { rows: 5, a: X.metalDark, b: shT(X.metalDark, 0.85), seam: 0.007, RK: 1.1, hem: X.seam });
+      if (D.det >= 2) { M.color = X.metalLight; for (const y of [kit.spineY, kit.chestY]) for (const th of [-30, 0, 30]) M.sphere(kit.torsoPt(th, y, 0.014 * k), 0.008 * k, 4, 2); }
+    } else if (t === 'rattan') {
+      vestRows(kit, { rows: 6, a: C3(PALF.rattan), b: C3(PALF.rattanDark), seam: 0.004, RK: 1.09, jitterAll: true });
+    } else if (t === 'quilt') {
+      vestRows(kit, { rows: 5, a: X.cloth, b: shT(X.cloth, 0.86), seam: 0.004, RK: 1.08, hem: X.cloth2 });
+    } else if (t === 'fur') {
+      vestRows(kit, { rows: 4, a: C3(PALF.fur), b: C3(PALF.furLight), seam: 0.002, RK: 1.1, jitterAll: true });
+    } else if (t === 'muscle') {
+      // 胸肌甲：铜甲上的胸肌与腹肌浮雕，腰与领口金边
+      M.bone = B.chest; M.color = X.metalLight;
+      for (const s of [1, -1]) M.sphere(kit.torsoPt(s * 24, kit.chestY + 0.07 * k, -0.035 * k), [0.085 * k, 0.065 * k, 0.05 * k], D.sph[0], D.sph[1]);
+      if (D.det >= 1) { M.bone = B.spine; M.color = X.metal; for (const y of [kit.spineY + 0.02 * k, kit.spineY + 0.09 * k]) M.sphere(kit.torsoPt(0, y, -0.012 * k), [0.05 * k, 0.03 * k, 0.025 * k], 5, 2); }
+      M.bone = B.pelvis; M.color = X.trim;
+      M.band([0, 0, 0], kit.waistR * 1.06, kit.waistR * 1.1, kit.pelvisY - 0.01 * k, kit.pelvisY + 0.03 * k, D.tor, kit.depthK);
+    } else if (t === 'bare') {
+      // 胸肌：两块略深的扁圆（肤色），按体格；女性：抹胸（见下）
+      if (!kit.fem && D.det >= 1) {
+        M.bone = B.chest; M.color = P.shade(X.skin, 0.95);
+        for (const s of [1, -1]) M.sphere(kit.torsoPt(s * 25, kit.chestY + 0.07 * k, -0.04 * k), [0.08 * k, 0.055 * k, 0.045 * k], D.sph[0], D.sph[1]);
       }
-      loft(gb, secs, { n: lod.limbN, reg: 'leather', col: col(DLEATHER), wf: W.leg(S) });
-      if (X.hi >= 1) { const F = legFrame(pr, S, bootTop); const [rx, rz] = legR(bootTop); tube(gb, ringPts(legPt(pr, S, bootTop), F.X, F.Z, rx * k * 1.27 + 0.004, rz * k * 1.27 + 0.004, lod.limbN), { r: 0.007 * pr.k, n: 4, reg: 'leather', col: col(shade(DLEATHER, 0.2)), w: W.leg(S)(legPt(pr, S, bootTop)), closed: true }); }
+      if (kit.fat > 0.3) { M.bone = B.spine; M.color = X.skin; M.sphere([0, kit.spineY - 0.02 * k, kit.waistR * kit.depthK * 0.55], [kit.waistR * 0.9, 0.12 * k, kit.waistR * 0.7], D.sph[0], D.sph[1]); }
+    } else if (t === 'robe' || t === 'cloth') {
+      if (kit.fat > 0.3) { M.bone = B.spine; M.color = X.cloth; M.sphere([0, kit.spineY - 0.02 * k, kit.waistR * kit.depthK * 0.5], [kit.waistR * 0.95, 0.13 * k, kit.waistR * 0.75], D.sph[0], D.sph[1]); }
     }
-    // 胫甲 + 护膝
-    if (L.greave === 'metal') {
-      const s0 = 0.54, s1 = 0.9;
-      panel(gb, (u, v) => {
-        const s = lerp(s0, s1, v), F = legFrame(pr, S, s), [rx, rz] = legR(s);
-        const th = lerp(-1.7, 1.7, u), g = 1.32;
-        return v3add(legPt(pr, S, s), v3add(v3mul(F.X, Math.sin(th) * (rx * k * g + 0.006)), v3mul(F.Z, Math.cos(th) * (rz * k * g + 0.008))));
-      }, { nu: Math.max(2, lod.pn), nv: Math.max(2, lod.pv - 3), th: 0.006, reg: 'metal', col: col(C.metal), w: p => W.leg(S)(p), mirrorS: true });
-      const kp = v3add(legPt(pr, S, 0.5), [0, 0.0, 0.065 * k]);
-      ellipsoid(gb, kp, [0.045 * k, 0.05 * k, 0.025 * k], { nl: Math.max(3, lod.hand[0] - 2), n: lod.hand[1], reg: 'metal', col: col(C.metal), w: W.leg(S)(kp) });
+    if (kit.fem && (t === 'bare' || t === 'rattan' || t === 'cloth' || t === 'robe')) {
+      // 女性胸型：两团柔和的圆；赤膊类衣装加抹胸
+      M.bone = B.chest; M.color = t === 'bare' ? (L.pelt ? C3(L.pelt === 'leopard' ? '#D8A040' : '#D87A2A') : X.cloth2) : t === 'rattan' ? C3(PALF.rattan) : X.cloth;
+      for (const s of [1, -1]) M.sphere(kit.torsoPt(s * 22, kit.chestY + 0.05 * k, -0.035 * k), [0.06 * k, 0.055 * k, 0.05 * k], D.sph[0], D.sph[1]);
+      if (t === 'bare') M.band([0, 0, 0], kit.torsoR(kit.chestY) * 1.08, kit.torsoR(kit.chestY + 0.1 * k) * 1.08, kit.chestY, kit.chestY + 0.1 * k, D.tor, kit.depthK);
     }
-    // 凉鞋绑带
-    if (L.boots === 'sandal' && X.hi >= 1) for (const s of [0.8, 0.88, 0.96]) { const F = legFrame(pr, S, s); const [rx, rz] = legR(s); tube(gb, ringPts(legPt(pr, S, s), F.X, F.Z, rx * k * 1.04 + 0.002, rz * k * 1.04 + 0.002, lod.limbN), { r: 0.004 * pr.k, n: 3, reg: 'leather', col: col(LEATHER), w: W.leg(S)(legPt(pr, S, s)), closed: true }); }
-    buildFoot(X, S);
-  }
-  function buildFoot(X, S) {
-    const { gb, lod, pr, C, L } = X;
-    const k = pr.k, a = pr.J['foot' + S];
-    const bare = L.boots === 'sandal' || L.boots === 'bare';
-    const reg = bare ? 'skin' : L.boots === 'shoe' ? 'cloth' : 'leather', cc = bare ? C.skin : L.boots === 'shoe' ? '#2a2420' : DLEATHER;
-    const st = X.hi === 0 ? [[-0.07, 0, 0, 0.03], [-0.03, 0.046, 0.06, 0.055], [0.1, 0.05, 0.032, 0.03], [0.17, 0, 0, 0.022]]
-      : [[-0.07, 0, 0, 0.03], [-0.058, 0.036, 0.04, 0.042], [-0.02, 0.046, 0.066, 0.06], [0.04, 0.05, 0.05, 0.045], [0.1, 0.05, 0.032, 0.03], [0.15, 0.043, 0.024, 0.024], [0.175, 0, 0, 0.022]];
-    const secs = st.map(([z, rx, rz, cy], i) => ({ c: [a[0], cy * k, a[2] + z * k], X: [-1, 0, 0], Z: [0, 1, 0], rx: rx * k * (bare ? 0.92 : 1.06), rz: rz * k * (bare ? 0.9 : 1.05), t: i / (st.length - 1), pole: rx === 0, sq: 2.6 }));
-    const fw = p => (p[1] > 0.075 * k ? [[B['foot' + S], 0.6], [B['shin' + S], 0.4]] : [[B['foot' + S], 1]]);
-    loft(gb, secs, { n: X.hi === 0 ? 6 : Math.max(6, lod.foot), reg, col: col(cc), wf: fw });
+    // 明光铠：双圆护胸（金边）+ 束甲绊；护心镜
+    if (t === 'plate' || L.chest === 'plate') {
+      M.bone = B.chest;
+      for (const s of [1, -1]) {
+        const c = kit.torsoPt(s * 26, kit.chestY + 0.06 * k, 0.018 * k);
+        M.push().translate(c).rotate(90, s * 22, 0);
+        M.color = gen ? X.goldLight : X.metalLight; M.cylinder([0, -0.012, 0], 0.062 * k, 0.056 * k, 0.022, D.rnd, false, false, true);
+        if (D.det >= 2) { M.color = gen ? X.goldDark : X.metalDark; M.cylinder([0, 0.01, 0], 0.026 * k, 0.02 * k, 0.012, Math.max(5, D.rnd - 2), false, false, true); }
+        M.pop();
+      }
+      M.color = X.leather; M.bone = B.chest;
+      M.band([0, 0, 0], kit.torsoR(kit.chestY - 0.03 * k) * 1.12, kit.torsoR(kit.chestY - 0.01 * k) * 1.12, kit.chestY - 0.05 * k, kit.chestY - 0.02 * k, D.tor, kit.depthK);
+    } else if (L.mirror && D.det >= 1) {
+      M.bone = B.chest;
+      const c = kit.torsoPt(0, kit.chestY + 0.05 * k, 0.022 * k);
+      M.push().translate(c).rotate(90, 0, 0);
+      M.color = X.goldLight; M.cylinder([0, -0.012, 0], 0.06 * k, 0.054 * k, 0.022, D.rnd);
+      M.color = X.goldDark; M.cylinder([0, 0.01, 0], 0.024 * k, 0.018 * k, 0.012, Math.max(5, D.rnd - 2));
+      M.pop();
+    }
+    // 袍甲：甲外罩前襟敞开的袍（深色衬里，远肩的内侧不会从襟口透空），领襟镶米色边
+    if (L.openRobe) {
+      const robe = X.cloth, lin = shT(X.cloth, 0.75), trim = kit.P.luma(X.cloth2 || [0, 0, 0]) > 0.6 ? X.cloth2 : X.cream;
+      const dk = kit.depthK * 1.02, nr = D.det >= 2 ? 7 : 5;
+      M.bone = B.chest;
+      M.panel([0, 0, 0], 36, 324, nr, [[0.096 * k, kit.neckY + 0.045 * k], [kit.shoulderR * 0.9, kit.shoulderY + 0.03 * k], [kit.shoulderR * 1.08, kit.shoulderY - 0.012 * k], [kit.chestR * 1.1, kit.chestY], [kit.waistR * 1.12, kit.spineY]], dk, robe, D.det >= 1 ? lin : null, 0.012);
+      M.bone = B.spine;
+      M.panel([0, 0, 0], 36, 324, nr, [[kit.waistR * 1.12, kit.spineY + 0.002], [kit.waistR * 1.14, kit.pelvisY + 0.03 * k]], dk, robe, D.det >= 1 ? lin : null, 0.012);
+      const edge = (th, r, y) => { const a = th * D2R; return [r * Math.sin(a), y, r * Math.cos(a) * dk]; };
+      M.color = trim;
+      for (const s of [1, -1]) {
+        const a = edge(s * 38, 0.1 * k, kit.neckY + 0.045 * k), a2 = edge(s * 38, kit.shoulderR * 0.93, kit.shoulderY + 0.028 * k), b = edge(s * 38, kit.shoulderR * 1.1, kit.shoulderY - 0.02 * k), c = edge(s * 38, kit.chestR * 1.12, kit.chestY), d = edge(s * 38, kit.waistR * 1.14, kit.spineY);
+        const out = [s * 0.6, 0.2, 1];
+        M.bone = B.chest;
+        if (D.det >= 2) { M.strip(a, a2, 0.034 * k, 0.038 * k, out, 0.016); M.strip(a2, b, 0.038 * k, 0.04 * k, out, 0.016); M.strip(b, c, 0.04 * k, 0.04 * k, out, 0.016); }
+        else { kit.strap(a, b, 0.036 * k, 0.04 * k, out, 0.016); kit.strap(b, c, 0.04 * k, 0.04 * k, out, 0.016); }
+        kit.strap(c, d, 0.04 * k, 0.036 * k, out, 0.016);
+        M.bone = B.spine;
+        kit.strap(d, edge(s * 38, kit.waistR * 1.16, kit.pelvisY + 0.03 * k), 0.036 * k, 0.036 * k, out, 0.016);
+      }
+      kit._robeTrim = trim;
+    }
+    // 交领（袍服 / 短衣 cross）：左襟压右襟，沿躯干表面的一条浅色宽带
+    if (L.collar === 'cross' || t === 'robe') {
+      const c2 = L.white ? X.cloth2 : (gen ? (X.cloth2 && kit.P.luma(X.cloth2) > 0.45 ? X.cloth2 : X.cream) : X.cream);
+      const nY = kit.neckY + 0.03 * k, sY = kit.shoulderY - 0.05 * k;
+      torsoStrip(kit, [[32, nY], [12, sY], [-18, kit.chestY - 0.02 * k], [-55, kit.spineY + 0.04 * k]], 0.045 * k, c2);
+      if (D.det >= 1) torsoStrip(kit, [[-32, nY], [-14, sY], [-2, kit.chestY + 0.06 * k]], 0.038 * k, c2);
+    }
+    // 斜挎：虎皮 / 豹皮（条纹 / 斑点两色交替）、绶带、托加
+    const sashPath = [[-45, kit.pelvisY + 0.02 * k], [-8, kit.spineY + 0.08 * k], [22, kit.chestY + 0.06 * k], [55, kit.shoulderY - 0.01 * k], [105, kit.shoulderY + 0.005 * k], [160, kit.shoulderY - 0.04 * k], [215, kit.chestY], [270, kit.spineY + 0.04 * k], [315, kit.pelvisY + 0.02 * k]];
+    const bandSub = D.det >= 2 ? 3 : D.det >= 1 ? 2 : 1;
+    if (L.pelt) drapeBand(kit, sashPath, 0.13 * k, L.pelt === 'leopard' ? [C3('#D8A848'), C3('#E2B860'), C3('#3A2A1E')] : [C3('#D8782A'), C3('#2A2220'), C3('#E08A34')], 0.016 * k, bandSub);
+    if (L.sash && !L.toga) drapeBand(kit, sashPath, 0.065 * k, X.cloth2, 0.014 * k, bandSub);
+    if (L.toga) {
+      const tc = L.white ? X.cloth : C3('#ECE6D8');
+      drapeBand(kit, sashPath, 0.22 * k, [tc, kit.P.shade(tc, 0.94)], 0.02 * k, bandSub);
+    }
+    // 彝族背心：前开的短背心
+    if (L.vest) {
+      M.bone = B.chest;
+      const y1 = kit.shoulderY - 0.01 * k, y0 = kit.spineY;
+      M.panel([0, 0, 0], 26, 334, D.tor, [[kit.torsoR(y1) * 1.1, y1], [kit.torsoR(kit.chestY) * 1.1, kit.chestY], [kit.torsoR(y0) * 1.1, y0]], kit.depthK, X.cloth, X.clothDark, 0.008);
+      if (D.det >= 1) torsoStrip(kit, [[27, y1], [27, y0]], 0.025 * k, X.cloth2, 0.02 * k);
+    }
+    kit.mark('torso');
   }
 
-  // ------------------------------------------------------------- 腰裙 --
-  // 一片裙甲：θ0..θ1，从腰（yTop）到下摆（yBot），下摆外张 flare；权重：上 = 骨盆，下 = 大腿 / 前后垂骨
-  function skirtPanel(X, o) {
-    const { gb, lod, pr, R, W } = X;
-    const k = pr.k;
-    return panel(gb, (s, t) => {
-      const th = lerp(o.th0, o.th1, s);
-      const y = lerp(o.yTop, o.yBot, t) * k - (o.curve || 0) * Math.pow(Math.abs(Math.sin(th)), 2) * t * k;
-      const top = torsoPt(R, Math.max(R[0].y + 0.02, o.yTop * k), th, o.off, 0, false);
-      const fl = (o.flare || 0.06) * Math.pow(t, 1.15) * k;
-      const n = torsoNormal(R, o.yTop * k, th);
-      const wav = o.wave ? o.wave * Math.sin(s * PI * (o.waves || 3)) * t : 0;
-      return [top[0] + n[0] * (fl + wav), y, top[2] + n[2] * (fl + wav)];
-    }, { nu: o.nu || Math.max(2, lod.pn), nv: o.nv || Math.max(2, lod.pv - 2), th: o.th || 0.007, reg: o.reg, col: shade(o.col, -0.4), colB: col(o.col), w: o.w, uv: o.uv, mirrorS: o.mirrorS, edge: o.edge });   // 裙片外侧（玩家看到的一面）画 colB：外亮内暗
-  }
-  function legSideW(S, top, bot) {
-    return (p, s, t) => { const T = clamp01(t); return [[B.pelvis, 1 - T * bot], [B['thigh' + S], T * bot]]; };
-  }
-  // 赤腿外罩过膝的袍 / 长衣 / 纱笼（腿在裙内画成衬布，见 buildLeg）
-  function robeOverBare(L) { return (L.legs || 'trousers') === 'bare' && (L.skirt === 'robe' || L.skirt === 'coat' || L.skirt === 'sarong') && (L.skirtLen || 0) >= 0.58; }
-  // 这种袍片的权重：盖在大腿正前方的一带（th ≈ ±0.65）随同侧大腿多（膝高处起 0.82，大腿前摆时把袍面顶起，不让腿穿出），
-  // 前中线（两片交叠处）略少（≈ 0.6，叉腿站立时前襟不至于分成两条裤腿），后片少（0.4）；两片分开处露出的是裙内的衬布腿
-  function robeSideW(S, th0, th1) {
-    const c = S === 'L' ? 0.65 : -0.65;
-    return (p, s, t) => {
-      const th = lerp(th0, th1, s), f = Math.exp(-(th - c) * (th - c) / 0.5);
-      // 前中线与后片在腰下起得慢（两片上端不早早分开，露出裙内的身体）
-      const w = sstep(0, lerp(0.8, 0.4, f), t) * (0.4 + 0.42 * f);
-      return [[B.pelvis, 1 - w], [B['thigh' + S], w]];
-    };
-  }
-  function buildSkirt(X) {
-    const { gb, lod, pr, C, L, look } = X;
-    const sk = L.skirt || 'none';
-    const top = 1.04, len = L.skirtLen || 0.55, bot = top - len;
-    const lowL = lod.detail === 0;
-    if (sk === 'lamellar' || sk === 'rattan' || sk === 'scale') {
-      const reg = sk === 'rattan' ? 'rattan' : sk === 'scale' ? 'scale' : (L.torso === 'lamLace' ? 'lamLace' : 'lamellar');
-      const cc = sk === 'rattan' ? '#c8a060' : reg === 'lamLace' ? C.cloth : C.metal;
-      const P4 = [[0.06, 1.62, 'L', 0.75], [-1.62, -0.06, 'R', 0.75], [1.52, 3.1, 'L', 0.55], [-3.1, -1.52, 'R', 0.55]];
-      for (const [a, b, S, wk] of P4) skirtPanel(X, { th0: a, th1: b, yTop: top, yBot: bot, off: 0.016, flare: 0.07, curve: 0.04, reg, col: cc, w: legSideW(S, 0, wk), nv: Math.max(2, lod.pv - 2) });
-      // 腰甲上缘的包边
-      if (!lowL) bandRing(X, (top - 0.02) * pr.k, (top + 0.03) * pr.k, 0.024, 0.003, 'goldEngr', C.trim, 0, X.W.torso);
-    } else if (sk === 'robe' || sk === 'coat' || sk === 'sarong') {
-      const reg = sk === 'sarong' ? 'brocade' : 'hem';
-      const cc = look.L.torso === 'cloth' && L.chest === 'plate' ? C.cloth : C.cloth;
-      const fl = sk === 'robe' ? 0.12 : sk === 'coat' ? 0.07 : 0.03;
-      const yb = sk === 'robe' ? Math.max(0.1, bot) : bot;
-      const wk = sk === 'robe' ? 0.45 : 0.6, rb = robeOverBare(L);
-      // 左右两片（左压右），各自随同侧大腿
-      skirtPanel(X, { th0: -0.25, th1: PI + 0.25, yTop: top + 0.02, yBot: yb, off: 0.014, flare: fl, reg, col: cc, w: rb ? robeSideW('L', -0.25, PI + 0.25) : legSideW('L', 0, wk), uv: (s, t) => [s, 1 - t], wave: X.hi >= 1 ? (sk === 'robe' && X.hi >= 2 ? 0.018 : 0.008) : 0, waves: sk === 'robe' && X.hi >= 2 ? 9 : 5, nu: sk === 'robe' && X.hi >= 2 ? 30 : Math.max(3, lod.pn + 2) });
-      skirtPanel(X, { th0: -PI - 0.25, th1: 0.25, yTop: top + 0.02, yBot: yb, off: 0.008, flare: fl, reg, col: cc, w: rb ? robeSideW('R', -PI - 0.25, 0.25) : legSideW('R', 0, wk), uv: (s, t) => [s, 1 - t], wave: X.hi >= 1 ? (sk === 'robe' && X.hi >= 2 ? 0.018 : 0.008) : 0, waves: sk === 'robe' && X.hi >= 2 ? 9 : 5, nu: sk === 'robe' && X.hi >= 2 ? 30 : Math.max(3, lod.pn + 2) });
-    } else if (sk === 'tunic' || sk === 'kilt' || sk === 'bands' || sk === 'pteruges') {
-      const tun = sk === 'tunic' || sk === 'pteruges' || L.tunic;
-      if (tun) {
-        const cc = look.culture === 'roman' ? '#a02a24' : C.cloth;
-        const yb = sk === 'pteruges' ? top - 0.5 : bot;
-        skirtPanel(X, { th0: -0.15, th1: PI + 0.15, yTop: top, yBot: yb, off: 0.008, flare: 0.05, reg: 'hem', col: cc, w: legSideW('L', 0, 0.6), uv: (s, t) => [s, 1 - t] });
-        skirtPanel(X, { th0: -PI - 0.15, th1: 0.15, yTop: top, yBot: yb, off: 0.004, flare: 0.05, reg: 'hem', col: cc, w: legSideW('R', 0, 0.6), uv: (s, t) => [s, 1 - t] });
-      }
-      if (sk === 'pteruges') {
-        // 皮条裙：一圈窄皮条
-        const n = lowL ? 6 : 14;
-        for (let i = 0; i < n; i++) {
-          const a = -PI + (i + 0.5) / n * TAU, w = TAU / n * 0.46;
-          const S = Math.sin(a) >= 0 ? 'L' : 'R';
-          skirtPanel(X, { th0: a - w, th1: a + w, yTop: top + 0.01, yBot: top - 0.3, off: 0.03, flare: 0.04, reg: 'leather', col: shade(C.leather, 0.15), w: legSideW(S, 0, 0.5), nu: 1, nv: lowL ? 1 : 3, th: 0.005 });
-        }
-      } else if (sk === 'kilt') {
-        const reg = L.pelt === 'tiger' ? 'tiger' : L.pelt === 'leopard' ? 'leopard' : 'cloth';
-        const cc = reg === 'cloth' ? C.cloth : '#ffffff';
-        skirtPanel(X, { th0: -0.7, th1: 0.7, yTop: top, yBot: bot, off: 0.014, flare: 0.04, reg, col: cc, w: (p, s, t) => wT(t, [[B.pelvis, 0], [B.skirtF, 0.7]]) });
-        skirtPanel(X, { th0: PI - 0.9, th1: PI + 0.9, yTop: top, yBot: bot + 0.04, off: 0.014, flare: 0.04, reg, col: cc, w: (p, s, t) => wT(t, [[B.pelvis, 0], [B.skirtB, 0.7]]) });
-        for (const S of ['L', 'R']) { const sg = S === 'L' ? 1 : -1; skirtPanel(X, { th0: sg > 0 ? 0.6 : -2.4, th1: sg > 0 ? 2.4 : -0.6, yTop: top, yBot: top - 0.22, off: 0.01, flare: 0.04, reg, col: cc, w: legSideW(S, 0, 0.5) }); }
-      } else if (sk === 'bands') {
-        // 草摺：多层横带
-        for (let j = 0; j < (X.hi === 0 ? 2 : 4); j++) {
-          const yt = top - j * (X.hi === 0 ? 0.2 : 0.1);
-          skirtPanel(X, { th0: -PI, th1: PI, yTop: yt, yBot: yt - 0.12, off: 0.02 + j * 0.022, flare: 0.02, reg: 'rivet', col: C.metal, w: (p, s, t) => [[B.pelvis, 1 - j * 0.12], [p[0] > 0 ? B.thighL : B.thighR, j * 0.12]], nu: Math.max(4, lod.torN), nv: 1, th: 0.005 });
-        }
-      }
+  // ----------------------------------------------------------- 颈与领 --
+  function neckLP(kit, X) {
+    const M = kit.M, look = kit.look, L = look.L, k = kit.k, D = kit.D;
+    kit.neck(kit.P.shade(X.skin, 0.88), look.kind === 'general' ? 1.04 : 1.06);
+    const cl = L.collar, gen = look.kind === 'general', t = L.torso || 'cloth';
+    const ny = kit.neckY;
+    M.bone = B.chest;
+    if (cl === 'scarf') {
+      M.color = gen ? (X.tabard || X.team) : X.team;
+      M.push().translate(0, ny + 0.03 * k, -0.012).rotate(10, 0, 0).scale(1, 1, 0.92).translate(0, -ny - 0.03 * k, 0);
+      M.lathe([[0.112 * k, ny - 0.015 * k], [0.104 * k, ny + 0.035 * k], [0.084 * k, ny + 0.065 * k]], D.tor, false, false, false, null, 180 / D.tor);
+      M.pop();
+      if (D.det >= 1 && !gen) { M.sphere([0.02 * k, ny - 0.0 * k, 0.1 * k], [0.03 * k, 0.025 * k, 0.02 * k], 5, 2); }
+    } else if (cl === 'fur') {
+      M.color = C3(PALF.furLight);
+      const keep = M.jitterAll; M.jitterAll = true;
+      M.push().translate(0, ny + 0.0 * k, -0.01).scale(1, 0.6, 0.86);
+      M.torus([0, 0, 0], 0.115 * k, 0.04 * k, D.det >= 1 ? 10 : 7, 4);
+      M.pop(); M.jitterAll = keep;
+    } else if (cl === 'gold') {
+      M.color = X.gold;
+      M.push().translate(0, ny - 0.02 * k, 0.0).rotate(14, 0, 0).scale(1, 1, 0.84);
+      M.lathe([[0.17 * k, -0.035 * k], [0.12 * k, 0.012 * k], [0.1 * k, 0.02 * k]], D.tor, false, false, false, null, 180 / D.tor);
+      M.pop();
+    } else if (cl === 'stand') {
+      // 立领：从袍里立起、绕到颈后（米色）
+      M.color = kit._robeTrim || X.cream;
+      M.push().translate(0, ny + 0.06 * k, -0.012).rotate(14, 0, 0).scale(1, 1, 0.9).translate(0, -ny - 0.06 * k, 0);
+      M.lathe([[0.102 * k, ny + 0.03 * k], [0.086 * k, ny + 0.1 * k]], D.det >= 1 ? 8 : 6, false, false, false, null, 22.5);
+      M.pop();
+    } else if (t !== 'bare' && t !== 'muscle' && !(L.toga)) {
+      // 立领（衣领向前倾：后颈高、喉前低）
+      M.color = t === 'robe' || t === 'cloth' ? X.cloth : gen ? X.cloth : X.team;
+      M.push().translate(0, ny + 0.05 * k, -0.012).rotate(14, 0, 0).scale(1, 1, 0.92).translate(0, -ny - 0.05 * k, 0);
+      M.lathe([[0.096 * k, ny + 0.025 * k], [0.078 * k, ny + 0.085 * k]], D.tor, false, false, false, null, 180 / D.tor);
+      M.pop();
     }
-    // 前垂（势力色、金线下摆）与后垂
-    if (C.tabard && L.tabard) {
-      const ttop = top + 0.01, tb = 0.42;
-      skirtPanel(X, { th0: -0.42, th1: 0.42, yTop: ttop, yBot: tb, off: sk === 'lamellar' || sk === 'scale' ? 0.045 : 0.03, flare: 0.08, reg: 'hem', col: C.tabard, uv: (s, t) => [Math.abs(2 * s - 1), 1 - t],
-        w: (p, s, t) => wT(t, [[B.pelvis, 0], [B.skirtF, 0.35]]), nu: Math.max(2, lod.pn - 1), nv: Math.max(2, lod.pv - 1), th: 0.006 });
-      if (look.kind === 'general') skirtPanel(X, { th0: PI - 0.5, th1: PI + 0.5, yTop: ttop, yBot: tb + 0.06, off: sk === 'lamellar' || sk === 'scale' ? 0.045 : 0.03, flare: 0.08, reg: 'hem', col: shade(C.tabard, -0.1), uv: (s, t) => [Math.abs(2 * s - 1), 1 - t],
-        w: (p, s, t) => wT(t, [[B.pelvis, 0], [B.skirtB, 0.35]]), nu: Math.max(2, lod.pn - 1), nv: Math.max(2, lod.pv - 1), th: 0.006 });
-    }
-    // 腰带
-    if (L.belt) buildBelt(X, top);
-  }
-  function buildBelt(X, top) {
-    const { gb, lod, pr, R, C, L, W } = X;
-    const k = pr.k, sash = L.belt === 'sash';
-    const y0 = (top - 0.035) * k, y1 = (top + 0.035) * k;
-    bandRing(X, y0, y1, sash ? 0.03 : 0.034, 0.002, sash ? 'cloth' : 'leather', sash ? (C.cloth2 || C.faction) : (X.look.kind === 'general' ? '#3a2a22' : C.leather), 0, W.torso);
-    if (!sash && X.hi >= 1) {
-      // 兽面带扣
-      const c = torsoPt(R, (y0 + y1) / 2, 0, 0.05, 0, pr.fem), n = torsoNormal(R, (y0 + y1) / 2, 0);
-      const AX = axesFromY(n);
-      const r = 0.05 * k * (X.look.kind === 'general' ? 1.1 : 0.8);
-      const start = gb.nv;
-      lathe(gb, [[r, -0.012, null, 0], [r * 1.02, 0, null, 0.1], [r * 0.9, 0.009, null, 0.3], [r * 0.4, 0.016, null, 0.7], [0, 0.019, null, 1]], { c, axes: AX, n: lod.ring, reg: 'buckle', col: col(GOLD), w: W.torso(c) });
-      fixDiscUV(gb, REG('buckle'), c, AX, r, start);
-    } else if (sash && X.hi >= 1) {
-      // 腰结与垂带
-      const c = torsoPt(R, (y0 + y1) / 2, -0.35, 0.035, 0, pr.fem);
-      for (const [dx, len] of [[0.0, 0.32], [0.035, 0.26]]) {
-        panel(gb, (s, t) => [c[0] - 0.02 + dx + s * 0.05 + t * 0.02, c[1] - t * len * k, c[2] + 0.01 + t * 0.03], { nu: 1, nv: 3, th: 0.004, reg: 'hem', col: col(C.cloth2 || C.faction), uv: (s, t) => [s, 1 - t], w: (p, s, t) => wT(t, [[B.pelvis, 0], [B.skirtF, 0.5]]) });
-      }
-    }
+    kit.mark('neck');
   }
 
-  // ------------------------------------------------------------- 护肩 --
-  function buildPauldron(X, S) {
-    const { gb, lod, pr, C, L } = X;
-    const tp = L.pauldron || 'none';
+  // ----------------------------------------------------------- 手臂 --
+  function armsLP(kit, X) {
+    const M = kit.M, look = kit.look, L = look.L, k = kit.k, D = kit.D;
+    const sl = L.sleeves || 'cloth', gen = look.kind === 'general', br = L.bracer || 'none';
+    const sleeve = gen ? X.cloth : (L.torso === 'bare' ? X.cloth : X.team);
+    const hand = gen && br === 'metal' ? X.leatherDark : X.skin;
+    const mus = sl === 'bare' ? 1 + clamp((kit.pr.build - 1) * 2.5, 0, 0.35) : 1;
+    // 肩头被护肩 / 短袖 / 锁子袖盖住：低细节层不建肩球
+    const covered = (L.pauldron && L.pauldron !== 'none') || sl === 'short' || sl === 'mail';
+    for (const s of [1, -1]) {
+      const S = s > 0 ? 'L' : 'R';
+      if (sl === 'bare') kit.arm(s, X.skin, X.skin, hand, { upK: mus, foK: mus * 0.98, covered });
+      else if (sl === 'short') {
+        kit.arm(s, X.skin, X.skin, hand, { upK: mus, covered });
+        kit.armFrame(s); kit.bone('upperArm' + S); M.color = sleeve;
+        M.lathe([[kit.armR * 1.35, -kit.upL * 0.5], [kit.armR * 1.28, 0.02 * k]], D.lim, false, false, false);
+        if (D.det >= 1) { M.color = gen ? X.trim : shT(sleeve, 0.75); M.band([0, 0, 0], kit.armR * 1.36, kit.armR * 1.38, -kit.upL * 0.52, -kit.upL * 0.44, D.lim); }
+        M.pop();
+      } else if (sl === 'mail') {
+        kit.arm(s, X.metal, X.skin, hand, { elbow: X.metal, covered });
+        kit.armFrame(s); kit.bone('upperArm' + S); M.color = X.metalDark;
+        M.lathe([[kit.armR * 1.3, -kit.upL * 1.02], [kit.armR * 1.18, -kit.upL * 0.7]], D.lim, false, false, false);
+        M.pop();
+      } else if (sl === 'elbow') {
+        // 袍袖到肘（深色衬里、米色袖口），护臂到腕，深色皮手套
+        const trim = kit._robeTrim || X.cream, ns = D.det >= 1 ? 7 : 5;
+        kit.arm(s, X.cloth, trim, br === 'metal' ? C3(PALF.gauntlet) : X.skin, { noShoulder: true, noUpper: true, noElbow: true, foreSides: Math.max(5, D.lim - 1), fistK: 0.62 });
+        kit.armFrame(s); kit.bone('upperArm' + S);
+        M.color = X.cloth;
+        M.lathe([[kit.armR * 1.95, -kit.upL * 0.98], [kit.armR * 1.55, -kit.upL * 0.45], [kit.armR * 1.3, 0.02 * k]], ns, false, false, false);
+        kit.innerTube([[kit.armR * 1.9, -kit.upL * 0.97], [kit.armR * 1.5, -kit.upL * 0.45]], ns, shT(X.cloth, 0.7));
+        M.color = trim;
+        M.band([0, 0, 0], kit.armR * 1.98, kit.armR * 2.02, -kit.upL * 1.02, -kit.upL * 0.94, ns);
+        M.pop();
+      } else if (sl === 'wide') {
+        kit.arm(s, X.cloth, X.cloth, X.skin, { noShoulder: true, noUpper: true, noElbow: true, foreSides: Math.max(4, D.lim - 1) });
+        kit.armFrame(s); kit.bone('upperArm' + S); M.color = X.cloth;
+        M.lathe([[kit.armR * 1.75, -kit.upL * 1.0], [kit.armR * 1.45, -kit.upL * 0.45], [kit.armR * 1.25, 0.02 * k]], D.lim, false, false, false);
+        kit.bone('foreArm' + S); M.color = X.cloth;
+        // 广袖：自肘起外张、下垂到腕下（暗色衬里，浅色袖口）
+        M.push().translate(0, -kit.upL, 0).rotate(0, 0, -s * 8);
+        M.lathe([[kit.foreR * 3.2, -kit.foL * 1.06], [kit.foreR * 2.5, -kit.foL * 0.55], [kit.armR * 1.6, 0.0]], D.lim + 1, false, false, false);
+        // 袖里（朝内的衬里）：从袖口看进去是衬里色，不是墨线外壳的内壁（一团黑）
+        kit.innerTube([[kit.foreR * 3.1, -kit.foL * 1.05], [kit.foreR * 2.42, -kit.foL * 0.55], [kit.armR * 1.52, -0.01]], D.lim + 1, shT(X.cloth, 0.62));
+        if (D.det >= 1) { M.color = X.cloth2 && kit.P.luma(X.cloth2) > 0.35 ? X.cloth2 : X.cream; M.band([0, 0, 0], kit.foreR * 3.24, kit.foreR * 3.28, -kit.foL * 1.08, -kit.foL * 0.99, D.lim + 1); }
+        M.pop(); M.pop();
+      } else {
+        // 布袖（衣色）：袖口一道镶边
+        kit.arm(s, sleeve, sleeve, hand, { covered });
+        if (D.det >= 1) {
+          kit.armFrame(s); kit.bone('upperArm' + S); M.color = sleeve;
+          M.lathe([[kit.armR * 1.25, -kit.upL * 0.95], [kit.armR * 1.18, 0.01]], D.lim, false, false, false);
+          M.pop();
+        }
+        if (br === 'none') kit.cuff(s, gen ? X.trim : shT(sleeve, 0.78), 0.86, 0.97, 1.22);
+      }
+      if (br === 'metal') { kit.cuff(s, X.metal, 0.14, 0.86, 1.3); if (D.det >= 1) kit.cuff(s, gen ? X.goldDark : X.metalDark, 0.86, 0.99, 1.4); }
+      else if (br === 'gold') kit.cuff(s, X.gold, 0.8, 0.97, 1.24);
+      else if (br === 'leather') kit.cuff(s, X.leather, 0.35, 0.92, 1.22);
+      if (L.armlet && (sl === 'bare' || sl === 'short') && D.det >= 1) kit.armRing(s, X.gold, sl === 'short' ? 0.56 : 0.34, sl === 'short' ? 0.66 : 0.44, 1.12 * mus);
+    }
+    kit.mark('arms');
+  }
+
+  // ----------------------------------------------------------- 护肩 --
+  function pauldronsLP(kit, X) {
+    const M = kit.M, look = kit.look, L = look.L, k = kit.k, D = kit.D, V = kit.V, J = kit.J;
+    const tp = L.pauldron || 'none', gen = look.kind === 'general';
     if (tp === 'none') return;
-    const sg = S === 'L' ? 1 : -1, k = pr.k * (0.9 + 0.1 * pr.limb);
-    const J = pr.J['upperArm' + S];
-    const d = [pr.armDirL[0] * sg, pr.armDirL[1], 0];
-    // 外上方向（垂直于手臂）
-    const out = v3norm(v3sub([sg, 0.55, 0], v3mul(d, v3dot([sg, 0.55, 0], d))));
-    const fwd = [0, 0, 1];
-    // 护肩刚性挂在肩部辅助骨上（所有甲片同一权重 → 手臂高举时整体随动，不会散成碎片）
-    // 第三版修订：甲片 70% 随肩部辅助骨、30% 随上臂（抬臂时略随手臂转动，袖子不再从甲片间穿出）；所有甲片同一权重，不会散开
-    const wpf = (a) => (p) => [[B['sh' + S], 0.7], [B['upperArm' + S], 0.3]];
-    const lnv = X.hi === 0 ? 1 : Math.max(2, lod.pv - 4);
-    const lame = (a0, a1, r0, r1, half, reg, cc, wk, thk, c0) => panel(gb, (s, t) => {
-      const ph = (c0 || 0) + lerp(-half, half, s), al = lerp(a0, a1, t) * k;
-      // 围绕手臂轴旋转「外上」方向：ph 正 = 向前
-      const dir = v3add(v3mul(out, Math.cos(ph)), v3mul(v3norm(v3cross(d, out)), Math.sin(ph) * -sg));
-      const r = lerp(r0, r1, Math.pow(t, 1.4)) * k;
-      return v3add(v3madd(J, d, al), v3mul(dir, r));
-    }, { nu: Math.max(3, lod.pn + 1), nv: lnv, th: thk || 0.007, reg, col: col(cc), colB: shade(cc, -0.45), w: wpf(wk), mirrorS: true });
-    if (tp === 'plate' || tp === 'lion') {
-      lame(-0.07, 0.05, 0.087, 0.108, 1.6, tp === 'lion' ? 'gold' : 'metal', tp === 'lion' ? GOLD : C.metal, 0.6, 0.009);
-      lame(0.0, 0.12, 0.1, 0.114, 1.5, 'metal', C.metal, 0.85);
-      if (X.hi >= 2) lame(0.07, 0.19, 0.104, 0.11, 1.4, 'metal', C.metal, 1);
-      // 兽面（狮子吞肩）
-      if (tp === 'lion' && X.hi >= 1) {
-        const c = v3add(v3madd(J, d, 0.0), v3mul(out, 0.105 * k)), AX = axesFromY(out), r = 0.05 * k, start = gb.nv;
-        lathe(gb, [[r, -0.01, null, 0], [r * 1.02, 0, null, 0.1], [r * 0.85, 0.012, null, 0.35], [r * 0.3, 0.022, null, 0.8], [0, 0.024, null, 1]], { c, axes: AX, n: lod.ring, reg: 'lion', col: col(GOLD), w: wpf(0.7)(c) });
-        fixDiscUV(gb, REG('lion'), c, AX, r, start);
-      }
-    } else if (tp === 'lamellar' || tp === 'scale' || tp === 'rattan') {
-      const reg = tp === 'rattan' ? 'rattan' : tp === 'scale' ? 'scale' : (L.torso === 'lamLace' ? 'lamLace' : 'lamellar');
-      const cc = tp === 'rattan' ? '#c8a060' : reg === 'lamLace' ? C.cloth : C.metal;
-      lame(-0.06, 0.1, 0.087, 0.115, 1.55, reg, cc, 0.7);
-      if (X.hi >= 1) lame(0.06, 0.2, 0.1, 0.114, 1.45, reg, cc, 1);
-    } else if (tp === 'segm' || tp === 'bands') {
-      const n = X.hi >= 1 ? 4 : 2;
-      for (let i = 0; i < n; i++) lame(-0.06 + i * 0.045, -0.06 + i * 0.045 + 0.06, 0.074 + i * 0.006, 0.084 + i * 0.006, 1.5, 'rivet', C.metal, 0.6 + i * 0.1, 0.005);
-    } else if (tp === 'fur') {
-      lame(-0.07, 0.08, 0.08, 0.11, 1.7, 'fur', '#8a6a48', 0.7, 0.02);
-    } else if (tp === 'pteruges') {
-      const n = X.hi >= 1 ? 5 : 3;
-      for (let i = 0; i < n; i++) {
-        const a = lerp(-1.2, 1.2, (i + 0.5) / n);
-        lame(0.02, 0.17, 0.068, 0.078, 0.2, 'leather', shade(C.leather, 0.15), 1, 0.005, a);
+    for (const s of [1, -1]) {
+      const S = s > 0 ? 'L' : 'R', sh = J['upperArm' + S];
+      kit.bone('sh' + S);
+      if (tp === 'plate' || tp === 'lion') {
+        // 三层叠甲护肩（FFX 式）：每层一片 120° 的圆壳，逐层外移下移，暗色下缘
+        const r = kit.armR * 1.58 * (gen ? 1 : 0.9), lames = D.det >= 2 ? 3 : 2;
+        const c = tp === 'lion' ? X.gold : X.metal, cd = tp === 'lion' ? X.goldDark : X.metalDark, cl = tp === 'lion' ? X.goldLight : X.metalLight;
+        M.push().translate(V.add(sh, [s * 0.03 * k, 0.03 * k, -0.004]));
+        for (let i = lames - 1; i >= 0; i--) {
+          const kk = 1 - i * 0.08, n = i === 0 ? D.rnd + 2 : D.rnd;
+          M.push().translate(s * i * 0.015 * k, -i * 0.05 * k, 0).rotate(0, 0, -s * (20 + i * 10));
+          const rad = [r * kk, r * 0.82 * kk, r * 0.96 * kk];
+          M.color = i === 1 ? shT(c, 0.93) : i === 0 ? cl : c;
+          if (i === 0) M.shell([0, 0, 0], rad, -180, 180, n, 0, 68, D.det >= 2 ? 2 : 1); else M.shell([0, 0, 0], rad, -180, 180, n, 36, 68, 1);
+          M.color = cd;
+          M.shell([0, 0, 0], rad, -180, 180, n, 68, 84, 1);
+          if (i === lames - 1) M.shell([0, 0, 0], V.mul(rad, 0.95), -180, 180, n, 40, 84, 1, true);
+          M.pop();
+        }
+        if (tp === 'lion' && D.det >= 1) {
+          // 兽面吞肩：金色面盘、深色眼与口
+          M.push().translate(s * r * 0.92, -0.01 * k, 0).rotate(0, 0, -s * 90);
+          M.color = X.goldLight; M.cylinder([0, -0.01, 0], r * 0.42, r * 0.36, 0.024, D.rnd);
+          M.color = X.goldDark; M.cylinder([0, 0.012, 0], r * 0.18, r * 0.12, 0.016, Math.max(5, D.rnd - 2));
+          M.pop();
+        }
+        M.pop();
+      } else if (tp === 'lamellar' || tp === 'scale' || tp === 'rattan') {
+        const c = tp === 'rattan' ? C3(PALF.rattan) : X.metal, c2 = tp === 'rattan' ? C3(PALF.rattanDark) : X.metalDark;
+        for (let i = 0; i < (D.det >= 1 ? 2 : 1); i++) {
+          M.color = i ? c2 : c;
+          M.push().translate(V.add(sh, [s * (0.012 + i * 0.024) * k, (0.03 - i * 0.055) * k, -0.006])).rotate(0, 0, s * (26 + i * 10));
+          M.sphere([0, 0, 0], [(0.1 - i * 0.01) * k, 0.05 * k, (0.1 - i * 0.01) * k], D.sph[0], D.sph[1]);
+          M.pop();
+        }
+      } else if (tp === 'fur') {
+        M.color = C3(PALF.fur);
+        const keep = M.jitterAll; M.jitterAll = true;
+        M.push().translate(V.add(sh, [s * 0.02 * k, 0.03 * k, -0.01])).rotate(0, 0, s * 24);
+        M.sphere([0, 0, 0], [0.11 * k, 0.065 * k, 0.11 * k], D.sph[0], D.sph[1]);
+        M.pop(); M.jitterAll = keep;
+      } else if (tp === 'segm' || tp === 'bands') {
+        const n = D.det >= 1 ? 4 : 2;
+        for (let i = 0; i < n; i++) {
+          M.color = i % 2 ? X.metal : X.metalLight;
+          M.push().translate(V.add(sh, [s * (0.01 + i * 0.012) * k, (0.035 - i * 0.032) * k, -0.006])).rotate(0, 0, -s * (16 + i * 9));
+          const rr = kit.armR * (1.42 + i * 0.05);
+          M.shell([0, 0, 0], [rr, rr * 0.7, rr * 0.95], -180, 180, D.rnd, i === 0 ? 0 : 40, 72, 1);
+          M.pop();
+        }
+      } else if (tp === 'pteruges') {
+        M.color = shT(X.leather, 1.15);
+        const n = D.det >= 1 ? 4 : 3;
+        for (let i = 0; i < n; i++) {
+          const a = lerp(-50, 50, (i + 0.5) / n) * D2R, r = kit.armR * 1.3;
+          const p0 = V.add(sh, [s * (Math.cos(a) * r * 0.4 + 0.02 * k), -0.02 * k, Math.sin(a) * r]);
+          M.strip(p0, V.add(p0, [s * 0.03 * k, -0.13 * k, Math.sin(a) * 0.02 * k]), 0.032 * k, 0.03 * k, [s, 0.1, Math.sin(a)], 0.006);
+        }
       }
     }
+    kit.mark('pauldrons');
   }
 
-  // ------------------------------------------------------------- 披风 --
-  function buildCape(X) {
-    const { gb, lod, pr, C, look } = X;
-    if (!C.cape) return;
-    const k = pr.k, sw = pr.sw;
-    const reg = look.L.capeReg || 'hem';
-    const yb = look.kind === 'soldier' ? 0.62 : 0.3;
-    // 第三版修订：下摆保持弧形横截面（裹住双腿，而不是一条平直的下沿），越往下越深的 4–5 道竖褶，厚度 12 毫米——
-    // 侧看不再是离开背部的一块平板
-    panel(gb, (s, t) => {
-      const a = lerp(-1.3, 1.3, s), sa = Math.sin(a), ca = Math.cos(a);
-      const top = [sa * 0.19 * sw * k, (1.475 - 0.03 * (1 - ca)) * k, (-ca * 0.13 - 0.03) * sw * k];
-      const bot = [sa * 0.34 * k, yb * k, (-ca * 0.27 - 0.06) * k];
-      const p = v3lerp(top, bot, Math.pow(t, 0.9));
-      p[2] += -0.06 * Math.sin(PI * t) * k - (look.L.skirt === 'lamellar' ? 0.02 : 0);
-      if (X.hi >= 1) {
-        const f = (Math.abs(Math.sin(s * PI * 4.5 + 0.7)) - 0.55) * 0.05 * t * k;
-        p[0] += sa * f + Math.sin(s * PI * 9) * 0.008 * t * k; p[2] += -ca * f;
+  // ----------------------------------------------------------- 腰裙 --
+  function skirtLP(kit, X) {
+    const M = kit.M, look = kit.look, L = look.L, k = kit.k, D = kit.D, J = kit.J;
+    const sk = L.skirt || 'none', gen = look.kind === 'general';
+    const top = kit.pelvisY + 0.01 * k, len = L.skirtLen || 0.55, hemY0 = Math.max(0.1, 1.04 - len) * k;
+    const gap = 0.012, nt = D.pan, nts = D.pan + 1;
+    const lined = D.det >= 1;
+    const hemH = 0.05 * k;
+    const prof = (yb, f, f0) => [[kit.hipR * (f0 || 1.12) + gap, top], [kit.hipR * 1.2 + gap, Math.max(yb + 0.02, kit.hipY - 0.04 * k)], [kit.hipR * f + gap, yb]];
+    const four = (yb, f, outer, lining, hem, fB) => {
+      kit.skirtPanel('skirtF', -30, 30, nt, prof(yb, f), outer, lined ? lining : null, hem, hemH);
+      kit.skirtPanel('skirtB', 148, 212, nt, prof(yb, f * (fB || 1.04)), outer, lined ? lining : null, hem, hemH);
+      kit.skirtPanel('thighL', 32, 146, nts, prof(yb, f * 1.02), outer, lined ? lining : null, hem, hemH);
+      kit.skirtPanel('thighR', -146, -32, nts, prof(yb, f * 1.02), outer, lined ? lining : null, hem, hemH);
+    };
+    if (sk === 'splitrobe') {
+      // 开衩的袍裙到膝下（深色衬里、米色下摆），两侧三排甲裙（随大腿）
+      const robe = X.cloth, lin = shT(X.cloth, 0.75), trim = kit._robeTrim || X.cream, hemY = 0.42 * k;
+      const prof2 = f => [[kit.hipR * 1.14, top], [kit.hipR * 1.32, kit.hipY - 0.2 * k], [kit.hipR * 1.5 * f, hemY]];
+      kit.skirtPanel('skirtF', -30, 30, nt, prof2(1), robe, lined ? lin : null, trim, 0.06 * k);
+      kit.skirtPanel('skirtB', 148, 212, nt, prof2(1.04), robe, lined ? lin : null, trim, 0.06 * k);
+      kit.skirtPanel('thighL', 32, 146, nts, prof2(1.02), robe, lined ? lin : null, trim, 0.06 * k);
+      kit.skirtPanel('thighR', -146, -32, nts, prof2(1.02), robe, lined ? lin : null, trim, 0.06 * k);
+      const rows = D.det >= 1 ? 3 : 2;
+      for (const s of [1, -1]) {
+        const bn = s > 0 ? 'thighL' : 'thighR';
+        for (let i = 0; i < rows; i++) {
+          const yy = rows === 3 ? [kit.pelvisY, kit.hipY - 0.06 * k, kit.hipY - 0.17 * k, kit.hipY - 0.29 * k] : [kit.pelvisY, kit.hipY - 0.12 * k, kit.hipY - 0.29 * k];
+          const r0 = kit.hipR * (1.27 + i * 0.05), r1 = kit.hipR * (1.34 + i * 0.05);
+          kit.skirtPanel(bn, s > 0 ? 58 : -122, s > 0 ? 122 : -58, Math.max(2, nt), [[r0, yy[i] + 0.01], [r1, yy[i + 1]]], i % 2 ? X.metalDark : X.metal, lined ? X.metalDark : null, null, 0, 0.9);
+        }
       }
-      return p;
-    }, { nu: X.hi >= 2 ? 12 : X.hi >= 1 ? 6 : 3, nv: X.hi >= 2 ? 12 : X.hi >= 1 ? 5 : 2, th: 0.012, reg,
-      // 褶皱明暗烘进顶点色（褶峰亮、褶谷暗，越往下越明显）+ 肩下的遮蔽：大片披风不再被灯光照成一整块平涂的亮色
-      col: X.hi >= 1 ? (s, t) => { const f = Math.abs(Math.sin(s * PI * 4.5 + 0.7)), q = (0.8 + 0.2 * f * (0.4 + 0.6 * t)) * (0.8 + 0.2 * sstep(0, 0.3, t)); return shade(C.cape, q - 1); } : col(C.cape),
-      colB: shade(C.cape, -0.5), uv: (s, t) => [Math.abs(2 * s - 1), 1 - t],
-      w: (p, s, t) => wT(t, [[B.chest, 0.02], [B.cape1, 0.12], [B.cape2, 0.5], [B.cape3, 0.9]]) });
-  }
-  // 飘带：自腰后两侧垂下
-  function buildRibbons(X) {
-    const { gb, pr, look } = X;
-    if (!look.ribbons || X.hi < 1) return;
-    const k = pr.k;
-    for (const sg of [1, -1]) {
-      panel(gb, (s, t) => {
-        const x = sg * (0.1 + 0.08 * t) * k + (s - 0.5) * 0.06 * k;
-        return [x, (1.02 - t * 0.85) * k, (-0.17 - 0.2 * t - 0.03 * Math.sin(t * 6 + sg)) * k];
-      }, { nu: 1, nv: X.hi >= 2 ? 10 : 4, th: 0.003, reg: 'cloth', col: col(look.ribbons), w: (p, s, t) => wT(t, [[B.pelvis, 0], [B.skirtB, 0.15], [B.cape3, 0.7]]) });
+    } else if (sk === 'robe' || sk === 'coat' || sk === 'sarong' || sk === 'tunic') {
+      const cc = X.cloth, hem = sk === 'sarong' ? X.cloth2 : (gen ? (L.white ? X.cloth2 : X.trim) : shT(cc, 0.75));
+      const yb = sk === 'tunic' ? Math.max(hemY0, J.shinL[1] + 0.02 * k) : hemY0;
+      const fl = sk === 'robe' ? 1.55 : sk === 'coat' ? 1.42 : sk === 'sarong' ? 1.22 : 1.32;
+      four(yb, fl, cc, X.inner, hem);
+    } else if (sk === 'lamellar' || sk === 'scale' || sk === 'rattan') {
+      // 甲裙：一层布裙 + 三排甲片（两侧随大腿）
+      const yb = Math.max(hemY0, J.shinL[1] - 0.04 * k);
+      four(yb, 1.38, X.cloth, X.inner, gen ? X.trim : null);
+      const a = sk === 'rattan' ? C3(PALF.rattan) : X.metal, b = sk === 'rattan' ? C3(PALF.rattanDark) : sk === 'scale' ? X.metalLight : X.metalDark;
+      const rows = D.det >= 1 ? 3 : 2;
+      for (const s of [1, -1]) {
+        const bn = s > 0 ? 'thighL' : 'thighR';
+        for (let i = 0; i < rows; i++) {
+          const y0 = top - i * (top - (kit.hipY - 0.29 * k)) / rows, y1 = top - (i + 1) * (top - (kit.hipY - 0.29 * k)) / rows;
+          const r0 = kit.hipR * (1.27 + i * 0.05) + gap, r1 = kit.hipR * (1.34 + i * 0.05) + gap;
+          kit.skirtPanel(bn, s > 0 ? 50 : -130, s > 0 ? 130 : -50, Math.max(2, nt), [[r0, y0 + 0.01], [r1, y1]], i % 2 ? b : a, lined && i === rows - 1 ? X.seam : null, null, 0, 0.9);
+        }
+      }
+      if (gen && D.det >= 1) { M.bone = B.skirtF; const y0 = top, y1 = kit.hipY - 0.2 * k; kit.skirtPanel('skirtF', -24, 24, 2, [[kit.hipR * 1.3 + gap, y0], [kit.hipR * 1.36 + gap, y1]], a, null, null); }
+    } else if (sk === 'kilt') {
+      const pc = L.pelt ? C3(L.pelt === 'leopard' ? '#D8A848' : '#D8782A') : X.cloth;
+      const yb = kit.hipY - 0.3 * k;
+      four(yb, 1.3, pc, X.inner, L.pelt ? C3('#2A2220') : shT(pc, 0.75));
+    } else if (sk === 'bands') {
+      // 草摺：多层横排铁板，逐层外扩
+      four(Math.max(hemY0, J.shinL[1] + 0.06 * k), 1.3, X.cloth, X.inner, null);
+      const rows = D.det >= 1 ? 4 : 2;
+      for (let j = 0; j < rows; j++) {
+        const y0 = top - j * 0.085 * k * (4 / rows), y1 = y0 - 0.08 * k * (4 / rows);
+        const r0 = kit.hipR * (1.22 + j * 0.07) + gap, r1 = kit.hipR * (1.27 + j * 0.07) + gap;
+        const c = j % 2 ? X.metalDark : X.metal;
+        kit.skirtPanel('thighL', 20, 160, nts, [[r0, y0], [r1, y1]], c, null, null);
+        kit.skirtPanel('thighR', -160, -20, nts, [[r0, y0], [r1, y1]], c, null, null);
+        kit.skirtPanel('skirtF', -22, 22, 1, [[r0, y0], [r1, y1]], c, null, null);
+        kit.skirtPanel('skirtB', 158, 202, 1, [[r0, y0], [r1, y1]], c, null, null);
+      }
+    } else if (sk === 'pteruges') {
+      // 罗马：短衣（红）+ 一圈皮条
+      const tun = look.culture === 'roman' ? C3('#B04030') : X.cloth;
+      four(J.shinL[1] + 0.12 * k, 1.3, tun, shT(tun, 0.8), null);
+      const n = D.det >= 1 ? 12 : 8;
+      const lc = shT(X.leather, 1.2);
+      for (let i = 0; i < n; i++) {
+        const a = -180 + (i + 0.5) * 360 / n, w = 360 / n * 0.42;
+        const bn = Math.abs(a) < 30 ? 'skirtF' : Math.abs(a) > 150 ? 'skirtB' : a > 0 ? 'thighL' : 'thighR';
+        kit.skirtPanel(bn, a - w, a + w, 1, [[kit.hipR * 1.24 + gap, top + 0.005], [kit.hipR * 1.34 + gap, kit.hipY - 0.26 * k]], lc, null, null);
+      }
     }
+    // 前垂 / 后垂（势力色、镶边）：挂在前后垂骨上
+    if (X.tabard && L.tabard) {
+      const off = sk === 'lamellar' || sk === 'scale' ? 1.42 : 1.3, tb = gen ? 0.44 * k : Math.max(0.5 * k, J.shinL[1]);
+      kit.skirtPanel('skirtF', -22, 22, Math.max(1, nt - 1), [[kit.hipR * off + gap, top + 0.005], [kit.hipR * (off + 0.12) + gap, tb]], X.tabard, lined ? X.tabardDark : null, gen ? X.trim : shT(X.tabard, 0.7), 0.04 * k);
+      if (gen) kit.skirtPanel('skirtB', 156, 204, Math.max(1, nt - 1), [[kit.hipR * off + gap, top + 0.005], [kit.hipR * (off + 0.14) + gap, tb + 0.06 * k]], shT(X.tabard, 0.9), lined ? X.tabardDark : null, X.trim, 0.04 * k);
+    }
+    kit.mark('skirt');
   }
-  // 箭壶、背弓
-  function buildBackGear(X) {
-    const { gb, lod, pr, look } = X;
-    const k = pr.k;
-    if (look.quiver) {
-      const a = [0.1 * k, 1.05 * k, -0.17 * k], b = [-0.12 * k, 1.5 * k, -0.2 * k];
-      tube(gb, [a, v3lerp(a, b, 0.5), b], { r: s => (0.042 - 0.006 * s) * k, n: Math.max(5, lod.tube), reg: 'leather', col: col(LEATHER), w: B.chest, capStart: true });
-      if (X.hi >= 1) for (let i = 0; i < 5; i++) {
-        const o = [(-0.012 + (i % 3) * 0.012) * k, 0, (-0.01 + Math.floor(i / 3) * 0.02) * k];
-        const p0 = v3add(b, o), p1 = v3add(p0, v3mul(v3norm(v3sub(b, a)), 0.1 * k));
-        tube(gb, [p0, p1], { r: s => 0.012 * k * (s > 0.3 ? 1 : 0.4), rz: 0.25, n: 3, reg: 'feather', col: [1, 1, 1], w: B.chest });
+
+  // ----------------------------------------------------------- 腰带 --
+  function beltLP(kit, X) {
+    const M = kit.M, look = kit.look, L = look.L, k = kit.k, D = kit.D, V = kit.V;
+    if (!L.belt) return;
+    const gen = look.kind === 'general', sash = L.belt === 'sash';
+    const bz = kit.waistR * 1.2 * kit.depthK * 1.06;
+    kit.bone('pelvis');
+    if (sash) {
+      M.color = X.cloth2 || X.team;
+      M.band([0, 0, 0], kit.waistR * 1.22, kit.waistR * 1.2, kit.pelvisY - 0.04 * k, kit.pelvisY + 0.03 * k, D.tor + 2, kit.depthK * 1.06);
+      if (D.det >= 1) {
+        // 腰结与两条垂带（随前垂骨）
+        const knot = [0.07 * k, kit.pelvisY - 0.02 * k, bz + 0.015];
+        M.sphere(knot, [0.042 * k, 0.034 * k, 0.03 * k], 5, 2);
+        kit.bone('skirtF');
+        M.curvedStrip(V.add(knot, [-0.01, -0.02, 0.005]), V.add(knot, [0.0, -0.16 * k, 0.04]), V.add(knot, [0.03 * k, -0.36 * k, 0.03]), 0.055 * k, 0.045 * k, [0, 0, 1], 0.012, 2);
+        M.curvedStrip(V.add(knot, [0.015, -0.02, 0.0]), V.add(knot, [0.06 * k, -0.14 * k, 0.03]), V.add(knot, [0.085 * k, -0.3 * k, 0.015]), 0.045 * k, 0.036 * k, [0.3, 0, 1], 0.012, 2);
       }
+    } else {
+      M.color = gen ? C3('#6E3B2C') : X.leather;
+      M.band([0, 0, 0], kit.waistR * 1.2, kit.waistR * 1.2, kit.pelvisY - 0.005 * k, kit.pelvisY + 0.055 * k, D.tor + 2, kit.depthK * 1.06);
+      M.color = gen ? X.goldLight : X.gold;
+      M.box([0, kit.pelvisY + 0.025 * k, bz + 0.012], [(gen ? 0.1 : 0.06) * k, (gen ? 0.08 : 0.05) * k, 0.028]);
+      if (gen && D.det >= 1) {
+        M.color = X.goldDark; M.box([0, kit.pelvisY + 0.027 * k, bz + 0.03], [0.05 * k, 0.03 * k, 0.012]);
+        M.color = X.gold; for (const s of [1, -1]) M.box([s * kit.waistR * 0.95, kit.pelvisY + 0.025 * k, bz * 0.72], [0.05 * k, 0.05 * k, 0.04]);
+      }
+      // 名将：朱红束带压在皮带下（关羽式）
+      if (gen && L.torso !== 'robe' && D.det >= 1 && (L.tabard || L.torso === 'plate' || L.torso === 'lamLace' || L.openRobe)) {
+        M.color = C3(PALF.red);
+        kit.bone('pelvis');
+        M.band([0, 0, 0], kit.waistR * 1.24, kit.waistR * 1.22, kit.pelvisY - 0.04 * k, kit.pelvisY - 0.004 * k, D.tor + 2, kit.depthK * 1.06);
+        if (L.sashKnot) {
+          // 左前的结与两条垂带（随前垂骨）
+          const knot = [0.07 * k, kit.pelvisY - 0.03 * k, bz + 0.02];
+          M.sphere(knot, [0.045 * k, 0.035 * k, 0.03 * k], 5, 2, false);
+          kit.bone('skirtF');
+          const v0 = M.vertexCount;
+          const sg = D.det >= 2 ? 2 : 1;
+          M.curvedStrip(V.add(knot, [-0.01, -0.02, 0.005]), V.add(knot, [0.0, -0.18 * k, 0.04]), V.add(knot, [0.035 * k, -0.4 * k, 0.03]), 0.06 * k, 0.05 * k, [0, 0, 1], 0.012, sg);
+          M.curvedStrip(V.add(knot, [0.015, -0.02, 0.0]), V.add(knot, [0.06 * k, -0.15 * k, 0.03]), V.add(knot, [0.09 * k, -0.33 * k, 0.015]), 0.05 * k, 0.04 * k, [0.3, 0, 1], 0.012, sg);
+          M.windBy(v0, p => 0.3 * clamp01((knot[1] - p[1]) / (0.4 * k)));
+          kit.bone('pelvis');
+        }
+      }
+    }
+    kit.mark('belt');
+  }
+
+  // ----------------------------------------------------------- 披风、飘带、背具 --
+  function capeLP(kit, X) {
+    const M = kit.M, look = kit.look, L = look.L, k = kit.k, D = kit.D, J = kit.J;
+    if (!X.cape) return;
+    const gen = look.kind === 'general';
+    const yb = (gen ? 0.32 : 0.62) * k;
+    const sy = kit.shoulderY + 0.02 * k, sr = kit.shoulderR * 1.04;
+    const rows = D.det >= 2 ? 5 : D.det >= 1 ? 3 : 2;
+    const prof = [];
+    for (let i = 0; i <= rows; i++) {
+      const t = i / rows, y = lerp(sy, yb, Math.pow(t, 0.95));
+      const r = lerp(sr, 0.3 * k * (gen ? 1.05 : 0.9), Math.pow(t, 0.7)) + 0.06 * k * Math.sin(PI * t) * 0.5;
+      prof.push([r, y]);
+    }
+    const v0 = M.vertexCount;
+    M.bone = B.chest;
+    M.panel([0, 0, -0.02 * k], 112, 248, D.det >= 2 ? 6 : 4, prof, 0.9, X.cape, X.capeIn, 0.012);
+    // 肩上的披风领（小披肩），挂在胸骨上
+    if (D.det >= 2) {
+      M.color = shT(X.cape, 0.9);
+      M.panel([0, 0, -0.015 * k], 70, 290, 8, [[0.11 * k, kit.neckY + 0.03 * k], [sr * 1.02, sy + 0.005 * k], [sr * 1.06, sy - 0.05 * k]], kit.depthK * 1.15, shT(X.cape, 0.9), X.capeIn, 0.01);
+    }
+    // 分骨：肩上随胸，往下依次 cape1 / cape2 / cape3（骨链，越往下摆动越大）
+    const y1 = J.cape1[1] - 0.06 * k, y2 = J.cape2[1], y3 = J.cape3[1];
+    M.boneBy(v0, p => (p[1] > y1 ? B.chest : p[1] > y2 ? B.cape1 : p[1] > y3 ? B.cape2 : B.cape3));
+    M.windBy(v0, p => 0.12 * clamp01((sy - p[1]) / (sy - yb)));
+    kit.mark('cape');
+  }
+  function ribbonsLP(kit, X) {
+    const M = kit.M, look = kit.look, k = kit.k, D = kit.D, V = kit.V;
+    if (!look.ribbons || D.det < 1) return;
+    const c = C3(look.ribbons);
+    const v0 = M.vertexCount;
+    for (const s of [1, -1]) {
+      M.color = c;
+      const a = [s * 0.11 * k, kit.pelvisY, -kit.waistR * kit.depthK - 0.02 * k];
+      const m = V.add(a, [s * 0.05 * k, -0.4 * k, -0.12 * k]), b = V.add(a, [s * 0.1 * k, -0.85 * k, -0.18 * k]);
+      M.curvedStrip(a, m, b, 0.06 * k, 0.045 * k, [0, 0, -1], 0.006, D.det >= 2 ? 4 : 2);
+    }
+    M.boneBy(v0, p => (p[1] > kit.pelvisY - 0.08 * k ? B.pelvis : p[1] > kit.J.cape3[1] ? B.skirtB : B.cape3));
+    M.windBy(v0, p => 0.5 * clamp01((kit.pelvisY - p[1]) / (0.8 * k)));
+    kit.mark('ribbons');
+  }
+  function backGearLP(kit, X) {
+    const M = kit.M, look = kit.look, k = kit.k, D = kit.D, V = kit.V;
+    if (look.quiver) {
+      kit.bone('chest');
+      const a = [0.1 * k, 1.05 * k, -0.19 * k], b = [-0.12 * k, 1.5 * k, -0.21 * k];
+      M.color = X.leather;
+      M.segment(a, b, 0.042 * k, 0.036 * k, D.lim);
+      if (D.det >= 1) { M.color = shT(X.leather, 0.75); M.band(V.lerp(a, b, 0.92), 0.04 * k, 0.04 * k, -0.01, 0.01, D.lim); }
+      // 箭羽
+      const dir = V.norm(V.sub(b, a));
+      M.color = X.white;
+      const nA = D.det >= 1 ? 4 : 2;
+      for (let i = 0; i < nA; i++) {
+        const o = [(-0.014 + (i % 2) * 0.028) * k, 0, (-0.01 + Math.floor(i / 2) * 0.02) * k];
+        const p0 = V.add(b, o);
+        M.blade(p0, V.add(p0, V.mul(dir, 0.1 * k)), 0.022 * k, [1, 0, 0]);
+      }
+      // 斜挎的箭袋带
+      if (D.det >= 1) torsoStrip(kit, [[-150, 1.05 * k], [-110, kit.chestY], [-60, kit.shoulderY - 0.03 * k], [0, kit.chestY + 0.08 * k], [40, kit.spineY + 0.04 * k]], 0.028 * k, X.leather, 0.016 * k);
     }
     if (look.backBow) {
-      const pts = [];
-      for (let i = 0; i <= 8; i++) { const t = i / 8; pts.push([lerp(0.3, -0.28, t) * k, lerp(0.95, 1.6, t) * k, (-0.2 - 0.07 * Math.sin(PI * t)) * k]); }
-      tube(gb, pts, { r: s => (0.012 - 0.006 * Math.abs(s - 0.5)) * k, n: 5, reg: 'wood', col: col('#5a3418'), w: B.chest });
+      kit.bone('chest');
+      M.color = C3('#5A3418');
+      const a = [0.3 * k, 0.95 * k, -0.21 * k], c = [0, 1.28 * k, -0.3 * k], b = [-0.28 * k, 1.6 * k, -0.21 * k];
+      M.curve(a, c, b, 0.012 * k, 0.008 * k, D.det >= 1 ? 4 : 3, 4);
     }
+    kit.mark('back');
   }
 
-  // ======================================================== 冠帽、发、须 ==
-  // 均在头部局部坐标中构建（gb.xf = 头骨绑定位置），权重为头骨（盔缨 / 长发用 plume / hair 骨）。
-  function hairline(th, style, recede) {
-    const a = Math.abs(th), front = (style === 'kunfa' ? 1.2 : FEAT.hairP) + (recede || 0) * 0.25;
-    if (a < 0.95) return front + (style === 'kunfa' ? 0 : 0.06 * Math.cos(th * 5) * gauss(a, 0.5, 0.3));
-    if (a < 1.45) return lerp(front - 0.15, 0.08, sstep(0.95, 1.45, a));
-    if (a < 1.75) return lerp(0.08, 0.15, sstep(1.45, 1.75, a));
-    return lerp(0.1, -0.55, sstep(1.75, 2.6, a));
+  // ======================================================== 头、脸、发、须、冠帽 ==
+  // 脸从头像外貌参数（SG.Portrait.spec）而来：肤色、眼形与眼色、眉形与粗细、鼻形、嘴、耳、胡须、疤、眼罩、面纹。
+  const EYE_MAP = {
+    normal: ['almond', 0, 1], sharp: ['almond', 8, 1], phoenix: ['narrow', 10, 1.18], round: ['round', 0, 1.12], narrow: ['narrow', 2, 1],
+    gentle: ['almond', -5, 1], big: ['round', 0, 1.06], sleepy: ['narrow', -6, 0.95],
+  };
+  const BROW_MAP = {
+    straight: [0, 1], arched: [-6, 1], angled: [16, 1.05], bushy: [6, 1.45], thin: [2, 0.75], knit: [20, 1.15], silkworm: [18, 1.45], sword: [18, 1.2], worried: [-14, 1],
+  };
+  const NOSE_MAP = { straight: [1, 0.32, 0.2], aquiline: [1.08, 0.42, 0.19], broad: [1.08, 0.28, 0.28], button: [0.86, 0.26, 0.2], small: [0.8, 0.26, 0.17], bulb: [1.2, 0.36, 0.27], flat: [0.95, 0.2, 0.28] };
+  function rimFn(front, side, back) {
+    return th => { const a = Math.abs(th); if (a < 55) return lerp(front, lerp(front, side, 0.2), a / 55); if (a < 110) return lerp(lerp(front, side, 0.2), side, (a - 55) / 55); return lerp(side, back, (a - 110) / 70); };
   }
-  function headN(p) { return v3norm(v3sub(p, HEAD_C)); }
-  // 头部外壳：在头部参数面 φ ∈ [φ0(θ), π/2] 上外扩（盔体、帽、发壳）
-  // o：{ phi0(θ), off(θ, s) 外扩, sy（顶部拔高）, nK, n, reg, col, w, apex（尖顶高度）, flat（压扁顶部）}
-  function headShell(X, Hp, o) {
-    const { gb, lod } = X;
-    const nK = o.nK || Math.max(3, Math.round(lod.head[0] * 0.45)), n = o.n || Math.max(8, lod.head[1]);
-    const secs = [];
-    for (let k = 0; k <= nK; k++) secs.push({ c: [0, 0, 0], X: [1, 0, 0], Z: [0, 0, 1], rx: 1, rz: 1, t: k / nK, pole: k === nK, kk: k / nK });
-    const ptf = (th, s) => {
-      const u = s.kk;
-      const p0 = o.phi0(th), ph = lerp(p0, PI / 2 - 0.001, Math.pow(u, o.pw || 0.85));
-      const p = headPoint(th, ph, Hp);
-      const nn = headN(p);
-      const d = o.off(th, u, ph);
-      const q = v3madd(p, nn, d);
-      // 拔高：以头中心高度为界向上等比拉伸（顶部保持圆润）
-      if (o.sy && q[1] > 0.12) q[1] = 0.12 + (q[1] - 0.12) * (1 + o.sy / 0.125);
-      if (o.apex) q[1] += o.apex * Math.pow(u, 3);
-      if (o.tilt) q[2] += o.tilt * Math.pow(Math.max(0, q[1] - 0.12) / 0.2, 2);
-      return q;
+  function faceLP(kit, X) {
+    const M = kit.M, look = kit.look, sp = look.spec || {}, D = kit.D, R = kit.R, P = kit.P, V = kit.V;
+    const acc = look.acc || [], marks = look.marks || [];
+    // 脸：眉下的颊面略暗（眉弓受光多）
+    kit.headShape(X.skin, 0.92);
+    if (D.ears) kit.ears(X.skin, acc.includes('bigears') || (sp.ears && sp.ears.size >= 1.3));
+    const eyesS = sp.eyes || {}, browsS = sp.brows || {}, expr = sp.expr || look.expr || 'neutral';
+    let em = EYE_MAP[eyesS.shape] || (look.kind === 'soldier' ? ['almond', 0, 1.1] : ['almond', 0, 1]);
+    if (look.sex === 'f' && !eyesS.shape) em = ['round', 0, 1.06];
+    const bm = BROW_MAP[browsS.shape] || [look.kind === 'soldier' ? -4 : 4, 1.1];
+    let tilt = bm[0] + (expr === 'fierce' ? 7 : expr === 'stern' ? 3 : expr === 'smile' ? -3 : 0);
+    const iris = lift(eyesS.color || '#3a2618', 0.16);
+    const brow = hairTone(browsS.color || (look.hair && look.hair.color) || '#221a18');
+    const size = em[2] * clamp(eyesS.size || 1, 0.88, 1.15) * (look.kind === 'soldier' ? 1.1 : 1.15);
+    const thick = clamp(browsS.thick || 1, 0.6, 1.5);
+    kit.eyes(iris, brow, em[0], tilt, -0.03 + (eyesS.y || 0) * 2, 0.41 + (eyesS.gap || 0) * 2, size, em[1], bm[1] * (0.75 + 0.3 * thick) * (look.sex === 'f' ? 0.75 : 1),
+      { patch: acc.includes('eyepatch'), browH: look.sex === 'f' ? 0.7 : 1 });
+    const nm = NOSE_MAP[(sp.nose && sp.nose.shape) || 'straight'] || NOSE_MAP.straight;
+    kit.nose(P.shade(X.skin, 0.84), nm[0] * clamp((sp.nose && sp.nose.size) || 1, 0.85, 1.2) * (look.sex === 'f' ? 0.85 : 1), -0.42, nm[1], nm[2] * clamp((sp.nose && sp.nose.w) || 1, 0.85, 1.25));
+    // 嘴：有长须 / 满腮胡时藏在须下
+    const bst = (look.beard && look.beard.style) || 'none';
+    const mshape = (sp.mouth && sp.mouth.shape) || (expr === 'smile' ? 'smile' : expr === 'fierce' || expr === 'stern' ? 'grim' : 'neutral');
+    if (!(bst === 'full' || bst === 'bristle' || bst === 'flowing' || bst === 'long' || bst === 'curled' || bst === 'braided') || look.sex === 'f') {
+      const lip = look.sex === 'f' ? P.mix(P.shade(X.skin, 0.72), [0.75, 0.28, 0.26], 0.45) : P.mix(P.shade(X.skin, 0.62), [0.55, 0.25, 0.22], 0.25);
+      kit.mouth(lip, -0.68, 0.3 * clamp((sp.mouth && sp.mouth.w) || 1, 0.85, 1.2), mshape === 'smile' ? 0.08 : mshape === 'grim' ? -0.05 : mshape === 'smirk' ? 0.03 : 0.02);
+    }
+    // 面部标记
+    const mark = (x0, y0, x1, y1, w, c, ink) => {
+      const a = kit.facePoint(x0, y0, 0.03), b = kit.facePoint(x1, y1, 0.03);
+      M.color = c; M.ink = ink == null ? 0.3 : ink;
+      M.strip(a, b, w * R, w * R, [(x0 + x1) * 0.5, 0, 1], 0.012 * R);
+      M.ink = 1;
     };
-    // 顶点 pole 位置
-    const top = ptf(0, { kk: 1 });
-    secs[nK].c = top;
-    return loft(gb, secs, { n, reg: o.reg, col: col(o.col), w: o.w != null ? o.w : B.head, ptf, mirror: o.mirror });
-  }
-  // 沿头部表面一圈的带子（发带、抹额、冠圈、盔沿）：phi(θ) 高度，off 外扩，r 管半径
-  function headRing(X, Hp, phi, off, r, reg, cc, o) {
-    const { gb, lod } = X;
-    const n = X.hi === 0 ? 8 : Math.max(10, lod.head[1]), pts = [];
-    o = o || {};
-    const a0 = o.a0 != null ? o.a0 : -PI, a1 = o.a1 != null ? o.a1 : PI;
-    for (let i = 0; i <= n; i++) { const th = lerp(a0, a1, i / n); const p = headPoint(th, phi(th), Hp); pts.push(v3madd(p, headN(p), off)); }
-    return tube(gb, pts, { r, rz: o.rz || 1, n: X.hi === 0 ? 3 : (o.tn || Math.max(4, lod.tube - 2)), reg, col: col(cc), w: o.w != null ? o.w : B.head, up: [0, 1, 0] });
-  }
-  function headAt(Hp, th, ph, off) { const p = headPoint(th, ph, Hp); return v3madd(p, headN(p), off || 0); }
-
-  // 盔缨（红缨）：自 p 处向上再下垂的一簇马尾
-  function tassel(X, p, size, cc, w) {
-    const { gb, lod } = X;
-    const s = size;
-    const prof = X.hi === 0 ? [[0.005, 0], [0.05 * s, 0.05 * s], [0.07 * s, -0.04 * s], [0.006, -0.01]]
-      : [[0.005, 0], [0.011, 0.02], [0.03 * s, 0.05 * s], [0.055 * s, 0.045 * s], [0.07 * s, 0.015 * s], [0.07 * s, -0.04 * s], [0.05 * s, -0.07 * s], [0.02 * s, -0.04 * s], [0.006, -0.005]];
-    prof.reverse();
-    lathe(gb, prof.map((q, i) => [q[0], q[1], null, i / (prof.length - 1)]), { c: p, n: Math.max(6, lod.ring - 4), reg: 'tassel', col: col(cc), w: w != null ? w : [[B.plume1, 1]] });
-    // 第三版修订（高精度）：缨顶散出一圈细丝，向外张开、向后下垂——不再只是一只「纸杯蛋糕」形的圆柱
-    if (X.hi >= 2) {
-      const n = 10, ww = w != null ? w : [[B.plume1, 1]];
-      for (let i = 0; i < n; i++) {
-        const a = i / n * TAU + 0.2, ca = Math.cos(a), sa = Math.sin(a), r0 = 0.03 * s, r1 = (0.07 + 0.03 * (i % 3) / 2) * s;
-        const back = 0.07 * s * (1 - 0.5 * Math.max(0, sa));
-        tube(gb, [[p[0] + ca * r0, p[1] + 0.045 * s, p[2] + sa * r0], [p[0] + ca * (r0 + r1) * 0.6, p[1] + 0.03 * s, p[2] + sa * (r0 + r1) * 0.6 - back * 0.4], [p[0] + ca * r1, p[1] - 0.09 * s, p[2] + sa * r1 - back]],
-          { r: t => 0.005 * (1 - 0.6 * t), n: 3, reg: 'tassel', col: col(cc), w: ww });
-      }
+    kit.bone('head');
+    if (marks.includes('scar') || marks.includes('scars')) mark(0.5, 0.28, 0.22, -0.4, 0.07, P.mix(X.skin, [0.95, 0.85, 0.8], 0.4));
+    if (marks.includes('scars')) mark(-0.18, 0.35, -0.5, -0.2, 0.06, P.mix(X.skin, [0.95, 0.85, 0.8], 0.4));
+    if (marks.includes('mole') && D.det >= 1) { M.color = P.shade(X.skin, 0.45); M.ink = 0.2; M.sphere(kit.facePoint(-0.32, -0.55, 0.02), 0.035 * R, 4, 2); M.ink = 1; }
+    if (marks.includes('warpaint')) for (const s of [1, -1]) { mark(s * 0.22, -0.2, s * 0.62, -0.26, 0.07, C3('#B83A2A')); if (D.det >= 1) mark(s * 0.25, -0.34, s * 0.6, -0.4, 0.06, C3('#B83A2A')); }
+    if (marks.includes('woad')) for (const s of [1, -1]) { mark(s * 0.2, 0.05, s * 0.55, -0.45, 0.08, C3('#3A5A9A')); }
+    if (marks.includes('tattoo-wa') || marks.includes('tattoo-yi')) for (const s of [1, -1]) { mark(s * 0.18, -0.2, s * 0.58, -0.05, 0.05, C3('#2A3A4A')); if (D.det >= 1) mark(s * 0.2, -0.36, s * 0.55, -0.48, 0.05, C3('#2A3A4A')); }
+    if (marks.includes('cheekscars') && D.det >= 1) for (const s of [1, -1]) for (let i = 0; i < 3; i++) mark(s * 0.3, -0.12 - i * 0.12, s * 0.62, -0.14 - i * 0.12, 0.035, P.shade(X.skin, 0.7));
+    if (marks.includes('tilaka') && D.det >= 1) { M.color = C3('#C8282A'); M.ink = 0.2; M.sphere(kit.facePoint(0, 0.36, 0.02), 0.04 * R, 4, 2); M.ink = 1; }
+    if (acc.includes('eyepatch')) {
+      // 眼罩的系带：额上斜过头侧
+      M.color = C3(PALF.black);
+      M.shell(kit.headAt(0, 0.02, -0.01), kit.hv(1.04, 1.04, 1.02), 20, 150, D.det >= 1 ? 6 : 3, th => lerp(60, 92, clamp01((th - 20) / 120)) - 4, th => lerp(60, 92, clamp01((th - 20) / 120)) + 4, 1);
     }
+    kit.mark('face');
   }
-  // 羽毛 / 雉翎：沿曲线的扁带（贴图 feather），宽度 w0 → w1
-  function featherStrip(X, pts, w0, w1, reg, cc, wfn, nv) {
-    const { gb } = X;
-    const F = frames(pts, [0, 0, 1]);
-    const N = pts.length;
-    const at = t => { const f = t * (N - 1), i = Math.min(N - 2, Math.floor(f)), u = f - i; return { p: v3lerp(pts[i], pts[i + 1], u), x: v3norm(v3lerp(F.X[i], F.X[i + 1], u)) }; };
-    panel(gb, (s, t) => { const a = at(t); return v3madd(a.p, a.x, (s - 0.5) * lerp(w0, w1, t)); }, { nu: 1, nv: nv || Math.max(4, (N - 1) * 2), th: 0.003, reg: reg || 'feather', col: col(cc || '#ffffff'), colB: col(cc || '#ffffff'), w: wfn, uv: (s, t) => [s, t] });
-  }
-  function bez(p0, p1, p2, p3, n) { const out = []; for (let i = 0; i <= n; i++) { const t = i / n, u = 1 - t; out.push([0, 1, 2].map(k => u * u * u * p0[k] + 3 * u * u * t * p1[k] + 3 * u * t * t * p2[k] + t * t * t * p3[k])); } return out; }
 
-  function buildHeadgear(X, Hp) {
-    const { gb, lod, look, C } = X;
-    const hat = look.hat || { type: 'none' };
-    const tp = hat.type || 'none';
-    const hc = hat.color ? col(hat.color) : null;
-    const metal = hat.color || C.metal, plume = hat.plume || C.plume || RED;
-    const hi = X.hi;
-    const cover = { none: 0, headband: 0, diadem: 0, laurel: 0, crown: 0.3, pheasant: 0.3, feathers: 0, chief: 0, shaman: 0, goldcrown: 0, featherband: 0 }[tp];
-    const res = { coversTop: cover == null || cover > 0.5, coversBack: ['helmet', 'galea', 'wahelm', 'keffiyeh', 'conical', 'spangen', 'celthelm', 'tiara', 'felt', 'furhat', 'turban'].includes(tp) };
-    const rim = (front, back) => th => lerp(back, front, (1 + Math.cos(th)) / 2);
-    const bowl = (o) => headShell(X, Hp, Object.assign({ phi0: rim(0.3, -0.3), off: (th, u) => 0.014 + 0.01 * u, reg: 'metal', col: metal }, o));
-    const apexY = (sy, ap) => headAt(Hp, 0, PI / 2 - 0.001, 0.024)[1] + (sy || 0) + (ap || 0);
-    if (tp === 'helmet') {
-      const v = hat.variant || 'plain';
-      const spike = v === 'spike' ? 0.09 : 0;
-      bowl({ phi0: rim(0.3, -0.25), sy: 0.012, apex: spike, reg: 'metal', col: metal });
-      // 盔沿
-      if (hi >= 1) headRing(X, Hp, rim(0.3, -0.25), 0.017, 0.007, 'goldEngr', C.trim);
-      // 竖棱
-      if (hi >= 2) for (let i = 0; i < 4; i++) {
-        const th = i * PI / 2 + PI / 4, pts = [];
-        for (let j = 0; j <= 5; j++) { const ph = lerp(rim(0.3, -0.25)(th), PI / 2 - 0.02, j / 5); const p = headAt(Hp, th, ph, 0.026 + 0.004 * j / 5); p[1] += 0.012 * Math.pow(j / 5, 2) + spike * Math.pow(j / 5, 3); pts.push(p); }
-        tube(gb, pts, { r: 0.004, n: 4, reg: 'gold', col: col(C.trim), w: B.head });
-      }
-      // 顿项（护颈）
-      const ng = hat.neck || (look.kind === 'general' ? shade(C.cloth2 || '#3a2a2a', -0.1) : null);
-      panel(gb, (s, t) => {
-        const th = lerp(1.15, TAU - 1.15, s);
-        const p = headAt(Hp, th, rim(0.3, -0.25)(th) + 0.02, 0.018);
-        const n = headN(p);
-        return [p[0] + n[0] * 0.04 * t, p[1] - t * 0.1, p[2] + n[2] * 0.05 * t];
-      }, { nu: Math.max(3, lod.pn + 1), nv: Math.max(1, lod.pv - 6), th: 0.006, reg: ng ? 'cloth' : 'lamellar', col: col(ng || metal), w: (p, s, t) => [[B.head, 1 - 0.4 * t], [B.neck, 0.4 * t]] });
-      // 护耳
-      if (hi >= 1) for (const sg of [1, -1]) panel(gb, (s, t) => {
-        const th = sg * lerp(0.95, 1.65, s);
-        const p = headAt(Hp, th, rim(0.3, -0.25)(th) + 0.01, 0.02 + 0.006 * t);
-        return [p[0] + sg * 0.008 * t, p[1] - t * 0.085, p[2] + 0.006 * t];
-      }, { nu: 2, nv: 2, th: 0.006, reg: 'metal', col: col(metal), w: B.head });
+  // ----------------------------------------------------------- 冠帽 --
+  // 返回 { top: 帽沿线 φ(θ)（盖住头顶时）, bun: 露出发髻, back: 盖住后脑, ears: 盖住耳 }
+  function feather(kit, pts, w0, w1, c, bones, windK) {
+    const M = kit.M, V = kit.V, v0 = M.vertexCount;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i + 1], t0 = i / (pts.length - 1), t1 = (i + 1) / (pts.length - 1);
+      M.color = Array.isArray(c[0]) ? c[i % c.length] : c;
+      const side = V.cross(V.sub(b, a), [0, 0, 1]);
+      M.strip(a, b, lerp(w0, w1, t0), lerp(w0, w1, t1), V.cross(side, V.sub(b, a)), 0.008);
+    }
+    if (bones) { const y0 = pts[0][1], y1 = pts[pts.length - 1][1], d0 = pts[0]; M.boneBy(v0, p => { const t = V.len(V.sub(p, d0)) / Math.max(1e-3, V.len(V.sub(pts[pts.length - 1], d0))); return t < 0.2 ? B.head : t < 0.6 ? B.plume1 : B.plume2; }); void y0; void y1; }
+    if (windK) M.windBy(v0, p => windK * clamp01(V.len(V.sub(p, pts[0])) / Math.max(1e-3, V.len(V.sub(pts[pts.length - 1], pts[0])))));
+  }
+  function horseTassel(kit, at, size, c) {
+    // 缨：一簇向下散开的马尾（顶上一颗金钮）
+    const M = kit.M, k = kit.k, D = kit.D, v0 = M.vertexCount;
+    M.color = c;
+    M.push().translate(at);
+    if (D.det === 0) M.lathe([[0.006 * k * size, 0.012 * k * size], [0.04 * k * size, -0.05 * k * size], [0.01 * k * size, -0.12 * k * size]].reverse(), 5, false, false, true);
+    else if (D.det === 1) M.lathe([[0.006 * k * size, 0.012 * k * size], [0.035 * k * size, -0.025 * k * size], [0.036 * k * size, -0.08 * k * size], [0.008 * k * size, -0.12 * k * size]].reverse(), 5, false, false, true);
+    else M.lathe([[0.006 * k * size, 0.012 * k * size], [0.03 * k * size, -0.015 * k * size], [0.04 * k * size, -0.06 * k * size], [0.03 * k * size, -0.1 * k * size], [0.008 * k * size, -0.12 * k * size]].reverse(), Math.max(5, D.rnd), false, true, true);
+    M.pop();
+    M.windBy(v0, p => 0.35 * clamp01((at[1] - p[1]) / (0.1 * k * size)));
+  }
+  function headgearLP(kit, X) {
+    const M = kit.M, look = kit.look, hat = look.hat || { type: 'none' }, tp = hat.type || 'none', D = kit.D, k = kit.k, R = kit.R, V = kit.V, P = kit.P;
+    const gen = look.kind === 'general';
+    const res = { top: null, bun: false, back: false, ears: false, under: 0 };
+    const hc = hat.color ? lift(hat.color, 0.18) : null;
+    const metal = hc || X.metal, plume = hat.plume ? lift(hat.plume, 0.25) : X.plume;
+    const np = D.det >= 2 ? 3 : 2;
+    const crownAt = (dy) => kit.headAt(0, 1.08 + (dy || 0), -0.04);
+    kit.bone('head');
+    const ring = (c, line, w, puff) => { M.color = c; M.shell(kit.capC, V.mul(kit.capR, puff || 1.03), -180, 180, D.hs, th => line(th) - w, th => line(th) + 1, 1); };
+    if (tp === 'helmet' || tp === 'wahelm') {
+      const wa = tp === 'wahelm', v = hat.variant || 'plain';
+      const line = rimFn(64, 92, wa ? 108 : 104);
+      kit.capShell(wa ? (hc || C3('#3A3C44')) : metal, 1.17, line, np);
+      if (D.det >= 1) ring(wa ? C3('#2E3036') : X.trim, line, 7, 1.035);
       // 眉庇
-      panel(gb, (s, t) => { const th = lerp(-0.85, 0.85, s); const p = headAt(Hp, th, 0.3, 0.02); const n = headN(p); return [p[0] + n[0] * 0.03 * t, p[1] - 0.004 * t, p[2] + n[2] * 0.035 * t]; },
-        { nu: Math.max(2, lod.pn), nv: 1, th: 0.005, reg: 'goldEngr', col: col(C.trim), w: B.head, mirrorS: true });
-      const top = [0, apexY(0.012, spike), HEAD_C[2] - 0.004];
-      if (v === 'wing' && hi >= 1) for (const sg of [1, -1]) {
-        featherStrip(X, bez(headAt(Hp, sg * 1.45, 0.45, 0.02), [sg * 0.13, 0.27, -0.01], [sg * 0.18, 0.33, -0.05], [sg * 0.2, 0.4, -0.1], 6), 0.07, 0.02, 'gold', C.trim, B.head, 6);
+      M.color = wa ? C3('#2E3036') : X.trim;
+      M.shell(kit.capC, V.mul(kit.capR, 1.1), -60, 60, Math.max(2, D.hs / 3), th => line(th) - 3, th => line(th) + 6, 1);
+      // 顿项（护颈）：盔后自盔沿外张下垂，名将为布色、士兵为甲片
+      const nk = gen ? (X.cloth2 || X.clothDark) : wa ? C3('#3A3C44') : X.metalDark;
+      const cy = kit.capC[1], rb = kit.capR[0];
+      const yA = cy + kit.capR[1] * Math.cos(line(180) * D2R) + 0.01 * k;
+      const rows = wa ? (D.det >= 1 ? 3 : 2) : 1;
+      for (let i = 0; i < rows; i++) {
+        const y0 = yA - i * 0.035 * k, y1 = y0 - (wa ? 0.045 : 0.1) * k;
+        M.panel([0, 0, kit.capC[2]], 95, 265, Math.max(3, D.pan + 2), [[rb * (1.02 + i * 0.1), y0], [rb * (1.2 + i * 0.12), y1]], kit.capR[2] / kit.capR[0], i % 2 ? shT(nk, 0.85) : nk, D.det >= 1 ? X.lining : null, 0.006);
       }
-      if (v === 'horn' && hi >= 0) for (const sg of [1, -1]) tube(gb, bez(headAt(Hp, sg * 1.2, 0.6, 0.015), [sg * 0.13, 0.25, 0.02], [sg * 0.16, 0.33, 0.04], [sg * 0.13, 0.4, 0.07], 6), { r: s => 0.014 * (1 - s) + 0.002, n: 6, reg: 'gold', col: col('#e8e0c8'), w: B.head });
-      if (v === 'lion') {
-        // 狮首（马超）：盔前一张浮雕狮面 —— 扁平面板（狮面贴图）+ 隆起的口鼻、眉骨、红宝石眼、双耳，四周一圈鬃毛簇
-        const N = v3norm([0, 0.3, 1]), c = headAt(Hp, 0, 0.6, 0.028), AX = axesFromY(N), r = 0.056, start = gb.nv;
-        const up = v3norm(v3sub([0, 1, 0], v3mul(N, N[1]))), sd = v3cross(up, N);
-        const at = (x, y, z) => v3add(c, v3add(v3mul(sd, x), v3add(v3mul(up, y), v3mul(N, z))));
-        lathe(gb, [[r, -0.01, null, 0], [r * 1.03, 0, null, 0.1], [r * 0.92, 0.007, null, 0.3], [r * 0.55, 0.011, null, 0.65], [0, 0.012, null, 1]], { c, axes: AX, n: lod.ring, reg: 'lion', col: col(GOLD), w: B.head });
-        fixDiscUV(gb, REG('lion'), c, AX, r, start);
-        const g = col(GOLD), gd = col(shade(GOLD, -0.25));
-        ellipsoid(gb, at(0, -0.016, 0.016), [0.021, 0.015, 0.014], { nl: hi >= 1 ? 5 : 3, n: hi >= 1 ? 8 : 6, reg: 'gold', col: g, w: B.head, axes: { X: sd, Y: up, Z: N } });    // 口鼻
-        ellipsoid(gb, at(0, -0.004, 0.026), [0.009, 0.006, 0.007], { nl: 3, n: 6, reg: 'gold', col: gd, w: B.head, axes: { X: sd, Y: up, Z: N } });                         // 鼻头
-        if (hi >= 1) {
-          for (const sg of [1, -1]) {
-            tube(gb, [at(sg * 0.006, 0.014, 0.014), at(sg * 0.02, 0.02, 0.016), at(sg * 0.034, 0.015, 0.01)], { r: q => 0.006 * (1 - 0.5 * q), n: 5, reg: 'gold', col: g, w: B.head });   // 眉骨
-            ellipsoid(gb, at(sg * 0.02, 0.008, 0.014), [0.006, 0.004, 0.004], { nl: 3, n: 6, reg: 'white', col: col('#d02828'), w: B.head });                                     // 宝石眼
-            tube(gb, [at(sg * 0.04, 0.036, 0.0), at(sg * 0.046, 0.052, -0.004)], { r: q => 0.01 * (1 - q) + 0.002, n: 5, reg: 'gold', col: g, w: B.head });                     // 耳
-            tube(gb, [at(sg * 0.012, -0.03, 0.016), at(sg * 0.014, -0.042, 0.012)], { r: q => 0.004 * (1 - q) + 0.001, n: 4, reg: 'white', col: col('#f0ead8'), w: B.head });  // 獠牙
-          }
-          const nm = hi >= 2 ? 14 : 9;
-          for (let i = 0; i < nm; i++) {
-            const a = PI * 0.15 + (i + 0.5) / nm * PI * 1.7, dx = Math.cos(a), dy = Math.sin(a) * 0.95;
-            const p0 = at(dx * r * 0.85, dy * r * 0.85, -0.004), p1 = at(dx * r * 1.32, dy * r * 1.32 + 0.004, -0.018);
-            tube(gb, [p0, v3lerp(p0, p1, 0.5), p1], { r: q => 0.011 * (1 - q) + 0.0015, rz: 0.6, n: 5, reg: 'gold', col: g, w: B.head });
-          }
+      if (wa && D.det >= 1) {
+        // 衝角：前方的鸟喙状脊
+        M.color = C3('#3A3C44');
+        M.push().translate(kit.capPoint(0, 40, 1.03)).rotate(-55, 0, 0);
+        M.sphere([0, 0.03 * k, 0], [0.015 * k, 0.07 * k, 0.03 * k], 5, 3);
+        M.pop();
+      }
+      if (!wa) {
+        const top = kit.capPoint(0, 0, 1);
+        if (v === 'spike') { M.color = metal; M.cone(V.add(top, [0, -0.01 * k, 0]), 0.03 * k, 0.13 * k, Math.max(5, D.rnd - 1)); }
+        if (v === 'wing' && D.det >= 1) for (const s of [1, -1]) {
+          const a = kit.capPoint(s * 85, 52, 1.0);
+          M.color = X.trim;
+          M.curvedStrip(a, V.add(a, [s * 0.05 * k, 0.08 * k, -0.01 * k]), V.add(a, [s * 0.07 * k, 0.17 * k, -0.06 * k]), 0.07 * k, 0.02 * k, [s, 0.1, 0.2], 0.008, D.det >= 2 ? 3 : 1);
+        }
+        if (v === 'horn') for (const s of [1, -1]) {
+          const a = kit.capPoint(s * 70, 40, 1.0);
+          M.color = C3('#E8E0C8');
+          M.curve(a, V.add(a, [s * 0.07 * k, 0.05 * k, 0.02 * k]), V.add(a, [s * 0.05 * k, 0.15 * k, 0.07 * k]), 0.016 * k, 0.003 * k, D.det >= 1 ? 3 : 2, 5);
+        }
+        if (v === 'lion') {
+          // 狮首盔（马超）：盔前金色兽面 + 一圈鬃簇
+          const c = kit.capPoint(0, 42, 1.04);
+          M.push().translate(c).rotate(-48, 0, 0);
+          M.color = X.goldLight; M.cylinder([0, -0.006, 0], 0.05 * k, 0.045 * k, 0.018, D.rnd);
+          M.color = X.goldDark; M.sphere([0, 0.012, -0.006 * k], [0.02 * k, 0.012, 0.016 * k], 5, 2);
+          if (D.det >= 1) { M.color = C3('#C82828'); for (const s of [1, -1]) M.sphere([s * 0.018 * k, 0.012, 0.016 * k], 0.006 * k, 4, 2); }
+          M.color = X.gold;
+          if (D.det >= 1) for (let i = 0; i < 7; i++) { const a = (i / 6 - 0.5) * 2.6; M.spike([Math.sin(a) * 0.046 * k, 0, Math.cos(a) * 0.046 * k], [Math.sin(a), 0.3, Math.cos(a)], 0.012 * k, 0.03 * k, 4); }
+          M.pop();
+        }
+        if (v === 'plume' || look.culture === 'korea') {
+          const t0 = V.add(top, [0, 0.005, 0]);
+          feather(kit, [t0, V.add(t0, [0, 0.1 * k, -0.02 * k]), V.add(t0, [0, 0.18 * k, -0.08 * k]), V.add(t0, [0, 0.22 * k, -0.17 * k])], 0.05 * k, 0.012 * k, plume, true, 0.3);
+        } else {
+          M.color = X.trim; if (D.det >= 1 || v === 'spike') M.cylinder(V.add(top, [0, v === 'spike' ? 0.08 * k : -0.006 * k, 0]), 0.011 * k, 0.009 * k, 0.03 * k, 5, false, false, D.det >= 1);
+          horseTassel(kit, V.add(top, [0, (v === 'spike' ? 0.08 : 0.0) * k + 0.028 * k, 0]), gen ? 1.15 : 0.85, plume);
+        }
+        if (D.det >= 1) for (const s of [1, -1]) {
+          // 护耳
+          M.color = metal;
+          M.shell(kit.capC, V.mul(kit.capR, 1.02), s > 0 ? 70 : -110, s > 0 ? 110 : -70, 2, th => line(th) - 2, th => line(th) + 26, 1);
         }
       }
-      if (v === 'plume' || look.culture === 'korea') { featherStrip(X, bez(top, [0, top[1] + 0.12, top[2] - 0.02], [0, top[1] + 0.22, top[2] - 0.08], [0, top[1] + 0.3, top[2] - 0.16], 6), 0.05, 0.012, 'tassel', plume, (p, s, t) => wT(t, [[B.plume1, 0], [B.plume2, 0.8]])); }
-      else {
-        if (hi >= 1) tube(gb, [top, [top[0], top[1] + 0.03, top[2]]], { r: 0.008, n: 6, reg: 'gold', col: col(C.trim), w: B.head });
-        tassel(X, [top[0], top[1] + (hi >= 1 ? 0.03 : 0.005), top[2]], look.kind === 'general' ? 1.15 : 0.85, plume);
-      }
-      res.coversTop = true;
-    } else if (tp === 'galea') {
-      bowl({ phi0: rim(0.32, -0.15), sy: 0.01, reg: 'metal', col: hat.color || (look.kind === 'soldier' ? '#b8bcc4' : BRONZE) });
-      headRing(X, Hp, rim(0.32, -0.15), 0.018, 0.008, 'gold', BRONZE);
-      // 护颈外翻
-      panel(gb, (s, t) => { const th = lerp(1.6, TAU - 1.6, s); const p = headAt(Hp, th, -0.15 + 0.03, 0.02); const n = headN(p); return [p[0] + n[0] * 0.06 * t, p[1] - 0.03 * t, p[2] + n[2] * 0.06 * t]; },
-        { nu: Math.max(2, lod.pn), nv: 1, th: 0.006, reg: 'metal', col: col(hat.color || '#b8bcc4'), w: B.head });
+      res.top = line; res.back = true; res.ears = true;
+    } else if (tp === 'galea' || tp === 'celthelm') {
+      const gal = tp === 'galea', line = rimFn(70, 96, 100);
+      const c = hc || (gal ? (look.kind === 'soldier' ? C3('#B8BCC4') : C3(PALF.bronze)) : C3(PALF.bronze));
+      kit.capShell(c, 1.15, line, np);
+      ring(gal ? C3(PALF.bronze) : shT(c, 0.8), line, 6, 1.04);
       // 护颊
-      if (hi >= 1) for (const sg of [1, -1]) panel(gb, (s, t) => { const th = sg * lerp(0.75, 1.55, s); const p = headAt(Hp, th, lerp(0.15, -0.65, t), 0.016 + 0.004 * t); return p; },
-        { nu: 2, nv: Math.max(1, lod.pv - 6), th: 0.006, reg: 'metal', col: col(BRONZE), w: B.head });
-      // 冠饰（纵向马鬃）
-      const pts = [], AX = [];
-      const N = Math.max(4, lod.head[0] - 8);
-      const secs = [];
-      for (let i = 0; i <= N; i++) {
-        const a = lerp(0.65, -0.2, i / N) * PI / 2 + (i / N) * 0 ;
-        const ph = lerp(0.95, 1.5, Math.sin(PI * i / N) * 0) ;
-        const th = i / N < 0.5 ? 0 : PI;
-        const pp = i / N;
-        const phi = pp < 0.5 ? lerp(0.85, PI / 2, pp * 2) : lerp(PI / 2, 0.6, (pp - 0.5) * 2);
-        const thh = pp < 0.5 ? 0 : PI;
-        const p = headAt(Hp, thh, phi, 0.034);
-        p[1] += 0.01;
-        const o = headN(p);
-        secs.push({ c: v3madd(p, o, 0.03), X: [1, 0, 0], Z: o, rx: 0.011, rz: 0.04 * Math.sin(PI * clamp(pp * 1.1, 0, 1)) + 0.008, t: pp });
-        void a; void ph; void th; pts.push(p); AX.push(o);
-      }
-      loft(gb, secs, { n: hi >= 1 ? 6 : 4, reg: 'tassel', col: col(plume || RED), w: B.head });
-      res.coversTop = true;
+      M.color = gal ? C3(PALF.bronze) : c;
+      for (const s of [1, -1]) M.shell(kit.capC, V.mul(kit.capR, 1.03), s > 0 ? 55 : -110, s > 0 ? 110 : -55, 2, th => line(th) - 2, th => line(th) + 42, 1);
+      // 护颈外翻
+      M.panel([0, 0, kit.capC[2]], 120, 240, Math.max(2, D.pan), [[kit.capR[0] * 1.0, kit.capC[1] + kit.capR[1] * Math.cos(100 * D2R)], [kit.capR[0] * 1.25, kit.capC[1] + kit.capR[1] * Math.cos(100 * D2R) - 0.035 * k]], kit.capR[2] / kit.capR[0], gal ? c : shT(c, 0.9), null);
+      if (gal) {
+        // 冠饰：纵向的红色马鬃
+        const pts = [];
+        for (let i = 0; i <= (D.det >= 1 ? 4 : 2); i++) { const n = D.det >= 1 ? 4 : 2, a = lerp(-55, 70, i / n); pts.push(kit.capPoint(0, Math.abs(a), 1.08 + 0.12 * Math.sin(PI * i / n)).map((v2, j) => (j === 2 && a < 0 ? v2 : v2))); }
+        for (let i = 0; i < pts.length; i++) { const a = lerp(-55, 70, i / (pts.length - 1)); pts[i] = kit.capPoint(a < 0 ? 0 : 180, Math.abs(a), 1.0); pts[i][1] += 0.035 * k; }
+        M.color = plume;
+        for (let i = 0; i < pts.length - 1; i++) M.strip(pts[i], pts[i + 1], 0.075 * k, 0.075 * k, [1, 0, 0], 0.022 * k);
+      } else { M.color = C3(PALF.bronze); M.sphere(kit.capPoint(0, 0, 1.04), [0.02 * k, 0.025 * k, 0.02 * k], 5, 2); }
+      res.top = line; res.back = true; res.ears = true;
     } else if (tp === 'ze' || tp === 'jinxian' || tp === 'futou' || tp === 'lunjin' || tp === 'turban') {
-      // 纶巾缺省为青色（与头像一致），帻露出发髻
-      const cc = hat.color || (tp === 'turban' ? '#3a6a3a' : tp === 'lunjin' ? '#3a5a8c' : '#22202a');
-      const tall = tp === 'lunjin' ? 0.045 : tp === 'futou' ? 0.025 : tp === 'turban' ? 0.03 : 0.006;
-      headShell(X, Hp, { phi0: rim(0.42, -0.1), off: (th, u) => 0.01 + (tp === 'turban' ? 0.018 : 0.006) * u, sy: tall, tilt: tp === 'lunjin' ? -0.03 : 0, reg: 'cloth', col: cc });
-      if (tp === 'lunjin') for (const [f, b] of hi >= 1 ? [[0.7, 0.35], [0.98, 0.7], [1.22, 1.0]] : [[0.85, 0.5]]) headRing(X, Hp, rim(f, b), 0.016 + 0.004 * f, 0.0045, 'cloth', '#d8e2ee', { rz: 0.6, tn: 4 });
-      if (tp === 'ze') res.showBun = true;
-      if (tp === 'turban') {
-        for (const [f, b, o] of [[0.42, -0.08, 0.02], [0.62, 0.12, 0.028]]) headRing(X, Hp, rim(f, b), o, 0.013, 'cloth', shade(cc, -0.08));
-        // 头巾结与垂带
-        const kp = headAt(Hp, PI, 0.15, 0.03);
-        ellipsoid(gb, kp, [0.025, 0.02, 0.02], { nl: 4, n: 6, reg: 'cloth', col: col(cc), w: B.head });
-        if (hi >= 1) for (const sg of [1, -1]) featherStrip(X, bez(kp, [kp[0] + sg * 0.03, kp[1] - 0.06, kp[2] - 0.03], [kp[0] + sg * 0.05, kp[1] - 0.14, kp[2] - 0.05], [kp[0] + sg * 0.06, kp[1] - 0.24, kp[2] - 0.06], 5), 0.05, 0.035, 'cloth', cc, (p, s, t) => wT(t, [[B.head, 0], [B.hair1, 0.6]]));
-      } else if (tp === 'jinxian') {
-        // 进贤冠：前高后低的冠梁
-        const f = headAt(Hp, 0, 0.95, 0.02), bk = headAt(Hp, PI, 1.25, 0.02);
-        panel(gb, (s, t) => [lerp(-0.035, 0.035, s), lerp(f[1] + 0.07, bk[1] + 0.02, t), lerp(f[2] - 0.0, bk[2] + 0.02, t)], { nu: 2, nv: 2, th: 0.008, reg: 'cloth', col: col(cc), w: B.head });
-        // 第三版修订：冠梁下补一片竖板连到帻顶（侧看不再是一根悬空的黑条）
-        const midAt = t => { const ph = t < 0.5 ? lerp(0.95, PI / 2 - 0.001, t * 2) : lerp(PI / 2 - 0.001, 1.25, (t - 0.5) * 2); return headAt(Hp, t < 0.5 ? 0 : PI, ph, 0.012); };
-        panel(gb, (s, t) => { const m0 = midAt(t), ty = lerp(f[1] + 0.07, bk[1] + 0.02, t), tz = lerp(f[2], bk[2] + 0.02, t); return [0, lerp(m0[1], ty, s), lerp(m0[2], tz, s)]; },
-          { nu: 1, nv: hi >= 1 ? 6 : 3, th: 0.01, reg: 'cloth', col: col(shade(cc, -0.1)), w: B.head });
-        headRing(X, Hp, rim(0.42, -0.1), 0.012, 0.006, 'cloth', shade(cc, 0.2));
-      } else if (tp === 'futou' && hi >= 1) {
-        const kp = headAt(Hp, PI, 0.4, 0.02);
-        for (const sg of [1, -1]) featherStrip(X, bez(kp, [kp[0] + sg * 0.02, kp[1] - 0.05, kp[2] - 0.02], [kp[0] + sg * 0.03, kp[1] - 0.12, kp[2] - 0.03], [kp[0] + sg * 0.035, kp[1] - 0.2, kp[2] - 0.03], 4), 0.03, 0.025, 'cloth', cc, (p, s, t) => wT(t, [[B.head, 0], [B.hair1, 0.6]]));
-      } else if (tp === 'lunjin' && hi >= 1) {
-        const kp = headAt(Hp, PI, 0.6, 0.02);
-        for (const sg of [1, -1]) featherStrip(X, bez(kp, [kp[0] + sg * 0.03, kp[1] - 0.06, kp[2] - 0.03], [kp[0] + sg * 0.04, kp[1] - 0.16, kp[2] - 0.05], [kp[0] + sg * 0.05, kp[1] - 0.3, kp[2] - 0.06], 5), 0.025, 0.022, 'cloth', shade(cc, 0.15), (p, s, t) => wT(t, [[B.head, 0], [B.hair1, 0.6]]));
+      const cc = hc || (tp === 'turban' ? C3('#3A6A3A') : tp === 'lunjin' ? C3('#3A5A8C') : C3('#2E2A34'));
+      const line = tp === 'ze' || tp === 'jinxian' ? rimFn(54, 84, 104) : tp === 'turban' ? rimFn(52, 82, 108) : rimFn(52, 86, 106);
+      const puff = tp === 'turban' ? 1.16 : tp === 'lunjin' ? 1.1 : 1.09;
+      kit.capShell(cc, puff, line, np, null, { ky: tp === 'lunjin' ? 1.14 : tp === 'futou' ? 1.06 : 1 });
+      if (D.det >= 1 || tp !== 'ze') ring(shT(cc, 0.82), line, tp === 'turban' ? 12 : 8, 1.035);
+      if (tp === 'ze' || tp === 'jinxian') res.bun = true;
+      if (tp === 'turban' || tp === 'futou' || tp === 'lunjin') {
+        if (tp === 'turban') { M.color = shT(cc, 0.9); M.shell(kit.capC, V.mul(kit.capR, 1.06), -180, 180, D.hs, th => line(th) - 30, th => line(th) - 16, 1); }
+        if (tp === 'lunjin' && D.det >= 1) for (const f of [-24, -40]) ring(C3('#D8E2EE'), th => line(th) + f, 3, 1.02);
+        // 脑后的结与两条垂带（随头发骨摆动）
+        const kp = kit.capPoint(180, line(180) - 18, 1.02);
+        M.color = cc; M.sphere(kp, [0.03 * k, 0.026 * k, 0.026 * k], 5, 2);
+        if (D.det >= 1) {
+          kit.bone('hair1');
+          const v0 = M.vertexCount;
+          for (const s of [1, -1]) M.curvedStrip(V.add(kp, [s * 0.01, -0.01, -0.01]), V.add(kp, [s * 0.04 * k, -0.08 * k, -0.04 * k]), V.add(kp, [s * 0.06 * k, (tp === 'lunjin' ? -0.24 : -0.16) * k, -0.05 * k]), 0.045 * k, 0.03 * k, [s * 0.3, 0, -1], 0.008, 2);
+          M.windBy(v0, p => 0.45 * clamp01((kp[1] - p[1]) / (0.15 * k)));
+          kit.bone('head');
+        }
       }
-      res.coversTop = true;
+      if (tp === 'jinxian') {
+        // 进贤冠：前高后低的冠梁（斜板）
+        M.color = cc;
+        const f = kit.capPoint(0, 28, 1.0);
+        M.push().translate(f).rotate(-28, 0, 0);
+        M.box([0, 0.055 * k, -0.04 * k], [0.065 * k, 0.11 * k, 0.012 * k]);
+        if (D.det >= 1) { M.color = shT(cc, 1.35); M.box([0, 0.11 * k, -0.04 * k], [0.07 * k, 0.012 * k, 0.016 * k]); }
+        M.pop();
+      }
+      res.top = line; res.back = tp === 'turban' || tp === 'futou';
     } else if (tp === 'pagri' || tp === 'mukuta' || tp === 'aksumcrown') {
-      // 第三版：天竺大缠头（额前大结 + 金饰牌）/ 天竺宝冠（缠头 + 扇形三片金冠 + 脑后宝带）/ 阿克苏姆金冠（头巾 + 尖叶金片 + 两侧麦穗）
-      const cc = tp === 'pagri' ? (hat.color || '#ece6d8') : (hat.color2 || (tp === 'mukuta' ? '#a8302a' : '#ece6d8'));
-      headShell(X, Hp, { phi0: rim(0.42, -0.1), off: (th, u) => 0.012 + 0.022 * u, sy: tp === 'aksumcrown' ? 0.02 : 0.04, reg: 'cloth', col: cc });
-      for (const [f, b, o] of hi >= 1 ? [[0.42, -0.08, 0.022], [0.66, 0.14, 0.03], [0.9, 0.42, 0.034]] : [[0.5, 0.0, 0.026]]) headRing(X, Hp, rim(f, b), o, 0.013, 'cloth', shade(cc, -0.08));
+      const cc = tp === 'pagri' ? (hc || C3('#ECE6D8')) : lift(hat.color2 || (tp === 'mukuta' ? '#A8302A' : '#ECE6D8'), 0.2);
+      const line = rimFn(50, 84, 106);
+      kit.capShell(cc, 1.2, line, np, null, { ky: tp === 'aksumcrown' ? 1.04 : 1.12 });
+      for (const f of D.det >= 1 ? [0, -16, -32] : [-10]) { M.color = shT(cc, f % 32 === 0 ? 0.9 : 0.96); M.shell(kit.capC, V.mul(kit.capR, 1.04), -180, 180, D.hs, th => line(th) + f - 12, th => line(th) + f, 1); }
       if (tp === 'pagri') {
-        const kp = headAt(Hp, 0, 1.0, 0.05); kp[1] += 0.035;
-        ellipsoid(gb, kp, [0.046, 0.04, 0.04], { nl: hi >= 1 ? 6 : 4, n: hi >= 1 ? 8 : 6, reg: 'cloth', col: col(cc), w: B.head });
-        const gp = headAt(Hp, 0, 0.62, 0.04);
-        ellipsoid(gb, gp, [0.017, 0.019, 0.007], { nl: 3, n: 6, reg: 'gold', col: col(GOLD), w: B.head });
-        if (hi >= 1) ellipsoid(gb, v3add(gp, [0, 0, 0.006]), [0.007, 0.007, 0.004], { nl: 3, n: 5, reg: 'white', col: col(hat.gem || '#c02a3a'), w: B.head });
+        const kp = kit.capPoint(0, 22, 1.08);
+        M.color = cc; M.sphere(kp, [0.045 * k, 0.04 * k, 0.035 * k], D.sph[0], D.sph[1]);
+        M.color = X.gold; M.sphere(kit.capPoint(0, 42, 1.08), [0.018 * k, 0.02 * k, 0.008 * k], 5, 2);
+        if (D.det >= 1) { M.color = lift(hat.gem || '#C02A3A', 0.3); M.sphere(V.add(kit.capPoint(0, 42, 1.08), [0, 0, 0.008 * k]), 0.008 * k, 4, 2); }
       } else {
-        const gc = hat.color || GOLD, rr = rim(0.62, 0.3);
-        headRing(X, Hp, rr, 0.036, 0.012, 'goldEngr', gc, { rz: 0.5 });
-        const plates = tp === 'mukuta' ? [[-0.62, 0.08, 0.05], [0.62, 0.08, 0.05], [0, 0.13, 0.07]]
-          : (hi >= 1 ? [[-1.15, 0.05, 0.026], [-0.58, 0.06, 0.028], [0, 0.075, 0.03], [0.58, 0.06, 0.028], [1.15, 0.05, 0.026]] : [[-0.58, 0.06, 0.028], [0, 0.075, 0.03], [0.58, 0.06, 0.028]]);
+        const gc = hc && tp !== 'pagri' ? lift(hat.color, 0.4) : X.gold;
+        ring(gc, th => line(th) - 22, 9, 1.07);
+        const plates = tp === 'mukuta' ? [[-40, 0.08, 0.05], [40, 0.08, 0.05], [0, 0.13, 0.07]] : (D.det >= 1 ? [[-70, 0.05, 0.028], [-35, 0.06, 0.03], [0, 0.075, 0.03], [35, 0.06, 0.03], [70, 0.05, 0.028]] : [[-35, 0.06, 0.03], [0, 0.075, 0.03], [35, 0.06, 0.03]]);
+        M.color = gc;
         for (const [th, h, w] of plates) {
-          const p0 = headAt(Hp, th, rr(th) + 0.03, 0.036), n = headN(p0), tx = Math.cos(th), tz = -Math.sin(th);
-          panel(gb, (u, t) => { const x = (u - 0.5) * w * (1 - t * (tp === 'mukuta' ? 0.75 : 0.97)); return [p0[0] + x * tx + n[0] * 0.012 * t, p0[1] + h * t, p0[2] + x * tz + n[2] * 0.012 * t]; },
-            { nu: 2, nv: hi >= 1 ? 3 : 1, th: 0.004, reg: 'gold', col: col(gc), w: B.head });
-          if (tp === 'mukuta' && hi >= 1) ellipsoid(gb, [p0[0] + n[0] * 0.01, p0[1] + h * 0.38, p0[2] + n[2] * 0.01], [0.009, 0.009, 0.005], { nl: 3, n: 5, reg: 'white', col: col(th === 0 ? (hat.gem || '#c02a3a') : '#2a8a6a'), w: B.head });
+          const p0 = kit.capPoint(th, line(th) - 26, 1.07), t = th * D2R;
+          M.push().translate(p0).rotate(-12, th, 0);
+          M.triangleFacing([-w * k * 0.5, 0, 0], [w * k * 0.5, 0, 0], [0, h * k, -0.01 * k], [0, 0.2, 1]);
+          M.triangleFacing([-w * k * 0.5, 0, -0.006], [0, h * k, -0.016 * k], [w * k * 0.5, 0, -0.006], [0, 0.2, -1]);
+          M.pop();
+          void t;
         }
-        if (tp === 'mukuta' && hi >= 1) { const kp = headAt(Hp, PI, 0.4, 0.04); for (const sg of [1, -1]) featherStrip(X, bez(kp, [kp[0] + sg * 0.03, kp[1] - 0.05, kp[2] - 0.04], [kp[0] + sg * 0.05, kp[1] - 0.14, kp[2] - 0.08], [kp[0] + sg * 0.06, kp[1] - 0.26, kp[2] - 0.12], 5), 0.03, 0.022, 'cloth', hat.ribbon || '#e8c860', (p, s2, t) => wT(t, [[B.head, 0], [B.hair1, 0.6]])); }
-        if (tp === 'aksumcrown' && hi >= 1) for (const sg of [1, -1]) {
-          const b0 = headAt(Hp, sg * 1.35, 0.55, 0.04), pts = bez(b0, [b0[0] + sg * 0.02, b0[1] + 0.06, b0[2]], [b0[0] + sg * 0.05, b0[1] + 0.12, b0[2] - 0.01], [b0[0] + sg * 0.07, b0[1] + 0.17, b0[2] - 0.02], 4);
-          tube(gb, pts, { r: 0.003, n: 3, reg: 'gold', col: col(gc), w: B.head });
-          for (let j = 2; j <= 4; j++) for (const sd of [1, -1]) ellipsoid(gb, v3add(pts[j], [sd * 0.008, 0, 0]), [0.006, 0.011, 0.004], { nl: 3, n: 4, reg: 'gold', col: col(gc), w: B.head, axes: axesFromY(v3norm([sd * 0.6, 1, 0])) });
-        }
+        if (tp === 'mukuta' && D.det >= 1) { M.color = lift(hat.gem || '#C02A3A', 0.3); M.sphere(V.add(kit.capPoint(0, line(0) - 26, 1.08), [0, 0.045 * k, 0.01 * k]), 0.01 * k, 4, 2); }
       }
-      res.coversTop = true; res.coversBack = true;
+      res.top = line; res.back = true; res.ears = true;
     } else if (tp === 'kushcrown') {
-      // 第三版修订：麦罗埃浮雕（纳塔卡马尼、阿曼尼托尔）的库施王冠——贴头的深色小帽（无檐，额前齐眉上、两侧过耳上、
-      // 脑后到颈），一道窄金王带贴帽箍住，额前一对昂首张颈的眼镜蛇（uraeus），王带脑后结处垂两条飘带。
-      // 原来是黄色圆顶 + 外凸的金圈（像安全帽的檐）+ 两根带球的「触角」。帽色只取深色（头像里的金色帽改为深色）。
-      const capC = hat.color2 && lum(hat.color2) < 0.3 ? hat.color2 : '#2a2422';
-      const gc = hat.color || GOLD;
-      const capRim = th => { const a = Math.abs(th); return a < 1.0 ? 0.48 : a < 1.3 ? lerp(0.48, 0.05, sstep(1.0, 1.3, a)) : a < 1.65 ? 0.05 : lerp(0.05, -0.66, sstep(1.65, 2.4, a)); };
-      headShell(X, Hp, { phi0: capRim, off: (th, u) => 0.005 + 0.002 * u, reg: 'cloth', col: capC, pw: 0.8 });
-      // 王带：贴帽的窄金带（竖窄横薄，不外凸成檐）
-      const bandP = rim(0.53, 0.28);
-      headRing(X, Hp, bandP, 0.0058, 0.0022, 'goldEngr', gc, { rz: 2.8 });
-      // 双蛇：蛇身自王带昂起（S 形），张开的颈盾（扁椭圆）朝前，小蛇头前伸
-      for (const sg of [1, -1]) {
-        const th = sg * 0.15, p0 = headAt(Hp, th, bandP(th) + 0.01, 0.008), nn = headN(p0);
-        const fw = v3norm([nn[0], 0, nn[2]]), up = [0, 1, 0], sd = v3norm(v3cross(up, fw));
-        const at = (u, f) => v3add(p0, v3add(v3mul(up, u * 1.2), v3mul(fw, f * 1.2)));
-        if (hi === 0) { ellipsoid(gb, at(0.012, 0.004), [0.006, 0.012, 0.003], { nl: 3, n: 4, reg: 'gold', col: col(gc), w: B.head, axes: { X: sd, Y: up, Z: fw } }); continue; }
-        tube(gb, bez(at(-0.002, -0.002), at(0.01, 0.009), at(0.014, -0.003), at(0.026, 0.002), 5), { r: s2 => 0.0042 - 0.001 * s2, n: 5, reg: 'gold', col: col(gc), w: B.head });
-        // 颈盾：上宽下窄，略向前弓
-        ellipsoid(gb, at(0.033, 0.004), [0.0105, 0.015, 0.003], { nl: hi >= 2 ? 5 : 3, n: hi >= 2 ? 8 : 5, reg: 'goldEngr', col: col(gc), w: B.head, axes: { X: sd, Y: v3norm([fw[0] * 0.2, 1, fw[2] * 0.2]), Z: fw } });
-        ellipsoid(gb, at(0.046, 0.009), [0.005, 0.004, 0.0075], { nl: 3, n: hi >= 2 ? 6 : 4, reg: 'gold', col: col(gc), w: B.head, axes: { X: sd, Y: up, Z: fw } });
+      // 库施：贴头的深色小帽、窄金王带、额前一对昂首的眼镜蛇、脑后两条飘带
+      const capC = lift(hat.color2 && lum(hat.color2) < 0.3 ? hat.color2 : '#2A2422', 0.16);
+      const line = rimFn(56, 94, 120);
+      kit.capShell(capC, 1.08, line, np);
+      const gc = hc ? lift(hat.color, 0.4) : X.gold;
+      ring(gc, th => line(th) - 8, 5, 1.04);
+      M.color = gc;
+      for (const s of [1, -1]) {
+        const a = kit.capPoint(s * 10, line(0) - 10, 1.05);
+        M.curve(a, V.add(a, [0, 0.02 * k, 0.012 * k]), V.add(a, [s * 0.004, 0.045 * k, 0.006 * k]), 0.006 * k, 0.004 * k, 2, 4);
+        M.sphere(V.add(a, [s * 0.004, 0.05 * k, 0.008 * k]), [0.012 * k, 0.016 * k, 0.005 * k], 5, 2);
       }
-      // 飘带：自王带脑后结处垂下，过肩后
-      if (hi >= 1) { const kp = headAt(Hp, PI, bandP(PI), 0.012); for (const sg of [1, -1]) featherStrip(X, bez(kp, [kp[0] + sg * 0.014, kp[1] - 0.05, kp[2] - 0.03], [kp[0] + sg * 0.026, kp[1] - 0.16, kp[2] - 0.07], [kp[0] + sg * 0.034, kp[1] - 0.3, kp[2] - 0.1], 5), 0.022, 0.018, 'cloth', hat.ribbon || '#e8e0d0', (p, s2, t) => wT(t, [[B.head, 0], [B.hair1, 0.6]])); }
-      res.coversTop = true; res.coversBack = true;
-    } else if (tp === 'bellcrown') {
-      // 第三版：僧伽罗式圆冠（钟形金冠，层层横箍，顶上尖钮）
-      const cc = hat.color || GOLD, c = [0, apexY(0, 0) - 0.07, HEAD_C[2]];
-      lathe(gb, [[0.088, 0], [0.09, 0.03], [0.084, 0.06], [0.07, 0.09], [0.05, 0.115], [0.026, 0.135], [0.012, 0.15], [0.008, 0.19], [0.002, 0.22]], { c, n: lod.ring, reg: 'goldEngr', col: col(cc), w: B.head });
-      if (hi >= 1) for (const [y, r] of [[0.03, 0.093], [0.075, 0.08]]) tube(gb, ringPts([c[0], c[1] + y, c[2]], [1, 0, 0], [0, 0, 1], r, r, Math.max(10, lod.ring)), { r: 0.0045, n: 4, reg: 'gold', col: col(cc), w: B.head, closed: true });
-      res.coversTop = true;
-    } else if (tp === 'headband' || tp === 'diadem' || tp === 'featherband') {
-      const cc = tp === 'diadem' ? (hat.color || GOLD) : (hat.color || RED);
-      // 库施弓手的插羽额带：脑侧一根立起的白羽
-      if (tp === 'featherband') { const p0 = headAt(Hp, 1.2, 0.5, 0.02); featherStrip(X, bez(p0, [p0[0] + 0.01, p0[1] + 0.08, p0[2] - 0.01], [p0[0] + 0.015, p0[1] + 0.16, p0[2] - 0.03], [p0[0] + 0.02, p0[1] + 0.22, p0[2] - 0.05], 4), 0.03, 0.014, 'feather', hat.feather || '#f0ece0', B.head, 4); }
-      headRing(X, Hp, rim(0.56, 0.3), 0.006, 0.011, tp === 'diadem' ? 'goldEngr' : 'cloth', cc, { rz: 0.4 });
-      if (hat.gem || tp === 'diadem') ellipsoid(gb, headAt(Hp, 0, 0.56, 0.014), [0.011, 0.013, 0.006], { nl: 4, n: 6, reg: 'white', col: col(hat.gem || '#2a6db5'), w: B.head });
-      if (hi >= 1) { const kp = headAt(Hp, PI, 0.3, 0.015); for (const sg of [1, -1]) featherStrip(X, bez(kp, [kp[0] + sg * 0.03, kp[1] - 0.04, kp[2] - 0.04], [kp[0] + sg * 0.05, kp[1] - 0.12, kp[2] - 0.08], [kp[0] + sg * 0.06, kp[1] - 0.24, kp[2] - 0.12], 5), 0.03, 0.02, tp === 'diadem' ? 'cloth' : 'cloth', tp === 'diadem' ? '#e8e0d0' : cc, (p, s, t) => wT(t, [[B.head, 0], [B.hair1, 0.6]])); }
-    } else if (tp === 'crown' || tp === 'pheasant' || tp === 'goldcrown' || tp === 'tallcrown') {
-      const cc = hat.color || GOLD;
+      res.top = line; res.back = true;
+    } else if (tp === 'bellcrown' || tp === 'tallcrown') {
+      const cc = hc || X.gold, c = crownAt(-0.32);
+      M.color = cc;
+      M.push().translate(c);
+      if (tp === 'bellcrown') M.lathe([[0.088 * k, 0], [0.09 * k, 0.03 * k], [0.084 * k, 0.06 * k], [0.07 * k, 0.09 * k], [0.05 * k, 0.115 * k], [0.026 * k, 0.135 * k], [0.012 * k, 0.15 * k], [0.008 * k, 0.19 * k], [0.001, 0.22 * k]], D.rnd + 2, false, false, false);
+      else M.lathe([[0.08 * k, 0], [0.085 * k, 0.03 * k], [0.06 * k, 0.05 * k], [0.065 * k, 0.08 * k], [0.04 * k, 0.12 * k], [0.042 * k, 0.15 * k], [0.02 * k, 0.2 * k], [0.001, 0.26 * k]], D.rnd + 2, false, false, false);
+      if (D.det >= 1) { M.color = X.goldDark; M.band([0, 0, 0], 0.092 * k, 0.092 * k, 0.02 * k, 0.035 * k, D.rnd + 2); }
+      M.pop();
+      res.top = rimFn(62, 82, 90); res.back = false;
+    } else if (tp === 'headband' || tp === 'diadem' || tp === 'featherband' || tp === 'shaman') {
+      const cc = tp === 'diadem' ? (hc || X.gold) : tp === 'shaman' ? C3('#E8DCC0') : (hc || C3(PALF.red));
+      kit.capC = kit.headAt(0, 0.02, -0.01); kit.capR = kit.hv(1.09, 1.09, 1.07);
+      const line = rimFn(52, 74, 92);
+      ring(cc, line, tp === 'diadem' ? 9 : 10, 1.0);
+      if (hat.gem || tp === 'diadem') { M.color = lift(hat.gem || '#2A6DB5', 0.3); M.sphere(kit.capPoint(0, line(0) - 5, 1.02), [0.013 * k, 0.015 * k, 0.007 * k], 5, 2); }
+      if (tp === 'shaman') { M.color = C3(PALF.bronze); M.push().translate(kit.capPoint(0, line(0) - 8, 1.03)).rotate(80, 0, 0); M.cylinder([0, 0, 0], 0.04 * k, 0.036 * k, 0.008, D.rnd); M.pop(); }
+      if (tp === 'featherband') { const p0 = kit.capPoint(70, line(70) - 5, 1.02); feather(kit, [p0, V.add(p0, [0.01 * k, 0.08 * k, -0.01 * k]), V.add(p0, [0.015 * k, 0.16 * k, -0.03 * k]), V.add(p0, [0.02 * k, 0.22 * k, -0.05 * k])], 0.03 * k, 0.012 * k, lift(hat.feather || '#F0ECE0', 0.3), false, 0.2); }
+      if (D.det >= 1 && tp !== 'shaman') {
+        const kp = kit.capPoint(180, line(180) - 5, 1.02);
+        kit.bone('hair1');
+        const v0 = M.vertexCount; M.color = tp === 'diadem' ? C3('#E8E0D0') : cc;
+        for (const s of [1, -1]) M.curvedStrip(kp, V.add(kp, [s * 0.03 * k, -0.06 * k, -0.04 * k]), V.add(kp, [s * 0.05 * k, -0.15 * k, -0.06 * k]), 0.03 * k, 0.02 * k, [s * 0.3, 0, -1], 0.006, 2);
+        M.windBy(v0, p => 0.45 * clamp01((kp[1] - p[1]) / (0.14 * k)));
+        kit.bone('head');
+      }
+    } else if (tp === 'crown' || tp === 'pheasant' || tp === 'goldcrown') {
+      const cc = hc || X.gold;
       if (tp === 'pheasant' || tp === 'goldcrown') {
-        headRing(X, Hp, rim(0.75, 0.45), 0.012, 0.014, 'goldEngr', cc, { rz: 0.45 });
-        // 前额金饰
-        const c = headAt(Hp, 0, 0.92, 0.02), AX = axesFromY(v3norm([0, 0.5, 1])), r = 0.035, start = gb.nv;
-        lathe(gb, [[r, -0.008, null, 0], [r, 0, null, 0.1], [r * 0.6, 0.012, null, 0.5], [0, 0.016, null, 1]], { c, axes: AX, n: lod.ring, reg: 'buckle', col: col(cc), w: B.head });
-        fixDiscUV(gb, REG('buckle'), c, AX, r, start);
-        ellipsoid(gb, v3add(c, [0, 0.0, 0.016]), [0.008, 0.008, 0.006], { nl: 4, n: 6, reg: 'white', col: col(hat.gem || '#c8302a'), w: B.head });
-      }
-      if (tp === 'pheasant') {
-        // 雉翎：两根长尾羽，自冠两侧向上向后弯
-        for (const sg of [1, -1]) {
-          const p0 = headAt(Hp, sg * 0.35, 1.0, 0.02);
-          // 第三版修订：更长（×1.3）、先向前再向后外方扫开的 S 形长翎，翎梢更细
-          featherStrip(X, bez(p0, [p0[0] + sg * 0.04, p0[1] + 0.32, p0[2] + 0.06], [p0[0] + sg * 0.26, p0[1] + 0.68, p0[2] - 0.12], [p0[0] + sg * 0.46, p0[1] + 0.76, p0[2] - 0.56], hi >= 2 ? 16 : 7),
-            0.032, 0.008, 'feather', '#ffffff', (p, s, t) => wT(t, [[B.head, 0], [B.plume1, 0.15], [B.plume2, 0.6]]), hi >= 2 ? 18 : 6);
+        kit.capC = kit.headAt(0, 0.02, -0.01); kit.capR = kit.hv(1.1, 1.1, 1.08);
+        const line = rimFn(44, 62, 76);
+        ring(cc, line, 10, 1.0);
+        M.color = X.goldLight; M.push().translate(kit.capPoint(0, line(0) - 6, 1.04)).rotate(70, 0, 0);
+        M.cylinder([0, 0, 0], 0.03 * k, 0.026 * k, 0.012, D.rnd); M.pop();
+        M.color = lift(hat.gem || '#C8302A', 0.3); M.sphere(kit.capPoint(0, line(0) - 6, 1.1), 0.01 * k, 4, 2);
+        if (tp === 'pheasant') {
+          // 雉翎：两根长尾羽，自冠前两侧先向上再向后外方扫开（S 形），黑白相间的羽节，随盔缨骨摆动
+          for (const s of [1, -1]) {
+            const p0 = kit.capPoint(s * 25, line(25) - 10, 1.05);
+            const n = D.det >= 2 ? 9 : D.det >= 1 ? 6 : 4, pts = [];
+            for (let i = 0; i <= n; i++) {
+              const t = i / n, u = 1 - t;
+              const c1 = V.add(p0, [s * 0.1 * k, 0.26 * k, 0.02 * k]), c2 = V.add(p0, [s * 0.34 * k, 0.58 * k, -0.2 * k]), e = V.add(p0, [s * 0.52 * k, 0.66 * k, -0.62 * k]);
+              pts.push([0, 1, 2].map(q => u * u * u * p0[q] + 3 * u * u * t * c1[q] + 3 * u * t * t * c2[q] + t * t * t * e[q]));
+            }
+            feather(kit, pts, 0.022 * k, 0.006 * k, [C3('#F2EEE4'), C3('#3A2E2A'), C3('#E8D8B8')], true, 0.25);
+          }
+        } else {
+          // 新罗金冠：三支「出」字形树枝金片
+          M.color = cc;
+          for (const th of D.det >= 1 ? [-50, 0, 50] : [0]) {
+            const p0 = kit.capPoint(th, line(th) - 10, 1.05);
+            M.push().translate(p0).rotate(-8, th, 0);
+            M.box([0, 0.07 * k, 0], [0.012 * k, 0.14 * k, 0.004]);
+            if (D.det >= 1) for (const y of [0.05, 0.1]) for (const s of [1, -1]) M.box([s * 0.022 * k, y * k, 0], [0.034 * k, 0.008 * k, 0.004]);
+            M.pop();
+          }
         }
+        res.top = null;
       }
-      if (tp === 'goldcrown' && hi >= 0) {
-        for (let i = -1; i <= 1; i++) { const p0 = headAt(Hp, i * 0.55, 0.8, 0.025); tube(gb, [p0, [p0[0], p0[1] + 0.12, p0[2] + 0.01]], { r: 0.007, n: 4, reg: 'gold', col: col(cc), w: B.head }); }
-      }
-      if (tp === 'tallcrown') {
-        const c = [0, apexY(0, 0) - 0.04, HEAD_C[2]];
-        lathe(gb, [[0.08, 0], [0.085, 0.03], [0.06, 0.05], [0.065, 0.08], [0.04, 0.12], [0.042, 0.15], [0.02, 0.2], [0.004, 0.26]], { c, n: lod.ring, reg: 'gold', col: col(cc), w: B.head });
-        res.coversTop = true;
-      }
+      res.crown = tp === 'crown';
     } else if (tp === 'feathers' || tp === 'chief') {
-      headRing(X, Hp, rim(0.6, 0.35), 0.012, 0.012, 'cloth', hat.color || '#b8862a', { rz: 0.5 });
-      const n = tp === 'chief' ? (hi >= 1 ? 9 : 5) : (hi >= 1 ? 6 : 3);
-      const cols = hat.colors || ['#d8a020', '#c03028', '#ece4d4'];
+      kit.capC = kit.headAt(0, 0.02, -0.01); kit.capR = kit.hv(1.09, 1.09, 1.07);
+      const line = rimFn(50, 70, 86);
+      ring(hc || C3('#B8862A'), line, 10, 1.0);
+      const n = tp === 'chief' ? (D.det >= 1 ? 9 : 5) : (D.det >= 1 ? 6 : 3);
+      const cols = (hat.colors || ['#D8A020', '#C03028', '#ECE4D4']).map(c => lift(c, 0.3));
       for (let i = 0; i < n; i++) {
-        const a = lerp(-1.1, 1.1, n > 1 ? i / (n - 1) : 0.5) + PI * (tp === 'chief' ? 0 : 0);
-        const p0 = headAt(Hp, a, 0.6, 0.02), d = headN(p0);
-        const L = (tp === 'chief' ? 0.3 : 0.2) * (1 - 0.3 * Math.abs(a));
-        featherStrip(X, [p0, v3add(p0, [d[0] * 0.04, L * 0.5, d[2] * 0.04 - 0.02]), v3add(p0, [d[0] * 0.09, L, d[2] * 0.06 - 0.06])], 0.03, 0.014, 'feather', cols[i % cols.length], B.head, 3);
+        const a = lerp(-75, 75, n > 1 ? i / (n - 1) : 0.5);
+        const p0 = kit.capPoint(a, line(a) - 6, 1.04), d = V.norm(V.sub(p0, kit.capC));
+        const L = (tp === 'chief' ? 0.3 : 0.2) * (1 - 0.3 * Math.abs(a) / 90) * k;
+        feather(kit, [p0, V.add(p0, [d[0] * 0.04 * k, L * 0.5, d[2] * 0.04 * k - 0.02 * k]), V.add(p0, [d[0] * 0.09 * k, L, d[2] * 0.06 * k - 0.06 * k])], 0.03 * k, 0.012 * k, cols[i % cols.length], false, 0.25);
       }
-    } else if (tp === 'wahelm') {
-      bowl({ phi0: rim(0.3, -0.25), sy: 0.02, reg: 'rivet', col: hat.color || '#3a3c44' });
-      headRing(X, Hp, rim(0.3, -0.25), 0.018, 0.006, 'metal', '#3a3c44');
-      // 衝角（前方鸟喙状脊）
-      const secs = [];
-      if (hi >= 1) { for (let i = 0; i <= 4; i++) { const t = i / 4; const p = headAt(Hp, 0, lerp(0.3, 1.2, t), 0.03); p[2] += 0.035 * (1 - t); p[1] += 0.01 * t; secs.push({ c: p, X: [1, 0, 0], Z: headN(p), rx: 0.006, rz: 0.012, t }); }
-        loft(gb, secs, { n: 4, reg: 'metal', col: col('#3a3c44'), w: B.head }); }
-      for (let j = 0; j < (hi >= 1 ? 3 : 1); j++) panel(gb, (s, t) => { const th = lerp(1.0, TAU - 1.0, s); const p = headAt(Hp, th, -0.2 + 0.02, 0.022 + j * 0.012); const n = headN(p); return [p[0] + n[0] * 0.03 * t, p[1] - j * 0.03 - t * 0.04, p[2] + n[2] * 0.035 * t]; },
-        { nu: Math.max(3, lod.pn), nv: 1, th: 0.004, reg: 'rivet', col: col('#3a3c44'), w: (p, s, t) => [[B.head, 1 - j * 0.15], [B.neck, j * 0.15]] });
-      res.coversTop = true;
-    } else if (tp === 'jeolpung') {
-      headShell(X, Hp, { phi0: rim(0.55, 0.2), off: (th, u) => 0.01 + 0.004 * u, apex: 0.07, reg: 'cloth', col: hat.color || '#c84a2a' });
-      for (const sg of [1, -1]) featherStrip(X, bez(headAt(Hp, sg * 1.3, 0.6, 0.02), [sg * 0.1, 0.3, -0.01], [sg * 0.11, 0.38, -0.03], [sg * 0.1, 0.46, -0.05], 4), 0.025, 0.01, 'feather', '#ffffff', B.head, 4);
-      res.coversTop = true;
-    } else if (tp === 'felt' || tp === 'furhat' || tp === 'pointcap' || tp === 'tallhat' || tp === 'phrygian' || tp === 'tiara' || tp === 'conical' || tp === 'spangen' || tp === 'celthelm') {
-      const cc = hat.color || { felt: '#e0d4b8', furhat: '#5a4a3a', pointcap: '#e8dcc0', tallhat: '#e8dcc0', phrygian: '#9a2a24', tiara: '#2a2a5a', conical: '#8a909a', spangen: '#8a909a', celthelm: BRONZE }[tp];
-      const metalH = tp === 'conical' || tp === 'spangen' || tp === 'celthelm';
-      const ap = { felt: 0.03, furhat: 0.03, pointcap: 0.16, tallhat: 0.13, phrygian: 0.08, tiara: 0.1, conical: 0.12, spangen: 0.08, celthelm: 0.02 }[tp];
-      headShell(X, Hp, { phi0: rim(0.38, -0.12), off: (th, u) => 0.013 + (metalH ? 0.006 : 0.008) * u, apex: ap, tilt: tp === 'phrygian' ? 0.09 : tp === 'pointcap' ? -0.03 : 0, reg: metalH ? 'metal' : 'cloth', col: cc, pw: tp === 'tallhat' ? 0.5 : 0.85 });
-      if (tp === 'furhat' || tp === 'felt') headRing(X, Hp, rim(0.38, -0.12), 0.022, tp === 'furhat' ? 0.024 : 0.012, tp === 'furhat' ? 'fur' : 'cloth', tp === 'furhat' ? '#8a6a48' : shade(cc, -0.2));
-      if (tp === 'tallhat' || tp === 'tiara' || tp === 'conical' || tp === 'spangen') headRing(X, Hp, rim(0.38, -0.12), 0.016, 0.008, 'goldEngr', GOLD);
-      if (tp === 'celthelm') { const top = [0, apexY(0, 0.02), HEAD_C[2]]; ellipsoid(gb, top, [0.015, 0.02, 0.015], { nl: 4, n: 6, reg: 'gold', col: col(BRONZE), w: B.head }); }
+    } else if (tp === 'jeolpung' || tp === 'pointcap' || tp === 'tallhat' || tp === 'phrygian' || tp === 'tiara' || tp === 'conical' || tp === 'spangen' || tp === 'felt' || tp === 'furhat') {
+      const def = { felt: '#E0D4B8', furhat: '#5A4A3A', pointcap: '#E8DCC0', tallhat: '#E8DCC0', phrygian: '#9A2A24', tiara: '#2A2A5A', conical: '#8A909A', spangen: '#8A909A', jeolpung: '#C84A2A' }[tp];
+      const cc = hc || lift(def, 0.22), metalH = tp === 'conical' || tp === 'spangen';
+      const line = rimFn(tp === 'jeolpung' ? 50 : 62, 90, 104);
+      kit.capShell(cc, metalH ? 1.16 : 1.14, line, np);
+      const top = kit.capPoint(0, 0, 1);
+      const ap = { felt: 0.02, furhat: 0.02, pointcap: 0.17, tallhat: 0.13, phrygian: 0.08, tiara: 0.11, conical: 0.12, spangen: 0.09, jeolpung: 0.09 }[tp] * k;
+      M.color = cc;
+      if (tp === 'tallhat' || tp === 'tiara') { M.push().translate(V.add(top, [0, -0.04 * k, 0])); M.lathe([[kit.capR[0] * 0.85, 0], [kit.capR[0] * 0.8, ap * 0.6], [kit.capR[0] * 0.55, ap + 0.04 * k], [0.001, ap + 0.05 * k]], D.rnd + 1, false, false, false); M.pop(); }
+      else if (tp === 'phrygian') { M.curve(V.add(top, [0, -0.03 * k, -0.01 * k]), V.add(top, [0, 0.07 * k, -0.01 * k]), V.add(top, [0, 0.07 * k, 0.07 * k]), kit.capR[0] * 0.75, 0.02 * k, D.det >= 1 ? 3 : 2, D.rnd); }
+      else if (tp === 'pointcap') { M.curve(V.add(top, [0, -0.04 * k, 0]), V.add(top, [0, 0.12 * k, -0.01 * k]), V.add(top, [0, 0.17 * k, -0.07 * k]), kit.capR[0] * 0.78, 0.008 * k, D.det >= 1 ? 3 : 2, D.rnd); }
+      else if (ap > 0.04 * k) { M.push().translate(V.add(top, [0, -0.045 * k, 0])); M.lathe([[kit.capR[0] * 0.82, 0], [0.001, ap + 0.04 * k]], D.rnd + 1, false, false, false); M.pop(); }
+      if (tp === 'felt' || tp === 'furhat') {
+        M.color = tp === 'furhat' ? C3(PALF.fur) : shT(cc, 0.8);
+        const keep = M.jitterAll; if (tp === 'furhat') M.jitterAll = true;
+        M.shell(kit.capC, V.mul(kit.capR, tp === 'furhat' ? 1.1 : 1.05), -180, 180, D.hs, th => line(th) - 16, th => line(th) + 2, 1);
+        M.jitterAll = keep;
+      }
+      if (tp === 'tallhat' || tp === 'tiara' || tp === 'conical' || tp === 'spangen') ring(X.gold, line, 6, 1.03);
+      if (tp === 'spangen' && D.det >= 1) {
+        M.color = X.gold;
+        for (const th of [0, 90, 180, 270]) { const a = kit.capPoint(th, line(th) - 4, 1.03), b = V.add(top, [0, ap * 0.9, 0]); M.segment(a, b, 0.006 * k, 0.005 * k, 4); }
+        M.color = cc; M.box(V.add(kit.capPoint(0, line(0) + 4, 1.06), [0, -0.035 * k, 0.004]), [0.014 * k, 0.07 * k, 0.008 * k]);
+      }
+      if (tp === 'jeolpung') for (const s of [1, -1]) { const p0 = kit.capPoint(s * 80, 40, 1.02); feather(kit, [p0, V.add(p0, [s * 0.02 * k, 0.1 * k, -0.01 * k]), V.add(p0, [s * 0.03 * k, 0.2 * k, -0.04 * k])], 0.025 * k, 0.01 * k, C3('#F4F2EE'), false, 0.2); }
       if (tp === 'felt' || tp === 'tiara' || tp === 'conical' || tp === 'spangen') {
-        // 护耳 / 护颈垂片（锁子 / 毡）
-        const reg = tp === 'felt' ? 'cloth' : tp === 'tiara' ? 'cloth' : 'mail';
-        panel(gb, (s, t) => { const th = lerp(0.9, TAU - 0.9, s); const p = headAt(Hp, th, rim(0.38, -0.12)(th) + 0.02, 0.018); const n = headN(p); return [p[0] + n[0] * 0.035 * t, p[1] - t * 0.11, p[2] + n[2] * 0.04 * t]; },
-          { nu: Math.max(3, lod.pn + 1), nv: Math.max(1, lod.pv - 6), th: 0.006, reg, col: col(reg === 'mail' ? '#8a909a' : cc), w: (p, s, t) => [[B.head, 1 - 0.4 * t], [B.neck, 0.4 * t]] });
+        // 护耳 / 护颈垂片（毡 / 锁子）
+        const c2 = tp === 'conical' || tp === 'spangen' ? C3('#7A808A') : cc;
+        const yA = kit.capC[1] + kit.capR[1] * Math.cos(line(180) * D2R);
+        M.panel([0, 0, kit.capC[2]], 75, 285, Math.max(3, D.pan + 2), [[kit.capR[0] * 1.0, yA + 0.01 * k], [kit.capR[0] * 1.14, yA - 0.1 * k]], kit.capR[2] / kit.capR[0], c2, D.det >= 1 ? X.lining : null, 0.006);
+        res.ears = true; res.back = true;
       }
-      if (tp === 'spangen' && hi >= 1) tube(gb, [headAt(Hp, 0, 0.35, 0.02), headAt(Hp, 0, 0.0, 0.035)], { r: 0.006, n: 4, reg: 'metal', col: col('#8a909a'), w: B.head });
-      if (tp === 'tiara' && hi >= 1) {
-        // 第三版修订：金珠钉在帽壳表面（与 headShell 同一套偏移与拔顶），不再悬在盔后一列
-        const p0 = rim(0.38, -0.12)(PI);
-        for (let i = 0; i < 5; i++) {
-          const ph = lerp(Math.max(p0 + 0.08, 0.5), 1.3, i / 4), u = Math.pow(clamp01((ph - p0) / (PI / 2 - 0.001 - p0)), 1 / 0.85);
-          const p = headAt(Hp, PI, ph, 0.013 + 0.008 * u + 0.006);
-          p[1] += ap * Math.pow(u, 3);
-          ellipsoid(gb, p, [0.006, 0.012, 0.012], { nl: 3, n: 5, reg: 'gold', col: col(GOLD), w: B.head });
-        }
-      }
-      res.coversTop = true;
+      res.top = line;
     } else if (tp === 'keffiyeh') {
-      const cc = hat.color || '#ece6da';
-      headShell(X, Hp, { phi0: rim(0.5, -0.4), off: (th, u) => 0.012 + 0.006 * u, reg: 'cloth', col: cc });
-      panel(gb, (s, t) => { const th = lerp(1.0, TAU - 1.0, s); const p = headAt(Hp, th, rim(0.5, -0.4)(th) + 0.04, 0.016); const n = headN(p); return [p[0] + n[0] * 0.06 * t, p[1] - t * 0.18, p[2] + n[2] * 0.06 * t - 0.02 * t]; },
-        { nu: Math.max(3, lod.pn + 1), nv: Math.max(2, lod.pv - 5), th: 0.006, reg: 'cloth', col: col(cc), w: (p, s, t) => [[B.head, 1 - 0.6 * t], [B.neck, 0.6 * t]] });
-      headRing(X, Hp, rim(0.75, 0.45), 0.018, 0.009, 'cloth', '#1c1a1e');
-      if (hi >= 1) headRing(X, Hp, rim(0.66, 0.36), 0.019, 0.008, 'cloth', '#1c1a1e');
-      res.coversTop = true; res.coversBack = true;
-    } else if (tp === 'laurel') {
-      const n = hi >= 1 ? 18 : 8;
-      for (let i = 0; i < n; i++) {
-        const th = lerp(-PI * 0.88, PI * 0.88, i / (n - 1)), p = headAt(Hp, th, lerp(0.72, 0.5, Math.abs(th) / PI), 0.018);
-        ellipsoid(gb, p, [0.007, 0.018, 0.006], { nl: 3, n: 5, reg: 'gold', col: col('#d8b850'), w: B.head, axes: axesFromY(v3norm([Math.cos(th) * 0.4, 0.8, -Math.sin(th) * 0.4])) });
+      const cc = hc || C3('#ECE6DA');
+      const line = rimFn(56, 98, 112);
+      kit.capShell(cc, 1.12, line, np);
+      const yA = kit.capC[1] + kit.capR[1] * Math.cos(100 * D2R);
+      M.panel([0, 0, kit.capC[2]], 62, 298, Math.max(4, D.pan + 3), [[kit.capR[0] * 1.02, yA + 0.02 * k], [kit.capR[0] * 1.3, yA - 0.12 * k], [kit.capR[0] * 1.55, yA - 0.2 * k]], kit.capR[2] / kit.capR[0], cc, D.det >= 1 ? shT(cc, 0.8) : null, 0.006);
+      ring(C3('#2A262A'), th => line(th) - 22, 6, 1.05);
+      if (D.det >= 1) ring(C3('#2A262A'), th => line(th) - 30, 5, 1.05);
+      res.top = line; res.back = true; res.ears = true;
+    } else if (tp === 'jinze') {
+      // 巾帻（试点关羽）：高裹露出额头、深色帻边、脑后一团结与两条短飘带、额前金托翠玉
+      const cc = hc || X.cloth, band = shT(cc, 0.75);
+      const line = th => { const a = Math.abs(th); if (a < 55) return lerp(48, 56, a / 55); if (a < 110) return lerp(56, 84, (a - 55) / 55); return lerp(84, 106, (a - 110) / 70); };
+      kit.capShell(cc, 1.1, line, np);
+      ring(band, line, 14, 1.03);
+      const bun = kit.capPoint(180, 40, 1.02), bunR = kit.hv(0.46, 0.42, 0.44);
+      M.color = cc; M.sphere(bun, bunR, D.det >= 1 ? 6 : 5, D.det >= 1 ? 3 : 2, false);
+      if (D.det >= 1) {
+        M.color = band; M.band(V.add(bun, kit.hv(0, -0.08, 0.04)), bunR[0] * 0.86, bunR[0] * 0.88, 0, 0.12 * kit.Ry, 7, bunR[2] / bunR[0]);
+        kit.bone('hair1'); M.color = cc;
+        const v0 = M.vertexCount;
+        for (const s of [1, -1]) {
+          const a = V.add(bun, kit.hv(s * 0.2, -0.24, -0.26)), m = V.add(a, [s * 0.04 * k, -0.06 * k, -0.03 * k]), t = V.add(a, [s * 0.09 * k, -0.12 * k, -0.026 * k]);
+          M.strip(a, m, 0.055 * k, 0.036 * k, [s * 0.3, 0, -1], 0.009);
+          M.strip(m, t, 0.036 * k, 0.016 * k, [s * 0.95, 0.1, -0.45], 0.009);
+        }
+        const ribTop = bun[1] - 0.24 * kit.Ry;
+        M.windBy(v0, p => 0.5 * clamp01((ribTop - p[1]) / (0.12 * k)));
+        kit.bone('head');
       }
-    } else if (tp === 'shaman') {
-      headRing(X, Hp, rim(0.62, 0.3), 0.014, 0.012, 'cloth', '#e8dcc0', { rz: 0.5 });
-      const c = headAt(Hp, 0, 0.75, 0.03), AX = axesFromY(v3norm([0, 0.3, 1])), r = 0.04, start = gb.nv;
-      lathe(gb, [[r, -0.006, null, 0], [r, 0, null, 0.1], [r * 0.8, 0.006, null, 0.4], [0, 0.008, null, 1]], { c, axes: AX, n: lod.ring, reg: 'mirror', col: col(BRONZE), w: B.head });
-      fixDiscUV(gb, REG('mirror'), c, AX, r, start);
+      const brow = kit.capPoint(0, line(0) - 6, 1.06);
+      M.color = X.goldLight; M.sphere(brow, [0.21 * R, 0.17 * R, 0.1 * R], D.det >= 1 ? 6 : 4, D.det >= 1 ? 3 : 2, false);
+      if (D.det >= 1) { M.color = C3(PALF.jade); M.emission = 0.15; M.sphere(V.add(brow, [0, 0, 0.06 * R]), [0.13 * R, 0.1 * R, 0.06 * R], 5, 2, false); M.emission = 0; }
+      res.top = line; res.back = false; res.wrapBun = true;
+    } else if (tp === 'laurel') {
+      kit.capC = kit.headAt(0, 0.02, -0.01); kit.capR = kit.hv(1.1, 1.1, 1.08);
+      const n = D.det >= 1 ? 16 : 8;
+      M.color = C3('#8AA850');
+      for (let i = 0; i < n; i++) {
+        const th = lerp(-150, 150, i / (n - 1)), p = kit.capPoint(th, lerp(52, 66, Math.abs(th) / 150), 1.03);
+        M.color = i % 2 ? C3('#8AA850') : C3('#C8B850');
+        M.push().translate(p).rotate(0, th, i % 2 ? 30 : -30);
+        M.sphere([0, 0, 0], [0.008 * k, 0.018 * k, 0.006 * k], 4, 2);
+        M.pop();
+      }
     }
+    kit.mark('headgear');
     return res;
   }
 
-  // ------------------------------------------------------------- 头发 --
-  function buildHair(X, Hp, cov) {
-    const { gb, lod, look } = X;
-    const hs = (look.hair && look.hair.style) || 'topknot';
-    if (hs === 'bald') return;
-    const hc = look.hair.color || '#1c1816', vol = (look.hair.vol || 1);
-    const recede = look.hair.recede || 0;
-    // 发壳（被盔帽完全盖住时省略）
-    if (!cov.coversTop) {
-      const thick = { short: 0.006, bob: 0.012, curly: 0.014, bushy: 0.02, wild: 0.024, spiky: 0.012, kunfa: 0.004, romanf: 0.012, tightcurl: 0.007, ringlets: 0.014 }[hs] || 0.01;
-      headShell(X, Hp, {
-        phi0: th => hairline(th, hs, recede), reg: 'hair', col: hc, pw: 0.9,
-        off: (th, u, ph) => (0.003 + thick * vol * sstep(0, 0.25, ph - hairline(th, hs, recede))) * (hs === 'curly' || hs === 'wild' || hs === 'ringlets' ? 1 + 0.3 * Math.sin(th * 7) * Math.sin(ph * 9) : hs === 'tightcurl' ? 1 + 0.25 * Math.sin(th * 13) * Math.sin(ph * 15) : 1),
-      });
+  // ----------------------------------------------------------- 头发 --
+  function hairLP(kit, X, cov) {
+    const M = kit.M, look = kit.look, hs = (look.hair && look.hair.style) || 'topknot', D = kit.D, k = kit.k, R = kit.R, V = kit.V;
+    const hc = X.hair, fem = look.sex === 'f';
+    const recede = (look.hair && look.hair.recede) || 0;
+    kit.bone('head');
+    if (hs === 'bald') {
+      if (look.hair && look.hair.tuft) { M.color = hc; M.sphere(kit.headAt(0, 0.95, -0.35), kit.hv(0.18, 0.12, 0.18), 5, 2); }
+      kit.mark('hair'); return;
     }
-    const top = headAt(Hp, PI, 1.25, 0.01);
+    const front = (hs === 'kunfa' ? 80 : 58) + recede * 14;
+    const thick = { short: 1.06, bob: 1.09, curly: 1.11, bushy: 1.13, wild: 1.13, spiky: 1.08, kunfa: 1.05, romanf: 1.08, tightcurl: 1.065, ringlets: 1.1 }[hs] || 1.075;
+    const back = { long: 140, wahair: 140, bob: 132, wild: 136, bushy: 132, ringlets: 132 }[hs] || 124;
+    // 盖住头顶的冠帽：头发只在帽沿下露一圈（鬓角、耳上、后颈）
+    const line = cov.top ? (th => Math.max(cov.top(th) + 4, 60)) : null;
+    const hl = th => { const a = Math.abs(th); if (a < 55) return lerp(front, front + 10, a / 55); if (a < 110) return lerp(front + 10, 100, (a - 55) / 55); return lerp(100, back, (a - 110) / 70); };
+    if (line) {
+      // 帽下的头发：从帽沿内略上 到 发际线
+      const lo = th => Math.max(line(th) - 14, 8);
+      const hi = th => Math.max(hl(th), line(th) + 3);
+      kit.hairCap(hc, front, 100, back, 1.065, hi, lo, D.det >= 1 ? 2 : 1);
+    } else {
+      kit.hairCap(hc, front, 100, back, thick, hl, null, D.det >= 2 ? 4 : D.det >= 1 ? 3 : 2);
+    }
+    // 鬓角：贴在脸侧的扁片
+    if (D.det >= 1 && hs !== 'kunfa' && !fem) for (const s of [1, -1]) { M.color = hc; M.strip(kit.facePoint(s * 0.9, 0.34, -0.045), kit.facePoint(s * 0.88, -0.2, -0.035), 0.24 * R, 0.08 * R, [s, 0, 0.3], 0.008); }
     const bunAt = (p, r, tie) => {
-      ellipsoid(gb, p, r, { nl: Math.max(4, lod.hand[0]), n: Math.max(6, lod.hand[1]), reg: 'hair', col: col(hc), w: B.head });
-      if (X.hi >= 1 && tie !== null) headRingSmall(X, p, r[0] * 1.02, r[1] * -0.55, tie || '#c03028');
+      M.color = hc; M.sphere(p, r, D.sph[0], D.sph[1]);
+      if (tie && D.det >= 1) { M.color = tie; M.band(V.add(p, [0, -r[1] * 0.5, 0]), r[0] * 0.86, r[0] * 0.92, 0, r[1] * 0.4, Math.max(5, D.sph[0]), r[2] / r[0]); }
     };
+    const tie = look.hair && look.hair.tie ? lift(look.hair.tie, 0.25) : (look.kind === 'soldier' && look.culture === 'han' ? C3('#C2402E') : null);
     if (hs === 'topknot' || hs === 'highbun' || hs === 'mallet') {
-      if (cov.coversTop && hs === 'topknot' && !cov.showBun) return;
-      const p = hs === 'mallet' ? headAt(Hp, PI, 0.75, 0.04) : headAt(Hp, PI, cov.showBun ? 1.47 : 1.38, cov.showBun ? 0.034 : 0.03);
-      if (hs !== 'mallet') p[1] += hs === 'highbun' ? 0.05 : cov.showBun ? 0.012 : 0.025;
-      // 第三版修订：露出冠帽的发髻贴着帽顶（不再悬空），并有一小段发根连到头顶
-      if (cov.showBun && hs !== 'mallet') tube(gb, [headAt(Hp, PI, 1.47, 0.012), p], { r: 0.022, n: Math.max(6, lod.hand[1]), reg: 'hair', col: col(hc), w: B.head });
-      const crown = look.hat && look.hat.type === 'crown';
-      bunAt(p, hs === 'mallet' ? [0.045, 0.042, 0.042] : [0.036, 0.032, 0.036], crown ? null : look.hair.tie);
-      if (crown) {
-        // 束发冠：包住发髻的金冠 + 横簪
-        lathe(gb, [[0.03, -0.022], [0.042, -0.012], [0.044, 0.012], [0.036, 0.03], [0.03, 0.036]].map((q, i) => [q[0], q[1], null, i / 4]), { c: p, n: Math.max(8, X.lod.ring), reg: 'goldEngr', col: col((look.hat && look.hat.color) || GOLD), w: B.head, sz: 0.85 });
-        if (look.hat.gem) ellipsoid(gb, [p[0], p[1] + 0.0, p[2] + 0.04], [0.008, 0.008, 0.005], { nl: 3, n: 5, reg: 'white', col: col(look.hat.gem), w: B.head });
+      if (!(cov.top && !cov.bun && !cov.crown && hs === 'topknot')) {
+        let p = hs === 'mallet' ? kit.headAt(0, 0.35, -1.0) : kit.headAt(0, hs === 'highbun' ? 1.18 : 1.02, -0.42);
+        if (cov.bun) p = kit.headAt(0, 1.12, -0.38);
+        const r = hs === 'mallet' ? kit.hv(0.5, 0.42, 0.46) : hs === 'highbun' ? kit.hv(0.4, 0.5, 0.4) : kit.hv(0.38, 0.32, 0.36);
+        bunAt(p, r, cov.crown ? null : tie);
+        if (cov.crown) {
+          // 束发冠：包住发髻的金冠 + 横簪
+          M.color = look.hat && look.hat.color ? lift(look.hat.color, 0.4) : X.gold;
+          M.push().translate(p);
+          M.lathe([[r[0] * 1.05, -r[1] * 0.7], [r[0] * 1.2, -r[1] * 0.2], [r[0] * 1.15, r[1] * 0.5], [r[0] * 0.9, r[1] * 0.9]], Math.max(6, D.rnd), false, true, false);
+          M.pop();
+          if (look.hat.gem && D.det >= 1) { M.color = lift(look.hat.gem, 0.3); M.sphere(V.add(p, [0, 0, r[2] * 1.2]), 0.012 * k, 4, 2); }
+        }
+        if (D.det >= 1 && (hs === 'topknot' || cov.crown)) { M.color = look.hair && look.hair.pin ? lift(look.hair.pin, 0.35) : X.gold; M.segment(V.add(p, [-r[0] * (cov.crown ? 2 : 1.6), 0, 0]), V.add(p, [r[0] * (cov.crown ? 2 : 1.6), 0, 0]), 0.005 * k, 0.005 * k, 4); }
       }
-      if (X.hi >= 1 && (hs === 'topknot' || crown)) tube(gb, [[p[0] - (crown ? 0.075 : 0.05), p[1] - 0.004, p[2]], [p[0] + (crown ? 0.075 : 0.05), p[1] - 0.004, p[2]]], { r: crown ? 0.005 : 0.0035, n: 4, reg: 'gold', col: col(look.hair.pin || GOLD), w: B.head });
     } else if (hs === 'bun' || hs === 'romanf' || hs === 'twinbun') {
-      if (hs === 'twinbun') for (const sg of [1, -1]) bunAt(headAt(Hp, sg * 1.1, 1.1, 0.03), [0.03, 0.03, 0.03], look.hair.tie);
-      else bunAt(headAt(Hp, PI, 0.55, 0.045), [0.042, 0.038, 0.035], look.hair.tie);
+      if (hs === 'twinbun') for (const s of [1, -1]) bunAt(kit.headAt(s * 0.62, 0.85, -0.25), kit.hv(0.3, 0.3, 0.3), tie);
+      else if (!cov.back) bunAt(kit.headAt(0, 0.3, -1.02), kit.hv(0.42, 0.36, 0.34), tie);
     } else if (hs === 'mizura') {
-      for (const sg of [1, -1]) {
-        const c = headAt(Hp, sg * 1.5, -0.25, 0.025);
-        tube(gb, bez([c[0], c[1] + 0.06, c[2] - 0.005], [c[0] + sg * 0.05, c[1] + 0.04, c[2]], [c[0] + sg * 0.05, c[1] - 0.06, c[2]], [c[0] + sg * 0.005, c[1] - 0.05, c[2] - 0.005], X.hi >= 1 ? 6 : 3), { r: 0.014, n: X.hi >= 1 ? 6 : 4, reg: 'hair', col: col(hc), w: B.head });
-        if (X.hi >= 1) tube(gb, [[c[0] + sg * 0.03, c[1] - 0.004, c[2] - 0.01], [c[0] + sg * 0.03, c[1] + 0.012, c[2] - 0.01]], { r: 0.016, n: 6, reg: 'cloth', col: col('#e8dcc0'), w: B.head });
+      // 美豆良：两侧耳旁绾成的环
+      for (const s of [1, -1]) {
+        const c = kit.headAt(s * 1.02, -0.3, -0.12);
+        M.color = hc;
+        M.curve(V.add(c, [0, 0.07 * k, 0]), V.add(c, [s * 0.06 * k, 0.0, 0.01]), V.add(c, [0, -0.07 * k, 0]), 0.016 * k, 0.014 * k, D.det >= 1 ? 3 : 2, 5);
+        if (D.det >= 1) { M.color = C3('#E8DCC0'); M.band(V.add(c, [s * 0.025 * k, 0, 0]), 0.018 * k, 0.018 * k, -0.01 * k, 0.01 * k, 5); }
       }
     } else if (hs === 'suebian') {
-      const c = headAt(Hp, -1.9, 0.5, 0.04);
-      ellipsoid(gb, c, [0.03, 0.036, 0.034], { nl: X.hi === 0 ? 3 : 5, n: X.hi === 0 ? 5 : 7, reg: 'hair', col: col(hc), w: B.head });
-      tube(gb, bez(c, [c[0] - 0.02, c[1] - 0.04, c[2] - 0.02], [c[0] - 0.02, c[1] - 0.09, c[2] - 0.04], [c[0] - 0.01, c[1] - 0.14, c[2] - 0.05], X.hi === 0 ? 2 : 5), { r: s => 0.02 * (1 - s) + 0.006, n: X.hi === 0 ? 4 : 6, reg: 'hair', col: col(hc), w: (s) => [[B.head, 1 - s * 0.5], [B.hair1, s * 0.5]] });
+      const c = kit.headAt(-0.72, 0.62, -0.45);
+      M.color = hc; M.sphere(c, kit.hv(0.32, 0.36, 0.34), D.sph[0], D.sph[1]);
+      if (D.det >= 1) M.curve(c, V.add(c, [-0.02 * k, -0.06 * k, -0.02 * k]), V.add(c, [-0.01 * k, -0.13 * k, -0.04 * k]), 0.018 * k, 0.006 * k, 2, 4);
+    } else if (hs === 'spiky' || hs === 'wild' || hs === 'curly' || hs === 'tightcurl' || hs === 'bushy') {
+      // 毛躁 / 卷发：发壳上一圈小团或尖簇
+      if (!cov.top) {
+        const n = D.det >= 2 ? 12 : D.det >= 1 ? 8 : 4;
+        for (let i = 0; i < n; i++) {
+          const th = (i / n) * 360 - 180 + 15, ph = 30 + (i % 3) * 22;
+          const p = kit.hairPoint(th, ph, 1.0);
+          M.color = kit.P.shade(hc, 0.92 + 0.12 * ((i * 7) % 3) / 2);
+          if (hs === 'spiky' || hs === 'wild') M.spike(p, V.norm(V.sub(p, kit.hairC)), 0.035 * k, (hs === 'wild' ? 0.07 : 0.05) * k, 4);
+          else M.sphere(p, (hs === 'tightcurl' ? 0.024 : 0.032) * k, 4, 2);
+        }
+      }
     }
-    // 长发 / 辫 / 髡发两鬓
-    if (hs === 'long' || hs === 'wahair' || hs === 'wild' || hs === 'bushy' || hs === 'bob' || hs === 'romanf' || hs === 'ringlets') {
-      const len = { long: 0.28, wahair: 0.36, wild: 0.18, bushy: 0.12, bob: 0.07, romanf: 0.05, ringlets: 0.13 }[hs] * (look.sex === 'f' ? 1.2 : 1);
-      if (!(cov.coversBack && len < 0.15)) panel(gb, (s, t) => {
-        const th = lerp(1.6, TAU - 1.6, s);
-        const p = headAt(Hp, th, lerp(0.2, -0.45, t), 0.012 + 0.012 * vol);
-        const n = headN(p);
-        const yy = t < 0.5 ? p[1] : lerp(p[1], p[1] - len, (t - 0.5) * 2);
-        return [p[0] * (1 + 0.15 * t) + n[0] * 0.01 * t, t < 0.5 ? p[1] : yy, p[2] + n[2] * 0.02 * t - (t > 0.5 ? (t - 0.5) * 0.06 : 0)];
-      }, { nu: Math.max(3, lod.pn + 1), nv: Math.max(2, lod.pv - 4), th: 0.008, reg: 'hair', col: col(hc), w: (p, s, t) => wT(t, [[B.head, 0.3], [B.hair1, 0.9]]), uv: (s, t) => [s, 1 - t] });
+    // 长发 / 披发 / 辫 / 髡发的鬓辫：后脑垂下（下部随头发骨摆动）
+    if (hs === 'long' || hs === 'wahair' || hs === 'wild' || hs === 'bushy' || hs === 'bob' || hs === 'ringlets' || (fem && (hs === 'bun' || hs === 'topknot'))) {
+      const len = ({ long: 0.3, wahair: 0.42, wild: 0.2, bushy: 0.14, bob: 0.08, ringlets: 0.16, bun: 0.06, topknot: 0.06 }[hs] || 0.1) * (fem ? 1.25 : 1) * k;
+      if (!(cov.back && len < 0.18 * k)) {
+        const v0 = M.vertexCount, y0 = kit.headCY - 0.1 * kit.Ry;
+        const sp = D.det >= 1 ? 5 : 3, pts = [];
+        M.color = hc;
+        const prof = [[kit.Rx * 1.02, y0 + 0.05 * k], [kit.Rx * 1.12, y0 - len * 0.45], [kit.Rx * (hs === 'bob' ? 1.05 : 1.2), y0 - len]];
+        M.panel([0, 0, kit.headC[2] - 0.02 * k], 105, 255, sp, prof, kit.Rz / kit.Rx * 1.05, hc, kit.P.shade(hc, 0.7), 0.012);
+        void pts;
+        M.boneBy(v0, p => (p[1] > y0 - 0.04 * k ? B.head : B.hair1));
+        M.windBy(v0, p => 0.25 * clamp01((y0 - p[1]) / len));
+        if (hs === 'ringlets' && D.det >= 1) for (let i = 0; i < 5; i++) { const th = lerp(120, 240, i / 4) * D2R; M.color = kit.P.shade(hc, 0.9); M.segment([Math.sin(th) * kit.Rx * 1.15, y0 - 0.02, kit.headC[2] + Math.cos(th) * kit.Rz * 1.1], [Math.sin(th) * kit.Rx * 1.2, y0 - len - 0.03 * k, kit.headC[2] + Math.cos(th) * kit.Rz * 1.15], 0.014 * k, 0.01 * k, 4); }
+      }
     }
     if (hs === 'braids' || hs === 'koreanbraid' || hs === 'kunfa') {
-      for (const sg of (hs === 'koreanbraid' ? [0] : [1, -1])) {
-        const p0 = hs === 'kunfa' ? headAt(Hp, sg * 1.35, 0.2, 0.02) : headAt(Hp, sg * 2.2, -0.1, 0.02);
-        const L = hs === 'kunfa' ? 0.14 : 0.3;
-        const pts = bez(p0, [p0[0] + sg * 0.02, p0[1] - L * 0.3, p0[2] - 0.02], [p0[0] + sg * 0.03, p0[1] - L * 0.7, p0[2] - 0.0], [p0[0] + sg * 0.03, p0[1] - L, p0[2] + 0.02], X.hi === 0 ? 2 : 6);
-        tube(gb, pts, { r: s => (0.012 - 0.004 * s) * (X.hi === 0 ? 1.1 : 1 + 0.25 * Math.sin(s * 40)), n: X.hi === 0 ? 4 : 6, reg: 'hair', col: col(hc), w: s => wT(s, [[B.head, 0.2], [B.hair1, 1]]) });
+      for (const s of hs === 'koreanbraid' ? [0] : [1, -1]) {
+        const p0 = hs === 'kunfa' ? kit.headAt(s * 0.95, -0.05, 0.05) : hs === 'koreanbraid' ? kit.headAt(0, -0.2, -1.0) : kit.headAt(s * 0.75, -0.3, -0.75);
+        const L = (hs === 'kunfa' ? 0.15 : 0.32) * k;
+        const v0 = M.vertexCount; M.color = hc;
+        const n = D.det >= 1 ? 4 : 1;
+        let prev = p0;
+        for (let i = 1; i <= n; i++) {
+          const t = i / n, p = V.add(p0, [s * 0.02 * k * t, -L * t, (hs === 'kunfa' ? 0.01 : -0.03) * k * t]);
+          kit.seg(prev, p, 0.016 * k * (1 - 0.3 * (t - 1 / n)), 0.016 * k * (1 - 0.3 * t), D.det >= 1 ? 5 : 4, D.det >= 1 && i === 1, D.det >= 1 || i === n);
+          prev = p;
+        }
+        if (D.det >= 1) { M.color = tie || C3(PALF.red); M.sphere(prev, 0.012 * k, 4, 2); }
+        M.boneBy(v0, p => (p[1] > p0[1] - 0.06 * k ? B.head : B.hair1));
+        M.windBy(v0, p => 0.25 * clamp01((p0[1] - p[1]) / L));
       }
     }
-  }
-  function headRingSmall(X, c, r, dy, cc) {
-    const pts = [];
-    for (let i = 0; i <= 10; i++) { const a = i / 10 * TAU; pts.push([c[0] + Math.sin(a) * r, c[1] + dy, c[2] + Math.cos(a) * r]); }
-    tube(X.gb, pts, { r: 0.004, n: 4, reg: 'cloth', col: col(cc), w: B.head });
+    // 头饰：花（帽沿 / 发上）
+    if ((look.acc || []).includes('flower') && D.det >= 1) { M.color = C3('#F2B8C6'); M.sphere(kit.headAt(0.85, 0.55, -0.1), [0.03 * k, 0.03 * k, 0.012 * k], 5, 2); M.color = C3('#F4D35E'); M.sphere(kit.headAt(0.9, 0.55, -0.08), 0.01 * k, 4, 2); }
+    kit.mark('hair');
   }
 
-  // ------------------------------------------------------------- 胡须 --
-  function buildBeard(X, Hp) {
-    const { gb, lod, look } = X;
-    const st = (look.beard && look.beard.style) || 'none';
-    const bc = look.beard.color || look.hair.color || '#1c1816', len = look.beard.len || 1;
-    const ms = (look.mus && look.mus.style) || 'none';
+  // ----------------------------------------------------------- 胡须 --
+  function beardLP(kit, X) {
+    const M = kit.M, look = kit.look, D = kit.D, k = kit.k, R = kit.R, V = kit.V, J = kit.J, P = kit.P;
     if (look.sex === 'f') return;
-    // 下颌须壳：θ ∈ [−w, w]，φ 从脸颊 / 下唇下方 到下巴之下
-    const shell = (w, thick, extra, bristle) => {
-      const topPhi = th => { const a = Math.abs(th) / w; return lerp(FEAT.mouthP - 0.13, -0.12, sstep(0.25, 1, a)); };
-      panel(gb, (s, t) => {
-        const th = lerp(-w, w, s), ph = lerp(topPhi(th), -1.48, t);
-        const p = headPoint(th, ph, Hp), n = headN(p);
-        const edge = Math.min(sstep(0, 0.25, t), sstep(0, 0.12, Math.min(s, 1 - s)));
-        let d = 0.002 + thick * edge;
-        if (bristle) d *= 1 + 0.45 * Math.sin(th * 13) * Math.sin(ph * 11);
-        const q = v3madd(p, n, d);
-        q[1] -= extra * Math.pow(t, 2) * gauss(th, 0, 0.9);
-        q[2] += extra * 0.4 * Math.pow(t, 2) * gauss(th, 0, 0.9);
-        return q;
-      }, { nu: X.hi === 0 ? 3 : Math.max(3, lod.pn + 2), nv: Math.max(2, lod.pv - 4), th: 0.004, reg: 'hair', col: col(bc), colB: col(shade(bc, -0.3)), w: B.head, uv: (s, t) => [s, 1 - t] });
-    };
-    // 垂须：自下巴垂下的锥形（美髯 / 长须 / 分叉）
-    const hang = (L, w0, fork, curl) => {
-      const c = headPoint(0, -1.05, Hp);
-      const N = X.hi >= 2 ? 10 : X.hi >= 1 ? 5 : 3;
-      for (const f of (fork ? [-1, 1] : [0])) {
-        const pts = [];
-        for (let i = 0; i <= N; i++) { const t = i / N; pts.push([c[0] + f * 0.018 * t, c[1] + 0.01 - L * t, c[2] + 0.012 + 0.03 * Math.sin(t * 2.4) + (curl ? 0.01 * Math.sin(t * 12) : 0)]); }
-        tube(gb, pts, { r: s => (w0 * Math.sin(PI * Math.min(1, 0.25 + s * 0.85)) * (1 - s * 0.6) + 0.002) * (fork ? 0.7 : 1), rz: 0.55, n: Math.max(5, lod.tube), reg: 'hair', col: col(bc), up: [0, 0, 1],
-          w: s => (L > 0.2 ? wT(s, [[B.head, 0.25], [B.neck, 0.7]]) : B.head) });
+    const st = (look.beard && look.beard.style) || 'none', ms = (look.mus && look.mus.style) || 'none';
+    const len = clamp((look.beard && look.beard.len) || 1, 0.6, 1.6);
+    const bc = X.beard, top = P.shade(bc, 1.25);
+    kit.bone('head');
+    const shell = (th, ph0, ph1, c, puff) => { M.color = c; M.shell(kit.headAt(0, -0.33, 0.02), kit.hv(1.03 * (puff || 1), 0.86 * (puff || 1), 1.0 * (puff || 1)), -th, th, D.det >= 1 ? 8 : 5, ph0, ph1, D.det >= 1 ? 2 : 1); };
+    const chestFront = kit.chestR * kit.depthK + 0.045 * k;
+    // 一绺须：五边的锥形放样，尖端前卷，上三分之一随头、其余随胸
+    const lock = (root, tip, w0, seed, curl) => {
+      const ctrl = [(root[0] + tip[0]) / 2, lerp(root[1], tip[1], 0.42), Math.max(root[2], tip[2]) + 0.035 * k];
+      const bez = t => { const u = 1 - t; return [u * u * root[0] + 2 * u * t * ctrl[0] + t * t * tip[0], u * u * root[1] + 2 * u * t * ctrl[1] + t * t * tip[1], u * u * root[2] + 2 * u * t * ctrl[2] + t * t * tip[2] + 0.035 * k * t * t * t]; };
+      const N = D.det >= 2 ? 4 : 2, rings = [], sides = D.det >= 1 ? 5 : 4;
+      for (let i = 0; i <= N; i++) {
+        const t = i / N, p = bez(t), q = bez(Math.min(1, t + 0.02)), pp = bez(Math.max(0, t - 0.02));
+        const T = V.norm(V.sub(q, pp)), Xa = V.norm(V.cross(T, [0, 0, 1])), U = V.cross(Xa, T);
+        const r = w0 * Math.pow(1 - t, 0.75) * (i === 0 ? 1 : 1 + 0.08 * Math.sin(seed + i * 1.7)) + (i === N ? 0.002 : 0);
+        const ring = [];
+        for (let j = 0; j < sides; j++) { const a = j * TAU / sides + PI / 2; ring.push(V.add(p, V.add(V.mul(Xa, Math.cos(a) * r), V.mul(U, Math.sin(a) * r * 0.6)))); }
+        rings.push(ring);
       }
-    };
-    // 簇：自下颌向外下方伸出的尖锥（虬髯 / 满腮胡的蓬松轮廓）
-    const tufts = (n, L, r0, spread) => {
-      for (let i = 0; i < n; i++) {
-        const a = lerp(-spread, spread, n > 1 ? i / (n - 1) : 0.5), ph = lerp(-0.95, -1.35, Math.abs(a) / Math.max(spread, 1e-3));
-        const p = headPoint(a, ph, Hp), nn = headN(p), dir = v3norm([nn[0] * 0.9, -0.75 - 0.2 * Math.cos(a * 2), nn[2] * 0.7]);
-        const Ln = L * (1 - 0.25 * Math.abs(a) / Math.max(spread, 1e-3)) * (0.85 + 0.3 * ((i * 0.618) % 1));
-        tube(gb, [v3madd(p, nn, -0.004), v3madd(p, dir, Ln * 0.5), v3madd(p, dir, Ln)], { r: q => r0 * (1 - q) + 0.0012, rz: 0.7, n: X.hi >= 2 ? 5 : 4, reg: 'hair', col: col(bc), w: B.head, up: [0, 0, 1] });
+      const start = M.vertexCount;
+      for (let i = 0; i < N; i++) {
+        const tone = lerp(1, 0.74, i / Math.max(1, N - 1));
+        M.loft([rings[i], rings[i + 1]], i === 0, i === N - 1, n => P.shade(n[1] > 0.3 || n[2] > 0.75 ? top : bc, tone));
       }
+      if (curl && D.det >= 1) { M.color = bc; M.sphere(tip, 0.03 * k, 4, 2); }
+      const split = root[1] - (root[1] - tip[1]) / 3;
+      M.boneBy(start, p => (p[1] > split || tip[1] > J.neck[1] ? B.head : B.chest));
     };
-    if (st === 'goatee') { hang(0.05 * len, 0.018, false); }
-    else if (st === 'short') shell(1.35, 0.008 * len, 0.004, false);
+    if (st === 'stubble') shell(80, 108, 162, P.mix(X.skin, bc, 0.4), 1.005);
+    else if (st === 'short') shell(92, 104, 165, bc, 1.02);
+    else if (st === 'goatee') lock(kit.headAt(0, -0.95, 0.6), kit.headAt(0, -1.35 - 0.15 * len, 0.62), 0.22 * R, 2);
     else if (st === 'full' || st === 'bristle' || st === 'curled' || st === 'braided') {
-      shell(1.42, 0.016 * len, 0.03 * len, st === 'bristle');
-      if (X.hi >= 1 && (st === 'bristle' || st === 'full')) tufts(X.hi >= 2 ? 9 : 5, (st === 'bristle' ? 0.05 : 0.04) * len, st === 'bristle' ? 0.011 : 0.013, 1.2);
-      if (st === 'braided') hang(0.12 * len, 0.016, false, true);
-    }
-    else if (st === 'long' || st === 'flowing' || st === 'forked') {
-      shell(1.3, 0.008 * len, 0.008, false);
-      hang((st === 'flowing' ? 0.3 : st === 'forked' ? 0.16 : 0.15) * len, st === 'flowing' ? 0.04 : 0.028, st === 'forked', false);
-      // 美髯两侧的鬓须：自腮边贴着脸颊汇入主须（不再单独悬空）
-      if (st === 'flowing' && X.hi >= 1) for (const sg of [1, -1]) { const p0 = headPoint(sg * 0.75, -0.7, Hp), c0 = headPoint(0, -1.05, Hp); tube(gb, [v3madd(p0, headN(p0), -0.003), [lerp(p0[0], c0[0], 0.55), p0[1] - 0.07 * len, p0[2] + 0.025], [sg * 0.012, c0[1] - 0.12 * len, c0[2] + 0.035]], { r: s => 0.013 * (1 - s) + 0.004, rz: 0.55, n: 5, reg: 'hair', col: col(bc), w: s => wT(s, [[B.head, 0.3], [B.neck, 0.9]]) }); }
-    }
-    // 八字胡
-    if (ms !== 'none' && X.hi >= 0) {
-      for (const sg of [1, -1]) {
-        const a = headPoint(sg * 0.06, FEAT.noseP - 0.14, Hp), b = headPoint(sg * 0.3, FEAT.mouthP + 0.06, Hp), c = headPoint(sg * 0.44, ms === 'droop' ? FEAT.mouthP - 0.32 : ms === 'curl' ? FEAT.mouthP + 0.12 : FEAT.mouthP - 0.06, Hp);
-        const off = p => v3madd(p, headN(p), 0.004);
-        const thk = ms === 'thin' ? 0.0035 : ms === 'bristle' ? 0.008 : 0.006;
-        tube(gb, [off(a), off(v3lerp(a, b, 0.5)), off(b), off(c)], { r: s => thk * (1 - s * 0.6), rz: 0.6, n: 4, reg: 'hair', col: col(bc), w: B.head });
+      shell(100, 100, 166, bc, 1.05);
+      const chin = kit.headAt(0, -1.05, 0.55);
+      M.color = bc; M.sphere(V.add(chin, [0, -0.03 * k * len, 0.01 * k]), kit.hv(0.5, 0.32 * len, 0.36), D.sph[0], D.sph[1]);
+      if (st === 'bristle') {
+        // 虬髯（张飞）：自下颌向外下方伸出的尖簇
+        const n = D.det >= 2 ? 9 : D.det >= 1 ? 6 : 3;
+        for (let i = 0; i < n; i++) {
+          const a = lerp(-80, 80, n > 1 ? i / (n - 1) : 0.5) * D2R;
+          const p = kit.headAt(Math.sin(a) * 0.9, -0.75 - 0.25 * Math.cos(a), Math.cos(a) * 0.8);
+          const dir = V.norm([Math.sin(a) * 0.9, -0.8, Math.cos(a) * 0.6]);
+          M.color = P.shade(bc, 0.9 + 0.2 * (i % 2));
+          M.spike(p, dir, 0.035 * k, 0.07 * k * len, 4);
+        }
+      }
+      if (st === 'braided') lock(kit.headAt(0, -1.1, 0.6), V.add(kit.headAt(0, -1.1, 0.6), [0, -0.13 * k * len, 0.04 * k]), 0.2 * R, 4);
+      if (st === 'curled' && D.det >= 1) for (const s of [1, 0, -1]) { M.color = top; M.sphere(kit.headAt(s * 0.4, -1.25, 0.45), 0.03 * k, 4, 2); }
+    } else if (st === 'long' || st === 'flowing' || st === 'forked') {
+      shell(66, 112, 160, bc);
+      const tipY = st === 'flowing' ? J.chest[1] - 0.02 * k - (len - 1) * 0.08 * k : kit.neckY - 0.05 * k * len;
+      const rootC = kit.headAt(0, -0.95, 0.62), tipC = [0, tipY, Math.max(chestFront, rootC[2])];
+      if (st === 'forked') for (const s of [1, -1]) lock(kit.headAt(s * 0.18, -0.95, 0.6), [s * 0.04 * k, tipY + 0.04 * k, tipC[2]], 0.26 * R, 2 + s);
+      else lock(rootC, tipC, (st === 'flowing' ? 0.4 : 0.32) * R, 1);
+      if (st === 'flowing' && D.det >= 1) {
+        // 美髯：两侧较短的两绺，左右张开 ±12°
+        const dir = V.sub(tipC, rootC), L = V.len(dir);
+        for (const s of [1, -1]) {
+          const root = kit.headAt(s * 0.34, -0.87, 0.58), a = s * 12 * D2R, d = V.mul(V.norm(dir), L * 0.7);
+          const tip = V.add(root, [d[0] * Math.cos(a) - d[1] * Math.sin(a), d[0] * Math.sin(a) + d[1] * Math.cos(a), d[2]]);
+          tip[2] = Math.max(tip[2], chestFront + 0.01);
+          lock(root, tip, 0.34 * R, 3 + s);
+        }
       }
     }
+    // 八字胡（tilt：thin / droop / thick / bristle / curl）
+    const shellBeard = st === 'full' || st === 'bristle' || st === 'curled' || st === 'braided' || st === 'long' || st === 'flowing' || st === 'forked';
+    if ((ms !== 'none' || st === 'flowing' || st === 'long' || st === 'full') && !(D.det === 0 && shellBeard)) {
+      const m = ms === 'none' ? 'thin' : ms;
+      kit.bone('head'); M.color = m === 'thin' ? bc : top;
+      const r0 = (m === 'thick' || m === 'bristle' ? 0.11 : 0.085) * R, r1 = (m === 'curl' ? 0.04 : 0.03) * R;
+      for (const s of [1, -1]) {
+        const end = m === 'droop' ? V.add(kit.facePoint(s * 0.5, -1.0, 0.05), [0, -0.03 * k, 0]) : m === 'curl' ? kit.facePoint(s * 0.62, -0.5, 0.06) : kit.facePoint(s * 0.52, -0.78, 0.05);
+        M.curve(kit.facePoint(s * 0.05, -0.56, 0.06), kit.facePoint(s * 0.42, -0.62, 0.07), end, r0, r1, D.det >= 2 ? 3 : 2, D.det >= 2 ? 4 : 3);
+      }
+    }
+    kit.mark('beard');
+  }
+
+  // ----------------------------------------------------------- 饰物 --
+  function accessoriesLP(kit, X) {
+    const M = kit.M, look = kit.look, acc = look.acc || [], D = kit.D, k = kit.k, V = kit.V;
+    if (!acc.length) return;
+    kit.bone('head');
+    if ((acc.includes('earring') || acc.includes('hoops')) && D.det >= 1) {
+      M.color = X.gold;
+      for (const s of [1, -1]) { const p = kit.headAt(s * 1.0, -0.55, -0.1); if (acc.includes('hoops')) { M.push().translate(p).rotate(0, 90, 0); M.torus([0, 0, 0], 0.016 * k, 0.004 * k, 6, 3); M.pop(); } else M.sphere(p, 0.008 * k, 4, 2); }
+    }
+    const beads = (n, col2, r) => {
+      kit.bone('chest');
+      for (let i = 0; i < n; i++) {
+        const a = lerp(-60, 60, n > 1 ? i / (n - 1) : 0.5);
+        const y = kit.neckY - 0.02 * k - 0.07 * k * Math.cos(a * D2R * 1.4);
+        M.color = Array.isArray(col2[0]) ? col2[i % col2.length] : col2;
+        M.sphere(kit.torsoPt(a, y, 0.012 * k + r), r, 4, 2);
+      }
+    };
+    if (acc.includes('torc') || acc.includes('goldcollar')) {
+      kit.bone('chest'); M.color = X.gold;
+      M.push().translate(0, kit.neckY - 0.01 * k, -0.01).rotate(12, 0, 0).scale(1, 1, 0.86);
+      M.torus([0, 0, 0], 0.1 * k, 0.012 * k, D.det >= 1 ? 10 : 6, 3);
+      M.pop();
+    }
+    if (acc.includes('hara') && D.det >= 1) beads(7, [X.gold, C3('#C02A3A'), X.gold, C3('#2A8A6A')], 0.012 * k);
+    if (acc.includes('magatama') && D.det >= 1) beads(7, [C3('#E8DCC0'), C3('#3AA060')], 0.012 * k);
+    if (acc.includes('shells') && D.det >= 1) beads(7, [C3('#F4ECE0'), C3('#D8703A')], 0.012 * k);
+    if (acc.includes('bones') && D.det >= 1) beads(5, C3('#E8E0C8'), 0.014 * k);
+    if (acc.includes('garland') && D.det >= 1) beads(9, [lift(look.spec && look.spec.garland || '#F0A030', 0.4), C3('#F4D35E')], 0.015 * k);
+    if (acc.includes('mirror') && D.det >= 1 && !look.L.mirror) {
+      kit.bone('chest'); M.color = C3(PALF.bronze);
+      M.push().translate(kit.torsoPt(0, kit.chestY + 0.03 * k, 0.02 * k)).rotate(90, 0, 0); M.cylinder([0, 0, 0], 0.045 * k, 0.04 * k, 0.01, D.rnd); M.pop();
+    }
+    kit.mark('acc');
   }
 
   // ======================================================== 兵器与盾 ==
@@ -3197,326 +2518,346 @@
   };
   const DUAL_BASE = { swords: 'jian', twinji: 'ji1', shortji: 'sji1', twindao: 'dao' };
 
-  function W_ctx(gb, lod, w, colMul) { return { gb, lod, w: w == null ? B.handR : w, hi: lod.detail }; }
-  function shaft(K, y0, y1, r, reg, cc, taper) {
-    tube(K.gb, K.hi === 0 ? [[0, y0, 0], [0, y1, 0]] : [[0, y0, 0], [0, (y0 + y1) / 2, 0], [0, y1, 0]], { r: s => r * (1 - (taper || 0) * s) * (K.hi === 0 ? 1.15 : 1), n: K.hi === 0 ? 4 : Math.max(5, K.lod.tube), reg, col: col(cc), w: K.w, capStart: K.hi >= 1, capEnd: K.hi >= 1 });
+  // ======================================================== 兵器与盾（低多边形） ==
+  // 兵器局部坐标：原点 = 右手握点，杆 / 刃沿 +Y（尖端方向），刃口朝 +Z，厚度方向 X（与 v3 的尺寸一致：单挑的判定距离按它校准）。
+  // det：0（士兵 / 远景）、1（中）、2（单挑特写）。
+  function wpnKit(M, det) {
+    const sides = det >= 2 ? 6 : det >= 1 ? 5 : 4;
+    const K = {
+      M, det, sides,
+      col(c) { M.color = Array.isArray(c) ? c : C3(c); return K; },
+      shaft(y0, y1, r, c, taper) { K.col(c); M.push().translate(0, y0, 0); M.lathe([[r * (det === 0 ? 1.15 : 1), 0], [r * (1 - (taper || 0)) * (det === 0 ? 1.15 : 1), y1 - y0]], sides, false, det >= 1, det >= 1); M.pop(); },
+      ring(y, r, h, c) { if (det === 0) return; K.col(c || PALF.gold); M.band([0, 0, 0], r, r, y - h / 2, y + h / 2, sides); },
+      spike(y, len, r, c, down) { if (det === 0 && len < 0.06) return; K.col(c || PALF.steel); M.spike([0, y, 0], [0, down ? -1 : 1, 0], r, len, Math.max(4, sides - 1)); },
+      tassel(y, len, r, c) {
+        const v0 = M.vertexCount;
+        K.col(c || PALF.tassel);
+        M.push().translate(0, y, 0);
+        if (det === 0) M.lathe([[0.012, 0.01], [r, -len * 0.45], [0.006, -len]].reverse(), 4, false, false, true);
+        else M.lathe([[0.012, 0.01], [r * 0.7, -len * 0.18], [r, -len * 0.5], [r * 0.6, -len * 0.88], [0.006, -len]].reverse(), sides, false, true, true);
+        M.pop();
+        M.windBy(v0, p => 0.25 * clamp01((y - p[1]) / len));
+      },
+      // 刃：沿 +Y 的站点 [y, 刃口宽, 刃背宽, 半厚, z 偏移]；dbl：双刃（菱形截面）
+      blade(st, dbl, c, back) {
+        const rings = st.map(([y, we, wb, th, z]) => {
+          const zz = z || 0;
+          return dbl ? [[0, y, zz + we], [th, y, zz], [0, y, zz - wb], [-th, y, zz]] : [[th, y, zz - wb], [0, y + 0.004, zz + we], [-th, y, zz - wb]];
+        });
+        K.col(c || PALF.steel);
+        M.loft(rings, true, true);
+        if (back && det >= 1 && !dbl) {
+          K.col(PALF.bladeBack);
+          for (let i = 0; i < st.length - 2; i += 2) M.beam([0, st[i][0], (st[i][4] || 0) - st[i][2] - 0.003], [0, st[i + 2][0], (st[i + 2][4] || 0) - st[i + 2][2] - 0.003], 0.024, 0.016, [0, 0, -1]);
+        }
+      },
+      dragon(y, c, s) {
+        s = s || 1;
+        K.col(c || '#56A878');
+        M.sphere([0, y, 0.01 * s], [0.034 * s, 0.05 * s, 0.045 * s], det >= 1 ? 6 : 4, det >= 1 ? 3 : 2);
+        M.segment([0, y + 0.005 * s, 0.035 * s], [0, y + 0.03 * s, 0.09 * s], 0.024 * s, 0.01 * s, 5);
+        if (det >= 2) for (const sg of [1, -1]) M.curve([sg * 0.015 * s, y + 0.03 * s, -0.01 * s], [sg * 0.03 * s, y + 0.07 * s, -0.03 * s], [sg * 0.02 * s, y + 0.11 * s, -0.06 * s], 0.008 * s, 0.002, 2, 4);
+      },
+      arcBlade(cy, cz, R, a0, a1, wFn, th, c, n) {
+        // 弧形刃（月牙 / 斧刃 / 戟枝）：沿圆弧放样，刃口朝外
+        const rings = [];
+        for (let i = 0; i <= n; i++) {
+          const a = lerp(a0, a1, i / n), w = wFn(i / n);
+          const ca = Math.cos(a), sa = Math.sin(a);
+          const p = [0, cy + sa * R, cz + ca * R], o = [0, sa, ca];
+          rings.push([[th, p[1] - o[1] * 0.012, p[2] - o[2] * 0.012], [0, p[1] + o[1] * w, p[2] + o[2] * w], [-th, p[1] - o[1] * 0.012, p[2] - o[2] * 0.012]]);
+        }
+        K.col(c || PALF.steel);
+        M.loft(rings, true, true);
+      },
+    };
+    return K;
   }
-  function ringAtY(K, y, r, h, reg, cc) {
-    if (K.hi === 0) return;
-    lathe(K.gb, [[r * 0.85, y - h / 2, null, 0], [r, y - h * 0.3, null, 0.25], [r, y + h * 0.3, null, 0.75], [r * 0.85, y + h / 2, null, 1]], { n: Math.max(6, K.lod.tube), reg: reg || 'goldEngr', col: col(cc || GOLD), w: K.w });
-  }
-  function spikeAt(K, y, len, r, cc, down) {
-    if (K.hi === 0) return;
-    const prof = down ? [[0, y - len], [r * 0.5, y - len * 0.6], [r, y - 0.01], [r * 0.9, y]] : [[r * 0.9, y], [r, y + 0.01], [r * 0.5, y + len * 0.6], [0, y + len]];
-    lathe(K.gb, prof, { n: Math.max(5, K.lod.tube), reg: 'brushed', col: col(cc || STEEL), w: K.w, capStart: !down, capEnd: down });
-  }
-  // 缨：套在杆上向下垂的马尾（y 处，长 len）
-  function shaftTassel(K, y, len, r, cc) {
-    const prof = (K.hi === 0 ? [[0.012, y + 0.01], [r, y - len * 0.45], [r * 0.4, y - len], [0.012, y - len * 0.7]] : [[0.012, y + 0.01], [r * 0.6, y - len * 0.15], [r, y - len * 0.45], [r * 0.85, y - len * 0.85], [r * 0.4, y - len], [0.012, y - len * 0.7]]).reverse();
-    lathe(K.gb, prof, { n: K.hi === 0 ? 4 : Math.max(6, K.lod.tube + 2), reg: 'tassel', col: col(cc || RED), w: K.w });
-  }
-  // 刃：沿 +Y 的站点（y、刃口宽、刃背宽、半厚、z 偏移）
-  function bladeY(K, pts, dbl, cc) {
-    const st = pts.map(q => ({ p: [0, q[0], q[4] || 0], e: [0, 0, 1], n: [1, 0, 0], we: q[1], wb: q[2], th: q[3], dbl }));
-    // 弯刃：刃口方向随中线切向旋转
-    for (let i = 0; i < st.length; i++) {
-      const a = st[Math.max(0, i - 1)].p, b = st[Math.min(st.length - 1, i + 1)].p;
-      const T = v3norm(v3sub(b, a));
-      st[i].e = v3norm(v3cross([1, 0, 0], T).map(v => -v));
-      if (st[i].e[2] < 0) st[i].e = st[i].e.map(v => -v);
-    }
-    blade(K.gb, st, { col: col(cc || '#ffffff'), w: K.w });
-  }
-  function dragonHead(K, y, cc, s) {
-    s = s || 1;
-    const gb = K.gb;
-    ellipsoid(gb, [0, y, 0.01 * s], [0.032 * s, 0.05 * s, 0.04 * s], { nl: Math.max(4, K.lod.hand[0]), n: Math.max(6, K.lod.hand[1]), reg: 'gold', col: col(cc || GOLD), w: K.w });
-    // 吻部（朝刃口方向）与双角
-    tube(gb, [[0, y + 0.01 * s, 0.03 * s], [0, y + 0.03 * s, 0.07 * s]], { r: t => (0.022 - 0.01 * t) * s, n: 6, reg: 'gold', col: col(cc || GOLD), w: K.w, capEnd: true });
-    if (K.hi >= 1) for (const sg of [1, -1]) tube(gb, bez([sg * 0.015 * s, y + 0.03 * s, -0.01 * s], [sg * 0.03 * s, y + 0.06 * s, -0.03 * s], [sg * 0.03 * s, y + 0.09 * s, -0.05 * s], [sg * 0.02 * s, y + 0.12 * s, -0.06 * s], 4), { r: t => 0.007 * (1 - t) + 0.002, n: 4, reg: 'gold', col: col(cc || GOLD), w: K.w });
-  }
-
-  function buildWeaponInto(gb, id, lod, o) {
-    o = o || {};
-    const K = W_ctx(gb, lod, o.w);
+  function buildWeaponLP(M, id, det) {
     const def = WEAPONS[id] || WEAPONS.jian;
+    const K = wpnKit(M, det);
+    const keepJ = M.jitter; M.jitter = 0.035;
     let info = { id, name: def.name, style: def.style, len: 1, tip: [0, 1, 0], off: null, base: [0, 0.1, 0] };
-    const SH = o.shaft || '#3a2418';
-    switch (DUAL_BASE[id] || id) {
+    const base = DUAL_BASE[id] || id;
+    switch (base) {
       case 'guandao': {
-        shaft(K, -0.9, 1.02, 0.017, 'wood', '#2a3a2c');
-        spikeAt(K, -0.9, 0.1, 0.017, GOLD, true);
-        for (const y of [-0.82, 0.25, 0.95]) ringAtY(K, y, 0.021, 0.04);
-        shaftTassel(K, 1.0, 0.16, 0.05, '#c8302a');
-        dragonHead(K, 1.07, '#5aa070');
-        bladeY(K, [[1.1, 0.06, 0.02, 0.009, 0], [1.22, 0.1, 0.022, 0.008, -0.005], [1.36, 0.14, 0.02, 0.007, -0.012], [1.5, 0.15, 0.018, 0.006, -0.025], [1.62, 0.12, 0.015, 0.005, -0.045], [1.72, 0.06, 0.01, 0.004, -0.07], [1.78, 0.0, 0.0, 0.002, -0.1]], false);
-        // 刀背倒钩
-        if (K.hi >= 1) tube(gb, bez([0, 1.3, -0.02], [0, 1.31, -0.06], [0, 1.34, -0.085], [0, 1.38, -0.095], 4), { r: t => 0.01 * (1 - t) + 0.001, rz: 0.4, n: 4, reg: 'blade', col: [1, 1, 1], w: K.w });
-        info = Object.assign(info, { len: 1.78, tip: [0, 1.7, 0.02], base: [0, 1.15, 0], off: [0, 0.6, 0] });
+        // 青龙偃月刀：青色长杆、金箍、龙吞口、红缨、宽阔的偃月刃（刀背倒钩、蓝钢刀背）
+        K.shaft(-0.9, 1.06, 0.021, '#2E5E44', 0.08);
+        for (const y of [-0.82, 0.25, 0.95]) K.ring(y, 0.026, 0.05, PALF.gold);
+        K.spike(-0.9, 0.12, 0.022, PALF.gold, true);
+        K.tassel(1.04, 0.17, 0.046, PALF.tassel);
+        K.dragon(1.1, '#56A878', 1);
+        const st = [[1.12, 0.07, 0.02, 0.011, 0], [1.24, 0.14, 0.025, 0.011, 0], [1.38, 0.19, 0.03, 0.011, 0], [1.52, 0.2, 0.045, 0.011, 0], [1.64, 0.16, 0.07, 0.01, 0], [1.74, 0.09, 0.1, 0.008, 0], [1.81, -0.04, 0.14, 0.002, 0]];
+        K.blade(det >= 1 ? st : [st[0], st[2], st[4], st[6]], false, '#E4EAEE', true);
+        if (det >= 1) { K.col(PALF.bladeBack); M.spike([0, 1.34, -0.03], [0, 0.4, -1], 0.016, 0.09, 4); }
+        info = Object.assign(info, { len: 1.8, tip: [0, 1.72, 0.06], base: [0, 1.15, 0], off: [0, 0.6, 0] });
         break;
       }
       case 'snake': {
-        shaft(K, -1.0, 1.42, 0.016, 'wood', '#1e1a1e');
-        spikeAt(K, -1.0, 0.08, 0.016, GOLD, true);
-        for (const y of [-0.9, 0.3, 1.35]) ringAtY(K, y, 0.02, 0.035);
-        shaftTassel(K, 1.4, 0.15, 0.045, '#c8302a');
-        ringAtY(K, 1.43, 0.022, 0.05, 'gold', GOLD);
-        const pts = [];
-        for (let i = 0; i <= 12; i++) { const t = i / 12; pts.push([1.46 + t * 0.52, 0.04 * (1 - t * 0.85), 0.04 * (1 - t * 0.85), 0.006, 0.03 * Math.sin(t * PI * 3) * (1 - t * 0.6)]); }
-        pts[12][1] = pts[12][2] = 0;
-        bladeY(K, pts, true);
-        info = Object.assign(info, { len: 1.98, tip: [0, 1.95, 0], base: [0, 1.46, 0], off: [0, 0.65, 0] });
+        // 丈八蛇矛：深色长杆、金箍、红缨、蜿蜒的蛇形矛刃
+        K.shaft(-1.0, 1.44, 0.019, '#3A3036', 0.05);
+        K.spike(-1.0, 0.08, 0.018, PALF.gold, true);
+        for (const y of [-0.9, 0.3, 1.36]) K.ring(y, 0.023, 0.04, PALF.gold);
+        K.tassel(1.42, 0.16, 0.046, PALF.tassel);
+        K.col(PALF.gold); M.cylinder([0, 1.42, 0], 0.024, 0.02, 0.05, K.sides);
+        const n = det >= 2 ? 10 : det >= 1 ? 7 : 4, st = [];
+        for (let i = 0; i <= n; i++) { const t = i / n; st.push([1.47 + t * 0.52, 0.042 * (1 - t * 0.9) + (i === n ? 0 : 0.002), 0.042 * (1 - t * 0.9), 0.007 * (1 - t * 0.5), 0.032 * Math.sin(t * PI * 3) * (1 - t * 0.6)]); }
+        K.blade(st, true, PALF.steel);
+        info = Object.assign(info, { len: 1.99, tip: [0, 1.95, 0], base: [0, 1.47, 0], off: [0, 0.65, 0] });
         break;
       }
       case 'halberd': {
-        shaft(K, -0.95, 1.38, 0.017, 'wood', '#5a1a1a');
-        spikeAt(K, -0.95, 0.09, 0.017, GOLD, true);
-        for (const y of [-0.85, 0.2, 1.28]) ringAtY(K, y, 0.021, 0.04);
-        ringAtY(K, 1.37, 0.026, 0.06, 'gold', GOLD);
-        bladeY(K, [[1.4, 0.03, 0.03, 0.008], [1.5, 0.036, 0.036, 0.007], [1.65, 0.03, 0.03, 0.006], [1.78, 0.014, 0.014, 0.005], [1.86, 0, 0, 0.002]], true);
-        // 双月牙
+        // 方天画戟：朱杆、金箍、矛尖 + 两侧月牙刃、红色彩带
+        K.shaft(-0.95, 1.4, 0.02, '#7A2A24', 0.05);
+        K.spike(-0.95, 0.09, 0.019, PALF.gold, true);
+        for (const y of [-0.85, 0.2, 1.28]) K.ring(y, 0.024, 0.04, PALF.gold);
+        K.col(PALF.gold); M.cylinder([0, 1.33, 0], 0.03, 0.024, 0.08, K.sides);
+        K.blade([[1.41, 0.03, 0.03, 0.009], [1.52, 0.04, 0.04, 0.008], [1.66, 0.032, 0.032, 0.007], [1.86, 0, 0, 0.002]], true, PALF.steel);
         for (const sg of [1, -1]) {
-          const st = [];
-          for (let i = 0; i <= 8; i++) {
-            const a = lerp(-1.25, 1.25, i / 8), R = 0.13;
-            const c = [0, 1.36 + Math.sin(a) * R, sg * (0.035 + Math.cos(a) * R * 0.75)];
-            const e = v3norm([0, Math.sin(a) * 0.75, sg * Math.cos(a)]);
-            const wa = 0.045 * (1 - Math.pow(Math.abs(a) / 1.25, 2)) + 0.004;
-            st.push({ p: c, e, n: [1, 0, 0], we: wa, wb: 0.012, th: 0.006, dbl: false });
-          }
-          st[0].we = st[8].we = 0.003;
-          blade(gb, st, { col: col(GOLD === '#e0b050' ? '#f0f0f0' : '#fff'), w: K.w });
-          tube(gb, [[0, 1.36, 0], [0, 1.36, sg * 0.05]], { r: 0.012, n: 5, reg: 'gold', col: col(GOLD), w: K.w });
+          K.arcBlade(1.37, sg * 0.04, 0.12, sg > 0 ? -1.15 : PI + 1.15, sg > 0 ? 1.15 : PI - 1.15, t => 0.05 * (1 - Math.pow(2 * t - 1, 2)) + 0.004, 0.006, '#E8EEF2', det >= 1 ? 6 : 3);
+          K.col(PALF.gold); M.segment([0, 1.37, 0], [0, 1.37, sg * 0.05], 0.012, 0.012, 4);
         }
-        // 彩带
-        if (K.hi >= 1) for (const sg of [1, -1]) featherStrip({ gb, lod }, bez([sg * 0.01, 1.34, 0], [sg * 0.03, 1.25, 0.02], [sg * 0.04, 1.12, 0.0], [sg * 0.05, 0.98, -0.03], 5), 0.035, 0.03, 'cloth', '#c8302a', K.w, 5);
+        if (det >= 1) {
+          const v0 = M.vertexCount; K.col(PALF.tassel);
+          for (const sg of [1, -1]) M.curvedStrip([sg * 0.012, 1.33, 0], [sg * 0.03, 1.22, 0.02], [sg * 0.05, 1.0, -0.03], 0.035, 0.028, [1, 0, 0], 0.006, 3);
+          M.windBy(v0, p => 0.4 * clamp01((1.33 - p[1]) / 0.33));
+        }
         info = Object.assign(info, { len: 1.86, tip: [0, 1.82, 0], base: [0, 1.4, 0], off: [0, 0.62, 0] });
         break;
       }
       case 'bigblade': case 'fengzui': case 'poleblade': {
         const big = id === 'bigblade', feng = id === 'fengzui';
         const top = big ? 0.72 : 1.0;
-        shaft(K, big ? -0.55 : -0.85, top + 0.02, big ? 0.02 : 0.017, 'wood', big ? '#2a2420' : '#3a2418');
-        spikeAt(K, big ? -0.55 : -0.85, 0.08, 0.018, STEEL, true);
-        ringAtY(K, top, 0.03, 0.06, 'gold', feng ? GOLD : BRONZE);
-        if (feng) dragonHead(K, top + 0.06, GOLD, 0.8);
-        if (!big) shaftTassel(K, top - 0.02, 0.13, 0.045, feng ? '#c8302a' : '#c8302a');
-        const L = big ? 0.78 : 0.62, W0 = big ? 0.13 : 0.08, W1 = big ? 0.2 : 0.12;
-        const curve = feng ? 0.12 : 0.04;
-        const pts = [];
-        for (let i = 0; i <= 8; i++) { const t = i / 8; pts.push([top + 0.04 + t * L, lerp(W0, W1, Math.sin(t * PI * 0.8)) * (t > 0.85 ? (1 - t) / 0.15 : 1), big ? 0.03 : 0.018, big ? 0.011 : 0.008, -curve * t * t]); }
-        bladeY(K, pts, false, big ? '#c8ccd2' : '#ffffff');
+        K.shaft(big ? -0.55 : -0.85, top + 0.02, big ? 0.024 : 0.02, big ? '#3A3230' : '#5A3E2A', 0.05);
+        K.spike(big ? -0.55 : -0.85, 0.08, 0.02, PALF.steel, true);
+        K.col(feng ? PALF.gold : PALF.bronze); M.cylinder([0, top - 0.02, 0], 0.03, 0.026, 0.06, K.sides);
+        if (feng) K.dragon(top + 0.06, PALF.gold, 0.8);
+        if (!big) K.tassel(top - 0.02, 0.13, 0.045, PALF.tassel);
+        const L = big ? 0.78 : 0.62, W0 = big ? 0.13 : 0.08, W1 = big ? 0.2 : 0.12, curve = feng ? 0.12 : 0.04;
+        const n = det >= 1 ? 6 : 3, st = [];
+        for (let i = 0; i <= n; i++) { const t = i / n; st.push([top + 0.04 + t * L, lerp(W0, W1, Math.sin(t * PI * 0.8)) * (t > 0.85 ? Math.max(0.05, (1 - t) / 0.15) : 1), big ? 0.03 : 0.02, big ? 0.012 : 0.009, -curve * t * t]); }
+        K.blade(st, false, big ? '#C8CCD2' : '#E4EAEE', true);
         info = Object.assign(info, { len: top + 0.04 + L, tip: [0, top + L, -curve * 0.8], base: [0, top + 0.1, 0], off: [0, big ? 0.45 : 0.55, 0] });
         break;
       }
       case 'spear': case 'bawang': case 'yajiao': case 'hutou': case 'lance': case 'pilum': case 'trident': {
         const lance = id === 'lance', pil = id === 'pilum';
         const top = lance ? 1.6 : pil ? 0.9 : 1.32;
-        const sc = id === 'yajiao' ? '#e4e4ec' : id === 'hutou' ? '#d8c8a0' : id === 'bawang' ? '#4a1a1a' : SH;
-        shaft(K, lance ? -1.4 : pil ? -0.7 : -0.95, top + 0.02, lance ? 0.019 : 0.016, 'wood', sc);
-        if (!pil) spikeAt(K, lance ? -1.4 : -0.95, 0.07, 0.016, id === 'hutou' ? GOLD : STEEL, true);
-        const fit = id === 'hutou' ? GOLD : id === 'yajiao' ? SILVER : id === 'bawang' ? GOLD : BRONZE;
-        if (K.hi >= 1 && !pil) for (const y of [-0.85, 0.3]) ringAtY(K, y, 0.019, 0.03, 'goldEngr', fit);
-        ringAtY(K, top, 0.022, 0.05, 'gold', fit);
-        if (id === 'yajiao' || id === 'hutou') dragonHead(K, top + 0.04, id === 'hutou' ? GOLD : '#e8eaf0', 0.75);
-        if (!lance && !pil) shaftTassel(K, top - 0.01, id === 'spear' ? 0.09 : 0.14, id === 'spear' ? 0.032 : 0.045, id === 'yajiao' || id === 'hutou' ? '#f0f0f0' : '#c8302a');
+        const sc = id === 'yajiao' ? '#E4E4EC' : id === 'hutou' ? '#D8C8A0' : id === 'bawang' ? '#6A2A24' : PALF.wood;
+        K.shaft(lance ? -1.4 : pil ? -0.7 : -0.95, top + 0.02, lance ? 0.021 : 0.018, sc, 0.06);
+        if (!pil) K.spike(lance ? -1.4 : -0.95, 0.07, 0.018, id === 'hutou' ? PALF.gold : PALF.steel, true);
+        const fit = id === 'hutou' ? PALF.gold : id === 'yajiao' ? PALF.silver : id === 'bawang' ? PALF.gold : PALF.bronze;
+        if (det >= 1 && !pil) for (const y of [-0.85, 0.3]) K.ring(y, 0.021, 0.03, fit);
+        K.col(fit); M.cylinder([0, top - 0.02, 0], 0.024, 0.02, 0.05, K.sides, false, det >= 1, det >= 1);
+        if (id === 'yajiao' || id === 'hutou') K.dragon(top + 0.04, id === 'hutou' ? PALF.gold : '#E8EAF0', 0.75);
+        if (!lance && !pil) K.tassel(top - 0.01, id === 'spear' ? 0.1 : 0.15, id === 'spear' ? 0.036 : 0.046, id === 'yajiao' || id === 'hutou' ? '#F0F0F0' : PALF.tassel);
         const b0 = top + (id === 'yajiao' || id === 'hutou' ? 0.1 : 0.03);
         if (pil) {
-          tube(gb, [[0, top, 0], [0, top + 0.45, 0]], { r: 0.006, n: 4, reg: 'brushed', col: col(IRON), w: K.w });
-          bladeY(K, [[top + 0.44, 0.012, 0.012, 0.008], [top + 0.5, 0, 0, 0.002]], true);
+          K.col(PALF.iron); M.segment([0, top, 0], [0, top + 0.45, 0], 0.007, 0.006, 4);
+          K.blade([[top + 0.44, 0.014, 0.014, 0.009], [top + 0.5, 0, 0, 0.002]], true);
           info.len = top + 0.5;
         } else if (id === 'trident') {
-          bladeY(K, [[b0, 0.025, 0.025, 0.007], [b0 + 0.15, 0.03, 0.03, 0.006], [b0 + 0.3, 0, 0, 0.002]], true);
-          for (const sg of [1, -1]) { const st = []; for (let i = 0; i <= 5; i++) { const t = i / 5; st.push({ p: [0, b0 + t * 0.2, sg * (0.03 + 0.05 * Math.sin(t * PI * 0.6))], e: [0, 0, sg], n: [1, 0, 0], we: 0.015 * (1 - t) + 0.002, wb: 0.008 * (1 - t) + 0.002, th: 0.005, dbl: true }); } blade(gb, st, { col: [1, 1, 1], w: K.w }); }
+          K.blade([[b0, 0.025, 0.025, 0.008], [b0 + 0.15, 0.03, 0.03, 0.007], [b0 + 0.3, 0, 0, 0.002]], true);
+          for (const sg of [1, -1]) { K.col(PALF.steel); M.curve([0, b0, 0], [0, b0 + 0.06, sg * 0.08], [0, b0 + 0.2, sg * 0.07], 0.012, 0.003, det >= 1 ? 3 : 2, 4); }
           info.len = b0 + 0.3;
         } else {
-          const L = lance ? 0.22 : id === 'bawang' ? 0.4 : id === 'spear' ? 0.26 : 0.36, Wd = lance ? 0.022 : id === 'bawang' ? 0.05 : 0.034;
-          bladeY(K, [[b0, Wd * 0.5, Wd * 0.5, 0.007], [b0 + L * 0.3, Wd, Wd, 0.007], [b0 + L * 0.7, Wd * 0.7, Wd * 0.7, 0.006], [b0 + L, 0, 0, 0.002]], true, id === 'hutou' ? '#f0d890' : '#ffffff');
+          const L = lance ? 0.22 : id === 'bawang' ? 0.4 : id === 'spear' ? 0.3 : 0.36, Wd = lance ? 0.024 : id === 'bawang' ? 0.05 : 0.04;
+          K.blade([[b0, Wd * 0.45, Wd * 0.45, 0.009], [b0 + L * 0.3, Wd, Wd, 0.008], [b0 + L * 0.7, Wd * 0.7, Wd * 0.7, 0.007], [b0 + L, 0, 0, 0.002]], true, id === 'hutou' ? '#F0D890' : PALF.steel);
           info.len = b0 + L;
         }
         info = Object.assign(info, { tip: [0, info.len - 0.04, 0], base: [0, b0, 0], off: [0, lance ? 0.7 : 0.6, 0] });
         break;
       }
       case 'staff': {
-        // 锡杖（第三版修订：僧人龙树、提婆、伊兰戈）：木杖、铜箍，杖头为桃形铜环套小环
+        // 锡杖：木杖、铜箍、杖头为桃形铜环套小环
         const top = 1.25;
-        shaft(K, -0.95, top, 0.017, 'wood', '#6a4a2a', 0.1);
-        ringAtY(K, -0.9, 0.019, 0.04, 'goldEngr', BRONZE);
-        ringAtY(K, top - 0.02, 0.02, 0.05, 'goldEngr', BRONZE);
-        tube(gb, ringPts([0, top + 0.11, 0], [1, 0, 0], [0, 1, 0], 0.075, 0.11, K.hi >= 1 ? 14 : 8).concat([[0.0, top + 0.0, 0]]), { r: 0.007, n: 5, reg: 'gold', col: col(BRONZE), w: K.w });
-        if (K.hi >= 1) for (const sx of [-1, 1]) for (const yy of [0.06, 0.15]) tube(gb, ringPts([sx * 0.075, top + yy, 0], [0, 0, 1], [0, 1, 0], 0.02, 0.02, 8), { r: 0.004, n: 4, reg: 'gold', col: col(BRONZE), w: K.w });
-        info.len = top + 0.22;
-        info = Object.assign(info, { tip: [0, top + 0.2, 0], base: [0, top - 0.3, 0], off: [0, 0.6, 0] });
+        K.shaft(-0.95, top, 0.018, '#7A5A34', 0.1);
+        K.ring(-0.9, 0.02, 0.04, PALF.bronze); K.ring(top - 0.02, 0.021, 0.05, PALF.bronze);
+        K.col(PALF.bronze);
+        M.push().translate(0, top + 0.1, 0).rotate(0, 90, 90).scale(1, 1, 1.45);
+        M.torus([0, 0, 0], 0.075, 0.008, det >= 1 ? 12 : 8, 4);
+        M.pop();
+        if (det >= 1) for (const sx of [-1, 1]) for (const yy of [0.06, 0.15]) { M.push().translate(0, top + yy, sx * 0.075).rotate(0, 0, 90); M.torus([0, 0, 0], 0.02, 0.004, 6, 3); M.pop(); }
+        info = Object.assign(info, { len: top + 0.22, tip: [0, top + 0.2, 0], base: [0, top - 0.3, 0], off: [0, 0.6, 0] });
         break;
       }
       case 'bigaxe': case 'axe': {
-        const big = id === 'bigaxe';
-        const top = big ? 1.05 : 0.95;
-        shaft(K, -0.6, top + 0.08, 0.019, 'wood', '#2a2018');
-        spikeAt(K, -0.6, 0.06, 0.018, STEEL, true);
-        ringAtY(K, top - 0.15, 0.024, 0.04, 'gold', BRONZE);
-        spikeAt(K, top + 0.08, 0.14, 0.018, STEEL);
-        // 斧刃：朝 +Z 的半月形
-        const st = [];
-        for (let i = 0; i <= 8; i++) {
-          const a = lerp(-1.1, 1.1, i / 8), R = big ? 0.2 : 0.14;
-          st.push({ p: [0, top + Math.sin(a) * R * 0.75, 0.03 + Math.cos(a) * R * 0.25], e: v3norm([0, Math.sin(a) * 0.5, Math.cos(a)]), n: [1, 0, 0], we: (big ? 0.1 : 0.07) * Math.cos(a * 0.9), wb: 0.03, th: 0.01, dbl: false });
-        }
-        blade(gb, st, { col: col('#d8dce2'), w: K.w });
+        const big = id === 'bigaxe', top = big ? 1.05 : 0.95;
+        K.shaft(-0.6, top + 0.08, 0.021, '#4A3A2E', 0.04);
+        K.spike(-0.6, 0.06, 0.02, PALF.steel, true);
+        K.ring(top - 0.15, 0.026, 0.04, PALF.bronze);
+        K.spike(top + 0.08, 0.14, 0.02, PALF.steel);
+        // 斧刃：朝 +Z 的半月
+        const R = big ? 0.2 : 0.14;
+        K.arcBlade(top, 0.03 - R * 0.25 + 0.02, R * 0.75, -1.1, 1.1, t => (big ? 0.12 : 0.09) * Math.cos((t - 0.5) * 2) * 0.9, 0.012, '#D8DCE2', det >= 1 ? 6 : 3);
+        K.col('#5A5E68'); M.box([0, top, 0.02], [0.03, R * 0.9, 0.06]);
         info = Object.assign(info, { len: top + 0.22, tip: [0, top, 0.2], base: [0, top - 0.1, 0], off: [0, 0.45, 0] });
         break;
       }
       case 'ji1': case 'sji1': {
-        const short = id === 'shortji';
-        const top = short ? 0.45 : 0.55;
-        shaft(K, -0.25, top + 0.02, 0.016, 'wrap', short ? '#5a2a1a' : '#2a2a2e');
-        spikeAt(K, -0.25, 0.05, 0.016, STEEL, true);
-        ringAtY(K, top, 0.022, 0.04, 'gold', short ? GOLD : IRON);
-        bladeY(K, [[top + 0.03, 0.022, 0.022, 0.008], [top + 0.1, 0.03, 0.03, 0.007], [top + (short ? 0.22 : 0.26), 0, 0, 0.002]], true, short ? '#ffffff' : '#b8bcc4');
-        const st = [];
-        for (let i = 0; i <= 6; i++) { const a = lerp(-1.2, 1.0, i / 6), R = short ? 0.085 : 0.11; st.push({ p: [0, top - 0.02 + Math.sin(a) * R, 0.025 + Math.cos(a) * R * 0.7], e: v3norm([0, Math.sin(a) * 0.7, Math.cos(a)]), n: [1, 0, 0], we: 0.04 * (1 - Math.pow(Math.abs(a + 0.1) / 1.1, 2)) + 0.004, wb: 0.012, th: 0.007, dbl: false }); }
-        blade(gb, st, { col: col(short ? '#ffffff' : '#b8bcc4'), w: K.w });
-        tube(gb, [[0, top - 0.04, 0], [0, top - 0.04, -0.07]], { r: t => 0.01 * (1 - t) + 0.002, n: 4, reg: 'brushed', col: col(IRON), w: K.w });
-        if (short) shaftTassel(K, top - 0.01, 0.09, 0.03, '#c8302a');
+        const short = id === 'shortji', top = short ? 0.45 : 0.55;
+        K.shaft(-0.25, top + 0.02, 0.018, short ? '#6A2A1A' : '#3A3236');
+        K.spike(-0.25, 0.05, 0.018, PALF.steel, true);
+        K.col(short ? PALF.gold : PALF.iron); M.cylinder([0, top - 0.02, 0], 0.024, 0.02, 0.04, K.sides);
+        K.blade([[top + 0.03, 0.022, 0.022, 0.009], [top + 0.1, 0.032, 0.032, 0.008], [top + (short ? 0.22 : 0.26), 0, 0, 0.002]], true, short ? '#E4EAEE' : '#B8BCC4');
+        K.arcBlade(top - 0.02, 0.025, short ? 0.085 : 0.11, -1.2, 1.0, t => 0.045 * (1 - Math.pow(Math.abs(t * 2 - 1.1), 2)) + 0.004, 0.008, short ? '#E4EAEE' : '#B8BCC4', det >= 1 ? 5 : 3);
+        K.col(PALF.iron); M.spike([0, top - 0.04, 0], [0, 0, -1], 0.01, 0.07, 4);
+        if (short) K.tassel(top - 0.01, 0.09, 0.03, PALF.tassel);
         info = Object.assign(info, { len: top + 0.26, tip: [0, top + 0.22, 0], base: [0, top, 0] });
         break;
       }
       case 'jian': case 'yitian': case 'gladius': case 'spatha': case 'dao': case 'guding': case 'tachi': {
         const curved = id === 'dao' || id === 'guding', glad = id === 'gladius', ring = id === 'dao' || id === 'guding' || id === 'tachi';
         const L = glad ? 0.5 : id === 'spatha' ? 0.78 : id === 'yitian' ? 0.86 : 0.76;
-        const gripC = glad ? '#d8c8a0' : id === 'yitian' ? '#5a1a1a' : '#2a2018';
-        tube(gb, K.hi === 0 ? [[0, -0.11, 0], [0, 0.07, 0]] : [[0, -0.11, 0], [0, -0.02, 0], [0, 0.07, 0]], { r: 0.015, n: K.hi === 0 ? 4 : Math.max(5, K.lod.tube), reg: glad ? 'wood' : 'wrap', col: col(gripC), w: K.w });
-        const fit = id === 'yitian' || id === 'guding' ? GOLD : glad || id === 'spatha' ? BRONZE : '#b8a070';
-        if (ring && K.hi >= 1) tube(gb, ringPts([0, -0.15, 0], [0, 0, 1], [0, 1, 0], 0.03, 0.03, 10), { r: 0.006, n: 4, reg: 'gold', col: col(fit), w: K.w });
-        else if (K.hi >= 1) ellipsoid(gb, [0, -0.125, 0], [0.024, 0.02, 0.024], { nl: 4, n: 6, reg: 'gold', col: col(fit), w: K.w });
+        const gripC = glad ? '#D8C8A0' : id === 'yitian' ? '#7A2A24' : '#3A2E26';
+        K.col(gripC); M.segment([0, -0.11, 0], [0, 0.07, 0], 0.016, 0.015, K.sides);
+        const fit = id === 'yitian' || id === 'guding' ? PALF.gold : glad || id === 'spatha' ? PALF.bronze : '#C8B07A';
+        K.col(fit);
+        if (ring && det >= 1) { M.push().translate(0, -0.145, 0).rotate(0, 90, 90); M.torus([0, 0, 0], 0.028, 0.006, 8, 3); M.pop(); }
+        else M.sphere([0, -0.125, 0], [0.024, 0.02, 0.024], det >= 1 ? 6 : 4, 2);
         // 护手
-        if (K.hi === 0) ellipsoid(gb, [0, 0.075, 0], [0.022, 0.012, 0.045], { nl: 2, n: 4, reg: 'gold', col: col(fit), w: K.w });
-        else if (glad || id === 'spatha') ellipsoid(gb, [0, 0.075, 0], [0.025, 0.014, 0.04], { nl: 4, n: 6, reg: 'wood', col: col(gripC), w: K.w });
-        else if (ring) lathe(gb, [[0.0, 0.065], [0.035, 0.066], [0.036, 0.075], [0.0, 0.077]], { n: 8, reg: 'gold', col: col(fit), w: K.w, sz: 1.3 });
-        else {
-          ellipsoid(gb, [0, 0.075, 0], [0.024, 0.018, 0.06], { nl: 4, n: 6, reg: 'gold', col: col(fit), w: K.w });
-          if (K.hi >= 1) for (const sg of [1, -1]) tube(gb, bez([0, 0.075, sg * 0.05], [0, 0.065, sg * 0.07], [0, 0.085, sg * 0.08], [0, 0.1, sg * 0.075], 3), { r: 0.006, n: 4, reg: 'gold', col: col(fit), w: K.w });
+        if (glad || id === 'spatha') { K.col(glad ? '#D8C8A0' : '#6A4A30'); M.sphere([0, 0.075, 0], [0.026, 0.016, 0.042], det >= 1 ? 6 : 4, 2); }
+        else if (ring) { M.cylinder([0, 0.064, 0], 0.036, 0.036, 0.012, det >= 1 ? 8 : 5); }
+        else { M.box([0, 0.075, 0], [0.024, 0.02, 0.12]); if (det >= 2) for (const sg of [1, -1]) M.sphere([0, 0.075, sg * 0.064], 0.012, 4, 2); }
+        const w0 = glad ? 0.032 : curved ? 0.024 : 0.022;
+        const n = det >= 1 ? 5 : 2, st = [];
+        for (let i = 0; i <= n; i++) {
+          const t = i / n;
+          const wt = glad ? (t < 0.75 ? w0 * (1 - 0.15 * t) : w0 * (1 - t) / 0.25 * 0.85) : (t < 0.86 ? w0 * (1 - 0.15 * t) : w0 * 0.87 * Math.max(0.03, (1 - t) / 0.14));
+          st.push([0.08 + t * L, curved ? wt * 1.4 : wt, curved ? wt * 0.35 : wt, curved ? 0.008 : 0.007, curved ? -0.045 * t * t : 0]);
         }
-        const w0 = glad ? 0.03 : curved ? 0.022 : 0.021;
-        const pts = [];
-        const N = K.hi >= 1 ? 6 : 2;
-        for (let i = 0; i <= N; i++) {
-          const t = i / N;
-          const wt = glad ? (t < 0.75 ? w0 * (1 - 0.15 * t) : w0 * (1 - t) / 0.25 * 0.85) : (t < 0.88 ? w0 * (1 - 0.15 * t) : w0 * 0.87 * (1 - t) / 0.12);
-          pts.push([0.08 + t * L, curved ? wt * 1.4 : wt, curved ? wt * 0.35 : wt, curved ? 0.007 : 0.006, curved ? -0.04 * t * t : 0]);
-        }
-        bladeY(K, pts, !curved && id !== 'tachi');
-        if ((id === 'jian' || id === 'yitian') && K.hi >= 1) shaftTassel({ gb, lod, w: K.w, hi: K.hi }, -0.14, 0.12, 0.022, '#c8302a');
+        K.blade(st, !curved && id !== 'tachi', id === 'yitian' ? '#EEF2F6' : PALF.steel, curved);
+        if ((id === 'jian' || id === 'yitian') && det >= 1) K.tassel(-0.14, 0.12, 0.024, PALF.tassel);
         info = Object.assign(info, { len: 0.08 + L, tip: [0, 0.06 + L, curved ? -0.03 : 0], base: [0, 0.12, 0] });
         break;
       }
       case 'khanda': {
-        // 第三版：天竺坎达剑（桑奇、阿马拉瓦蒂浮雕中的长直剑）——直身双刃、向尖端渐宽、钝圆头；圆盘护手、护指弯条、盘形柄头
+        // 天竺坎达剑：直身双刃、向尖端渐宽、钝圆头；圆盘护手、护指弯条、盘形柄头
         const L = 0.84;
-        tube(gb, K.hi === 0 ? [[0, -0.1, 0], [0, 0.06, 0]] : [[0, -0.1, 0], [0, -0.02, 0], [0, 0.06, 0]], { r: 0.014, n: K.hi === 0 ? 4 : Math.max(5, K.lod.tube), reg: 'wrap', col: col('#3a2418'), w: K.w });
-        lathe(gb, [[0.0, -0.124], [0.034, -0.12], [0.036, -0.11], [0.012, -0.1]], { n: K.hi === 0 ? 5 : 8, reg: 'gold', col: col(GOLD), w: K.w });
-        lathe(gb, [[0.0, 0.06], [0.032, 0.062], [0.034, 0.072], [0.0, 0.076]], { n: K.hi === 0 ? 5 : 8, reg: 'gold', col: col(GOLD), w: K.w, sz: 1.4 });
-        if (K.hi >= 1) {
-          tube(gb, [[0, -0.126, 0], [0, -0.165, 0]], { r: q => 0.006 * (1 - q) + 0.0012, n: 4, reg: 'gold', col: col(GOLD), w: K.w });
-          tube(gb, bez([0, 0.068, 0.04], [0, 0.04, 0.075], [0, -0.07, 0.075], [0, -0.112, 0.032], 5), { r: 0.0048, n: 4, reg: 'gold', col: col(GOLD), w: K.w });
-        }
-        const pts = [], N = K.hi >= 1 ? 8 : 3;
-        for (let i = 0; i <= N; i++) {
-          const t = i / N, wt = t < 0.86 ? 0.019 + 0.012 * t : 0.0293 * Math.sqrt(Math.max(0, 1 - Math.pow((t - 0.86) / 0.14, 2)));
-          pts.push([0.08 + t * L, Math.max(0.003, wt), Math.max(0.003, wt), 0.0055, 0]);
-        }
-        bladeY(K, pts, true);
+        K.col('#3A2418'); M.segment([0, -0.1, 0], [0, 0.06, 0], 0.015, 0.014, K.sides);
+        K.col(PALF.gold);
+        M.cylinder([0, -0.128, 0], 0.036, 0.03, 0.016, det >= 1 ? 8 : 5);
+        M.cylinder([0, 0.058, 0], 0.034, 0.034, 0.014, det >= 1 ? 8 : 5);
+        if (det >= 1) M.curve([0, 0.068, 0.04], [0, -0.02, 0.1], [0, -0.112, 0.032], 0.005, 0.005, 3, 4);
+        const n = det >= 1 ? 6 : 3, st = [];
+        for (let i = 0; i <= n; i++) { const t = i / n, wt = t < 0.86 ? 0.019 + 0.012 * t : 0.029 * Math.sqrt(Math.max(0, 1 - Math.pow((t - 0.86) / 0.14, 2))); st.push([0.08 + t * L, Math.max(0.003, wt), Math.max(0.003, wt), 0.006]); }
+        K.blade(st, true);
         info = Object.assign(info, { len: 0.08 + L, tip: [0, 0.08 + L, 0], base: [0, 0.12, 0] });
         break;
       }
       case 'mace': {
-        shaft(K, -0.14, 0.5, 0.017, 'wrap', '#3a2418');
-        lathe(gb, [[0.018, 0.48], [0.036, 0.51], [0.05, 0.56], [0.052, 0.62], [0.04, 0.67], [0.015, 0.7], [0, 0.71]], { n: 16, reg: 'brushed', col: col('#8a8e98'), w: K.w, off: (th) => 0.016 * Math.pow(Math.max(0, Math.cos(th * 3)), 4) });
-        ringAtY(K, 0.49, 0.022, 0.03, 'gold', BRONZE);
+        K.shaft(-0.14, 0.5, 0.018, '#3A2418');
+        K.ring(0.49, 0.024, 0.03, PALF.bronze);
+        K.col('#8A8E98');
+        M.push().translate(0, 0.6, 0);
+        M.lathe([[0.02, -0.12], [0.045, -0.08], [0.055, -0.02], [0.05, 0.04], [0.02, 0.09], [0.001, 0.1]], det >= 1 ? 8 : 5, false, false, false);
+        if (det >= 1) { K.col('#A8ACB6'); for (let i = 0; i < 6; i++) { const a = i * PI / 3; M.box([Math.sin(a) * 0.05, 0, Math.cos(a) * 0.05], [0.014 + Math.abs(Math.sin(a)) * 0.0, 0.11, 0.014]); } }
+        M.pop();
         info = Object.assign(info, { len: 0.7, tip: [0, 0.62, 0], base: [0, 0.5, 0] });
         break;
       }
       case 'handaxe': {
-        shaft(K, -0.12, 0.5, 0.016, 'wood', '#5a3a20');
-        const st = [];
-        for (let i = 0; i <= 5; i++) { const t = i / 5; st.push({ p: [0, 0.38 + t * 0.12, 0.02 + 0.02 * t], e: [0, -0.5 + t * 0.8, 1], n: [1, 0, 0], we: 0.04 + 0.06 * t * t, wb: 0.02, th: 0.008, dbl: false }); }
-        st.forEach(s => (s.e = v3norm(s.e)));
-        blade(gb, st, { col: col('#d0d4d8'), w: K.w });
-        info = Object.assign(info, { len: 0.52, tip: [0, 0.45, 0.1], base: [0, 0.42, 0] });
+        K.shaft(-0.12, 0.52, 0.017, '#6A4A2A');
+        K.col('#D0D4D8');
+        M.loft([[[0.008, 0.38, 0.0], [0, 0.4, 0.13], [-0.008, 0.38, 0.0]], [[0.008, 0.5, 0.0], [0, 0.54, 0.14], [-0.008, 0.5, 0.0]]].map(r => r), true, true);
+        M.box([0, 0.46, 0.0], [0.03, 0.1, 0.04]);
+        info = Object.assign(info, { len: 0.54, tip: [0, 0.47, 0.12], base: [0, 0.42, 0] });
         break;
       }
       case 'fan': {
-        tube(gb, [[0, -0.08, 0], [0, 0.08, 0]], { r: 0.012, n: 6, reg: 'gold', col: col('#c8a050'), w: K.w });
-        ellipsoid(gb, [0, 0.1, 0], [0.02, 0.02, 0.02], { nl: 4, n: 6, reg: 'gold', col: col(GOLD), w: K.w });
-        // 羽面：扁平椭圆（白羽）
-        panel(gb, (s, t) => { const a = (s - 0.5) * PI * 0.62, r = 0.03 + t * 0.27; return [Math.sin(a) * r * 0.05 + 0.01 * Math.sin(s * PI * 9) * t, 0.1 + Math.cos(a) * r, Math.sin(a) * r]; }, { nu: K.hi >= 1 ? 9 : 3, nv: K.hi >= 1 ? 4 : 2, th: 0.008, reg: 'tassel', col: col('#f4f2ee'), colB: col('#e8e4dc'), w: K.w, uv: (s, t) => [s, t] });
-        if (K.hi >= 1) for (let i = 0; i < 7; i++) { const a = (i / 6 - 0.5) * PI * 0.6; tube(gb, [[0, 0.1, 0], [Math.sin(a) * 0.005, 0.1 + Math.cos(a) * 0.27, Math.sin(a) * 0.27]], { r: 0.0025, n: 3, reg: 'gold', col: col('#e8d8a8'), w: K.w }); }
+        // 羽扇：金柄、扇形白羽（羽根略暗）
+        K.col('#C8A050'); M.segment([0, -0.08, 0], [0, 0.08, 0], 0.012, 0.012, 5);
+        K.col(PALF.gold); M.sphere([0, 0.1, 0], 0.02, 5, 2);
+        const n = det >= 1 ? 9 : 5, r1 = 0.3;
+        for (let i = 0; i < n; i++) {
+          const a0 = (i / n - 0.5) * PI * 0.62, a1 = ((i + 1) / n - 0.5) * PI * 0.62;
+          const c0 = [0, 0.1, 0], p0 = [Math.sin(a0) * 0.008, 0.1 + Math.cos(a0) * r1, Math.sin(a0) * r1], p1 = [Math.sin(a1) * 0.008, 0.1 + Math.cos(a1) * r1, Math.sin(a1) * r1];
+          M.color = i % 2 ? C3('#F4F2EE') : C3('#E8E4DC');
+          M.triangleFacing(c0, p0, p1, [1, 0, 0]); M.triangleFacing(c0, p1, p0, [-1, 0, 0]);
+        }
         info = Object.assign(info, { len: 0.4, tip: [0, 0.38, 0], base: [0, 0.12, 0] });
         break;
       }
       case 'bow': case 'huangbow': case 'longbow': {
-        // 反曲弓：沿 ±Y 两臂，弓背朝 +Z，弦在 −Z 一侧；longbow（第三版：天竺竹长弓 / 库施长弓）更长、单弯、竹色
+        // 反曲弓：沿 ±Y 两臂，弓背朝 +Z，弦在 −Z 一侧；黄忠宝雕弓金饰；长弓竹色
         const gold = id === 'huangbow', lb = id === 'longbow';
-        const half = gold ? 0.62 : lb ? 0.74 : 0.55, pts = [];
-        const N = K.hi >= 1 ? 12 : 6;
-        for (let i = 0; i <= N; i++) { const t = i / N * 2 - 1, a = Math.abs(t); pts.push([0, t * half, lb ? 0.07 * (1 - a * a) : 0.06 * (1 - a * a) - 0.05 * Math.pow(a, 6) * 1.2 + (a > 0.85 ? -0.02 * (a - 0.85) / 0.15 : 0)]); }
-        tube(gb, pts, { r: s => (0.013 - 0.007 * Math.abs(2 * s - 1)) * (gold ? 1.1 : 1), rz: 0.8, n: Math.max(5, K.lod.tube), reg: gold ? 'gold' : 'wood', col: col(gold ? '#c89a48' : lb ? '#a8884a' : '#5a3418'), w: K.w });
-        tube(gb, [[0, -0.06, 0.05], [0, 0.06, 0.05]], { r: 0.017, n: 6, reg: 'wrap', col: col('#3a2418'), w: K.w });
-        // 弦（细管）
-        tube(gb, [pts[0], [0, 0, pts[0][2] - 0.005], pts[N]], { r: 0.0018, n: 3, reg: 'white', col: col('#e8e0d0'), w: K.w });
-        info = Object.assign(info, { len: half, tip: [0, half, 0], base: [0, 0, 0], string: [0, 0, pts[0][2]], nockTop: pts[N], nockBot: pts[0] });
+        const half = gold ? 0.62 : lb ? 0.74 : 0.55, n = det >= 1 ? 8 : 4, pts = [];
+        for (let i = 0; i <= n; i++) { const t = i / n * 2 - 1, a = Math.abs(t); pts.push([0, t * half, lb ? 0.07 * (1 - a * a) : 0.06 * (1 - a * a) - 0.06 * Math.pow(a, 6) + (a > 0.85 ? -0.02 * (a - 0.85) / 0.15 : 0)]); }
+        K.col(gold ? '#C89A48' : lb ? '#A8884A' : '#6A4020');
+        for (let i = 0; i < n; i++) { const t0 = Math.abs(i / n * 2 - 1), t1 = Math.abs((i + 1) / n * 2 - 1); M.segment(pts[i], pts[i + 1], 0.013 - 0.007 * t0, 0.013 - 0.007 * t1, 4); }
+        K.col('#3A2418'); M.segment([0, -0.06, 0.055], [0, 0.06, 0.055], 0.017, 0.017, 5);
+        if (gold && det >= 1) { K.col(PALF.goldLight); for (const s of [1, -1]) M.sphere(pts[s > 0 ? n : 0], 0.014, 4, 2); }
+        K.col('#E8E0D0'); M.segment(pts[0], pts[n], 0.002, 0.002, 3);
+        info = Object.assign(info, { len: half, tip: [0, half, 0], base: [0, 0, 0], string: [0, 0, pts[0][2]], nockTop: pts[n], nockBot: pts[0] });
         break;
       }
-      default: return buildWeaponInto(gb, 'jian', lod, o);
+      default: M.jitter = keepJ; return buildWeaponLP(M, 'jian', det);
     }
+    M.jitter = keepJ;
     return info;
   }
 
-  // 盾：局部 +Z 为盾面朝外，+Y 沿前臂（朝手）方向；原点在前臂处
-  function buildShieldInto(gb, id, lod, colr, w) {
-    const K = { gb, lod, w: w == null ? B.foreArmL : w, hi: lod.detail };
-    const fc = col(colr || '#8a2a24');
+  // 盾：局部 +Z 为盾面朝外，+Y 沿前臂（朝手）方向；原点在前臂处。face = 盾面色（势力色），rim = 边
+  function buildShieldLP(M, id, det, X) {
+    const keepJ = M.jitter; M.jitter = 0.04;
+    const team = X ? X.team : tcol([0.55, 0.2, 0.18], 1), trim = X ? X.trim : C3(PALF.gold);
+    const sides = det >= 2 ? 12 : det >= 1 ? 10 : 7;
+    let info = { r: 0.32 };
+    const disc = (R, cz, face, rim, boss, sy, rings) => {
+      M.push().translate(0, 0, cz).rotate(90, 0, 0).scale(1, 1, sy || 1);
+      M.color = face;
+      M.lathe([[R, -0.018], [R * 1.02, 0], [R * 0.95, 0.012], [R * 0.5, 0.03], [0.001, 0.04]], sides, false, true, false, null, 180 / sides);
+      if (rim) { M.color = rim; M.band([0, 0, 0], R * 1.03, R * 1.03, -0.02, 0.006, sides); }
+      if (rings && det >= 1) { M.color = rings; M.band([0, 0, 0], R * 0.66, R * 0.62, 0.02, 0.028, sides); }
+      if (boss) { M.color = boss; M.sphere([0, 0.04, 0], [R * 0.2, 0.03, R * 0.2], det >= 1 ? 6 : 4, 2); }
+      M.pop();
+    };
     if (id === 'scutum') {
-      const W0 = 0.62, H0 = 1.02, Rc = 0.5;
-      panel(gb, (s, t) => { const a = (s - 0.5) * W0 / Rc; return [Math.sin(a) * Rc, (t - 0.5) * H0 + 0.02, Math.cos(a) * Rc - Rc + 0.07]; }, { nu: K.hi >= 1 ? 6 : 3, nv: K.hi >= 1 ? 4 : 2, th: 0.02, reg: 'scutum', col: fc, colB: col('#6a4a30'), w: K.w, uv: (s, t) => [s, t] });
-      const c = [0, 0.02, 0.09], AX = axesFromY([0, 0, 1]), r = 0.07, start = gb.nv;
-      lathe(gb, [[r, -0.004, null, 0], [r * 0.9, 0.01, null, 0.3], [r * 0.5, 0.03, null, 0.7], [0, 0.036, null, 1]], { c, axes: AX, n: Math.max(6, lod.ring - 4), reg: 'brushed', col: col('#c8ccd2'), w: K.w, capStart: true });
-      void start;
-      return { r: 0.5 };
+      // 罗马长方弧形盾：势力色盾面、金边、钢盾心与金色饰条
+      const W0 = 0.62, H0 = 1.02, Rc = 0.5, a = W0 / Rc / 2 / D2R;
+      M.color = team;
+      M.panel([0, 0.02, 0.07 - Rc], -a, a, det >= 1 ? 4 : 2, [[Rc, H0 / 2], [Rc, -H0 / 2]], 1, team, C3('#6A4A30'), 0.02);
+      if (det >= 1) { M.color = trim; for (const y of [H0 / 2 - 0.01, -H0 / 2 + 0.01]) M.panel([0, 0.02, 0.07 - Rc], -a, a, 4, [[Rc + 0.006, y + 0.015], [Rc + 0.006, y - 0.015]], 1, trim, null); M.panel([0, 0.02, 0.07 - Rc], -3, 3, 1, [[Rc + 0.005, H0 / 2], [Rc + 0.005, -H0 / 2]], 1, shT(trim, 0.9), null); }
+      M.color = C3('#C8CCD2'); M.push().translate(0, 0.02, 0.08).rotate(90, 0, 0); M.lathe([[0.07, -0.004], [0.06, 0.012], [0.03, 0.03], [0.001, 0.036]], det >= 1 ? 8 : 5, false, true, false); M.pop();
+      info = { r: 0.5 };
+    } else if (id === 'wa' || id === 'pai' || id === 'long') {
+      const W0 = id === 'wa' ? 0.4 : id === 'long' ? 0.4 : 0.46, H0 = id === 'wa' ? 0.92 : id === 'long' ? 0.98 : 0.76;
+      const face = id === 'wa' ? C3('#8A3A2A') : team, back = C3('#5A3A24');
+      const cols = det >= 1 ? 3 : 2;
+      M.color = face;
+      // 竖向略弯的木盾（宽向弯 6 厘米）；天竺长盾顶边圆拱
+      const P0 = (s, t) => { const e = 1 - Math.pow(2 * s - 1, 2); return [(s - 0.5) * W0, (t - 0.5) * H0 + (id === 'long' ? Math.pow(t, 4) * 0.11 * e : 0), 0.06 * e]; };
+      for (let i = 0; i < cols; i++) for (let j = 0; j < 2; j++) {
+        const s0 = i / cols, s1 = (i + 1) / cols, t0 = j / 2, t1 = (j + 1) / 2;
+        M.color = face;
+        M.quad(P0(s0, t0), P0(s1, t0), P0(s1, t1), P0(s0, t1), [0, 0, 1]);
+        M.color = back;
+        M.quad(V0(P0(s0, t0)), V0(P0(s1, t0)), V0(P0(s1, t1)), V0(P0(s0, t1)), [0, 0, -1]);
+      }
+      // 边框
+      M.color = id === 'wa' ? C3('#2A2426') : trim;
+      const edge = [[0, 0], [1, 0], [1, 1], [0, 1]];
+      for (let i = 0; i < 4; i++) { const a = P0(...edge[i]), b = P0(...edge[(i + 1) % 4]); M.strip(a, b, 0.03, 0.03, [0, 0, 1], 0.03); }
+      if (det >= 1) {
+        M.color = id === 'wa' ? C3('#E8D8B0') : shT(face, 1.25);
+        if (id === 'pai') { M.push().translate(0, 0.0, 0.07).rotate(90, 0, 0); M.cylinder([0, 0, 0], 0.11, 0.1, 0.012, sides); M.pop(); M.color = C3(PALF.goldLight); M.push().translate(0, 0, 0.085).rotate(90, 0, 0); M.cylinder([0, 0, 0], 0.045, 0.035, 0.012, 7); M.pop(); }
+        else if (id === 'wa') { for (const y of [-0.22, 0, 0.22]) M.strip([-W0 * 0.42, y, 0.066], [W0 * 0.42, y, 0.066], 0.03, 0.03, [0, 0, 1], 0.006); }
+        else { M.color = C3(PALF.gold); M.sphere([0, 0.04, 0.09], [0.05, 0.05, 0.02], 6, 2); }
+      }
+      info = { r: H0 / 2 };
+    } else {
+      // 圆盾 / 椭圆盾 / 藤牌 / 皮盾（阿克苏姆、库施的长皮盾）
+      const oval = id === 'oval' || id === 'hide', rat = id === 'rattan';
+      const R0 = oval ? 0.26 : rat ? 0.33 : 0.32;
+      const face = rat ? C3(PALF.rattan) : id === 'hide' ? C3('#A07A4E') : team;
+      disc(R0, 0.06, face, rat ? C3(PALF.rattanDark) : id === 'hide' ? C3('#6A4A2A') : trim, rat ? null : C3(id === 'hide' ? '#5A3A20' : '#C8CCD2'), id === 'hide' ? 2.1 : oval ? 1.8 : 1, rat ? C3(PALF.rattanDark) : id === 'hide' ? null : shT(face, 1.3));
+      if (id === 'hide' && det >= 1) { M.color = C3('#6A4A2A'); M.segment([0, -R0 * 1.9, 0.105], [0, R0 * 1.9, 0.105], 0.012, 0.012, 4); }
+      info = { r: oval ? R0 * 1.8 : R0 };
     }
-    if (id === 'wa' || id === 'pai') {
-      const W0 = id === 'wa' ? 0.4 : 0.46, H0 = id === 'wa' ? 0.92 : 0.76;
-      panel(gb, (s, t) => [(s - 0.5) * W0, (t - 0.5) * H0, 0.06 - 0.06 * Math.pow(2 * s - 1, 2)], { nu: 3, nv: 2, th: 0.02, reg: id === 'wa' ? 'brocade' : 'wood', col: id === 'wa' ? col('#7a2a1a') : fc, colB: col('#5a3a24'), w: K.w, uv: (s, t) => [s, t] });
-      const c = [0, 0.02, 0.085], AX = axesFromY([0, 0, 1]), r = id === 'wa' ? 0.08 : 0.11, start = gb.nv;
-      lathe(gb, [[r, -0.006, null, 0], [r, 0.0, null, 0.1], [r * 0.85, 0.012, null, 0.35], [r * 0.3, 0.02, null, 0.8], [0, 0.022, null, 1]], { c, axes: AX, n: Math.max(6, lod.ring - 4), reg: id === 'wa' ? 'mirror' : 'buckle', col: col(GOLD), w: K.w });
-      fixDiscUV(gb, REG(id === 'wa' ? 'mirror' : 'buckle'), c, AX, r, start);
-      return { r: H0 / 2 };
-    }
-    if (id === 'long') {
-      // 第三版：天竺长盾（桑奇浮雕）——窄长、顶边圆拱、竖向弯曲的木盾，正中金泡钉
-      const W0 = 0.4, H0 = 0.98;
-      panel(gb, (s, t) => { const e = 1 - Math.pow(2 * s - 1, 2); return [(s - 0.5) * W0, (t - 0.5) * H0 + Math.pow(t, 4) * 0.11 * e, 0.07 * e]; },
-        { nu: K.hi >= 1 ? 4 : 2, nv: K.hi >= 1 ? 4 : 2, th: 0.02, reg: 'wood', col: fc, colB: col('#5a3a24'), w: K.w, uv: (s, t) => [s, t] });
-      const c = [0, 0.04, 0.09], AX = axesFromY([0, 0, 1]), r = 0.06, start = gb.nv;
-      lathe(gb, [[r, -0.006, null, 0], [r, 0.0, null, 0.1], [r * 0.85, 0.012, null, 0.35], [r * 0.3, 0.02, null, 0.8], [0, 0.022, null, 1]], { c, axes: AX, n: Math.max(6, lod.ring - 4), reg: 'buckle', col: col(GOLD), w: K.w });
-      fixDiscUV(gb, REG('buckle'), c, AX, r, start);
-      return { r: H0 / 2 };
-    }
-    // 圆盾 / 椭圆盾 / 藤牌；hide（第三版：阿克苏姆 / 库施的长皮盾，椭圆、皮色）
-    const oval = id === 'oval' || id === 'hide', rat = id === 'rattan';
-    const R0 = oval ? 0.26 : rat ? 0.33 : 0.32;
-    const c = [0, 0, 0.07], AX = axesFromY([0, 0, 1]), start = gb.nv;
-    const reg = rat ? 'rattan' : id === 'hide' ? 'cloth' : 'shieldRound';
-    lathe(gb, [[R0, -0.02, null, 0], [R0 * 1.02, 0.0, null, 0.04], [R0 * 0.95, 0.012, null, 0.1], [R0 * 0.5, 0.03, null, 0.5], [0, 0.04, null, 1]], { c, axes: AX, n: Math.max(8, lod.ring), reg, col: rat ? col('#c8a060') : id === 'hide' ? col('#a07a4e') : fc, w: K.w, sx: 1, sz: id === 'hide' ? 2.1 : oval ? 1.8 : 1, capStart: true });
-    if (!rat) fixDiscUV(gb, REG(reg), c, AX, R0, start); else fixDiscUV(gb, REG(reg), c, AX, R0, start);
-    if (oval) { for (let i = start; i < gb.nv; i++) { /* 椭圆：UV 已按圆投影，纵向拉伸可接受 */ } }
-    if (id === 'hide' && K.hi >= 1) {
-      // 皮盾：纵向一道木脊 + 正中皮钮
-      tube(gb, [[0, -R0 * 1.9, 0.105], [0, 0, 0.118], [0, R0 * 1.9, 0.105]], { r: 0.012, rz: 0.6, n: 4, reg: 'wood', col: col('#6a4a2a'), w: K.w });
-      ellipsoid(gb, [0, 0, 0.12], [0.04, 0.05, 0.02], { nl: 4, n: 6, reg: 'leather', col: col('#5a3a20'), w: K.w });
-    }
-    return { r: oval ? R0 * 1.8 : R0 };
+    M.jitter = keepJ;
+    return info;
   }
+  function V0(p) { return [p[0], p[1], p[2] - 0.02]; }
 
   // ======================================================== 战马 ==
   const HBONES = ['root', 'body', 'chest', 'neck1', 'neck2', 'head', 'tail1', 'tail2',
@@ -3538,112 +2879,320 @@
     for (const n in J) J[n] = J[n].map(v => v * k);
     return J;
   }
-  const HORSE_COATS = [['#7a4a2a', '#1c1614'], ['#8a4a22', '#5a2a14'], ['#2a2422', '#141010'], ['#e4e0d8', '#d8d4cc'], ['#a8a49c', '#3a3634'], ['#b08a5a', '#3a2a1a']];
-  const HORSE_NAMED = { '赤兔': ['#a83220', '#4a1410'], '的卢': ['#e8e4dc', '#3a3634'], '绝影': ['#2a2422', '#141010'], '爪黄飞电': ['#e8e0c8', '#c8a050'], '白龙驹': ['#f0eee8', '#e0dcd4'] };
 
-  function buildHorseGeometry(opts) {
-    const lod = LODP[opts.lod || 'mid'] || LODP.mid;
-    const k = 1.0;
-    const J = horseJoints(k);
-    const gb = new GB();
-    if (lod.detail === 0) gb.noEdges = true;
-    const r = Rng(hashStr('horse' + (opts.seed || 0)));
-    const named = HORSE_NAMED[opts.name];
-    const coatPair = opts.coat ? [opts.coat, opts.mane || shade(opts.coat, -0.6)] : named || HORSE_COATS[(opts.seed || 0) % HORSE_COATS.length];
-    const coat = col(coatPair[0]), mane = col(coatPair[1]);
-    const fc = TEAM;
+  // ======================================================== 战马（低多边形） ==
+  // 按 js/lp-pilot.js 试点的战马（Lanternvale CreatureKit 的敦实）：深胸低腹、上粗下细的腿（膝 / 飞节 / 球节隆起、外撇的蹄）、
+  // 圆头大眼（高光）、竖耳、整片鬃毛（下缘分绺、两色、随风）、一体的马尾；势力色马衣与鞍、胸前红缨。具装（scale）：
+  // 颈、胸、身、臀披鳞甲排（两色交替）+ 势力色镶边；名将的马（general）加面帘与红缨。刚性蒙皮在战马骨架上。
+  const HLOD = {
+    high: { n: 12, sides: 10, neck: 8, leg: 7, legLo: 6, hoof: 7, mane: 6, det: 2 },
+    mid: { n: 9, sides: 8, neck: 7, leg: 6, legLo: 5, hoof: 6, mane: 4, det: 1 },
+    low: { n: 7, sides: 7, neck: 6, leg: 5, legLo: 4, hoof: 5, mane: 3, det: 0 },
+  };
+  const HCOATS = [
+    ['#A85A36', '#6B3A26', '#4A2A1E'], ['#8A4A2A', '#3A2620', '#2A1E1A'], ['#4A3E3C', '#2E2628', '#262022'],
+    ['#DCD8D0', '#B4B0A8', '#ECE8E0'], ['#B08A5A', '#5A4430', '#3A2A1A'], ['#A8A49C', '#6A6660', '#4A4644'],
+  ];
+  const HNAMED = { '赤兔': ['#B03A24', '#6A2014', '#4A1410'], '的卢': ['#E4E0D8', '#B8B4AC', '#4A4644'], '绝影': ['#3A3236', '#262022', '#1E1A1C'], '爪黄飞电': ['#E8E0C8', '#C8B890', '#C8A050'], '白龙驹': ['#F0EEE8', '#D8D4CC', '#E0DCD4'] };
+  function buildHorseLP(opts, mode) {
+    const L = LPX(), P = L.Paint, V = L.V;
+    const D = HLOD[opts.lod] || HLOD.mid;
+    const FB = FigBuilder();
+    const M = new FB(77 + (opts.seed | 0));
+    M.jitter = 0.05;
+    const bone = n => { M.bone = HB[n]; };
+    // 皮带 / 白鼻梁：特写（det 2）用有厚度的带；中、远景用一片朝外的四边形（2 个三角形，不描线）
+    const strap = (a, b, w0, w1, facing, thick) => {
+      if (D.det >= 2) { M.strip(a, b, w0, w1, facing, thick); return; }
+      const axis = V.sub(b, a); let side = V.cross(axis, facing);
+      if (V.dot(side, side) < 1e-10) return;
+      side = V.norm(side);
+      const n = V.norm(V.cross(side, axis)), lift = V.mul(V.dot(n, facing) < 0 ? V.neg(n) : n, (thick || 0.01) * 0.5);
+      const keepInk = M.ink; M.ink = 0;
+      M.quad(V.add(V.madd(a, side, -w0 / 2), lift), V.add(V.madd(a, side, w0 / 2), lift), V.add(V.madd(b, side, w1 / 2), lift), V.add(V.madd(b, side, -w1 / 2), lift), facing);
+      M.ink = keepInk;
+    };
+    const named = HNAMED[opts.name];
+    let coatS = named || HCOATS[(opts.seed || 0) % HCOATS.length];
+    if (opts.coat) coatS = [opts.coat, shade(opts.coat, -0.35), opts.mane || shade(opts.coat, -0.55)];
+    const coat = C3(coatS[0]), points = C3(coatS[1]), mane = hairTone(coatS[2]), mane2 = P.shade(mane, 1.2);
+    const coatDark = P.shade(coat, 0.84), belly = P.mix(coat, C3('#E8C9A0'), 0.2), markC = C3('#EFE2C6');
+    const team = mode === 'crowd' ? [1, 1, 1] : teamTone(opts.color || '#8a2a24');
+    const cloth = tcol(team, 1), clothDark = tcol(team, 0.78), trim = C3('#EBDDB0');
+    const tasselC = C3(opts.plume ? opts.plume : PALF.tassel), gold = C3(PALF.gold), saddleC = C3('#5A3426');
     const armor = opts.armor || 'cloth';
-    const hi = lod.detail;
-    const N = lod.detail >= 2 ? 18 : lod.detail >= 1 ? 10 : 7;
-    // 躯干
-    const bodyS = [[-0.88, 0, 0, 1.22], [-0.84, 0.15, 0.17, 1.22], [-0.74, 0.27, 0.3, 1.18], [-0.56, 0.32, 0.36, 1.15], [-0.3, 0.31, 0.35, 1.11], [0.0, 0.315, 0.36, 1.08], [0.25, 0.305, 0.37, 1.1], [0.45, 0.285, 0.375, 1.14], [0.58, 0.23, 0.32, 1.18], [0.66, 0.13, 0.18, 1.24], [0.7, 0, 0, 1.26]];
-    const bw = p => (p[2] > 0.3 ? [[HB.chest, 1]] : p[2] > 0.1 ? [[HB.chest, (p[2] - 0.1) / 0.2], [HB.body, 1 - (p[2] - 0.1) / 0.2]] : [[HB.body, 1]]);
-    const tailW = p => (p[2] < -0.78 ? [[HB.body, 0.6], [HB.tail1, 0.4]] : null);
-    loft(gb, bodyS.map(([z, rx, ry, cy], i) => ({ c: [0, cy * k, z * k], X: [-1, 0, 0], Z: [0, 1, 0], rx: rx * k, rz: ry * k, t: i / (bodyS.length - 1), pole: rx === 0, sq: 2.2 })),
-      { n: N + 2, reg: 'horse', col: coat, wf: p => tailW(p) || bw(p),
-        off: (th, s) => { const z = s.c[2]; return (0.02 * gauss(z, -0.5, 0.15) * gauss(Math.abs(th), 0.9, 0.5) + 0.018 * gauss(z, 0.42, 0.12) * gauss(Math.abs(th), 1.2, 0.5) - 0.015 * gauss(z, 0.0, 0.3) * gauss(Math.abs(th), PI, 0.6)) * k; } });
-    // 颈
-    const nk = [[0, 1.2, 0.38], [0, 1.4, 0.56], [0, 1.6, 0.72], [0, 1.78, 0.86], [0, 1.88, 0.94]];
-    const nr = [[0.17, 0.34], [0.135, 0.32], [0.11, 0.25], [0.09, 0.19], [0.082, 0.15]];
-    const nF = frames(nk, [0, 1, 0]);
-    const neckW = p => { const t = clamp01((p[1] - 1.3) / 0.55); return wT(t, [[HB.chest, 0], [HB.neck1, 0.25], [HB.neck2, 0.6], [HB.head, 1]]); };
-    loft(gb, nk.map((c, i) => { const d = nF.T[i], up = v3norm(v3sub([0, 0.3, -1].map(v => -v), v3mul(d, v3dot([0, -0.3, 1], d)))); const Zs = v3norm(v3sub([0, 1, -0.6], v3mul(d, v3dot([0, 1, -0.6], d)))); return { c: v3mul(c, k), X: v3cross(d, Zs), Z: Zs, rx: nr[i][0] * k, rz: nr[i][1] * 0.55 * k, t: i / 4 }; }),
-      { n: N, reg: 'horse', col: coat, wf: neckW });
-    // 头：自后脑向前下方
-    const hd = [[0, 1.9, 0.9], [0, 1.88, 0.98], [0, 1.8, 1.1], [0, 1.68, 1.24], [0, 1.58, 1.33], [0, 1.53, 1.37]];
-    const hr = [[0.08, 0.1], [0.1, 0.13], [0.092, 0.115], [0.072, 0.09], [0.068, 0.082], [0.035, 0.045]];
-    const hF = frames(hd, [0, 1, 0]);
-    loft(gb, hd.map((c, i) => { const d = hF.T[i], Zs = v3norm(v3sub([0, 1, 0.3], v3mul(d, v3dot([0, 1, 0.3], d)))); return { c: v3mul(c, k), X: v3cross(d, Zs), Z: Zs, rx: hr[i][0] * k, rz: hr[i][1] * k, t: i / 5, pole: i === 5 && false }; }),
-      { n: N, reg: 'horse', col: coat, w: HB.head, capEnd: true, capStart: true });
-    // 耳、眼、鼻孔
+    const sockHind = (opts.seed | 0) % 3 === 1 || opts.name === '的卢', blaze = (opts.seed | 0) % 2 === 0 || !!named;
+    // ---- 躯干：一颗分面的豆形，后半随 body、前半随 chest（重叠）；背线在鞍下，腹部低垂圆润
+    const z0 = -0.98, z1 = 0.76;
+    const section = z => {
+      const s = clamp01((z - z0) / (z1 - z0)), u = s * 2 - 1;
+      const e = Math.pow(Math.max(0, 1 - Math.pow(Math.abs(u), 2.4)), 1 / 2.4);
+      const withers = Math.exp(-Math.pow((s - 0.74) / 0.12, 2)), croup = Math.exp(-Math.pow((s - 0.2) / 0.12, 2));
+      const cy = lerp(1.1, 1.14, sstep(0.2, 0.8, s)) + 0.03 * withers + 0.025 * croup;
+      const w = 0.345 * e * lerp(1.0, 0.95, s);
+      return { cy, w, top: 0.34 * e * (1 + 0.1 * withers + 0.06 * croup), bottom: 0.44 * e * (1 - 0.05 * Math.exp(-Math.pow((s - 0.5) / 0.2, 2))) };
+    };
+    const n = D.n, zs = [];
+    for (let i = 0; i <= n; i++) zs.push(lerp(z0, z1, 0.5 - 0.5 * Math.cos(PI * i / n)));
+    const mid = Math.round(n / 2), sides = D.sides;
+    const piece = (b, from, to) => {
+      bone(b);
+      const rings = [];
+      for (let i = from; i <= to; i++) {
+        const sc = section(zs[i]);
+        let kk = 1;
+        if (b === 'body' && i > mid) kk = 1 - 0.3 * sstep(0, 2, i - mid);
+        if (b === 'chest' && i < mid) kk = 1 - 0.3 * sstep(0, 2, mid - i);
+        const ring = [];
+        for (let j = 0; j < sides; j++) { const a = j * TAU / sides, c = Math.cos(a); ring.push([Math.sin(a) * sc.w * kk, sc.cy + c * (c >= 0 ? sc.top : sc.bottom) * kk, zs[i]]); }
+        rings.push(ring);
+      }
+      const keepJ = M.jitter; M.jitter = 0.03;
+      M.loft(rings, from === 0, to === n, nrm => (nrm[1] < -0.6 ? belly : nrm[1] > 0.75 ? P.shade(coat, 1.04) : coat));
+      M.jitter = keepJ;
+    };
+    piece('body', 0, Math.min(n, mid + 2));
+    piece('chest', Math.max(0, mid - 2), n);
+    // ---- 颈：粗、拱，胸前深
+    const neckPts = [[0, 1.26, 0.52], [0, 1.46, 0.64], [0, 1.65, 0.77], [0, 1.81, 0.87], [0, 1.9, 0.91]];
+    const neckW = [0.17, 0.145, 0.12, 0.1, 0.09], neckH = [0.31, 0.24, 0.18, 0.14, 0.12];
+    const frame = (pts, i) => { const t = V.norm(V.sub(pts[Math.min(pts.length - 1, i + 1)], pts[Math.max(0, i - 1)])); return V.norm(V.cross([1, 0, 0], t)); };
+    const ns = D.neck;
+    const neckRings = neckPts.map((c, i) => { const up = frame(neckPts, i), ring = []; for (let j = 0; j < ns; j++) { const a = j * TAU / ns; ring.push(V.add(V.add(c, [Math.sin(a) * neckW[i], 0, 0]), V.mul(up, Math.cos(a) * neckH[i] * (Math.cos(a) > 0 ? 1 : 0.85)))); } return ring; });
+    bone('neck1'); M.color = coat; M.loft(neckRings.slice(0, 3), true, false);
+    bone('neck2'); M.color = coat; M.loft(neckRings.slice(1, 5), false, false);
+    // ---- 头：宽圆的颅骨与下颚、渐细的脸、奶白口鼻（鼻孔）、白鼻梁；侧向的大眼（高光）、竖耳
+    bone('head');
+    const HJ = [0, 1.86, 0.92];
+    M.push().translate(HJ).scale(1.15).translate(V.neg(HJ));
+    const skull = [0, 1.87, 0.97];
+    M.color = coat;
+    M.sphere(skull, [0.118, 0.125, 0.14], D.det >= 2 ? 9 : D.det >= 1 ? 8 : 7, D.det >= 2 ? 5 : 4, true);
+    if (D.det >= 1) M.sphere([0, 1.95, 0.9], [0.09, 0.07, 0.1], D.det >= 2 ? 7 : 6, D.det >= 2 ? 4 : 3, true);
+    const faceAxis = [[0, 1.86, 1.04], [0, 1.77, 1.14], [0, 1.67, 1.23], [0, 1.6, 1.29]];
+    const faceW = [0.1, 0.088, 0.078, 0.072], faceH = [0.105, 0.09, 0.08, 0.075], fs = D.det >= 1 ? 8 : 6;
+    const faceRings = faceAxis.map((c, i) => { const up = frame(faceAxis, i), ring = []; for (let j = 0; j < fs; j++) { const a = j * TAU / fs; ring.push(V.add(V.add(c, [Math.sin(a) * faceW[i], 0, 0]), V.mul(up, Math.cos(a) * faceH[i]))); } return ring; });
+    M.color = coat;
+    M.loft(faceRings, false, false, nrm => (nrm[1] < -0.55 ? coatDark : coat));
+    const muzzle = C3('#C9A88C');
+    M.color = P.mix(muzzle, coat, 0.25);
+    M.sphere([0, 1.565, 1.315], [0.085, 0.078, 0.088], D.det >= 2 ? 8 : D.det >= 1 ? 7 : 6, D.det >= 2 ? 4 : 3, true);
+    if (D.det >= 1) {
+      M.color = C3('#3A241C');
+      for (const s of [1, -1]) { M.push().translate(s * 0.042, 1.585, 1.392).rotate(-20, s * 22, 0); M.sphere([0, 0, 0], [0.018, 0.024, 0.008], 5, 2, false); M.pop(); }
+      M.color = P.shade(muzzle, 0.7); M.box([0, 1.512, 1.37], [0.07, 0.008, 0.02], null, 'tfrl');
+    }
+    if (blaze) {
+      const bl = faceRings.map((r, i) => V.add(r[Math.round(fs / 2)], V.mul(frame(faceAxis, i), -0.001)));
+      M.color = markC;
+      for (let i = 0; i < bl.length - 1; i++) strap(bl[i], bl[i + 1], lerp(0.045, 0.034, i / 3), lerp(0.045, 0.034, (i + 1) / 3), V.neg(frame(faceAxis, i)), 0.004);
+    }
+    // 眼：深色圆片、虹膜、白色高光
+    const keepJ = M.jitter; M.jitter = 0;
     for (const s of [1, -1]) {
-      tube(gb, [[s * 0.05 * k, 1.95 * k, 0.93 * k], [s * 0.065 * k, 2.03 * k, 0.9 * k], [s * 0.07 * k, 2.09 * k, 0.88 * k]], { r: t => (0.022 * (1 - t) + 0.002) * k, rz: 0.55, n: 5, reg: 'horse', col: coat, w: HB.head });
-      ellipsoid(gb, [s * 0.088 * k, 1.84 * k, 1.04 * k], [0.012 * k, 0.016 * k, 0.02 * k], { nl: 4, n: 6, reg: 'white', col: col('#140e0c'), w: HB.head });
-      ellipsoid(gb, [s * 0.04 * k, 1.56 * k, 1.36 * k], [0.012 * k, 0.014 * k, 0.01 * k], { nl: 3, n: 5, reg: 'white', col: col('#1a1210'), w: HB.head });
+      M.push().translate(s * 0.098, 1.885, 1.05).rotate(-8, s * 48, 0);
+      M.ink = 0.5; M.color = C3('#1E1612'); M.sphere([0, 0, 0], [0.036, 0.038, 0.016], D.det >= 2 ? 7 : 5, D.det >= 2 ? 3 : 2, false);
+      if (D.det >= 2) { M.color = C3('#4A2E22'); M.sphere([0, -0.008, 0.008], [0.024, 0.022, 0.012], 6, 2, false); }
+      M.emission = 0.55; M.ink = 0; M.color = [1, 1, 0.96]; if (D.det >= 1) M.sphere([s * 0.01, 0.014, 0.015], 0.009, 4, 2, false);
+      M.emission = 0; M.ink = 1;
+      M.pop();
     }
-    // 鬃
-    panel(gb, (s, t) => { const p = v3lerp(nk[1], [0, 1.95, 0.9], t); return [lerp(-0.012, 0.03, s) * k + 0.02 * k * t, (p[1] + 0.13 - 0.06 * t + 0.0 * s) * k - s * 0.1 * k, (p[2] - 0.06 * (1 - t) - 0.02) * k]; },
-      { nu: 1, nv: hi >= 1 ? 6 : 3, th: 0.03 * k, reg: 'hair', col: mane, w: p => neckW(p), uv: (s, t) => [s, t] });
-    // 腿
-    const legs = [['F', 'L'], ['F', 'R'], ['H', 'L'], ['H', 'R']];
-    for (const [fh, S] of legs) {
-      const up = J['up' + fh + S], lo = J['lo' + fh + S], ft = J['ft' + fh + S], sg = S === 'L' ? 1 : -1;
-      const hoof = [ft[0], 0.0, ft[2] + 0.04 * k];
-      const top = fh === 'F' ? [up[0] * 0.9, 1.22 * k, up[2] - 0.04 * k] : [up[0] * 0.9, 1.22 * k, up[2] + 0.05 * k];
-      let pts = [top, up, v3lerp(up, lo, 0.35), v3lerp(up, lo, 0.75), lo, v3lerp(lo, ft, 0.5), ft, [ft[0], 0.11 * k, ft[2] + 0.025 * k]];
-      let rr = fh === 'F' ? [0.15, 0.105, 0.088, 0.066, 0.058, 0.043, 0.054, 0.046] : [0.17, 0.14, 0.105, 0.075, 0.064, 0.045, 0.055, 0.046];
-      if (hi === 0) { pts = [pts[0], pts[1], pts[4], pts[6], pts[7]]; rr = [rr[0], rr[1], rr[4], rr[6], rr[7]]; }
-      const chain = fh === 'F' ? [[HB.chest, top], [HB['upF' + S], up], [HB['loF' + S], lo], [HB['ftF' + S], ft], [null, hoof]] : [[HB.body, top], [HB['upH' + S], up], [HB['loH' + S], lo], [HB['ftH' + S], ft], [null, hoof]];
-      tube(gb, pts, { r: (s, i) => rr[i] * k, rz: 1.1, n: hi === 0 ? 5 : Math.max(6, N - 4), reg: 'horse', col: (s => (s > 0.78 && (opts.seed || 0) % 3 === 1 ? col('#ece8e0') : coat))(0), wf: p => chainW(p, chain, 0.05), up: [0, 0, 1] });
-      // 蹄
-      lathe(gb, hi === 0 ? [[0.06 * k, 0.0], [0.046 * k, 0.105 * k]] : [[0.056 * k, 0.0], [0.062 * k, 0.006 * k], [0.054 * k, 0.075 * k], [0.044 * k, 0.105 * k]], { c: [hoof[0], 0, hoof[2] - 0.01 * k], n: hi === 0 ? 5 : Math.max(6, N - 4), reg: 'leather', col: col('#262220'), w: HB['ft' + fh + S], capStart: true });
-    }
-    // 尾
-    const tp = [[0, 1.3, -0.82], [0, 1.22, -0.92], [0, 1.0, -0.98], [0, 0.78, -0.98], [0, 0.6, -0.96]].map(p => v3mul(p, k));
-    tube(gb, tp, { r: s => (0.045 + 0.05 * Math.sin(s * PI * 0.9)) * k, rz: 0.55, n: Math.max(5, N - 6), reg: 'hair', col: mane, w: s => wT(s, [[HB.body, 0], [HB.tail1, 0.15], [HB.tail2, 0.6]]), capEnd: true });
-    // ---- 马具 ----
-    const sad = J.saddle;
-    // 鞍
-    panel(gb, (s, t) => { const a = lerp(-1.25, 1.25, s); const z = lerp(-0.22, 0.2, t) * k; const y = (1.43 + 0.05 * (Math.pow(2 * t - 1, 2))) * k; return [Math.sin(a) * 0.3 * k, y - (1 - Math.cos(a)) * 0.16 * k, z]; },
-      { nu: hi >= 1 ? 6 : 3, nv: hi >= 1 ? 4 : 2, th: 0.03, reg: 'leather', col: col('#4a2a1a'), w: HB.body, mirrorS: true });
-    if (hi >= 1) for (const zz of [-0.22, 0.2]) tube(gb, (() => { const pts = []; for (let i = 0; i <= 8; i++) { const a = lerp(-1.3, 1.3, i / 8); pts.push([Math.sin(a) * 0.31 * k, (1.47 + (zz > 0 ? 0.05 : 0.04) - (1 - Math.cos(a)) * 0.16) * k, zz * k]); } return pts; })(), { r: 0.014 * k, n: 5, reg: 'gold', col: col(GOLD), w: HB.body });
-    // 马衣（鞍下垂到腹下的布）或具装鳞甲
+    M.jitter = keepJ;
     for (const s of [1, -1]) {
-      if (armor === 'none') break;
-      const scale = armor === 'scale';
-      panel(gb, (u, t) => {
-        const z = lerp(scale ? -0.75 : -0.45, scale ? 0.6 : 0.35, u) * k;
-        const ring = ringAtHorse(bodyS, z / k);
-        const a = lerp(0.35, 1.75, t);
-        const yb = ring.cy + Math.cos(a) * ring.ry * 1.06, xb = Math.sin(a) * ring.rx * 1.08 + 0.012;
-        return [s * xb * k, yb * k - (t > 0.9 ? (t - 0.9) * 0.3 : 0), z];
-      }, { nu: hi >= 1 ? 8 : 3, nv: hi >= 1 ? 4 : 2, th: 0.008, reg: scale ? 'scale' : 'hem', col: scale ? col(opts.metal || '#8a909a') : fc, colB: shade(TEAM, -0.5), uv: (u, t) => [u, 1 - t],
-        w: p => bw(p) });
+      M.aim([s * 0.065, 2.0, 0.9], [s * 0.28, 1, 0.12]);
+      M.push().scale(1, 1, 0.6);
+      M.color = coat; M.cone([0, 0, 0], 0.045, 0.145, 4);
+      if (D.det >= 1) { M.color = coatDark; M.cone([0, 0.01, 0.012], 0.028, 0.1, 4); }
+      M.pop(); M.pop();
     }
-    // 胸带
-    if (hi >= 1) tube(gb, (() => { const pts = []; for (let i = 0; i <= 10; i++) { const a = lerp(-1.6, 1.6, i / 10); pts.push([Math.sin(a) * 0.26 * k, (1.15 + Math.cos(a) * 0.08 - 0.05) * k, (0.5 + Math.cos(a) * 0.14) * k]); } return pts; })(), { r: 0.018 * k, rz: 0.4, n: 4, reg: 'leather', col: col('#5a1a14'), w: HB.chest });
-    if (hi >= 1) for (const zz of [0.62]) ellipsoid(gb, [0, 1.2 * k, zz * k], [0.035 * k, 0.035 * k, 0.015 * k], { nl: 4, n: 6, reg: 'gold', col: col(GOLD), w: HB.chest });
-    // 络头与缰绳
-    if (hi >= 1) {
-      for (const [a, b] of [[[0, 1.6, 1.28], 0.075], [[0, 1.86, 0.94], 0.1]]) { void b; }
-      tube(gb, ringPts([0, 1.62 * k, 1.27 * k], [1, 0, 0], v3norm([0, 0.6, -0.8]), 0.072 * k, 0.09 * k, 10), { r: 0.008 * k, n: 3, reg: 'leather', col: col('#3a1a14'), w: HB.head });
-      tube(gb, ringPts([0, 1.88 * k, 0.95 * k], [1, 0, 0], v3norm([0, 0.2, 1]), 0.1 * k, 0.11 * k, 10), { r: 0.008 * k, n: 3, reg: 'leather', col: col('#3a1a14'), w: HB.head });
-      for (const s of [1, -1]) tube(gb, [[s * 0.065 * k, 1.56 * k, 1.28 * k], [s * 0.15 * k, 1.42 * k, 0.75 * k], [s * 0.16 * k, 1.5 * k, 0.28 * k]], { r: 0.006 * k, n: 3, reg: 'leather', col: col('#3a1a14'), w: s2 => wT(s2, [[HB.head, 0], [HB.neck2, 0.4], [HB.chest, 1]]) });
+    // 额发
+    let ws = M.vertexCount;
+    M.color = mane;
+    M.curvedStrip([0, 2.02, 0.88], [0.015, 2.0, 0.98], [0.03, 1.93, 1.03], 0.075, 0.035, [0, 0.6, 1], 0.03, D.det >= 1 ? 2 : 1);
+    M.windBy(ws, p => 0.35 * clamp01((2.02 - p[1]) / 0.09));
+    // 耳后的小红缨（名将：面帘 + 大缨）
+    if (opts.general || armor === 'scale' || opts.chamfron) {
+      const pc = opts.metal ? lift(opts.metal, 0.35) : C3(PALF.bronze);
+      M.color = pc;
+      const a = faceRings[0][Math.round(fs / 2)], b = faceRings[3][Math.round(fs / 2)];
+      strap(V.add(a, [0, 0.03, 0.01]), V.add(b, [0, 0.0, 0.012]), 0.11, 0.07, [0, 0.6, 1], 0.012);
+      if (D.det >= 1) { M.color = gold; M.sphere(V.add(V.lerp(a, b, 0.25), [0, 0.03, 0.03]), 0.022, 5, 2); }
     }
-    // 马面（护额甲）
-    if (opts.chamfron || armor === 'scale' || opts.general) {
-      // 第三版修订：面帘更窄、贴着马脸（不再是罩在脸前的一大块银板），青铜色、錾花
-      panel(gb, (s, t) => { const d = hd[1].map((v, i) => lerp(v, hd[4][i], t)); const th = lerp(-1.0, 1.0, s); const R = lerp(0.1, 0.065, t); return [Math.sin(th) * R * 0.95 * k, (d[1] + Math.cos(th) * R * 0.62) * k + 0.012, (d[2] + Math.cos(th) * R * 0.5) * k + 0.004]; },
-        { nu: hi >= 1 ? 4 : 2, nv: hi >= 1 ? 4 : 2, th: 0.005, reg: 'goldEngr', col: col(opts.metal ? shade(opts.metal, -0.25) : '#8a6e44'), w: HB.head, mirrorS: true });
-      if (hi >= 1) tassel({ gb, lod, hi }, [0, 1.98 * k, 0.94 * k], 0.7, opts.plume || '#c8302a', HB.head);
+    M.color = gold; M.sphere([0, 2.02, 0.84], 0.02, 5, 2, false);
+    ws = M.vertexCount;
+    M.color = tasselC;
+    const big = opts.general ? 1.6 : 1;
+    M.push().translate(0, 2.02, 0.84).rotate(-24, 0, 0);
+    M.lathe([[0.008, 0], [0.026 * big, 0.026 * big], [0.028 * big, 0.055 * big], [0.011, 0.09 * big]], D.det >= 1 ? 6 : 4, false, true, true);
+    M.pop();
+    M.windBy(ws, p => 0.3 * clamp01((p[1] - 2.02) / 0.1));
+    // 络头：鼻革、颊革、额带、金色圆饰
+    if (D.det >= 1) {
+      M.color = saddleC;
+      M.push().translate(0, 1.66, 1.225).rotate(-50, 0, 0); M.band([0, 0, 0], 0.088, 0.088, -0.018, 0.018, D.det >= 2 ? 8 : 6, 1.15); M.pop();
+      for (const s of [1, -1]) {
+        M.color = saddleC;
+        strap([s * 0.11, 1.95, 0.87], [s * 0.086, 1.68, 1.2], 0.024, 0.024, [s, 0, 0], 0.012);
+        strap([s * 0.11, 1.95, 0.87], [0, 1.99, 0.95], 0.024, 0.024, [0, 0.5, 1], 0.012);
+        if (D.det >= 2) { M.color = gold; M.sphere([s * 0.104, 1.76, 1.1], 0.02, 5, 2, false); }
+      }
     }
-    // 镫
-    if (hi >= 1) for (const s of [1, -1]) { tube(gb, [[s * 0.3 * k, 1.36 * k, 0.0], [s * 0.33 * k, 1.0 * k, 0.02 * k]], { r: 0.006 * k, n: 3, reg: 'leather', col: col('#3a1a14'), w: HB.body }); tube(gb, ringPts([s * 0.33 * k, 0.96 * k, 0.03 * k], [0, 0, 1], [0, 1, 0], 0.04 * k, 0.035 * k, 8), { r: 0.006 * k, n: 3, reg: 'gold', col: col(BRONZE), w: HB.body }); }
-    return { gb, J, k };
-  }
-  function ringAtHorse(S, z) {
-    for (let i = 0; i < S.length - 1; i++) { const a = S[i], b = S[i + 1]; if (z <= b[0]) { const t = (z - a[0]) / (b[0] - a[0] || 1); return { rx: lerp(a[1], b[1], t), ry: lerp(a[2], b[2], t), cy: lerp(a[3], b[3], t) }; } }
-    const l = S[S.length - 1]; return { rx: l[1], ry: l[2], cy: l[3] };
+    M.pop();
+    // ---- 鬃：颈上一道鬃脊（菱形截面，顶上深色）+ 左侧整片下缘分绺的鬃帘（两色）+ 右侧短鬃；按位置分在 neck1 / neck2，随风
+    const crestAt = t => {
+      const f = t * 4, i0 = Math.min(3, Math.floor(f)), u = f - i0;
+      const c = V.lerp(neckPts[i0], neckPts[i0 + 1], u), up = V.neg(frame(neckPts, Math.min(4, Math.round(f))));
+      return { p: V.add(c, V.mul(up, lerp(neckH[i0], neckH[i0 + 1], u) * 0.9)), up };
+    };
+    const zSplit = lerp(neckPts[0][2], neckPts[4][2], 0.48), crestYAt = z => crestAt(clamp01((z - neckPts[0][2]) / (neckPts[4][2] - neckPts[0][2]))).p[1];
+    const ms = M.vertexCount;
+    bone('neck1');
+    const curtain = (sd, locks, lenK, inner) => {
+      const cols = locks * 2, top = [], midO = [], bot = [], inn = [];
+      for (let j = 0; j <= cols; j++) {
+        const t = lerp(0.04, 0.97, j / cols), { p } = crestAt(t);
+        const len = lerp(0.34, 0.2, t) * lenK * (j % 2 ? 1 : 0.55) * (j === 0 || j === cols ? 0.6 : 1);
+        const tp = V.add(p, [sd * (0.045 + 0.012 * M.random01()), -0.02 - 0.015 * M.random01(), 0]);
+        top.push(tp); midO.push(V.add(tp, [sd * (0.06 + 0.02 * (j % 2)), -len * 0.45, -0.01]));
+        bot.push(V.add(tp, [sd * (0.085 + 0.02 * (j % 2)), -len, -0.03 - 0.015 * (j % 2)])); inn.push(V.add(tp, [-sd * 0.03, -len * 0.25, 0]));
+      }
+      for (let j = 0; j < cols; j++) {
+        const cc = (j >> 1) % 2 ? mane2 : mane, out = [sd, 0.2, 0];
+        M.color = cc;
+        M.quad(top[j], top[j + 1], midO[j + 1], midO[j], out, P.shade(cc, 1 + (M.random01() - 0.5) * 0.06));
+        M.quad(midO[j], midO[j + 1], bot[j + 1], bot[j], out, P.shade(cc, 0.94 + (M.random01() - 0.5) * 0.06));
+        if (inner) { M.quad(top[j], top[j + 1], inn[j + 1], inn[j], [-sd, 0, 0], P.shade(mane, 0.8)); M.quad(inn[j], inn[j + 1], bot[j + 1], bot[j], [-sd, -0.3, 0], P.shade(mane, 0.75)); }
+      }
+    };
+    curtain(1, D.mane, 1, D.det >= 1);
+    curtain(-1, Math.max(2, D.mane - 1), 0.42, false);
+    {
+      const rings = [], nr = D.det >= 1 ? 6 : 4;
+      for (let i = 0; i <= nr; i++) {
+        const t = i / nr, { p, up } = crestAt(t), w = lerp(0.075, 0.06, t) * (i === 0 || i === nr ? 0.6 : 1);
+        const h = 0.075 * (i === 0 ? 0.5 : 1) + 0.012 * Math.sin(i * 2.1);
+        rings.push([V.add(V.add(p, [w, 0, 0]), V.mul(up, -0.025)), V.add(p, V.mul(up, h)), V.add(V.add(p, [-w, 0, 0]), V.mul(up, -0.025)), V.add(p, V.mul(up, -0.07))]);
+      }
+      M.loft(rings, true, true, nrm => (nrm[1] > 0.55 ? mane : mane2));
+    }
+    M.boneBy(ms, q => (q[2] < zSplit ? HB.neck1 : HB.neck2));
+    M.windBy(ms, q => 0.45 * clamp01((crestYAt(q[2]) - q[1]) / 0.3));
+    // ---- 腿：上粗下细的车削，膝 / 飞节 / 球节隆起，下段深色；后腿白袜（按种子）
+    const leg = (fh, S) => {
+      const s = S === 'L' ? 1 : -1, front = fh === 'F', x0 = (front ? 0.15 : 0.17) * s;
+      const lo = front ? [x0, 0.55, 0.45] : [x0, 0.58, -0.7], ft = front ? [x0, 0.2, 0.46] : [0.16 * s, 0.2, -0.64];
+      const sock = !front && sockHind, low = sock ? markC : points;
+      bone('up' + fh + S); M.color = coat;
+      if (front) { M.segment([x0, 1.0, 0.43], [x0, 0.8, 0.44], 0.105, 0.1, D.leg, false, false); M.segment([x0, 0.8, 0.44], V.add(lo, [0, 0.03, 0]), 0.1, 0.066, D.leg, false, false); }
+      else {
+        M.segment([x0, 0.98, -0.56], lo, 0.115, 0.066, D.leg, false, false);
+        if (D.det >= 1) M.sphere(V.add(V.lerp([x0, 0.98, -0.56], lo, 0.4), [s * 0.01, 0, -0.045]), [0.07, 0.12, 0.075], D.leg, D.det >= 2 ? 3 : 2, true);
+      }
+      bone('lo' + fh + S); M.color = front ? coat : coatDark;
+      if (D.det >= 1) M.sphere(lo, front ? [0.068, 0.074, 0.07] : [0.07, 0.08, 0.075], D.legLo, D.det >= 2 ? 3 : 2, false);
+      if (!front && D.det >= 2) { M.color = coatDark; M.sphere(V.add(lo, [0, 0.02, -0.05]), [0.04, 0.05, 0.04], 5, 2, false); }
+      M.color = points;
+      M.segment(V.add(lo, [0, -0.03, 0]), V.add(ft, [0, 0.03, 0]), 0.05, 0.045, D.legLo, false, false);
+      bone('ft' + fh + S); M.color = low;
+      if (D.det >= 1) M.sphere(ft, [0.06, 0.062, 0.066], D.legLo, D.det >= 2 ? 3 : 2, false);
+      M.segment(ft, [ft[0], 0.105, ft[2] + 0.04], 0.052, 0.056, D.legLo, false, false);
+      M.color = C3('#3A2A22');
+      M.push().translate(ft[0], 0, ft[2] + 0.045);
+      M.lathe([[0.078, 0], [0.074, 0.03], [0.058, 0.115]], D.hoof, false, D.det >= 1, true);
+      M.pop();
+    };
+    for (const fh of ['F', 'H']) for (const S of ['L', 'R']) leg(fh, S);
+    // ---- 尾：短尾根 + 三绺（远景一绺）五边形放样，散开，尖端错落，随风
+    ws = M.vertexCount;
+    bone('tail1');
+    const dockRing = (c, w, d, k5) => { const r = [], nn = k5 || 5; for (let j = 0; j < nn; j++) { const a = j * TAU / nn; r.push([c[0] + Math.sin(a) * w, c[1], c[2] + Math.cos(a) * d]); } return r; };
+    M.color = mane;
+    M.loft([dockRing([0, 1.38, -0.86], 0.06, 0.06), dockRing([0, 1.24, -1.0], 0.085, 0.07)], true, false);
+    const lockCols = [mane2, mane, mane2];
+    (D.det >= 1 ? [-1, 0, 1] : [0]).forEach((f, li) => {
+      const a = f * 9 * D2R, len = 0.74 + (f === 0 ? 0.06 : f > 0 ? -0.06 : 0);
+      const pt = t => [Math.sin(a) * len * t + f * 0.025 * Math.sin(PI * t), 1.25 - len * t * Math.cos(a), -1.01 - 0.11 * t - 0.05 * Math.sin(PI * t)];
+      const wk = D.det >= 1 ? 1 : 1.5;
+      const ts = [0, 0.3, 0.62, 1], ws_ = [0.062, 0.08, 0.064, 0.014], ds = [0.06, 0.078, 0.062, 0.012];
+      M.loft(ts.map((t, i) => dockRing(pt(t), ws_[i] * wk, ds[i] * wk, D.det >= 1 ? 5 : 4)), false, true, nrm => P.shade(lockCols[li] || mane, nrm[0] * f > 0.3 ? 1.1 : 1));
+    });
+    M.boneBy(ws, q => (q[1] > 1.06 ? HB.tail1 : HB.tail2));
+    M.windBy(ws, q => 0.6 * clamp01((1.2 - q[1]) / 0.7));
+    // ---- 马具：势力色马衣（米色镶边、金钉）、鞍、肚带、胸带与红缨；具装：鳞甲排
+    bone('body');
+    const clothPt = (z, deg, off) => { const sc = section(z), a = deg * D2R, c = Math.cos(a); return [Math.sin(a) * (sc.w + off), sc.cy + c * (c >= 0 ? sc.top : sc.bottom) + off * Math.sign(c), z]; };
+    if (armor === 'scale') {
+      // 具装：身侧、臀、颈下的鳞甲排（两色交替），势力色下缘
+      const rowsZ = D.det >= 1 ? [-0.86, -0.62, -0.38, -0.14, 0.1, 0.34, 0.56] : [-0.86, -0.38, 0.1, 0.56];
+      const metal = opts.metal ? lift(opts.metal, 0.35) : C3('#8A909A'), metalD = P.shade(metal, 0.8);
+      const angs = D.det >= 1 ? [0, 30, 60, 90, 112] : [0, 50, 100];
+      for (const s of [1, -1]) for (let i = 0; i < rowsZ.length - 1; i++) for (let kk = 0; kk < angs.length - 1; kk++) {
+        const off = 0.03, a = clothPt(rowsZ[i], s * angs[kk], off), b = clothPt(rowsZ[i], s * angs[kk + 1], off), c = clothPt(rowsZ[i + 1], s * angs[kk + 1], off), d = clothPt(rowsZ[i + 1], s * angs[kk], off);
+        const zc = (rowsZ[i] + rowsZ[i + 1]) / 2, out = V.sub(V.mul(V.add(V.add(a, b), V.add(c, d)), 0.25), [0, section(zc).cy, zc]);
+        const hem = kk === angs.length - 2;
+        M.color = hem ? cloth : (kk % 2 ? metal : metalD);
+        M.quad(a, b, c, d, out, hem ? cloth : P.shade(kk % 2 ? metal : metalD, 1 + (M.random01() - 0.5) * 0.08));
+        if (hem && D.det >= 1) { const inn = V.mul(V.norm(out), -0.014); M.quad(V.add(a, inn), V.add(b, inn), V.add(c, inn), V.add(d, inn), V.neg(out), clothDark); }
+      }
+      // 颈甲：颈下两侧的甲帘
+      bone('neck1');
+      for (const s of [1, -1]) {
+        M.color = metal;
+        const a = V.add(neckPts[0], [s * neckW[0] * 1.05, 0.05, 0.0]), b = V.add(neckPts[2], [s * neckW[2] * 1.15, 0.0, 0.02]);
+        M.strip(a, b, 0.2, 0.14, [s, -0.2, 0.2], 0.012);
+      }
+      bone('body');
+    } else if (armor !== 'none') {
+      const cz = D.det >= 1 ? [-0.44, -0.24, -0.04, 0.16, 0.34] : [-0.44, -0.04, 0.34], angs = D.det >= 1 ? [0, 26, 52, 78, 100, 112] : [0, 56, 112];
+      for (const s of [1, -1]) for (let i = 0; i < cz.length - 1; i++) for (let kk = 0; kk < angs.length - 1; kk++) {
+        const hem = kk === angs.length - 2, off = 0.028;
+        const a = clothPt(cz[i], s * angs[kk], off), b = clothPt(cz[i], s * angs[kk + 1], off), c = clothPt(cz[i + 1], s * angs[kk + 1], off), d = clothPt(cz[i + 1], s * angs[kk], off);
+        const zc = (cz[i] + cz[i + 1]) / 2, out = V.sub(V.mul(V.add(V.add(a, b), V.add(c, d)), 0.25), [0, section(zc).cy, zc]);
+        const cc = hem ? trim : (i === 0 || i === cz.length - 2) && kk > 0 ? clothDark : cloth;
+        M.color = cc;
+        M.quad(a, b, c, d, out, cc.t ? tcol(team, (cc === cloth ? 1 : 0.78) * (1 + (M.random01() - 0.5) * 0.06)) : P.shade(cc, 1 + (M.random01() - 0.5) * 0.06));
+        if (kk >= angs.length - 3) { const inn = V.mul(V.norm(out), -0.014); M.color = clothDark; M.quad(V.add(a, inn), V.add(b, inn), V.add(c, inn), V.add(d, inn), V.neg(out), clothDark); }
+      }
+      if (D.det >= 1) for (const s of [1, -1]) for (const z of [cz[0], cz[cz.length - 1]]) for (let kk = 0; kk < angs.length - 1; kk++) {
+        const a = clothPt(z, s * angs[kk], 0.028), b = clothPt(z, s * angs[kk + 1], 0.028);
+        const inn = V.mul(V.norm([a[0], a[1] - section(z).cy, 0]), -0.014);
+        M.color = trim; M.quad(a, b, V.add(b, inn), V.add(a, inn), [0, 0, Math.sign(z)], trim);
+      }
+      if (D.det >= 2) { M.color = gold; for (const s of [1, -1]) for (const z of [-0.34, -0.14, 0.06, 0.26]) M.sphere(clothPt(z, s * 106, 0.04), 0.024, 4, 2, false); }
+    }
+    // 鞍：鞍座、前后鞍桥（金边）
+    const sy = section(-0.05).cy + section(-0.05).top;
+    M.color = saddleC;
+    M.push().translate(0, sy - 0.02, -0.05);
+    M.taperedBox([0, 0, 0], [0.34, 0.08, 0.5], 0.15, 0.08);
+    M.color = P.shade(saddleC, 1.15);
+    M.push().translate(0, 0.02, 0.24).rotate(-18, 0, 0); M.taperedBox([0, 0, 0], [0.3, 0.11, 0.09], 0.45, 0.2); M.pop();
+    M.push().translate(0, 0.02, -0.25).rotate(20, 0, 0); M.taperedBox([0, 0, 0], [0.36, 0.13, 0.09], 0.4, 0.2); M.pop();
+    if (D.det >= 1) { M.color = gold; M.box([0, 0.125, 0.255], [0.16, 0.022, 0.05]); M.box([0, 0.145, -0.275], [0.21, 0.022, 0.05]); }
+    M.pop();
+    if (D.det >= 1) {
+      M.color = saddleC;
+      const sc = section(0.12), gp = a => { a *= D2R; return [Math.sin(a) * (sc.w + 0.012), sc.cy + Math.cos(a) * (sc.bottom + 0.012), 0.12]; };
+      for (const s of [1, -1]) for (let i = 0; i < 3; i++) { const a0 = s * lerp(108, 180, i / 3), a1 = s * lerp(108, 180, (i + 1) / 3); strap(gp(a0), gp(a1), 0.06, 0.06, V.sub(gp((a0 + a1) / 2), [0, sc.cy, 0.12]), 0.01); }
+      // 镫
+      for (const s of [1, -1]) { M.color = saddleC; M.segment([s * 0.3, 1.36, 0.0], [s * 0.33, 1.0, 0.02], 0.008, 0.008, 3, false, false); M.color = C3(PALF.bronze); M.push().translate(s * 0.33, 0.97, 0.02).rotate(0, 0, 90); M.torus([0, 0, 0], 0.035, 0.007, D.det >= 2 ? 6 : 5, D.det >= 2 ? 3 : 2); M.pop(); }
+    }
+    // 胸带与三颗红缨
+    bone('chest');
+    const bc = [];
+    for (let i = 0; i <= 6; i++) { const a = lerp(-62, 62, i / 6) * D2R, z = 0.63 + Math.cos(a) * 0.1, sc = section(Math.min(z, 0.72)); bc.push([Math.sin(a) * (sc.w + 0.03), sc.cy + 0.02 - Math.cos(a) * 0.06, z + 0.02]); }
+    M.color = saddleC;
+    for (let i = 0; i < 6; i += D.det >= 1 ? 1 : 2) strap(bc[i], bc[Math.min(6, i + (D.det >= 1 ? 1 : 2))], 0.06, 0.06, V.add([bc[i][0], 0, 1], [0, 0, 0.5]), 0.016);
+    for (const i of D.det >= 1 ? [2, 3, 4] : [3]) {
+      const p = bc[i];
+      M.color = gold; M.sphere(V.add(p, [0, -0.02, 0.012]), 0.022, 5, 2, false);
+      const v0 = M.vertexCount; M.color = tasselC;
+      M.push().translate(p[0], 0, p[2] + 0.015);
+      M.lathe([[0.012, p[1] - 0.03], [0.042, p[1] - 0.08], [0.036, p[1] - 0.16], [0.012, p[1] - 0.2]].reverse(), D.det >= 1 ? 5 : 4, false, true, true);
+      M.pop();
+      M.windBy(v0, q => 0.3 * clamp01((p[1] - q[1]) / 0.2));
+    }
+    return M;
   }
 
   // ======================================================== 动作片段 ==
@@ -3878,6 +3427,7 @@
   }
 
   // ======================================================== 模板（共用几何体） ==
+  // 模板 = 某外观 × LOD × 势力色（单个人物：势力色烘进顶点色）或「士兵群」（势力色为实例属性，lpTeam 遮罩）的几何体。
   const TEMPLATES = new Map();
   function shieldLocal(pr) {
     const d = [pr.armDirL[0], pr.armDirL[1], 0], out = [Math.cos(ARM_A), Math.sin(ARM_A), 0];
@@ -3889,92 +3439,111 @@
     const s = shieldLocal(pr), J = pr.J.foreArmL;
     return new THREE.Matrix4().compose(new THREE.Vector3(J[0] + s.p[0], J[1] + s.p[1], J[2] + s.p[2]), s.q, new THREE.Vector3(1, 1, 1));
   }
-  // 构建模板；超出该 LOD 的三角形预算时按 SQUEEZE 逐级压缩重建
-  function buildTemplate(look) {
+  const WDET = { high: 2, mid: 1, low: 0 };
+  // 独立兵器几何体（名将的兵器网格、SG.Figure.weapon、setWeapon）：按 (兵器, 细节) 缓存
+  const WGEO = new Map();
+  function weaponGeo(id, det) {
+    const key = id + '|' + det;
+    let w = WGEO.get(key);
+    if (!w) {
+      const M = new (FigBuilder())(11);
+      const info = buildWeaponLP(M, WEAPONS[id] ? id : 'jian', det);
+      const geo = M.toGeometry();
+      geo.computeBoundingBox();
+      w = { geo, info, tris: geo.userData.tris, range: [geo.boundingBox.min.y, geo.boundingBox.max.y] };
+      WGEO.set(key, w);
+    }
+    return w;
+  }
+  function buildTemplate(look, mode, hexc) {
     const t0 = now();
-    const base = LODP[look.lod] || LODP.high, budget = TRI_BUDGET[look.lod] || 15000;
+    const lodName = LODK[look.lod] ? look.lod : 'high';
+    const pr = makeProps(look);
+    const hero = look.kind === 'general' && !!(SIG[look.name] || (look.spec && look.spec.war >= 90));
+    const budget = lodName === 'high' ? (hero ? TRI_BUDGET.hero : TRI_BUDGET.high) : lodName === 'mid' ? TRI_BUDGET.mid : TRI_BUDGET.low;
+    const team = mode === 'crowd' ? [1, 1, 1] : teamTone(hexc || look.factionHex);
+    const levels = SQUEEZE[lodName];
     let tpl = null;
-    for (let lv = 0; lv <= SQUEEZE[look.lod || 'high'].length; lv++) {
-      look._lodP = lv ? Object.assign({}, base, SQUEEZE[look.lod || 'high'][lv - 1]) : base;
-      tpl = buildTemplateOnce(look);
-      tpl.squeeze = lv;
+    for (let lv = 0; lv <= levels.length; lv++) {
+      const D = lv ? Object.assign({}, LODK[lodName], levels[lv - 1]) : LODK[lodName];
+      tpl = buildTemplateOnce(look, pr, D, lodName, team);
+      tpl.squeeze = lv; tpl.budget = budget;
       if (tpl.tris <= budget) break;
-      if (lv < SQUEEZE[look.lod || 'high'].length) { for (const g of [tpl.geometry, tpl.headGeo, tpl.weaponGeo, tpl.shieldGeo]) if (g) g.dispose(); STATS.templates--; }
+      if (lv < levels.length) { tpl.geometry.dispose(); STATS.templates--; }
     }
     tpl.ms = now() - t0; STATS.lastBuildMs = tpl.ms;
+    const tk = (look.kind === 'soldier' ? look.type + '/' + look.culture : look.name) + '@' + lodName;
+    STATS.tris[tk] = tpl.tris;
+    if (!STATS.parts) STATS.parts = {};
+    STATS.parts[tk] = tpl.parts;
     return tpl;
   }
-  function buildTemplateOnce(look) {
+  function buildTemplateOnce(look, pr, D, lodName, team) {
     const t0 = now();
-    const X = makeCtx(look);
-    const { gb, pr, lod } = X;
-    if (lod.detail === 0) gb.noEdges = true;
-    gb.detail = lod.detail;
-    const parts = {};
-    let last = 0;
-    const mark = name => { parts[name] = (parts[name] || 0) + gb.tris - last; last = gb.tris; };
-    buildTorso(X); mark('torso'); buildNeck(X); mark('neck');
-    for (const S of ['L', 'R']) { buildArm(X, S); mark('arms'); buildLeg(X, S); mark('legs'); buildPauldron(X, S); mark('pauldrons'); }
-    buildSkirt(X); mark('skirt'); buildCape(X); mark('cape'); buildRibbons(X); buildBackGear(X); mark('back');
-    const Hp = headParams(look.spec || { face: {}, nose: {}, ears: {} });
-    Hp.lodF = lod.head[1] >= 24 ? 1 : lod.head[1] >= 14 ? 0.3 : 0;
-    const hm = new THREE.Matrix4().makeTranslation(pr.J.head[0], pr.J.head[1], pr.J.head[2]);
-    gb.xf = hm;
-    const cov = buildHeadgear(X, Hp); mark('headgear');
-    buildHair(X, Hp, cov); mark('hair');
-    buildBeard(X, Hp); mark('beard');
-    const tpl = { look, pr, lod: look.lod, boneInverses: makeBoneInverses(pr), refs: 0, key: look.key, parts };
+    const seed = (hashStr((look.name || '') + '|' + look.culture + '|' + (look.type || '') + '|' + (look.seed | 0)) % 9973) + 1;
+    const kit = new Kit(look, pr, D, team, seed);
+    const X = kit.X = paletteOf(kit);
+    const M = kit.M;
+    legsLP(kit, X); torsoLP(kit, X); neckLP(kit, X); armsLP(kit, X); skirtLP(kit, X); beltLP(kit, X); pauldronsLP(kit, X);
+    capeLP(kit, X); ribbonsLP(kit, X); backGearLP(kit, X);
+    faceLP(kit, X);
+    const cov = headgearLP(kit, X);
+    hairLP(kit, X, cov); beardLP(kit, X); accessoriesLP(kit, X);
+    const tpl = { look, pr, lod: lodName, boneInverses: makeBoneInverses(pr), refs: 0, key: look.key, parts: kit.parts, D };
     const weaponId = look.weapon || 'jian';
     const wdef = WEAPONS[weaponId] || WEAPONS.jian;
     tpl.style = wdef.style;
+    const wdet = Math.min(WDET[lodName], D.det);
+    let wtris = 0;
     if (look.kind === 'soldier') {
-      // 头、兵器、盾并入同一蒙皮网格（一次绘制）
-      buildHead(gb, Hp, { nLat: lod.head[0], nLon: lod.head[1], reg: look.face || 'faceA', col: col(look.skin), w: B.head, ears: lod.detail >= 1 }); mark('head');
+      // 士兵：兵器与盾烘进同一个蒙皮网格（一次绘制 + 一次墨线）
       const side = wdef.style === 'bow' ? 'L' : 'R';
-      gb.xf = socketRest(pr, side);
-      tpl.weapon = buildWeaponInto(gb, weaponId, lod, { w: B['hand' + side] }); mark('weapon');
-      if (look.shield) { gb.xf = shieldRest(pr); tpl.shieldInfo = buildShieldInto(gb, look.shield, lod, look.C.faction, B.foreArmL); tpl.hasShield = true; mark('shield'); }
-      gb.xf = null;
+      kit.bone('hand' + side);
+      M.push().setMatrix(M.matrix.clone().multiply(socketRest(pr, side)));
+      tpl.weapon = buildWeaponLP(M, weaponId, wdet);
+      M.pop();
+      kit.mark('weapon');
+      tpl.weaponRange = weaponGeo(weaponId, 0).range;
     } else {
-      gb.xf = null;
-      const hgb = new GB();
-      buildHead(hgb, Hp, { nLat: lod.head[0], nLon: lod.head[1], col: [1, 1, 1], w: 0, ears: true });
-      tpl.headGeo = hgb.build({ skin: false });
-      tpl.faceSize = look.lod === 'high' ? 512 : look.lod === 'mid' ? 256 : 128;
-      const wgb = new GB();
-      wgb.detail = lod.detail;
-      tpl.weapon = buildWeaponInto(wgb, weaponId, lod, { w: 0 });
-      tpl.weaponGeo = wgb.build({ skin: false });
-      if (look.shield) { const sgb = new GB(); tpl.shieldInfo = buildShieldInto(sgb, look.shield, lod, look.C.faction, 0); tpl.shieldGeo = sgb.build({ skin: false }); }
+      const w = weaponGeo(weaponId, wdet);
+      tpl.weapon = w.info; tpl.weaponGeo = w.geo; tpl.weaponRange = w.range;
+      wtris = w.tris * (wdef.style === 'dual' ? 2 : 1);
     }
-    tpl.geometry = gb.build();
-    tpl.tris = gb.tris + (tpl.headGeo ? tpl.headGeo.index.count / 3 : 0) + (tpl.weaponGeo ? tpl.weaponGeo.index.count / 3 * (wdef.style === 'dual' ? 2 : 1) : 0) + (tpl.shieldGeo ? tpl.shieldGeo.index.count / 3 : 0);
+    if (look.shield) {
+      kit.bone('foreArmL');
+      M.push().setMatrix(M.matrix.clone().multiply(shieldRest(pr)));
+      tpl.shieldInfo = buildShieldLP(M, look.shield, wdet, X);
+      M.pop();
+      tpl.hasShield = true;
+      kit.mark('shield');
+    }
+    tpl.geometry = M.toGeometry({ skinned: true });
+    tpl.tris = tpl.geometry.userData.tris + wtris;
     tpl.ms = now() - t0;
     STATS.templates++;
-    STATS.buildMs += tpl.ms; STATS.lastBuildMs = tpl.ms;
-    const tk = (look.kind === 'soldier' ? look.type + '/' + look.culture : look.name) + '@' + look.lod;
-    STATS.tris[tk] = Math.round(tpl.tris);
-    if (!STATS.parts) STATS.parts = {};
-    STATS.parts[tk] = parts;
+    STATS.buildMs += tpl.ms;
     return tpl;
   }
-  function getTemplate(look, key) {
+  function getTemplate(look, key, mode, hexc) {
     let t = TEMPLATES.get(key);
-    if (!t) { look.key = key; t = buildTemplate(look); TEMPLATES.set(key, t); }
+    if (!t) { look.key = key; t = buildTemplate(look, mode, hexc); t.key = key; t.mode = mode; TEMPLATES.set(key, t); }
     t.refs++;
     return t;
   }
   function releaseTemplate(t) {
     if (!t) return;
     t.refs--;
-    // 士兵模板常驻（复用率高）；名将模板在无人使用时释放
-    if (t.refs <= 0 && t.look.kind !== 'soldier') {
+    // 士兵群模板常驻（复用率高）；名将与单个士兵（势力色烘进顶点）的模板在无人使用时释放
+    if (t.refs <= 0 && t.mode !== 'crowd') {
       TEMPLATES.delete(t.key);
-      for (const g of [t.geometry, t.headGeo, t.weaponGeo, t.shieldGeo]) if (g) g.dispose();
+      t.geometry.dispose();
     }
   }
 
   // ======================================================== Figure ==
+  // Lanternvale 的 PoleHold（试点 SG.LPPilot.POLE_LEAN）：静止 / 行进片段里，烘在右手上的长兵在人物坐标里向外横滚 roll 度、
+  // 向后 back 度，杆子立在头侧、不把脸劈成两半；出招片段保持原来的兵器线。on = false 关闭（SG.Figure.POLE_LEAN）。
+  const POLE_LEAN = { on: true, roll: 20, back: -24, clips: new Set(['idle', 'walk', 'run', 'ride', 'gallop', 'march', 'stand']) };
   const SOCK = {};
   const DEF_O = [0.27, 1.0, 0.1], DEF_OW = [0, 0, 0], DEF_OFF = [0, 0.5, 0];
   // 双手 IK 只需要的骨链（父骨在前）
@@ -3998,24 +3567,19 @@
       BONES.forEach((n, i) => { this.bones[n] = bones[i]; });
       this.restPos = bones.map(b => b.position.clone());
       this.skeleton = new THREE.Skeleton(bones, tpl.boneInverses);
-      const mat = teamMaterial(opts.color || tpl.look.factionHex);
-      this.mesh = new THREE.SkinnedMesh(tpl.geometry, mat);
-      this.mesh.name = 'body';
-      this.mesh.add(bones[0]);
-      this.mesh.bind(this.skeleton, new THREE.Matrix4());
-      // 地面贴合开关（见材质的 skinning_vertex 补丁）：站在地面上时开启，骑乘时关闭；写在骨骼贴图的空余矩阵里
-      this.groundClamp = true;
-      const fig = this, sk = this.skeleton, skUpdate = sk.update, GI = GROUND_SLOT * 16;
-      sk.update = function () {
-        skUpdate.call(this);
-        const m = this.boneMatrices;
-        if (m.length >= GI + 16) { m[GI] = fig.groundClamp && !fig.mounted ? 1 : 0; m[GI + 1] = 0.006; }
-      };
-      this.mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 1.0 * pr.k, 0), (this.style === 'pole' ? 2.3 : 1.7) * pr.k);
+      const L = LPX();
       const shadow = opts.shadow !== false;
-      this.mesh.castShadow = shadow; this.mesh.receiveShadow = false;
+      // 骨架挂在 root 下（不挂在网格下：外观 setLook 只作用于本体网格与它的墨线，骑在马上的人物不受马的外观影响）
+      this.root.add(bones[0]);
+      this.mesh = L.skinnedMesh(tpl.geometry, this.skeleton, { castShadow: shadow, receiveShadow: false });
+      this.mesh.name = 'body';
+      // 地面压平：LP 材质不做（倒地时布料、缨低于地面的部分被地面挡住）；保留字段以兼容
+      this.groundClamp = true;
       this.root.add(this.mesh);
-      this.meshes = [this.mesh];
+      this.meshes = [this.mesh, this.mesh.userData.outline].filter(Boolean);
+      const HS = pr.head;
+      this._headPt = [(HS.c[0] - pr.J.head[0]) / pr.k, (HS.c[1] - pr.J.head[1]) / pr.k, (HS.c[2] - pr.J.head[2]) / pr.k];
+      this._headR = 0.5 * HS.H / pr.k;
       // 挂点
       this.sockets = {};
       for (const S of ['L', 'R']) {
@@ -4028,40 +3592,21 @@
       so.name = 'shieldL'; so.position.set(sl.p[0], sl.p[1], sl.p[2]); so.quaternion.copy(sl.q);
       this.bones.foreArmL.add(so); this.sockets.shieldL = so;
       const bk = new THREE.Object3D(); bk.name = 'back'; bk.position.set(0, 0.18 * pr.k, -0.17 * pr.k); this.bones.chest.add(bk); this.sockets.back = bk;
-      const hs = new THREE.Object3D(); hs.name = 'headTop'; hs.position.set(0, 0.26 * pr.k, 0); this.bones.head.add(hs); this.sockets.headTop = hs;
-      // 名将：头部、兵器、盾为独立网格
+      const hs = new THREE.Object3D(); hs.name = 'headTop'; hs.position.set(0, HS.c[1] - pr.J.head[1] + 0.55 * HS.H, HS.c[2] - pr.J.head[2]); this.bones.head.add(hs); this.sockets.headTop = hs;
+      // 名将：兵器为独立网格（单挑按判定距离缩放兵器、取尖端轨迹）；头与盾并入本体
       this.head = null; this.weaponMesh = null; this.weaponMesh2 = null; this.shieldMesh = null;
-      if (tpl.headGeo) {
-        this._face = faceTexture(tpl.look.spec || {}, tpl.faceSize);
-        this._faceMat = faceMaterial(this._face);
-        this.head = new THREE.Mesh(tpl.headGeo, this._faceMat);
-        this.head.name = 'head'; this.head.castShadow = shadow;
-        // 阴影用不带贴图的深度材质（同 duel-game.js 的 figHeadDepth）：three.js 共用的深度材质会记住面部贴图，
-        // 武将释放后阴影渲染可能把已释放的贴图重新上传（每名武将泄漏一张面部贴图）
-        this.head.customDepthMaterial = headDepthMaterial();
-        this.bones.head.add(this.head);
-        this.meshes.push(this.head);
+      this._shadow = shadow;
+      if (tpl.weaponGeo) this._makeWeaponMeshes(tpl.weaponGeo);
+      this.hasShield = !!tpl.hasShield;
+      this._wRange = tpl.weaponRange || null;
+      if (opts.blob) {
+        this.blob = L.blobShadow(0.42 * pr.k, 0.4 * pr.k, 0.5, 0.5);
+        Object.defineProperty(this.blob, 'castShadow', { get: () => false, set: () => {}, configurable: true });
+        this.root.add(this.blob);
       }
-      if (tpl.weaponGeo) {
-        const side = this.style === 'bow' ? 'L' : 'R';
-        this.weaponMesh = new THREE.Mesh(tpl.weaponGeo, mat);
-        this.weaponMesh.name = 'weapon'; this.weaponMesh.castShadow = shadow;
-        this.sockets['grip' + side].add(this.weaponMesh);
-        this.meshes.push(this.weaponMesh);
-        if (this.style === 'dual') {
-          this.weaponMesh2 = new THREE.Mesh(tpl.weaponGeo, mat);
-          this.weaponMesh2.name = 'weapon2'; this.weaponMesh2.castShadow = shadow;
-          this.sockets.gripL.add(this.weaponMesh2);
-          this.meshes.push(this.weaponMesh2);
-        }
-      }
-      if (tpl.shieldGeo) {
-        this.shieldMesh = new THREE.Mesh(tpl.shieldGeo, mat);
-        this.shieldMesh.castShadow = shadow;
-        this.sockets.shieldL.add(this.shieldMesh);
-        this.meshes.push(this.shieldMesh);
-      }
-      this.hasShield = !!(tpl.shieldGeo || tpl.hasShield);
+      this._look = {};
+      attachLook(this.mesh, this._look);
+      for (const m of [this.weaponMesh, this.weaponMesh2]) if (m) attachLook(m, this._look);
       this.mounted = null;
       this._P = newPoseObj(); this._P2 = newPoseObj(); this._PL = newPoseObj();
       this._R = torsoProfile(pr);
@@ -4099,7 +3644,24 @@
       }
       this._clipName = name; this._clipT = t;
       this._apply(P, opts);
+      // 长兵外倾（Lanternvale PoleHold）：静止 / 行进片段里杆子向外、向后倾，不挡脸
+      // 只在人物自己画本体时外倾：本体材质被换掉（如 js/lp-pilot.js 把 figure.js 当骨架用、自己再做 poleLean）时不重复外倾
+      const own = this.mesh && this.mesh.material && this.mesh.material.userData && this.mesh.material.userData.lpBase;
+      if (this.style === 'pole' && opts.lean !== false && POLE_LEAN.on && own) {
+        let f = POLE_LEAN.clips.has(name) ? 1 : 0;
+        if (opts.blend && opts.blend.clip) { const w = clamp01(opts.blend.w != null ? opts.blend.w : 0.5); f = f * w + (POLE_LEAN.clips.has(opts.blend.clip) ? 1 - w : 0); }
+        if (f > 0.001) this._poleLean(f);
+      }
       return this;
+    }
+    // 右手（兵器烘在它上面）在人物坐标里转 roll 度向外、back 度向后：qH' = qR·qL·qR⁻¹·qH
+    _poleLean(f) {
+      const T = tmp(), bn = this._bones;
+      this._fk();
+      const Wq = this._Wq;
+      const qL = T.q1.setFromEuler(T.e.set(POLE_LEAN.back * f * D2R, 0, POLE_LEAN.roll * f * D2R, 'XZY'));
+      const qW = T.q2.copy(Wq[B.root]).multiply(qL).multiply(T.q3.copy(Wq[B.root]).invert()).multiply(Wq[B.handR]);
+      bn[B.handR].quaternion.copy(T.q3.copy(Wq[B.foreArmR]).invert().multiply(qW));
     }
     blendPose(a, ta, b, tb, w) { return this.setPose(a, ta, { blend: { clip: b, t: tb, w: 1 - w } }); }
     _apply(P, opts) {
@@ -4149,7 +3711,7 @@
       const pt = (i, x, y, z, r) => { const v = T.v1.set(x * k, y * k, z * k).applyQuaternion(Wq[i]).add(Wp[i]); const h = v.y - r * k; if (h < mn) mn = h; };
       pt(B.pelvis, 0, 0, 0, 0.125); pt(B.pelvis, 0.11, -0.03, 0, 0.1); pt(B.pelvis, -0.11, -0.03, 0, 0.1);
       pt(B.spine, 0, 0.06, 0.005, 0.115); pt(B.chest, 0, 0.07, 0, 0.13); pt(B.chest, 0.15, 0.15, -0.01, 0.075); pt(B.chest, -0.15, 0.15, -0.01, 0.075);
-      pt(B.head, 0, 0.115, 0.01, 0.112); pt(B.neck, 0, 0.04, 0, 0.06);
+      pt(B.head, this._headPt[0], this._headPt[1], this._headPt[2], this._headR); pt(B.neck, 0, 0.04, 0, 0.06);
       for (const S of ['L', 'R']) {
         const th = B['thigh' + S], sh = B['shin' + S], ft = B['foot' + S];
         const a = Wp[th], b = Wp[sh], c = Wp[ft];
@@ -4427,23 +3989,32 @@
       return obj;
     }
     detach(obj) { if (obj && obj.parent) obj.parent.remove(obj); return obj; }
+    // 兵器网格（LP 材质 + 墨线外壳）：右手握点（弓：左手）；双持时左手一把同样的
+    _makeWeaponMeshes(geo) {
+      const L = LPX(), side = this.style === 'bow' ? 'L' : 'R';
+      for (const m of [this.weaponMesh, this.weaponMesh2]) if (m && m.parent) m.parent.remove(m);
+      this.weaponMesh = L.mesh(geo, { castShadow: this._shadow, receiveShadow: false });
+      this.weaponMesh.name = 'weapon';
+      this.sockets['grip' + side].add(this.weaponMesh);
+      this.weaponMesh2 = null;
+      if (this.style === 'dual') {
+        this.weaponMesh2 = L.mesh(geo, { castShadow: this._shadow, receiveShadow: false });
+        this.weaponMesh2.name = 'weapon2';
+        this.sockets.gripL.add(this.weaponMesh2);
+      }
+      const body = [this.mesh, this.mesh.userData.outline];
+      this.meshes = body.concat([this.weaponMesh, this.weaponMesh2].filter(Boolean).reduce((a, m) => a.concat([m, m.userData.outline]), [])).filter(Boolean);
+      this.drawCalls = this.meshes.length;
+      if (this._look) for (const m of [this.weaponMesh, this.weaponMesh2]) if (m) attachLook(m, this._look);
+    }
     setWeapon(name) {
       if (!WEAPONS[name] || this.kind === 'soldier') return this;
-      if (this.weaponMesh) { this.weaponMesh.parent.remove(this.weaponMesh); }
-      if (this.weaponMesh2) { this.weaponMesh2.parent.remove(this.weaponMesh2); }
-      if (this._ownWeaponGeo) this._ownWeaponGeo.dispose();
-      const wgb = new GB();
-      const lod = this.tpl.look._lodP || LODP[this.tpl.lod] || LODP.high;
-      this.weaponInfo = buildWeaponInto(wgb, name, lod, { w: 0 });
-      this._ownWeaponGeo = wgb.build({ skin: false });
+      const det = Math.min(WDET[this.tpl.lod] != null ? WDET[this.tpl.lod] : 2, this.tpl.D ? this.tpl.D.det : 2);
+      const w = weaponGeo(name, det);
+      this.weaponInfo = w.info;
       this.style = WEAPONS[name].style;
-      const mat = this._ownMat || this.mesh.material;
-      this.weaponMesh = new THREE.Mesh(this._ownWeaponGeo, mat); this.weaponMesh.castShadow = this.mesh.castShadow;
-      this.sockets[this.style === 'bow' ? 'gripL' : 'gripR'].add(this.weaponMesh);
-      this.weaponMesh2 = null;
-      if (this.style === 'dual') { this.weaponMesh2 = new THREE.Mesh(this._ownWeaponGeo, mat); this.sockets.gripL.add(this.weaponMesh2); }
-      this.meshes = [this.mesh, this.head, this.weaponMesh, this.weaponMesh2, this.shieldMesh].filter(Boolean);
-      this.drawCalls = this.meshes.length;
+      this._wRange = w.range;
+      this._makeWeaponMeshes(w.geo);
       this.setPose(this._clipName || 'idle', this._clipT || 0);
       return this;
     }
@@ -4465,45 +4036,74 @@
       s.updateWorldMatrix(true, false);
       return out.applyMatrix4(s.matrixWorld);
     }
-    // 受击闪光：每个人物用独立的材质副本（共用着色器程序）
+    // 受击闪光、格开的冷光、反击窗口的金光……：LP 外观（共用材质，逐物体写入），以墨线变色加粗为主，正面少量闪色
     setTint(hex, k) {
-      if (!this._ownMat) {
-        this._ownMat = ownCopy(this.mesh.material);
-        this.mesh.material = this._ownMat;
-        for (const m of [this.weaponMesh, this.weaponMesh2, this.shieldMesh]) if (m) m.material = this._ownMat;
-      }
-      const c = col(hex || '#ffffff');
-      this._ownMat.userData.tint.value.setRGB(c[0] * (k || 0), c[1] * (k || 0), c[2] * (k || 0));
-      if (this._faceMat && this._faceMat.userData.tint) this._faceMat.userData.tint.value.copy(this._ownMat.userData.tint.value);
+      tintLook(this._look, hex, k, 1);
       return this;
     }
+    // 显示 / 隐藏（含兵器网格；骑在马上时随马）
+    get visible() { return this.root.visible; }
+    set visible(v) { this.root.visible = !!v; }
     dispose() {
       if (this._disposed) return;
       this._disposed = true;
       if (this.root.parent) this.root.parent.remove(this.root);
       if (this.mounted) this.mounted.dismount(this);
       this.skeleton.dispose();
-      if (this._faceMat) this._faceMat.dispose();
-      if (this._face) releaseFace(this._face);
-      if (this._ownMat) this._ownMat.dispose();
-      if (this._ownWeaponGeo) this._ownWeaponGeo.dispose();
       releaseTemplate(this.tpl);
     }
   }
-  let HEAD_DEPTH = null;
-  function headDepthMaterial() {
-    if (HEAD_DEPTH) return HEAD_DEPTH;
-    const m = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
-    Object.defineProperty(m, 'map', { get: () => null, set: () => {}, configurable: true });
-    m.name = 'SG.Figure.headDepth';
-    return (HEAD_DEPTH = m);
+  // 着色外观（第三版的 setTint 是「自发光 = 颜色 × k」，黑色 = 无效果）：强度 = k × 颜色的最大分量，色相 = 归一化的颜色。
+  // 外观对象常驻（见 attachLook）：强度 > 0 时墨线变成该色并加粗（辉光轮廓）、正面少量闪色、rim 提亮；强度 = 0 时这些字段归零。
+  // 单挑每帧调用（颜色常为黑 = 关闭）。
+  function tintLook(look, hex, k, flashK) {
+    const L = LPX();
+    const c = col(hex == null ? '#ffffff' : hex);
+    const mx = Math.max(c[0], c[1], c[2]);
+    const s = clamp01((+k || 0) * Math.min(1.5, mx));
+    if (s <= 0.004) { look.flash = 0; look.ink = null; look.inkWidth = null; look.rim = 0; return look; }
+    const h = [c[0] / mx, c[1] / mx, c[2] / mx];
+    look.flash = 0.3 * s * (flashK == null ? 1 : flashK);
+    look.flashColor = h;
+    const ink = L.INK, ki = Math.min(1, s * 1.4);
+    look.ink = [lerp(ink[0], h[0], ki), lerp(ink[1], h[1], ki), lerp(ink[2], h[2], ki)];
+    look.inkWidth = 1 + 1.4 * s;
+    look.rim = 0.6 * s;
+    return look;
   }
-  function ownCopy(base) {
-    const m = base.clone();
-    m.userData = {};
-    patchMaterial(m, 'kit');
-    if (base.userData && base.userData.team && base.userData.team.value && base.userData.team.value.isColor) m.userData.team.value.copy(base.userData.team.value);
-    return m;
+  // 没有 LP 氛围（SG.LP.Mood）的场景：沿用旧版物理比例的灯（强度 × π，如攻击画面、单挑画面自建的太阳 / 天光）。LP 着色器把
+  // 灯的强度当作 Lanternvale 的线性值，会亮约 π 倍、发白；这里按场景的灯判断，人物与士兵群的反照率乘 1/π（= 旧版 Lambert 的曝光），
+  // 有氛围（全局覆盖量生效）或灯本身就是 Lanternvale 量级的场景不变。各场景接入 SG.Gfx.newMood 后自动失效。
+  const LEGACY_TINT = [0.6, 0.6, 0.6];        // sRGB 0.6 = 线性 1/π（外观的 tint 按 sRGB 解码）
+  const LEGACY_K = 1 / Math.PI;
+  function sceneLightK(renderer, scene) {
+    const L = SG.LP;
+    if (!L || !scene || L.globals.lpSunC.value.w > 0.5) return 1;
+    const ud = scene.userData, fr = renderer && renderer.info ? renderer.info.render.frame : 0;
+    let c = ud.__sgLightK;
+    if (c && c.f === fr) return c.k;
+    if (!c || !c.lights || (fr - c.scan) > 90 || fr < c.scan) {
+      const lights = [];
+      scene.traverse(o => { if (o.isLight && (o.isDirectionalLight || o.isHemisphereLight || o.isAmbientLight)) lights.push(o); });
+      c = ud.__sgLightK = { f: -1, k: 1, lights, scan: fr };
+    }
+    let sun = 0, amb = 0, ds = false, hs = false;
+    for (const o of c.lights) {
+      if (!o.visible) continue;
+      const m = Math.max(o.color.r, o.color.g, o.color.b) * o.intensity;
+      if (o.isDirectionalLight) { if (!ds) { sun = m; ds = true; } }
+      else if (o.isHemisphereLight) { if (!hs) { amb += m; hs = true; } }
+      else amb += m;
+    }
+    c.f = fr; c.k = sun + amb > 2.6 ? LEGACY_K : 1;
+    return c.k;
+  }
+  // 常驻外观 + 场景曝光补偿：LP.setLook 之后包一层 onBeforeRender（先按场景定 tint，再交给 LP 写入共用材质）
+  function attachLook(mesh, look) {
+    if (!mesh) return;
+    LPX().setLook(mesh, look);
+    const lb = mesh.onBeforeRender;
+    mesh.onBeforeRender = function (r, sc, cam, g, m) { look.tint = sceneLightK(r, sc) === 1 ? null : LEGACY_TINT; lb.call(this, r, sc, cam, g, m); };
   }
   function blendPoses(P, Q, w) {
     // P = lerp(P, Q, w)
@@ -4512,18 +4112,22 @@
     return P;
   }
 
+
   // ======================================================== 战马实例 ==
   const HTPL = new Map();
   class Horse {
     constructor(opts) {
       opts = opts || {};
-      const lod = opts.lod || 'mid';
-      const key = [lod, opts.coat, opts.armor, opts.seed | 0, opts.name, !!opts.general, opts.metal, opts.plume].join('|');
+      const lod = HLOD[opts.lod] ? opts.lod : 'mid';
+      const crowdMode = !!opts._crowd;
+      const key = [lod, opts.coat, opts.mane, opts.armor, opts.seed | 0, opts.name, !!opts.general, opts.metal, opts.plume, crowdMode ? '*' : (opts.color || '#8a2a24')].join('|');
       let t = HTPL.get(key);
       if (!t) {
         const t0 = now();
-        const r = buildHorseGeometry(Object.assign({}, opts, { lod }));
-        t = { key, geometry: r.gb.build(), J: r.J, k: r.k, refs: 0, tris: r.gb.tris, inv: HBONES.map(n => new THREE.Matrix4().makeTranslation(-r.J[n][0], -r.J[n][1], -r.J[n][2])) };
+        const J = horseJoints(1);
+        const M = buildHorseLP(Object.assign({}, opts, { lod }), crowdMode ? 'crowd' : 'single');
+        const geometry = M.toGeometry({ skinned: true });
+        t = { key, geometry, J, k: 1, refs: 0, tris: geometry.userData.tris, inv: HBONES.map(n => new THREE.Matrix4().makeTranslation(-J[n][0], -J[n][1], -J[n][2])), crowd: crowdMode };
         t.ms = now() - t0;
         STATS.buildMs += t.ms; STATS.templates++;
         STATS.tris['horse@' + lod] = t.tris;
@@ -4538,15 +4142,23 @@
       this._bones = bones; this.bones = {}; HBONES.forEach((n, i) => { this.bones[n] = bones[i]; });
       this.restPos = bones.map(b => b.position.clone());
       this.skeleton = new THREE.Skeleton(bones, t.inv);
-      this.mesh = new THREE.SkinnedMesh(t.geometry, teamMaterial(opts.color || '#8a2a24'));
-      this.mesh.add(bones[0]); this.mesh.bind(this.skeleton, new THREE.Matrix4());
-      this.mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 1.1, 0), 1.9);
-      this.mesh.castShadow = opts.shadow !== false;
+      const L = LPX();
+      // 骨架挂在 root 下：马的外观（setTint）不影响骑在鞍座骨上的人物
+      this.root.add(bones[0]);
+      this.mesh = L.skinnedMesh(t.geometry, this.skeleton, { castShadow: opts.shadow !== false, receiveShadow: false });
+      this.mesh.name = 'horse';
       this.root.add(this.mesh);
-      this.meshes = [this.mesh];
+      this.meshes = [this.mesh, this.mesh.userData.outline].filter(Boolean);
+      if (opts.blob) {
+        this.blob = L.blobShadow(0.58, 1.3, 0.5, 0.55);
+        Object.defineProperty(this.blob, 'castShadow', { get: () => false, set: () => {}, configurable: true });
+        this.root.add(this.blob);
+      }
       this.sockets = { saddle: this.bones.saddle };
       this.riders = [];
-      this.triangles = t.tris; this.drawCalls = 1;
+      this.triangles = t.tris; this.drawCalls = this.meshes.length;
+      this._look = {};
+      attachLook(this.mesh, this._look);
       STATS.built++;
       this.setPose('idle', 0);
     }
@@ -4579,20 +4191,15 @@
     }
     attach(obj, where) { const t = typeof where === 'string' ? (this.sockets[where] || this.bones[where]) : where; (t || this.root).add(obj); return obj; }
     detach(obj) { if (obj && obj.parent) obj.parent.remove(obj); return obj; }
-    setTint(hex, k) {
-      if (!this._ownMat) { this._ownMat = ownCopy(this.mesh.material); this.mesh.material = this._ownMat; }
-      const c = col(hex || '#ffffff'); this._ownMat.userData.tint.value.setRGB(c[0] * (k || 0), c[1] * (k || 0), c[2] * (k || 0));
-      return this;
-    }
+    setTint(hex, k) { tintLook(this._look, hex, k, 1); return this; }
     dispose() {
       if (this._disposed) return;
       this._disposed = true;
       for (const f of this.riders.slice()) this.dismount(f);
       if (this.root.parent) this.root.parent.remove(this.root);
       this.skeleton.dispose();
-      if (this._ownMat) this._ownMat.dispose();
       const t = this.tpl;
-      if (--t.refs <= 0) { HTPL.delete(t.key); t.geometry.dispose(); }
+      if (--t.refs <= 0 && !t.crowd) { HTPL.delete(t.key); t.geometry.dispose(); }
     }
   }
   const HCLIPS = { idle: { dur: 3.0, loop: true, desc: '站立' }, walk: { dur: 1.1, loop: true, desc: '慢步' }, trot: { dur: 0.7, loop: true, desc: '快步' },
@@ -4606,7 +4213,7 @@
     const leg = (L, ang, knee, fet) => { set('up' + L, ang); set('lo' + L, knee); set('ft' + L, fet); };
     if (name === 'idle') {
       const s = Math.sin(ph);
-      set('neck1', -4 + s * 2); set('neck2', 6 + s * 2); set('head', 14 - s * 2); set('tail1', 20, Math.sin(ph * 2) * 10); set('tail2', 15, Math.sin(ph * 2 + 1) * 12);
+      set('neck1', -4 + s * 2); set('neck2', 6 + s * 2); set('head', 14 - s * 2); set('tail1', 2, Math.sin(ph * 2) * 10); set('tail2', 2, Math.sin(ph * 2 + 1) * 12);   // 尾自然下垂（试点 TAIL_REST）
       b.body.position.y += Math.sin(ph * 2) * 0.004;
       leg('FL', 0, 0, 0); leg('FR', 0, 0, 0); leg('HL', 0, 0, 0); leg('HR', 4, -6, 4);
       return;
@@ -4626,6 +4233,7 @@
       set('body', g ? Math.sin(ph) * 5 : 0);
       set('neck1', g ? -10 + Math.sin(ph + 1) * 8 : -6 + Math.sin(ph * 2) * 3); set('neck2', g ? 4 : 6); set('head', g ? 10 : 14 + Math.sin(ph * 2) * 3);
       set('tail1', g ? 45 : 22, Math.sin(ph) * 8); set('tail2', g ? 25 : 18, Math.sin(ph + 1) * 10);
+      if (name === 'walk') { b.tail1.rotation.x -= 18 * D2R; b.tail2.rotation.x -= 14 * D2R; }
       return;
     }
     if (name === 'rear') {
@@ -4718,7 +4326,7 @@
     const t0 = now();
     const f = new Figure(tpl, { shadow: false });
     tpl.refs++;
-    const h = new Horse(Object.assign({}, hopts, { shadow: false }));
+    const h = new Horse(Object.assign({}, hopts, { shadow: false, _crowd: true }));
     h.mount(f);
     h.root.updateMatrixWorld(true);
     const list = Object.keys(MOUNT_CLIPS).map(n => ({ name: n, dur: MOUNT_CLIPS[n][2], loop: MOUNT_CLIPS[n][3] }));
@@ -4740,10 +4348,11 @@
     return b;
   }
 
-  // 实例化材质：装具材质 + 烘焙蒙皮 + 实例势力色
+  // 实例化材质：LP 光照着色器（与单个人物同一套 Lanternvale 光照）+ 烘焙蒙皮 + 实例势力色（只乘在 lpTeam 遮罩的顶点上）；
+  // 墨线外壳同样实例化（共用实例矩阵与动作属性）
   const CROWD_VS_PARS = [
     'uniform sampler2D uSgBake;', 'uniform vec2 uSgSize;', 'uniform float uSgTime;', 'uniform float uSgFps;', 'uniform float uSgGround;',
-    'attribute vec4 skinIndex;', 'attribute vec4 skinWeight;', 'attribute vec4 aSgAnim;', 'attribute vec3 aSgTeam;', 'varying vec3 vSgTeam;',
+    'attribute vec4 skinIndex;', 'attribute vec4 skinWeight;', 'attribute vec4 aSgAnim;',
     'mat4 sgBone( float v, float bi ) {',
     '  float dx = 1.0 / uSgSize.x, x = ( floor( bi + 0.5 ) * 3.0 + 0.5 ) * dx;',
     '  vec4 r0 = texture2D( uSgBake, vec2( x, v ) ), r1 = texture2D( uSgBake, vec2( x + dx, v ) ), r2 = texture2D( uSgBake, vec2( x + dx * 2.0, v ) );',
@@ -4754,52 +4363,56 @@
     '  float f = max( 0.0, ( uSgTime - aSgAnim.z ) * uSgFps * aSgAnim.w );',
     '  f = aSgAnim.y > 0.0 ? mod( f, n ) : min( f, n - 1.0 );',
     '  float v = ( aSgAnim.x + f + 0.5 ) / uSgSize.y;',
-    '  return sgBone( v, skinIndex.x ) * skinWeight.x + sgBone( v, skinIndex.y ) * skinWeight.y + sgBone( v, skinIndex.z ) * skinWeight.z + sgBone( v, skinIndex.w ) * skinWeight.w;',
+    '  return sgBone( v, skinIndex.x ) * skinWeight.x;',
     '}'].join('\n');
-  function crowdVertex(src) {
-    return src.replace('#include <common>', '#include <common>\n' + CROWD_VS_PARS)
-      .replace('#include <skinbase_vertex>', 'mat4 sgSkin = sgSkinMat();\nvSgTeam = aSgTeam;')
+  // 刚性蒙皮（每顶点一骨，权重 1）：只取 skinIndex.x
+  function crowdVertex(src, team) {
+    const pars = CROWD_VS_PARS + (team ? '\nattribute float lpTeam;\nattribute vec3 aSgTeam;\nvarying vec3 vSgTeam;' : '');
+    const s = src.replace('#include <skinning_pars_vertex>', pars)
+      .replace('#include <skinbase_vertex>', 'mat4 sgSkin = sgSkinMat();' + (team ? '\nvSgTeam = mix( vec3( 1.0 ), aSgTeam, lpTeam );' : ''))
       .replace('#include <skinnormal_vertex>', 'objectNormal = ( sgSkin * vec4( objectNormal, 0.0 ) ).xyz;')
       .replace('#include <skinning_vertex>', 'transformed = ( sgSkin * vec4( transformed, 1.0 ) ).xyz;\nif ( uSgGround > 0.5 ) transformed.y = max( transformed.y, 0.006 );');
+    if (s.indexOf('sgSkinMat()') < 0 || s.indexOf('sgSkin * vec4( transformed') < 0) throw new Error('SG.Figure：士兵群着色器补丁失败（LP 着色器结构变了）');
+    return s;
   }
   function crowdUniforms(bake, ground) {
     return { uSgBake: { value: bake.tex }, uSgSize: { value: new THREE.Vector2(bake.W, bake.rows) }, uSgTime: { value: 0 }, uSgFps: { value: BAKE_FPS }, uSgGround: { value: ground ? 1 : 0 } };
   }
-  function crowdMaterial(U) {
-    const base = kitMaterial();
-    const m = base.clone();
-    m.userData = {};
-    m.name = 'SG.Figure.crowd';
-    const RIMu = RIM;
-    m.onBeforeCompile = function (sh) {
-      Object.assign(sh.uniforms, U, { uRimColor: RIMu.color, uRimK: RIMu.k, uRimDir: RIMu.dir });
-      sh.vertexShader = crowdVertex(sh.vertexShader);
-      sh.fragmentShader = 'uniform vec3 uRimColor;\nuniform float uRimK;\nuniform vec3 uRimDir;\nvarying vec3 vSgTeam;\n' + sh.fragmentShader
-        .replace('#include <map_fragment>', ['#ifdef USE_MAP', '  vec4 sgTex = texture2D( map, vMapUv );', '  diffuseColor.rgb *= sgTex.rgb;', '#endif'].join('\n'))
-        .replace('#include <color_fragment>', [
-          '#if defined( USE_COLOR_ALPHA )', '  vec3 sgVC = mix( vColor.rgb, vColor.rgb * vSgTeam, vColor.a );',
-          '#elif defined( USE_COLOR )', '  vec3 sgVC = vColor.rgb;', '#endif',
-          '#if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA )', '  #ifdef USE_MAP', '  diffuseColor.rgb *= mix( vec3( 1.0 ), sgVC, sgTex.a );', '  #else', '  diffuseColor.rgb *= sgVC;', '  #endif', '#endif'].join('\n'))
-        .replace('#include <emissivemap_fragment>', ['#include <emissivemap_fragment>',
-          RIM_GLSL].join('\n'));
-    };
-    m.customProgramCacheKey = () => 'sgcrowd';
+  // 从 LP 的共用材质派生：同一套着色器源码与全局量（氛围、风、视口）共用同一组 uniform 对象
+  function lpDerived(base, U, vs, fs, name) {
+    const L = LPX(), G = L.globals;
+    const u = THREE.UniformsUtils.clone(base.uniforms);
+    for (const k in G) if (k in u) u[k] = G[k];
+    Object.assign(u, U);
+    const m = new THREE.ShaderMaterial({ uniforms: u, vertexShader: vs, fragmentShader: fs, lights: base.lights, fog: base.fog, vertexColors: base.vertexColors, side: base.side });
+    m.defines = Object.assign({}, base.defines || {});
+    m.name = name;
     return m;
+  }
+  function crowdMaterial(U) {
+    const base = LPX().material({});
+    const fs = 'varying vec3 vSgTeam;\n' + base.fragmentShader.replace('vec3 albedo = lpLin( vColor.rgb ) * uTint;', 'vec3 albedo = lpLin( vColor.rgb * vSgTeam ) * uTint;');
+    if (fs.indexOf('vColor.rgb * vSgTeam') < 0) throw new Error('SG.Figure：士兵群着色器补丁失败（LP 片元着色器结构变了）');
+    return lpDerived(base, U, crowdVertex(base.vertexShader, true), fs, 'SG.Figure.crowd');
+  }
+  function crowdOutlineMaterial(U) {
+    const base = LPX().outlineMaterial({});
+    return lpDerived(base, U, crowdVertex(base.vertexShader, false), base.fragmentShader, 'SG.Figure.crowdOutline');
   }
   function crowdDepthMaterial(U) {
     const m = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
-    m.onBeforeCompile = function (sh) { Object.assign(sh.uniforms, U); sh.vertexShader = crowdVertex(sh.vertexShader).replace('vSgTeam = aSgTeam;', ''); sh.vertexShader = sh.vertexShader.replace('varying vec3 vSgTeam;', ''); };
-    m.customProgramCacheKey = () => 'sgcrowd-depth';
+    m.onBeforeCompile = function (sh) { Object.assign(sh.uniforms, U); sh.vertexShader = crowdVertex(sh.vertexShader, false); };
+    m.customProgramCacheKey = () => 'sgcrowd-lp-depth';
     return m;
   }
 
-  // 一组（同一几何体 + 同一烘焙）
+  // 一组（同一几何体 + 同一烘焙）：本体 + 墨线两个 InstancedMesh，共用实例矩阵与实例属性
   class CrowdGroup {
     constructor(crowd, geo, bake, cap, ground, name) {
       this.crowd = crowd; this.bake = bake; this.cap = cap; this.count = 0; this.ids = [];
       const g = new THREE.BufferGeometry();
-      for (const k of ['position', 'normal', 'uv', 'color', 'skinIndex', 'skinWeight']) if (geo.attributes[k]) g.setAttribute(k, geo.attributes[k]);
-      g.setIndex(geo.index);
+      for (const k of ['position', 'normal', 'color', 'lpWind', 'lpSmooth', 'skinIndex', 'skinWeight', 'lpTeam']) if (geo.attributes[k]) g.setAttribute(k, geo.attributes[k]);
+      if (!geo.attributes.lpTeam) g.setAttribute('lpTeam', new THREE.BufferAttribute(new Uint8Array(geo.attributes.position.count), 1, true));
       g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 1, 0), 2.5);
       this.anim = new THREE.InstancedBufferAttribute(new Float32Array(cap * 4), 4); this.anim.setUsage(THREE.DynamicDrawUsage);
       this.team = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3); this.team.setUsage(THREE.DynamicDrawUsage);
@@ -4808,13 +4421,30 @@
       this.U = crowdUniforms(bake, ground);
       this.U.uSgTime = crowd._time;     // 所有组共用同一时钟
       this.mat = crowdMaterial(this.U);
-      this.mesh = new THREE.InstancedMesh(g, this.mat, cap);
-      this.mesh.count = 0; this.mesh.frustumCulled = false; this.mesh.name = 'Crowd:' + name;
-      this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-      this.mesh.castShadow = crowd.shadow; this.mesh.receiveShadow = false;
-      if (crowd.shadow) this.mesh.customDepthMaterial = crowdDepthMaterial(this.U);
-      crowd.root.add(this.mesh);
-      this.tris = geo.index.count / 3;
+      this.outMat = crowdOutlineMaterial(this.U);
+      this.depthMat = crowd.shadow ? crowdDepthMaterial(this.U) : null;
+      this.name = name;
+      this._makeMeshes(cap, null);
+      this.tris = geo.userData.tris || geo.attributes.position.count / 3;
+    }
+    _makeMeshes(cap, old) {
+      const m = new THREE.InstancedMesh(this.geo, this.mat, cap);
+      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      if (old) m.instanceMatrix.array.set(old.instanceMatrix.array);
+      m.count = this.count; m.frustumCulled = false; m.name = 'Crowd:' + this.name;
+      m.castShadow = this.crowd.shadow; m.receiveShadow = false;
+      const mat = this.mat;
+      m.onBeforeRender = (r, sc) => { const kk = sceneLightK(r, sc); if (mat.uniforms.uTint.value.x !== kk) { mat.uniforms.uTint.value.setScalar(kk); mat.uniformsNeedUpdate = true; } };
+      if (this.depthMat) m.customDepthMaterial = this.depthMat;
+      const o = new THREE.InstancedMesh(this.geo, this.outMat, cap);
+      o.instanceMatrix = m.instanceMatrix;
+      o.count = this.count; o.frustumCulled = false; o.castShadow = false; o.receiveShadow = false; o.name = 'outline';
+      o.raycast = () => {};
+      m.add(o);
+      m.userData.outline = o;
+      if (old) { this.crowd.root.remove(old); }
+      this.crowd.root.add(m);
+      this.mesh = m; this.outline = o;
     }
     grow() {
       const cap = this.cap * 2;
@@ -4822,13 +4452,12 @@
       const t = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3); t.array.set(this.team.array); t.setUsage(THREE.DynamicDrawUsage);
       this.geo.setAttribute('aSgAnim', a); this.geo.setAttribute('aSgTeam', t); this.anim = a; this.team = t;
       const old = this.mesh;
-      const m = new THREE.InstancedMesh(this.geo, this.mat, cap);
-      m.instanceMatrix.array.set(old.instanceMatrix.array); m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-      m.count = this.count; m.frustumCulled = false; m.name = old.name; m.castShadow = old.castShadow; m.customDepthMaterial = old.customDepthMaterial;
-      this.crowd.root.remove(old); old.dispose && old.dispose(); this.crowd.root.add(m);
-      this.mesh = m; this.cap = cap;
+      this.cap = cap;
+      this._makeMeshes(cap, old);
+      if (old.dispose) old.dispose();
     }
-    alloc(id) { if (this.count >= this.cap) this.grow(); const i = this.count++; this.ids[i] = id; this.mesh.count = this.count; return i; }
+    _setCount() { this.mesh.count = this.count; this.outline.count = this.count; }
+    alloc(id) { if (this.count >= this.cap) this.grow(); const i = this.count++; this.ids[i] = id; this._setCount(); return i; }
     free(i) {
       const last = --this.count;
       if (i !== last) {
@@ -4836,10 +4465,10 @@
         this.anim.array.copyWithin(i * 4, last * 4, last * 4 + 4); this.team.array.copyWithin(i * 3, last * 3, last * 3 + 3);
         const mv = this.ids[last]; this.ids[i] = mv; this.crowd._moved(mv, this, i);
       }
-      this.ids.length = this.count; this.mesh.count = this.count;
+      this.ids.length = this.count; this._setCount();
       this.mesh.instanceMatrix.needsUpdate = true; this.anim.needsUpdate = true; this.team.needsUpdate = true;
     }
-    dispose() { this.crowd.root.remove(this.mesh); this.geo.dispose(); this.mat.dispose(); if (this.mesh.customDepthMaterial) this.mesh.customDepthMaterial.dispose(); }
+    dispose() { this.crowd.root.remove(this.mesh); this.geo.dispose(); this.mat.dispose(); this.outMat.dispose(); if (this.depthMat) this.depthMat.dispose(); }
   }
 
   const _cm = () => new THREE.Matrix4();
@@ -4867,10 +4496,10 @@
       o = o || {};
       const id = this._next++;
       const look = lookOfSoldier(Object.assign({ lod: this.lod }, o, { lod: this.lod, type: o.mounted ? 'cavalry' : o.type }));
-      const key = ['S', look.type, look.culture, look.lod, look.seed].join('|');
-      const it = { id, mounted: !!o.mounted, color: col(o.color || '#8a2a24'), parts: [], clip: 'idle', t0: 0, speed: 1, m: _cm() };
+      const key = crowdKey(look);
+      const it = { id, mounted: !!o.mounted, color: teamTone(o.color || '#8a2a24'), parts: [], clip: 'idle', t0: 0, speed: 1, m: _cm(), o };
       if (!this.instanced) return this._addFallback(it, o, id);
-      const tpl = getTemplate(look, key);
+      const tpl = getTemplate(look, key, 'crowd');
       if (o.mounted) {
         const ho = crowdHorseOpts(o, look, this.lod);
         const hkey = crowdHorseKey(ho);
@@ -4896,7 +4525,7 @@
     _horseTpl(ho, hkey) {
       if (!this._htpls) this._htpls = new Map();
       let t = this._htpls.get(hkey);
-      if (!t) { const h = new Horse(Object.assign({}, ho, { shadow: false })); t = h.tpl; t.refs++; h.dispose(); this._htpls.set(hkey, t); }
+      if (!t) { const h = new Horse(Object.assign({}, ho, { shadow: false, _crowd: true })); t = h.tpl; t.refs++; h.dispose(); this._htpls.set(hkey, t); }
       return t;
     }
     _moved(id, g, i) { const it = this.items.get(id); if (it) for (const p of it.parts) if (p.g === g) p.i = i; }
@@ -4936,8 +4565,17 @@
     clipDur(clip, mounted) { return mounted ? (MOUNT_CLIPS[clip] || MOUNT_CLIPS.idle)[2] : (CL[clip] || CL.idle).dur; }
     setColor(id, hexc) {
       const it = this.items.get(id); if (!it) return this;
-      it.color = col(hexc);
-      if (it.fig) { it.fig.mesh.material = teamMaterial(hexc); return this; }
+      it.color = teamTone(hexc);
+      if (it.fig) {
+        // 回退路径（逐个 SkinnedMesh）：势力色烘在顶点色里，换色 = 重建这名士兵（及其战马）
+        const m = it.m.clone(), clip = it.clip, t0 = it.t0, speed = it.speed;
+        it.fig.dispose(); if (it.horse) it.horse.dispose();
+        it.o = Object.assign({}, it.o, { color: hexc });
+        this._buildFallback(it, it.o);
+        it.clip = clip; it.t0 = t0; it.speed = speed;
+        this.setMatrix(it.id, m);
+        return this;
+      }
       for (const p of it.parts) { p.g.team.array.set(it.color, p.i * 3); p.g.team.needsUpdate = true; }
       return this;
     }
@@ -4960,10 +4598,14 @@
       if (this.root.parent) this.root.parent.remove(this.root);
     }
     // ---- 回退（WebGL1）：每名士兵一个 SkinnedMesh，按同一接口驱动
-    _addFallback(it, o, id) {
+    _buildFallback(it, o) {
       it.fig = soldier(Object.assign({}, o, { lod: this.lod, type: o.mounted ? 'cavalry' : o.type, shadow: this.shadow }));
       this.root.add(it.fig.root);
+      it.horse = null;
       if (o.mounted) { it.horse = horse(Object.assign({ lod: 'low', color: o.color, seed: (o.seed | 0) % 2 }, o.horse || {})); this.root.add(it.horse.root); it.horse.mount(it.fig); }
+    }
+    _addFallback(it, o, id) {
+      this._buildFallback(it, o);
       it.table = o.mounted ? MOUNT_CLIPS : null;
       this.items.set(id, it);
       this.play(id, 'idle', { phase: (id * 0.618034) % 1 });
@@ -4976,12 +4618,13 @@
     }
   }
   function crowd(opts) { return new Crowd(opts); }
+  function crowdKey(look) { return ['S', look.type, look.culture, look.lod, look.seed, '*'].join('|'); }
   // 预烘焙（生成器，按片段分片）：士兵规格 { type, culture, seed, mounted, horse }
   function* bakeCrowdGen(o, lod) {
     lod = lod || 'low';
     const look = lookOfSoldier(Object.assign({}, o, { lod, type: o.mounted ? 'cavalry' : o.type }));
-    const key = ['S', look.type, look.culture, look.lod, look.seed].join('|');
-    const tpl = getTemplate(look, key);
+    const key = crowdKey(look);
+    const tpl = getTemplate(look, key, 'crowd');
     yield;
     if (!o.mounted) yield* bakeSoldierGen(look, key, tpl);
     else {
@@ -4995,76 +4638,85 @@
 
   // ======================================================== 公开接口 ==
   const SOLDIER_TYPES = ['spear', 'sword', 'archer', 'cavalry'];
-  function generalKey(look, opts) {
+  // 单个人物的模板键：外观 × LOD × 势力色（势力色烘进顶点色）
+  function generalKey(look) {
     const sp = look.spec || {};
-    return ['G', look.name, look.culture, look.lod, look.weapon, look.shield || '', sp.key || '', opts.mounted ? 'm' : ''].join('|');
+    return ['G', look.name, look.culture, look.lod, look.weapon, look.shield || '', sp.key || '', String(look.factionHex || '').toLowerCase()].join('|');
   }
   function general(gen, opts) {
     opts = opts || {};
     const look = lookOfGeneral(gen, opts);
-    const tpl = getTemplate(look, generalKey(look, opts));
-    const fig = new Figure(tpl, Object.assign({ color: look.factionHex }, opts));
-    return fig;
+    const tpl = getTemplate(look, generalKey(look), 'single', look.factionHex);
+    return new Figure(tpl, Object.assign({ color: look.factionHex }, opts));
   }
   function soldier(opts) {
     opts = opts || {};
     const look = lookOfSoldier(opts);
-    const key = ['S', look.type, look.culture, look.lod, look.seed].join('|');
-    const tpl = getTemplate(look, key);
+    const key = ['S', look.type, look.culture, look.lod, look.seed, String(look.factionHex).toLowerCase()].join('|');
+    const tpl = getTemplate(look, key, 'single', look.factionHex);
     return new Figure(tpl, Object.assign({ color: look.factionHex }, opts));
   }
   function horse(opts) { return new Horse(opts || {}); }
+  // 独立兵器：每次新建几何体（调用方可以释放：mesh.userData.dispose()）
   function weapon(name, opts) {
     opts = opts || {};
-    const lod = LODP[opts.lod || 'high'] || LODP.high;
-    const gb = new GB();
-    const info = buildWeaponInto(gb, WEAPONS[name] ? name : 'jian', lod, { w: 0 });
-    const g = gb.build({ skin: false });
-    const m = new THREE.Mesh(g, teamMaterial(opts.color));
+    const id = WEAPONS[name] ? name : 'jian';
+    const det = WDET[opts.lod || 'high'] != null ? WDET[opts.lod || 'high'] : 2;
+    const M = new (FigBuilder())(11);
+    const info = buildWeaponLP(M, id, det);
+    const g = M.toGeometry();
+    const m = LPX().mesh(g, { castShadow: opts.shadow !== false, receiveShadow: false });
     m.name = 'Weapon:' + info.id;
-    m.castShadow = opts.shadow !== false;
     m.userData.weapon = { id: info.id, name: info.name, style: info.style, len: info.len, tip: new THREE.Vector3(...info.tip), base: new THREE.Vector3(...info.base), off: info.off ? new THREE.Vector3(...info.off) : null };
-    m.userData.tris = gb.tris;
+    m.userData.tris = g.userData.tris;
     m.userData.dispose = () => g.dispose();
     return m;
   }
+  // 独立的盾（+Z 为盾面）：盾面为势力色（opts.color）
   function shield(name, opts) {
     opts = opts || {};
-    const lod = LODP[opts.lod || 'high'] || LODP.high;
-    const gb = new GB();
-    buildShieldInto(gb, name || 'round', lod, TEAM, 0);
-    const g = gb.build({ skin: false });
-    const m = new THREE.Mesh(g, teamMaterial(opts.color));
-    m.userData.tris = gb.tris;
+    const det = WDET[opts.lod || 'high'] != null ? WDET[opts.lod || 'high'] : 2;
+    const M = new (FigBuilder())(13);
+    const X = { team: tcol(teamTone(opts.color || '#8a2a24'), 1), trim: C3(PALF.gold) };
+    const info = buildShieldLP(M, name || 'round', det, X);
+    const g = M.toGeometry();
+    const m = LPX().mesh(g, { castShadow: opts.shadow !== false, receiveShadow: false });
+    m.name = 'Shield:' + (name || 'round');
+    m.userData.shield = info;
+    m.userData.tris = g.userData.tris;
+    m.userData.dispose = () => g.dispose();
     return m;
   }
 
-  // 预生成：图集、环境贴图、士兵模板（分片，单片约 12ms）
+  // 预生成：士兵模板、名将模板、士兵群动作烘焙（分片，单片约 12ms）；先等 lowpoly.js 就绪
   let preloading = null;
   function preload(opts) {
     if (preloading && !opts) return preloading;
     opts = opts || {};
-    const cultures = opts.cultures || CULTURES;
-    const types = opts.types || SOLDIER_TYPES;
-    const lods = opts.lods || ['low'];
-    const seeds = opts.seeds || [0];
-    const budget = opts.budget || 12;
     const t0 = now();
-    const jobs = [];
-    if (!ATLAS) jobs.push({ gen: genAtlas(), name: 'atlas' });
-    jobs.push({ fn: () => { envMap(); kitMaterial(); headTextures(); } });
-    // 有渲染器时提前上传贴图（避免首次绘制时卡顿）
-    const rr = opts.renderer || (SG.Gfx && SG.Gfx.renderer);
-    if (rr && rr.initTexture) jobs.push({ fn: () => { const A = atlas(); for (const t of [A.map, A.normalMap, A.ormMap]) rr.initTexture(t); } });
-    for (const lod of lods) for (const c of cultures) for (const ty of types) for (const sd of seeds) jobs.push({ name: 'soldier ' + c + '/' + ty, fn: () => { const f = soldier({ type: ty, culture: c, lod, seed: sd }); f.dispose(); } });
-    if (opts.generals) for (const g of opts.generals) jobs.push({ fn: () => { /* 面部贴图与模板（随后由调用方使用） */ const f = general(g, { lod: opts.generalLod || 'mid' }); f.dispose(); } });
-    // 士兵群的动作烘焙：opts.crowd = [{ type, culture, seed, mounted }]（或 true：所选文化 × 兵种，seed 0，骑兵带马）
-    if (opts.crowd) {
-      const specs = opts.crowd === true ? [].concat(...cultures.map(c => types.map(ty => ({ type: ty, culture: c, seed: 0, mounted: ty === 'cavalry' })))) : opts.crowd;
-      for (const o of specs) jobs.push({ gen: bakeCrowdGen(o, opts.crowdLod || 'low'), name: 'crowd ' + o.culture + '/' + o.type + (o.mounted ? '+horse' : '') });
-    }
-    preloading = runJobs(jobs, budget).then(() => { STATS.preloadMs = Math.round(now() - t0); return STATS; });
-    return preloading;
+    const p = ensureLP().then(ok => {
+      if (!ok) throw new Error('SG.Figure：js/lowpoly.js（SG.LP）载入失败');
+      LPX();
+      const cultures = opts.cultures || CULTURES;
+      const types = opts.types || SOLDIER_TYPES;
+      const lods = opts.lods || ['low'];
+      const seeds = opts.seeds || [0];
+      const budget = opts.budget || 12;
+      const jobs = [];
+      // 共用材质与程序（LP 着色器）提前编译：有渲染器时
+      const rr = opts.renderer || (SG.Gfx && SG.Gfx.renderer);
+      void rr;
+      for (const lod of lods) for (const c of cultures) for (const ty of types) for (const sd of seeds) jobs.push({ name: 'soldier ' + c + '/' + ty, fn: () => { const f = soldier({ type: ty, culture: c, lod, seed: sd }); f.dispose(); } });
+      if (opts.generals) for (const g of opts.generals) jobs.push({ name: 'general', fn: () => { const f = general(g, { lod: opts.generalLod || 'mid' }); f.dispose(); } });
+      // 士兵群的动作烘焙：opts.crowd = [{ type, culture, seed, mounted }]（或 true：所选文化 × 兵种，seed 0，骑兵带马）
+      if (opts.crowd) {
+        const specs = opts.crowd === true ? [].concat(...cultures.map(c => types.map(ty => ({ type: ty, culture: c, seed: 0, mounted: ty === 'cavalry' })))) : opts.crowd;
+        for (const o of specs) jobs.push({ gen: bakeCrowdGen(o, opts.crowdLod || 'low'), name: 'crowd ' + o.culture + '/' + o.type + (o.mounted ? '+horse' : '') });
+      }
+      return runJobs(jobs, budget);
+    }).then(() => { STATS.preloadMs = Math.round(now() - t0); return STATS; });
+    if (!opts || Object.keys(opts).length === 0) preloading = p;
+    return p;
   }
   function runJobs(jobs, budget) {
     return new Promise(resolve => {
@@ -5085,8 +4737,7 @@
   }
 
   function stats() {
-    let tris = 0;
-    return Object.assign({}, STATS, { templateCount: TEMPLATES.size, horseTemplates: HTPL.size, faces: FACE_CACHE.size, materials: TEAM_MATS.size, totalTris: tris });
+    return Object.assign({}, STATS, { templateCount: TEMPLATES.size, horseTemplates: HTPL.size, weaponGeos: WGEO.size, bakes: BAKES.size, faces: 0, materials: 0 });
   }
   // 程序化片段 → THREE.AnimationClip（需要 AnimationMixer 时）
   function toAnimationClip(fig, clip, fps) {
@@ -5111,7 +4762,8 @@
     return new THREE.AnimationClip(clip, info.dur, tracks);
   }
   function clearCache() {
-    for (const t of TEMPLATES.values()) if (t.refs <= 0) { for (const g of [t.geometry, t.headGeo, t.weaponGeo, t.shieldGeo]) if (g) g.dispose(); TEMPLATES.delete(t.key); }
+    for (const t of [...TEMPLATES.values()]) if (t.refs <= 0) { if (t.geometry) t.geometry.dispose(); TEMPLATES.delete(t.key); }
+    for (const t of [...HTPL.values()]) if (t.refs <= 0) { t.geometry.dispose(); HTPL.delete(t.key); }
   }
   const clipsOut = {};
   for (const k in CL) clipsOut[k] = { dur: CL[k].dur, loop: CL[k].loop, desc: CL[k].desc };
@@ -5122,11 +4774,16 @@
     clips: clipsOut, horseClips: HCLIPS,
     cultures: CULTURES.slice(), weapons: Object.keys(WEAPONS).map(id => ({ id, name: WEAPONS[id].name, style: WEAPONS[id].style })),
     soldierTypes: SOLDIER_TYPES.slice(), boneNames: BONES.slice(), horseBoneNames: HBONES.slice(),
-    get material() { return kitMaterial(); },
+    // 第四版：所有人物共用 SG.LP 的 Lanternvale 光照材质（势力色烘进顶点色；士兵群为实例属性）
+    get material() { return LPX().material({}); },
     teamMaterial, setRim,
     lookOf(gen, opts) { return lookOfGeneral(gen, opts || {}); },
     soldierLook(opts) { return lookOfSoldier(opts || {}); },
-    atlas() { return atlas(); },
-    _internal: { genAtlas, bakeCrowdGen, GB, loft, tube, lathe, panel, ellipsoid, blade, headPoint, headUV, paintFaceInto, faceDesc, makeProps, LODP, STANCE, CL, compiled, TEMPLATES },
+    // 第三版的贴图图集已取消（顶点色）；保留接口返回 null
+    atlas() { return null; },
+    ready: ensureLP,
+    POLE_LEAN,
+    budgets: { high: TRI_BUDGET.high, hero: TRI_BUDGET.hero, mid: TRI_BUDGET.mid, low: TRI_BUDGET.low, soldier: TRI_BUDGET.low, horseHigh: 2600, horseMid: 1800, horseLow: 900 },
+    _internal: { bakeCrowdGen, makeProps, headSpec, headGrid, Kit, LODK, SQUEEZE, TRI_BUDGET, buildWeaponLP, buildShieldLP, buildHorseLP, weaponGeo, STANCE, CL, compiled, TEMPLATES, HTPL, WGEO, BAKES, paletteOf, teamTone },
   };
 })();

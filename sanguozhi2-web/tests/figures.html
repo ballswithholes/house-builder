@@ -34,6 +34,7 @@
 <script src="../js/world-data.js"></script>
 <script src="../js/portrait-data.js"></script>
 <script src="../js/portrait.js"></script>
+<script src="../js/lowpoly.js"></script>
 <script src="../js/figure.js"></script>
 <script>
 'use strict';
@@ -58,24 +59,41 @@
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   // 绘制统计包含阴影贴图那一遍（three 默认在阴影之后才重置 info，会漏掉阴影绘制）
   renderer.info.autoReset = false;
+  // 第四版：Lanternvale 风格的 SG.LP 光照（LP.Mood：太阳 / 天光 / 雾 / 夜色调），与 tests/lowpoly.html 的试点同一套布景
+  //（?mood=noon | golden | dusk | night，缺省 noon；?bg=dark 换深色背景）
+  const LP = SG.LP;
+  LP.setOutputEncoded(true);
+  const MOODN = qv('mood', 'noon');
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0.2, 0.21, 0.25);
-  scene.fog = new THREE.Fog(new THREE.Color(0.2, 0.21, 0.25), 18, 60);
+  const bgCol = Q.get('bg') === 'dark' ? new THREE.Color(0.2, 0.21, 0.25) : MOODN === 'night' ? new THREE.Color(0.17, 0.2, 0.36) : MOODN === 'golden' ? new THREE.Color(0.93, 0.82, 0.7) : new THREE.Color(0.8, 0.86, 0.92);
+  scene.background = bgCol.clone();
+  scene.fog = new THREE.Fog(bgCol.clone(), 40, 120);
   const camera = new THREE.PerspectiveCamera(30, 1, 0.05, 200);
-  const hemi = new THREE.HemisphereLight(new THREE.Color('#9aaccc'), new THREE.Color('#4a3c2e'), Math.PI * 0.5);
-  scene.add(hemi);
-  const sun = new THREE.DirectionalLight(new THREE.Color('#fff0d8'), Math.PI * 0.85);
-  sun.position.set(-4, 7, 6); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.02;
-  const sc = sun.shadow.camera; sc.left = -12; sc.right = 12; sc.top = 10; sc.bottom = -6; sc.near = 0.5; sc.far = 40;
-  scene.add(sun); scene.add(sun.target);
-  const rim = new THREE.DirectionalLight(new THREE.Color('#ffc890'), Math.PI * 0.55);
-  rim.position.set(5, 4, -6); scene.add(rim);
-  // 地面
-  const gc = document.createElement('canvas'); gc.width = gc.height = 256;
-  const gx = gc.getContext('2d'); const gg = gx.createRadialGradient(128, 128, 10, 128, 128, 128);
-  gg.addColorStop(0, '#6a6458'); gg.addColorStop(0.7, '#3c3832'); gg.addColorStop(1, '#2a2826'); gx.fillStyle = gg; gx.fillRect(0, 0, 256, 256);
-  const ground = new THREE.Mesh(new THREE.CircleGeometry(30, 48), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(gc), roughness: 0.95, metalness: 0 }));
-  ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+  window.__fig.three = { scene, camera, renderer };   // 性能测量用
+  const mood = new LP.Mood(scene, { center: [0, 0, -1], extent: 14, shadowSize: 2048 });
+  mood.set(MOODN);
+  LP.globals.lpFog.value.x = 0.6;
+  if (MOODN === 'night') { mood.addLamp([-2.2, 2.2, 1.6], { color: '#ffb35c', intensity: 1.6, range: 9 }); mood.addLamp([2.6, 2.2, 1.2], { color: '#ffb35c', intensity: 1.4, range: 9 }); }
+  // 地面：试点的米绿色棋盘格（1 米格，便于比对身高）
+  function checkerGround(n) {
+    const M = new LP.MeshBuilder(5);
+    const a = [0.66, 0.72, 0.55], b = [0.61, 0.67, 0.51], N = n || 24;
+    for (let z = -N; z < N; z++) for (let x = -N; x < N; x++) {
+      const c = ((x + z) & 1) === 0 ? a : b;
+      M.quad([x, 0, z], [x + 1, 0, z], [x + 1, 0, z + 1], [x, 0, z + 1], [0, 1, 0], c);
+    }
+    const m = LP.mesh(M.toGeometry(), { outline: false, castShadow: false, side: THREE.DoubleSide });
+    m.name = 'checker';
+    return m;
+  }
+  const ground = checkerGround(); scene.add(ground);
+  // 自动检查用的小场景（同样的 LP 正午光照）
+  function lpScene(shadow) {
+    const s = new THREE.Scene();
+    const md = new LP.Mood(s, { center: [0, 0, 0], extent: 10, shadow: shadow !== false, shadowSize: 1024 });
+    md.set('noon');
+    return { scene: s, mood: md };
+  }
 
   // 武将数据
   const W = SG.Scenarios && SG.Scenarios.world;
@@ -174,9 +192,9 @@
         scene.add(w);
         const it = { mesh: w, x, z, spinMesh: true, ly: y0 - 0.25 }; label(it, wd.name); items.push(it);
       });
-      lay(poles, -1.2, 1.05, 0.5);
-      lay(short, 0.6, 0.55, 0.36);
-      camTarget.set(0, 1.0, -0.4); camDist = 6.5; camPitch = 0.05;
+      lay(poles, -1.2, 1.05, 0.62);
+      lay(short, 0.6, 0.55, 0.44);
+      camTarget.set(0, 1.0, -0.4); camDist = 9; camPitch = 0.05;
     } else if (m === 'crowd') {
       // 实例化士兵群：每种文化一排（枪、刀盾、弓、骑），片段取 pose（骑兵：idle / walk / trot / gallop / attack / charge / hit / die）
       const cults = Q.has('cults') ? Q.get('cults').split(',') : ['han', 'roman', 'persia', 'steppe', 'wa'];
@@ -233,7 +251,7 @@
     renderPoseButtons();
   }
   // ------------------------------------------------------------ 自动检查（?mode=check）--
-  // 倒地 / 跪地片段不穿地、双手长兵左手在杆上、三角形预算、裸身肤色与面部一致、士兵群绘制次数（含阴影）
+  // 倒地 / 跪地片段不穿地、双手长兵左手在杆上、三角形预算（第四版：high 3.1k / 名将 3.6k / mid 1.8k / 士兵 900 / 战马）、裸身肤色与面部一致、士兵群绘制次数（含阴影、墨线）
   function runChecks() {
     const R = [], ok = (name, pass, info) => R.push({ name, pass, info });
     const v = new THREE.Vector3(), a = new THREE.Vector3(), b = new THREE.Vector3(), g = new THREE.Vector3(), ab = new THREE.Vector3(), ag = new THREE.Vector3();
@@ -270,30 +288,52 @@
     const W2 = SG.Scenarios && SG.Scenarios.world;
     const all = W2 ? W2.Generals.map(l => l.split('|')[0]) : names;
     const step = Q.has('all') ? 1 : 6;
-    let hi = 0, mid = 0, lo = 0, hn = '', mn = '', ln = '';
-    for (let i = 0; i < all.length; i += step) for (const lod of ['high', 'mid']) { const f = SG.Figure.general(gen(all[i]), { lod }); if (lod === 'high' && f.triangles > hi) { hi = f.triangles; hn = all[i]; } if (lod === 'mid' && f.triangles > mid) { mid = f.triangles; mn = all[i]; } f.dispose(); }
+    // 第四版预算（含兵器与盾，墨线外壳不计）：high ≤ 3.1k（名将 ≤ 3.6k）、mid ≤ 1.8k、士兵 low ≤ 900；战马 high ≤ 2.6k、mid ≤ 1.8k、low ≤ 900
+    const BUD = SG.Figure.budgets || { high: 3100, hero: 3600, mid: 1800, low: 900 };
+    let hi = 0, hh = 0, mid = 0, lo = 0, hn = '', hhn = '', mn = '', ln = '', sq = 0;
+    for (let i = 0; i < all.length; i += step) for (const lod of ['high', 'mid']) {
+      const f = SG.Figure.general(gen(all[i]), { lod, color: gen(all[i]).color });
+      const hero = f.tpl && f.tpl.budget === BUD.hero;
+      if (lod === 'high' && !hero && f.triangles > hi) { hi = f.triangles; hn = all[i]; }
+      if (lod === 'high' && hero && f.triangles > hh) { hh = f.triangles; hhn = all[i]; }
+      if (lod === 'mid' && f.triangles > mid) { mid = f.triangles; mn = all[i]; }
+      if (f.tpl && f.tpl.squeeze) sq++;
+      f.dispose();
+    }
     for (const c of SG.Figure.cultures) for (const ty of SG.Figure.soldierTypes) for (const sd of [0, 1, 2]) { const f = SG.Figure.soldier({ type: ty, culture: c, seed: sd }); if (f.triangles > lo) { lo = f.triangles; ln = c + '/' + ty + sd; } f.dispose(); }
-    ok('三角形预算 high ≤ 15000', hi <= 15000, hi + ' ' + hn); ok('三角形预算 mid ≤ 4000', mid <= 4000, mid + ' ' + mn); ok('三角形预算 low 士兵 ≤ 900', lo <= 900, lo + ' ' + ln);
+    ok('三角形预算 high ≤ ' + BUD.high, hi <= BUD.high, hi + ' ' + hn); ok('三角形预算 名将 high ≤ ' + BUD.hero, hh <= BUD.hero, hh + ' ' + hhn);
+    ok('三角形预算 mid ≤ ' + BUD.mid, mid <= BUD.mid, mid + ' ' + mn); ok('三角形预算 low 士兵 ≤ ' + BUD.low, lo <= BUD.low, lo + ' ' + ln);
+    ok('超预算降级重建的模板数（信息）', true, sq + ' / ' + Math.ceil(all.length / step) * 2);
+    {
+      const hs = {}; let okH = true;
+      for (const lod of ['high', 'mid', 'low']) for (const armor of ['cloth', 'scale']) { const h = SG.Figure.horse({ lod, armor, general: lod !== 'low', seed: 1 }); hs[lod] = Math.max(hs[lod] || 0, h.triangles); h.dispose(); }
+      okH = hs.high <= (BUD.horseHigh || 2600) && hs.mid <= (BUD.horseMid || 1800) && hs.low <= (BUD.horseLow || 900);
+      ok('战马预算 high ≤ ' + (BUD.horseHigh || 2600) + ' · mid ≤ ' + (BUD.horseMid || 1800) + ' · low ≤ ' + (BUD.horseLow || 900), okH, 'high ' + hs.high + ' · mid ' + hs.mid + ' · low ' + hs.low);
+    }
     // 裸身肤色：脸颊与胸口亮度相差 ≤ 15%
     {
-      const sc = new THREE.Scene(); sc.add(hemi.clone()); const sn = sun.clone(); sn.castShadow = false; sc.add(sn); sc.add(sn.target);
+      const sc = lpScene(false).scene;
       const f = SG.Figure.general(gen('许褚'), { lod: 'high' }); sc.add(f.root); f.setPose('idle', 0); f.root.updateMatrixWorld(true);
       const cam = new THREE.PerspectiveCamera(30, 1, 0.05, 50); cam.position.set(0, 1.45, 1.8); cam.lookAt(0, 1.45, 0); cam.updateMatrixWorld();
       const rt = new THREE.WebGLRenderTarget(256, 256); renderer.setRenderTarget(rt); renderer.render(sc, cam); renderer.setRenderTarget(null);
       const px = new Uint8Array(4 * 25), lumAt = (p) => { p.project(cam); const x = Math.round((p.x * 0.5 + 0.5) * 256), y = Math.round((p.y * 0.5 + 0.5) * 256); renderer.readRenderTargetPixels(rt, x - 2, y - 2, 5, 5, px); let s = 0; for (let i = 0; i < 25; i++) s += px[i * 4] * 0.3 + px[i * 4 + 1] * 0.59 + px[i * 4 + 2] * 0.11; return s / 25; };
       const hb = new THREE.Vector3(); f.bones.head.getWorldPosition(hb);
-      const face = lumAt(new THREE.Vector3(hb.x - 0.04, hb.y + 0.09, hb.z + 0.09)), chest = lumAt(new THREE.Vector3(0.02, 1.3, 0.15));
-      ok('裸身：胸口与脸颊亮度差 ≤ 15%', Math.abs(chest - face) / Math.max(face, 1) <= 0.15, 'face ' + face.toFixed(0) + ' chest ' + chest.toFixed(0));
+      // 第四版：头关节在寰椎处（头内、约耳垂高），颊点 = 头中心之下 0.12 头高（眼下、胡须之上）、偏右 0.3 头宽、脸前
+      const HS = f.pr.head, piv = HS.pivot || f.pr.J.head;
+      const face = lumAt(new THREE.Vector3(hb.x - 0.3 * HS.W, hb.y + (HS.c[1] - piv[1]) - 0.12 * HS.H, hb.z + (HS.c[2] - piv[2]) + 0.45 * HS.D)), chest = lumAt(new THREE.Vector3(0.02, 1.3, 0.15));
+      // 第四版：脸的下半（颊面）按 Lanternvale 的画法暗 8%（眉弓受光），胸口更朝向太阳：允许 20%
+      ok('裸身：胸口与脸颊亮度差 ≤ 20%', Math.abs(chest - face) / Math.max(face, 1) <= 0.2, 'face ' + face.toFixed(0) + ' chest ' + chest.toFixed(0));
       f.dispose(); rt.dispose();
     }
     // 士兵群：56 名（含 4 名骑兵）一次渲染的绘制次数（含阴影）
     {
-      const sc = new THREE.Scene(); const sn = sun.clone(); sn.castShadow = true; sc.add(sn); sc.add(sn.target); sc.add(hemi.clone());
+      const sc = lpScene(true).scene;
       const cr = SG.Figure.crowd({ lod: 'low', renderer }); sc.add(cr.root);
       for (let side = 0; side < 2; side++) for (let i = 0; i < 28; i++) { const ty = i < 4 ? 'cavalry' : i < 12 ? 'archer' : i < 20 ? 'spear' : 'sword'; const id = cr.add({ type: ty, culture: 'han', seed: i, color: side ? '#2c3d8f' : '#2f7d4a', mounted: ty === 'cavalry' }); cr.setTransform(id, (side ? 1 : -1) * (1 + (i % 4)), 0, (i >> 2) - 3, 0); }
       const cam = new THREE.PerspectiveCamera(40, 1, 0.1, 100); cam.position.set(0, 8, 14); cam.lookAt(0, 0, 0); cam.updateMatrixWorld();
       const rt = new THREE.WebGLRenderTarget(64, 64); renderer.setRenderTarget(rt); renderer.info.reset(); renderer.render(sc, cam); const calls = renderer.info.render.calls; renderer.setRenderTarget(null);
-      ok('士兵群 56 人绘制次数（含阴影）≤ 40', calls <= 40, calls + ' 次，' + cr.stats().groups + ' 组');
+      // 第四版：每组 = 本体 + 实例化墨线 + 投影 = 3 次绘制（与人数无关）
+      ok('士兵群 56 人绘制次数（含阴影、墨线）≤ 3 × 组数 + 2', calls <= 3 * cr.stats().groups + 2, calls + ' 次，' + cr.stats().groups + ' 组');
       cr.dispose(); rt.dispose();
     }
     window.__fig.checks = R;
@@ -352,7 +392,7 @@
   cv.addEventListener('pointerup', () => { drag = null; });
   cv.addEventListener('wheel', e => { camDist *= e.deltaY > 0 ? 1.1 : 0.9; e.preventDefault(); }, { passive: false });
 
-  function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+  function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); const v = renderer.getDrawingBufferSize(new THREE.Vector2()); LP.setViewport(v.x, v.y); }
   addEventListener('resize', resize); resize();
   const hud = document.getElementById('hud');
   // 窄屏：HUD 默认折叠成一行（点按展开），不遮挡动作按钮
@@ -365,11 +405,11 @@
     const j0 = performance.now();
     if (state.anim) { animT += dt; poseAll(animT); for (const it of items) if (it.fig) it.fig.update(dt); }
     if (crowd) crowd.setTime(state.t != null ? state.t : animT);
+    LP.setTime(animT + 1.2);
     if (state.spin && state.mode !== 'stress') camYaw += dt * 0.35;
     if (state.mode === 'weapons') for (const it of items) if (it.spinMesh) it.mesh.rotation.y += state.spin ? dt * 0.6 : 0;
     camera.position.set(camTarget.x + Math.sin(camYaw) * Math.cos(camPitch) * camDist, camTarget.y + Math.sin(camPitch) * camDist, camTarget.z + Math.cos(camYaw) * Math.cos(camPitch) * camDist);
     camera.lookAt(camTarget);
-    sun.target.position.copy(camTarget);
     jsAcc += performance.now() - j0;
     renderer.info.reset();
     renderer.render(scene, camera);
@@ -384,7 +424,7 @@
       fps = frames / acc; frameMs = acc / frames * 1000; jsMs = jsAcc / frames; frames = 0; acc = 0; jsAcc = 0;
       const info = renderer.info, st = SG.Figure.stats();
       let tris = 0, figs = 0; for (const it of items) { if (it.fig) { tris += it.fig.triangles; figs++; } if (it.horse) tris += it.horse.triangles; if (it.mesh) tris += it.mesh.userData.tris || 0; if (it.crowd) { tris += it.crowd.triangles; figs += it.crowd.count; } }
-      hudFull = `${state.mode}  ${state.pose}\n人物 ${figs}  模型三角形 ${tris}\n绘制（含阴影）${info.render.calls}  渲染三角形 ${info.render.triangles}${crowd ? '\n士兵群 ' + crowd.count + ' 人 / ' + crowd.drawCalls + ' 组' : ''}\n帧 ${frameMs.toFixed(1)}ms (${fps.toFixed(0)}fps)  JS ${jsMs.toFixed(2)}ms\n构建 ${window.__fig.info.buildMs}ms  图集 ${st.atlasMs}ms\n模板 ${st.templateCount}  贴图 ${st.textures}  程序 ${info.programs ? info.programs.length : '?'}`;
+      hudFull = `${state.mode}  ${state.pose}\n人物 ${figs}  模型三角形 ${tris}\n绘制（含阴影）${info.render.calls}  渲染三角形 ${info.render.triangles}${crowd ? '\n士兵群 ' + crowd.count + ' 人 / ' + crowd.drawCalls + ' 组' : ''}\n帧 ${frameMs.toFixed(1)}ms (${fps.toFixed(0)}fps)  JS ${jsMs.toFixed(2)}ms\n构建 ${window.__fig.info.buildMs}ms  动作烘焙 ${Math.round(st.bakeMs || 0)}ms\n模板 ${st.templateCount}  战马模板 ${st.horseTemplates}  烘焙贴图 ${st.textures}  程序 ${info.programs ? info.programs.length : '?'}`;
       hud.textContent = hud.classList.contains('min') ? hudFull.split('\n').slice(0, 3).join('  ').replace(/\s+/g, ' ') + '  ▾' : hudFull;
       Object.assign(window.__fig.info, { fps, frameMs, jsMs, calls: info.render.calls, rtris: info.render.triangles, tris, programs: info.programs ? info.programs.length : 0 });
     }
