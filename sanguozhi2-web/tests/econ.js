@@ -157,7 +157,17 @@ section('3 SG.Econ formulas with providers: one clamp at the end, caps of INTEGR
   eq(inst({ gearPersuade: () => 2 }).Econ.persuadeP(gov, foe, g.player), 0.9, 'persuade p ≤ 0.90');
   eq(inst({ gearPersuade: () => 2 }).Econ.persuadeP(gov, g.ruler(foe.faction), g.player), 0, 'persuade a ruler = 0');
   near(inst({ gearPersuade: () => 0.3, persuadeRes: () => 0.5 }).Econ.persuadeP(gov, foe, g.player),
-    M.clamp((Econ.persuadeP(gov, foe, g.player) + 0.3) * 0.5, 0, 0.9), 'persuade resistance before the clamp', 1e-12);
+    M.clamp(Econ.persuadeP(gov, foe, g.player) + 0.3, 0, 0.9) * 0.5, 'persuade: one clamp, then × (1 − resistance)', 1e-12);
+  // INTEGRATION §4.5 / TITLES §7.1: clamp(v3 product + gear + title, 0, 0.90) × (1 − persuadeRes) — the resistance is never eaten
+  // by the clamp (a raw value above 0.90 with resistance 0.5 gives 0.45, not 0.599)
+  {
+    const L0 = foe.loyalty; foe.loyalty = 0;
+    const raw = (100 - foe.loyalty) / 110 * (0.45 + gov.intel / 180) * (0.55 + Mods.virtue(g.player) / 220) + 0.6;
+    ok(raw > 0.9, 'persuade vector: raw ' + raw.toFixed(3) + ' above the clamp');
+    near(inst({ gearPersuade: () => 0.6, persuadeRes: () => 0.5 }).Econ.persuadeP(gov, foe, g.player), 0.45, 'persuade raw > 0.90 with resistance 0.5 → 0.90 × 0.5', 1e-12);
+    near(inst({ gearDiscord: () => 2, discordRes: () => 0.5 }).Econ.discordP(gov, foe), 0.45, 'discord: the same order (clamp, then resistance)', 1e-12);
+    foe.loyalty = L0;
+  }
   // fame / virtue / AP / exp / shields / auras
   const f = g.player, F = g.factions[f];
   I = inst({ prestigeFame: () => 13, eventFame: () => 3, gearFame: () => 15 });
@@ -192,6 +202,35 @@ section('3 SG.Econ formulas with providers: one clamp at the end, caps of INTEGR
   near(inst({ tradeK: () => 0.4 }).Econ.tradeK(c), 0.25, 'trade discount ≤ 0.25');
   eq(inst({ gearReward: () => 3 }).Econ.rewardLoy(gov, 2, gov), B.RewardLoyalty + 5, 'reward + ruler gear');
   eq(inst({ allyMonths: () => 12 }).Econ.allianceMonths(0, 1, null), B.AllianceMonths + 12, 'alliance months + ability');
+});
+
+// ===================================================================== 3b Decisions =====
+// DESIGN-V4 §20: every open decision lives in SG.Balance.Decisions and the code reads it at run time — a changed value changes
+// the result (an EconCore instance over a copy of SG whose Balance.Decisions is replaced)
+section('3b SG.Balance.Decisions is read by the code (purse share, order weight, atk × def product cap)', () => {
+  const g = newGame('liubei', 5, 'classic');
+  const c = g.cities.find(x => x.owner === g.player);
+  const gen = g.generals[c.governor];
+  const withDec = d => Object.assign({}, SG, { Balance: Object.assign({}, B, { Decisions: Object.assign({}, B.Decisions, d) }) });
+  const instDec = (d, P) => { const SGx = withDec(d); const core = SG.EconCore.create(SGx, P || {}, {}); SG.BattleMathCore.extend(core.Mods, SGx, P || {}); return core; };
+  eq(B.AIBudget.Share, B.Decisions.aiPurseShare, 'AIBudget.Share is the Decisions value');
+  near(inst({}).AIBudget.share, 0.22, 'purse share 0.22 by default');
+  near(instDec({ aiPurseShare: 0.30 }).AIBudget.share, 0.30, 'Decisions.aiPurseShare 0.30 → purse share 0.30');
+  near(inst({ order: () => 80 }).Econ.cityGold(c).mods.order, 0.03, 'order term (80 − 50) / 1000 at the default weight 0.05');
+  near(instDec({ orderIncomeWeight: 0.10 }, { order: () => 80 }).Econ.cityGold(c).mods.order, 0.06, 'orderIncomeWeight 0.10 → (80 − 50) / 50 × 0.10');
+  near(instDec({ orderIncomeWeight: 0.10 }, { order: () => 20 }).Econ.harvest(c, 1).mods.order, -0.06, 'harvest order term follows the weight');
+  eq(instDec({ orderIncomeWeight: 0 }, { order: () => 100 }).Econ.cityGold(c).mods.order, 0, 'weight 0 → no order term');
+  for (const ov of [0, 13, 37, 50, 61.5, 77, 100]) eq(inst({ order: () => ov }).Econ.cityGold(c).mods.order, (ov - 50) / 1000, 'default order term bit-identical to (ov − 50) / 1000 at ' + ov);
+  const P = { gearAtk: () => 0.5, gearDef: () => 0.5 };
+  const u = { gen, side: 0, alive: true, formation: 0, morale: 70 };
+  const m = { commander: () => null, units: [u] };
+  const I0 = inst(P), I2 = instDec({ stackProductCap: 2.0 }, P);
+  near(I0.Mods.atkMul(u, m) * I0.Mods.defMul(u, m), 2.25, 'no product cap (Q1 default): atk 1.5 × def 1.5 = 2.25');
+  near(I2.Mods.atkMul(u, m) * I2.Mods.defMul(u, m), 2.0, 'stackProductCap 2.0: atk × def scaled to 2.0', 1e-12);
+  near(I2.Mods.atkMul(u, m), 1.5 * Math.sqrt(2 / 2.25), 'both sides scaled by √(cap / (atk × def))', 1e-12);
+  const pv = I2.Mods.unitPreview(gen, { formation: 0 });
+  near(pv.atkMul * pv.defMul, 2.0, 'unitPreview applies the same product cap', 1e-12);
+  near(instDec({ stackProductCap: 2.0 }, { gearAtk: () => 0.2, gearDef: () => 0.2 }).Mods.atkMul(u, m), 1.2, 'below the product cap nothing changes');
 });
 
 // ===================================================================== 4 provider registry =====
@@ -381,10 +420,47 @@ section('7 Commands → SG.Econ, Commands.lastResult records (DOMESTIC-FX §3.2)
   const msg = C.search(c, gov);
   eq(C.lastResult.outcome, 'item', 'searchItem hook gives an item outcome'); ok(msg.indexOf('测试宝物') >= 0, 'item message');
   C.searchItem = null;
-  // attack record from Conquest.prepare
+  // attack record from Conquest.prepare: through Commands.record, so onCommand and SG.Events 'command' see 出征 too
   const src = c, t = g.cities[src.links[0]];
+  const heardA = [], heardE = [];
+  const offA = C.onCommand((cmd, res) => heardA.push(cmd + ':' + res.to));
+  const offB = SG.Events.on('command', (cmd, res) => heardE.push(cmd + ':' + res.to));
   const s = SG.Conquest.prepare(g.player, src, t, [w], 100, 0);
+  offA(); offB();
   eq(C.lastResult.cmd, 'attack', 'attack record'); eq(C.lastResult.to, t.id, 'attack to'); void s;
+  eq(C.lastResult.city, src.id, 'attack record city = source city id'); eq(C.lastResult.gen, w.id, 'attack record gen'); eq(C.lastResult.f, g.player, 'attack record faction');
+  eq(C.lastResult.month, g.monthIndex, 'attack record month'); eq(C.lastResult.gens, 1, 'attack record gens');
+  eq(heardA.join(), 'attack:' + t.id, 'onCommand hears 出征'); eq(heardE.join(), 'attack:' + t.id, "SG.Events 'command' hears 出征");
+});
+
+// 拉拢 that surrenders a city (献城): the record keeps the common `city` (the agent's city id) and says surrendered: true
+section('7b 拉拢 records: surrendered flag for 献城 (DOMESTIC-FX §3.2), city id common to every record', () => {
+  const g = newGame('liubei', 4, 'classic');
+  const C = SG.Commands;
+  const agent = g.generals.find(x => x.faction === g.player && !g.isRuler(x));
+  const lone = g.generals.find(x => x.faction >= 0 && x.faction !== g.player && !g.isRuler(x) && g.officersIn(g.cities[x.city]).length === 1 && g.cityCount(x.faction) > 1);
+  ok(!!lone, 'a lone non-ruler officer exists');
+  const oldCity = g.cities[lone.city], oldF = lone.faction;
+  lone.loyalty = 0;
+  const rv = SG.Random.value; SG.Random.value = () => 0;   // force success (persuade draws value() then R(0, 15))
+  let msg;
+  try { msg = C.persuade(agent, lone, g.player); } finally { SG.Random.value = rv; }
+  const r = C.lastResult;
+  eq(r.cmd, 'persuade', 'persuade record'); eq(r.ok, true, 'persuade succeeded');
+  eq(r.surrendered, true, '献城: surrendered true'); eq(r.cityId, oldCity.id, '献城: cityId = the surrendered city');
+  eq(r.city, agent.city, 'record.city = the agent city id (common field)'); eq(r.from, oldF, 'record.from = the old faction');
+  eq(oldCity.owner, g.player, 'the city changed hands'); ok(msg.indexOf('献城') >= 0, '献城 message');
+  // the other outcome: the target comes over with his troops (not alone in his city)
+  const g2 = newGame('liubei', 4, 'classic');
+  const agent2 = g2.generals.find(x => x.faction === g2.player && !g2.isRuler(x));
+  const t2 = g2.generals.find(x => x.faction >= 0 && x.faction !== g2.player && !g2.isRuler(x) && g2.officersIn(g2.cities[x.city]).length >= 2);
+  t2.loyalty = 0;
+  SG.Random.value = () => 0;
+  try { C.persuade(agent2, t2, g2.player); } finally { SG.Random.value = rv; }
+  eq(C.lastResult.surrendered, false, '率部来投: surrendered false'); eq(C.lastResult.cityId, undefined, '率部来投: no cityId');
+  SG.Random.value = () => 0.999;
+  try { C.persuade(agent2, g2.generals.find(x => x.faction >= 0 && x.faction !== g2.player && !g2.isRuler(x)), g2.player); } finally { SG.Random.value = rv; }
+  eq(C.lastResult.ok, false, 'refused persuade'); eq(C.lastResult.surrendered, false, 'refused: surrendered false');
 });
 
 // ===================================================================== 8 month pipeline =====
@@ -517,6 +593,111 @@ section('11 registries (INTEGRATION §10): Settings, Reg.*, Events', () => {
   for (const k of ['voiceCues', 'stings', 'icons', 'clips', 'cards']) ok(SG.Reg[k] && typeof SG.Reg[k].def === 'function', 'SG.Reg.' + k + ' exists');
   SG.Reg.stings.def('develop.land', { tiers: 4 }); eq(SG.Reg.stings.get('develop.land').tiers, 4, 'stings registry');
   let ev = 0; const o = SG.Events.on('test.ev', (a, b) => { ev = a + b; }); SG.Events.emit('test.ev', 2, 3); o(); SG.Events.emit('test.ev', 5, 5); eq(ev, 5, 'Events on / emit / off');
+});
+
+// ===================================================================== 11b absent generals =====
+// INTEGRATION §6.4: an injured-away (or away) general is not in generalsIn; when his city changes hands while he is absent
+// (conquest, a defection that empties it, 拉拢 献城) he goes to his faction's nearest city, or is freed if it has none;
+// a general coming back to a city that is no longer his faction's is moved the same way (the review probe injury-ghost.js)
+section('11b absent generals are rehomed when their city changes hands (conquest, empty city, 献城, return)', () => {
+  const C = SG.Commands, Q = SG.Conquest;
+  const where = (g, x) => (x.faction >= 0 ? g.factions[x.faction].name : '在野') + '@' + g.cities[x.city].name + '(' + (g.cities[x.city].owner >= 0 ? g.factions[g.cities[x.city].owner].name : '空') + ')';
+  // (a) conquest
+  {
+    const g = newGame('liubei', 3, 'classic'); g.player = -1;
+    const c = g.cities.find(x => x.owner >= 0 && g.cityCount(x.owner) >= 3 && g.officersIn(x).length >= 2 && !g.officersIn(x).some(o => g.isRuler(o)) && x.links.some(j => g.cities[j].owner >= 0 && g.cities[j].owner !== x.owner));
+    const D = c.owner, hurt = g.officersIn(c)[1];
+    hurt.injury = { until: g.monthIndex + 2, war: 5, away: true };
+    eq(g.absent(hurt), true, 'GameState.absent: injured-away');
+    const src = g.cities[c.links.find(j => g.cities[j].owner >= 0 && g.cities[j].owner !== D)];
+    const st = { attacker: src.owner, defender: D, src, target: c, atk: g.officersIn(src).slice(0, 1), def: g.officersIn(c), routed: new Set(), captives: [], captiveInfo: {}, atkFood: 0, atkGold: 0, attackerWon: true };
+    Q.apply(st);
+    eq(c.owner, src.owner, 'the city was conquered');
+    eq(hurt.faction, D, 'the absent general keeps his faction (not captured, not fighting)');
+    eq(g.cities[hurt.city].owner, D, 'conquest: the absent general moved to an own city (' + where(g, hurt) + ')');
+    ok(c.links.indexOf(hurt.city) >= 0 || g.nearestCityOf(D, c.id).id === hurt.city, 'conquest: the nearest own city');
+    for (let m = 0; m < 3; m++) StrategyAI.endMonth();
+    eq(hurt.injury, undefined, 'the injury expired');
+    ok(g.cities.some(x => g.officersIn(x).indexOf(hurt) >= 0), 'healed: he is in officersIn of an own city again (' + where(g, hurt) + ')');
+  }
+  // (b) a defection empties the city while an injured general is there
+  {
+    const g = newGame('liubei', 5, 'classic'); g.player = -1;
+    const c = g.cities.find(x => x.owner >= 0 && g.cityCount(x.owner) >= 2 && g.officersIn(x).length === 2 && g.officersIn(x).every(o => !g.isRuler(o)));
+    const f = c.owner, [a, b] = g.officersIn(c);
+    a.injury = { until: g.monthIndex + 3, war: 0, away: true };
+    b.loyalty = 0;
+    const rv = SG.Random.value; SG.Random.value = () => 0;
+    try { StrategyAI.phaseDefections(g, { news: [], defections: [] }); } finally { SG.Random.value = rv; }
+    eq(b.faction, -1, 'the last present officer defected');
+    eq(c.owner, -1, 'the city is empty');
+    eq(a.faction, f, 'the injured general keeps his faction');
+    eq(g.cities[a.city].owner, f, 'empty city: the injured general moved to an own city (' + where(g, a) + ')');
+  }
+  // (c) 拉拢 献城 with an absent officer of the old faction in that city
+  {
+    const g = newGame('liubei', 4, 'classic');
+    const agent = g.generals.find(x => x.faction === g.player && !g.isRuler(x));
+    const c = g.cities.find(x => x.owner >= 0 && x.owner !== g.player && g.cityCount(x.owner) >= 2 && g.officersIn(x).length === 2 && g.officersIn(x).every(o => !g.isRuler(o)));
+    const oldF = c.owner, [a, b] = g.officersIn(c);
+    a.away = { kind: 'caravan', until: g.monthIndex + 2 };
+    b.loyalty = 0;
+    const rv = SG.Random.value; SG.Random.value = () => 0;
+    try { C.persuade(agent, b, g.player); } finally { SG.Random.value = rv; }
+    eq(C.lastResult.surrendered, true, '献城 with only the persuaded officer present');
+    eq(c.owner, g.player, 'the city changed hands');
+    eq(g.cities[a.city].owner, oldF, '献城: the away officer moved to an own city of his faction (' + where(g, a) + ')');
+  }
+  // (d) the faction has no city left → the absent general is freed (checkFactionDeath frees the rest)
+  {
+    const g = newGame('liubei', 6, 'classic'); g.player = -1;
+    const c = g.cities.find(x => x.owner >= 0 && g.cityCount(x.owner) === 1 && g.officersIn(x).length >= 2 && x.links.some(j => g.cities[j].owner >= 0 && g.cities[j].owner !== x.owner));
+    if (c) {
+      const D = c.owner, hurt = g.officersIn(c).find(o => !g.isRuler(o));
+      hurt.injury = { until: g.monthIndex + 2, war: 5, away: true };
+      const src = g.cities[c.links.find(j => g.cities[j].owner >= 0 && g.cities[j].owner !== D)];
+      SG.Random.seed(1);
+      Q.apply({ attacker: src.owner, defender: D, src, target: c, atk: g.officersIn(src).slice(0, 1), def: g.officersIn(c), routed: new Set(g.officersIn(c).map(o => o.id)), captives: [], captiveInfo: {}, atkFood: 0, atkGold: 0, attackerWon: true });
+      eq(hurt.faction, -1, 'last city lost: the absent general is freed');
+      eq(g.factions[D].alive, false, 'the faction died');
+    } else ok(true, 'no single-city faction with two officers (skipped)');
+  }
+  // (e) coming back to a city that changed hands without the helper (another system's ownership change)
+  {
+    const g = newGame('liubei', 7, 'classic'); g.player = -1;
+    const c = g.cities.find(x => x.owner >= 0 && g.cityCount(x.owner) >= 2 && g.officersIn(x).length >= 2);
+    const f = c.owner, x = g.officersIn(c).find(o => !g.isRuler(o));
+    x.injury = { until: g.monthIndex + 1, war: 0, away: true };
+    const other = g.factions.find(F => F.alive && F.id !== f).id;
+    c.owner = other;   // e.g. an ENGAGEMENT 归附 written without the helper
+    const ctx = { ended: { monthIndex: g.monthIndex }, healed: [] };
+    StrategyAI.phaseInjuries(g, ctx, 'list'); StrategyAI.phaseInjuries(g, ctx, 'clear');
+    ok(ctx.healed.indexOf(x.id) >= 0, 'listed as healed');
+    eq(g.cities[x.city].owner, f, 'returning general moved to an own city (' + where(g, x) + ')');
+    ok(ctx.rehomed && ctx.rehomed.indexOf(x) >= 0, 'ctx.rehomed lists him');
+  }
+  // (f) no absent generals: nothing happens (v3 unchanged)
+  {
+    const g = newGame('liubei', 8, 'classic');
+    const before = JSON.stringify(g);
+    eq(g.rehomeStrays().length, 0, 'rehomeStrays with nobody absent → []');
+    eq(JSON.stringify(g), before, 'no state change');
+  }
+  // Conquest.attackBlocked: the player's 出征 list uses the same conditions as the AI (incl. the host truce, Q12)
+  {
+    const g = newGame('liubei', 9, 'classic');
+    const mine = g.cities.find(x => x.owner === g.player);
+    const t = g.cities.find(x => x.owner >= 0 && x.owner !== g.player);
+    eq(Q.attackBlocked(g.player, mine) !== null, true, 'own city blocked');
+    eq(Q.attackBlocked(g.player, t), null, 'an enemy city is a target');
+    g.setAlliance(g.player, t.owner, g.monthIndex + 3);
+    ok(/同盟/.test(Q.attackBlocked(g.player, t) || ''), 'allied → blocked');
+    g.setAlliance(g.player, t.owner, 0);
+    const off = Mods.provide({ cityProtected: (cc, f) => cc === t && f === g.player }, { owner: 'test', when: () => B.Decisions.tourneyHostTruce });
+    ok(/武林大会/.test(Q.attackBlocked(g.player, t) || ''), 'host truce (cityProtected) → blocked with the reason 武林大会期间停战');
+    off();
+    eq(Q.attackBlocked(g.player, t), null, 'provider removed → a target again');
+  }
 });
 
 // ===================================================================== 12 refs =====

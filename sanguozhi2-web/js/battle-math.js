@@ -10,6 +10,8 @@
      atkFactors(u, model) → { pos, neg }     四组各一个因子 (1 + x)：1 装备 gearAtk · 2 官职 titleAtk + 主将 cmdAtk ·
                                              3 羁绊 bondAtk · 4 光环 auraAtk；条件项由调用者以 cond 传入
      atkMul(u, model, cond) / defMul(u, model, cond)    封顶 CAPS.atk / CAPS.def（1.60），负向不低于 ×0.5；老练不在上限内
+     productCap() / pairScale(a, d) DESIGN-V4 §20 问题 1：Balance.Decisions.stackProductCap（推荐 null = 不加）；设为数值（如 2.0）时
+                                    攻 × 防 之积超过它，两边各乘 √(cap / (攻 × 防))（atkMul、defMul、unitPreview 一致）
      startMorale(u, base)           min(100, base + min(25, 装备 + 官职))
      FORM_CRIT                      阵型会心（SG.Defs.formations[i].crit）
      critChance(u)                  clamp(2 % + 0.15 % × max(0, 武力 − 50) + 0.4 % × (vetLevel − 1) + 阵型
@@ -36,6 +38,9 @@
       ? SGx.Defs.formations.map(f => f.crit)
       : [-0.02, 0, 0.02, 0.01, 0.03, 0.04, 0.01, 0];
 
+    // DESIGN-V4 §20 问题 1 的可选乘积上限（缺省 null：不加，atkMul / defMul 与上限表的结果完全相同）
+    const productCap = () => { const D = B() && B().Decisions, v = D ? D.stackProductCap : null; return typeof v === 'number' && v > 0 ? v : null; };
+    const pairScale = (a, d) => { const pc = productCap(); return pc && a * d > pc ? Math.sqrt(pc / (a * d)) : 1; };
     const pushTo = (pos, neg, v) => { if (v > 0) pos.push(1 + v); else if (v < 0) neg.push(1 + v); };
     Object.assign(Mods, {
       FORM_CRIT,
@@ -60,15 +65,23 @@
         pushTo(pos, neg, z(P.auraDef, u, model));
         return { pos, neg };
       },
+      productCap,
+      pairScale,
       atkMul(u, model, cond) {
         const f = Mods.atkFactors(u, model);
         for (const k of cond || []) pushTo(f.pos, f.neg, k);
-        return Mods.capped(f.pos, f.neg, CAPS.atk);
+        const a = Mods.capped(f.pos, f.neg, CAPS.atk);
+        if (!productCap()) return a;
+        const e = Mods.defFactors(u, model);
+        return a * pairScale(a, Mods.capped(e.pos, e.neg, CAPS.def));
       },
       defMul(u, model, cond) {
         const f = Mods.defFactors(u, model);
         for (const k of cond || []) pushTo(f.pos, f.neg, k);
-        return Mods.capped(f.pos, f.neg, CAPS.def);
+        const d = Mods.capped(f.pos, f.neg, CAPS.def);
+        if (!productCap()) return d;
+        const e = Mods.atkFactors(u, model);
+        return d * pairScale(Mods.capped(e.pos, e.neg, CAPS.atk), d);
       },
       startMorale(u, base) { return Math.min(100, base + Math.min(CAPS.morale, z(P.gearMorale, u.gen) + z(P.titleMorale, u.gen))); },
       vetLevel(gen) {
@@ -111,7 +124,8 @@
         const u = { gen, side: 0, alive: true, formation, morale: opts.morale !== undefined ? opts.morale : 70, confused: 0, commander: true, troops: gen.troops };
         const model = opts.model || { commander: () => u, units: [u] };
         const a = Mods.atkFactors(u, model), d = Mods.defFactors(u, model);
-        const atkMul = Mods.capped(a.pos, a.neg, CAPS.atk), defMul = Mods.capped(d.pos, d.neg, CAPS.def);
+        const a0 = Mods.capped(a.pos, a.neg, CAPS.atk), d0 = Mods.capped(d.pos, d.neg, CAPS.def), ps = pairScale(a0, d0);
+        const atkMul = a0 * ps, defMul = d0 * ps;
         const vk = Mods.vetK(gen);
         const form = SGx.Defs && SGx.Defs.formations ? SGx.Defs.formations[formation] : null;
         return {
@@ -139,7 +153,7 @@
     SG.BattleMath = {
       capped: M.capped, atkFactors: M.atkFactors, defFactors: M.defFactors, atkMul: M.atkMul, defMul: M.defMul,
       startMorale: M.startMorale, FORM_CRIT: M.FORM_CRIT, critChance: M.critChance, critK: M.critK, critEnabled: M.critEnabled,
-      rollCrit: M.rollCrit, vetLevel: M.vetLevel, vetK: M.vetK, unitPreview: M.unitPreview,
+      rollCrit: M.rollCrit, vetLevel: M.vetLevel, vetK: M.vetK, unitPreview: M.unitPreview, productCap: M.productCap, pairScale: M.pairScale,
     };
   }
 })();

@@ -13,6 +13,7 @@
        2 items         ITEMS 月末（补货、每月装备效果）
        3 engage        ENGAGEMENT 月末（民心、营建、商队、探索、任务、事件、贡金、文会 …）
        4 injuries → 出奔（v3 规则，忠诚用 SG.Mods.effLoy：官爵与羁绊防护取较大者；德用 SG.Mods.virtue）→ 'defections'
+                       伤病到期删 gen.injury（ctx.healed）；回来时所在城已易主的武将回到本势力最近的城（G.rehomeStrays，ctx.rehomed）
        5 loyAura       忠诚光环（官职与宝物取较大者，≤ 95）
          —— 武将 moved 复位，月份 +1（以下各相 g.month 为新月；ctx.ended 为刚结束的月）——
        6 titles        Titles.monthStart
@@ -27,7 +28,9 @@
      电脑（runAI）与攻城的钩子：提供者 noAttack / cityProtected（不打、不算威胁）、needK（攻城所需兵力比的加项）、
        aiTargetK（目标排序：守军 × (1 + k)）、aiSearchP（电脑搜索概率，缺省 0.15）、autoPower（自动结算战力）；
        事件 conquest.prepare / conquest.resolved / conquest.apply / captive.taken / captive.released / captive.executed /
-       faction.succession（js/registry.js 的 SG.Events）。出征也写 Commands.lastResult（cmd 'attack'）。
+       faction.succession / general.rehomed（js/registry.js 的 SG.Events）。出征也写结果记录（Commands.record('attack', …)：
+       onCommand 与 'command' 事件同样收到）。Conquest.attackBlocked(f, target) → 不能出征的原因或 null（玩家的出征列表用）。
+       城易主（攻陷、出奔后的空城、拉拢献城）时，守方外出 / 伤病的武将由 G.rehomeStrays() 安置（INTEGRATION §6.4）。
    ========================================================================== */
 (function () {
   const SG = window.SG;
@@ -68,9 +71,10 @@
       src.food -= food; src.gold -= gold;
       for (const x of atk) x.moved = true;
       s.def = pickDefenders(target);
-      // 第四版：出征的结果记录（DOMESTIC-FX §3.2）与事件
-      if (Commands) Commands.lastResult = { cmd: 'attack', ok: true, city: src.id, gen: atk.length ? atk[0].id : null, month: g.monthIndex, f: attacker,
-        gens: atk.length, troops: Seq.sum(atk, x => x.troops), ruler: atk.some(x => g.isRuler(x)), to: target.id, food, gold, tier: null };
+      // 第四版：出征的结果记录（DOMESTIC-FX §3.2）走 Commands.record（与其他指令一样通知 onCommand 与 SG.Events 'command'）
+      const rec = { ok: true, gens: atk.length, troops: Seq.sum(atk, x => x.troops), ruler: atk.some(x => g.isRuler(x)), to: target.id, food, gold };
+      if (Commands && typeof Commands.record === 'function') Commands.record('attack', src, atk.length ? atk[0] : null, rec);
+      else if (Commands) Commands.lastResult = Object.assign({ cmd: 'attack', city: src.id, gen: atk.length ? atk[0].id : null, month: g.monthIndex, f: attacker, tier: null }, rec);
       emit('conquest.prepare', s);
       return s;
     },
@@ -116,6 +120,7 @@
           else if (routed || retreatTo == null) { if (SG.Random.value() < 0.75 || retreatTo == null) capture(s, d); else d.city = retreatTo.id; }
         }
         s.target.owner = A;
+        g.rehomeStrays();   // 第四版：守方在城里外出 / 伤病的武将（不参战、不被俘）回到本势力最近的城（INTEGRATION §6.4）
         s.target.gold = M.idiv(s.target.gold, 2) + s.atkGold;
         s.target.food = M.idiv(s.target.food, 2) + s.atkFood;
         for (const a of s.atk) if (!s.routed.has(a.id) || a.troops > 0) a.city = s.target.id;
@@ -153,6 +158,17 @@
       }
     },
     isCaptive(gen) { return Conquest.pendingCaptives.has(gen.id); },
+    // 第四版：势力 f 现在不能出征 target 的原因（中文）或 null —— 玩家的出征目标列表与电脑用同一套条件：
+    //   自己的城、同盟（含 ENGAGEMENT 的盟约）、提供者 noAttack（互不侵犯）、cityProtected（武林大会东道主停战，TOURNAMENT Q12）
+    attackBlocked(f, target) {
+      const g = G();
+      if (!target) return '没有目标。';
+      if (target.owner === f) return target.name + '是己方城池。';
+      if (target.owner >= 0 && g.allied(target.owner, f)) return '与' + g.factions[target.owner].name + '有同盟，不能出征。';
+      if (noAttack(target.owner, f)) return '与' + g.factions[target.owner].name + '有互不侵犯之约，不能出征。';
+      if (cityProtected(target, f)) return '武林大会期间停战，' + target.name + '本月不受攻击。';
+      return null;
+    },
     // 俘虏被俘时的身份 → { faction, wasRuler }（无记录时按现状）
     captiveInfo(s, c) {
       const g = G();
@@ -456,7 +472,15 @@
     phaseInjuries(g, ctx, step) {
       const next = ctx.ended.monthIndex + 1;
       if (step === 'list') { for (const gen of g.generals) if (gen.injury && gen.injury.until <= next) ctx.healed.push(gen.id); return; }
-      for (const id of ctx.healed) { const gen = g.generals[id]; if (gen && gen.injury && gen.injury.until <= next) delete gen.injury; }
+      const back = [];
+      for (const id of ctx.healed) { const gen = g.generals[id]; if (gen && gen.injury && gen.injury.until <= next) { delete gen.injury; back.push(gen); } }
+      // 下个月回来的外出武将（gen.away 的记录由 ENGAGEMENT 自己结算）
+      for (const gen of g.generals) if (gen.away && gen.away.until <= next && gen.away.until > ctx.ended.monthIndex) back.push(gen);
+      if (!back.length) return;
+      // 回来时所在的城已不归本势力（离开期间易主）：回到本势力最近的城（INTEGRATION §6.4）；伤愈的君主照旧坐镇（autoGovernor）
+      ctx.rehomed = g.rehomeStrays(back);
+      const seen = new Set();
+      for (const gen of back) if (!gen.injury && gen.faction >= 0 && !seen.has(gen.city)) { seen.add(gen.city); const c = g.cities[gen.city]; if (c.owner === gen.faction) g.autoGovernor(c); }
     },
     // 低忠诚武将出奔：v3 规则，忠诚取 SG.Mods.effLoy（官爵与羁绊的防护取较大者），德取 SG.Mods.virtue
     phaseDefections(g, ctx) {
@@ -475,7 +499,7 @@
           g.addLog(gen.name + '离开了' + g.factions[f].name + '。');
           ctx.defections.push({ gen: gen.id, from: f, city: c.id });
           StrategyAI.stats.defections++;
-          if (g.officersIn(c).length === 0) { c.owner = -1; g.checkFactionDeath(f); }
+          if (g.officersIn(c).length === 0) { c.owner = -1; g.rehomeStrays(); g.checkFactionDeath(f); }   // 空城：外出 / 伤病的武将回本势力最近的城
         }
       }
     },

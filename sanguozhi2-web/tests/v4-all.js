@@ -146,9 +146,12 @@ function nativeGates() {
 // =========================================================================================== B prototype =====
 // Runs v4-all-proto.js in a child with js/econ.js + js/battle-math.js as its econ module (W0_ECON=js, default) or with its
 // own econ-proto.js (W0_ECON=proto). Prints the prototype's lines; returns them.
+// W0_PIPE (default 1): the prototype's modules run on the shipped pipeline (endMonthV4, model.js Commands, the real
+// SG.AIBudget; see "B pipeline mode" below); W0_PIPE=0 keeps the prototype's own month order and command wrappers.
+const PIPE_DEFAULT = process.env.W0_PIPE === '0' ? '0' : '1';
 function protoRun(mode, scen, a, b, env) {
   const r = cp.spawnSync(process.execPath, [__filename, '--proto-child', mode, scen, String(a || ''), String(b || '')], {
-    cwd: ROOT, encoding: 'utf8', maxBuffer: 256 << 20, env: Object.assign({}, process.env, env || {}),
+    cwd: ROOT, encoding: 'utf8', maxBuffer: 256 << 20, env: Object.assign({}, process.env, { W0_PIPE: PIPE_DEFAULT }, env || {}),
   });
   const lines = (r.stdout || '').split('\n').filter(l => l.trim() && !/^done /.test(l));
   if (r.status !== 0) throw new Error(`proto ${mode} ${scen} failed (${r.status}): ${(r.stderr || '').slice(-2000)}`);
@@ -170,10 +173,19 @@ function protoGates() {
     console.log(`== B0 equivalence: prototype campaign classic ${seeds} × ${years} y, econ-proto.js vs js/econ.js (every printed number)`);
     // wall-clock numbers ("[9 s]", "3.4 ms each") are not results
     const strip = L => L.map(l => l.replace(/\[\d+ s\]/g, '').replace(/[0-9.]+ ms each/g, '_ ms each'));
-    const a = strip(protoRun('campaign', 'classic', seeds, years, { VARIANTS: 'off,all', SEED0: '0', W0_ECON: 'proto' }));
-    const b = strip(protoRun('campaign', 'classic', seeds, years, { VARIANTS: 'off,all', SEED0: '0', W0_ECON: 'js' }));
+    const a = strip(protoRun('campaign', 'classic', seeds, years, { VARIANTS: 'off,all', SEED0: '0', W0_ECON: 'proto', W0_PIPE: '0' }));
+    const b = strip(protoRun('campaign', 'classic', seeds, years, { VARIANTS: 'off,all', SEED0: '0', W0_ECON: 'js', W0_PIPE: '0' }));
     const diff = a.filter((l, i) => l !== b[i]);
     gate('prototype campaign identical with js/econ.js', diff.length === 0 && a.length === b.length && a.length > 5, diff.length ? diff.slice(0, 3).join(' | ') : a.length + ' lines identical');
+    // the pipeline mode with every switch off is v3 again: its [off] block equals the prototype wiring's [off] block
+    if (PIPE_DEFAULT === '1') {
+      const c = strip(protoRun('campaign', 'classic', seeds, years, { VARIANTS: 'off', SEED0: '0', W0_PIPE: '1' }));
+      const offB = blockOf(b, 'off'), offC = blockOf(c, 'off');
+      const d2 = offB.filter((l, i) => l !== offC[i]);
+      gate('pipeline mode, all off == the prototype\'s off (v3: endMonthV4 + model.js Commands + js/econ.js with no provider active)',
+        d2.length === 0 && offB.length === offC.length && offB.length >= 4, d2.length ? d2.slice(0, 2).join(' | ') + ' ≠ ' + offC.filter((l, i) => l !== offB[i]).slice(0, 2).join(' | ') : offB.length + ' lines identical');
+      info('gates B1–B5 below run the prototype modules on the SHIPPED pipeline (INTEGRATION §6.3 month order: endMonthV4 phases 0–9, model.js Commands + onCommand, the real SG.AIBudget); W0_PIPE=0 measures the prototype\'s own wiring');
+    } else info('W0_PIPE=0: gates B1–B5 below use the prototype\'s own month order and command wrappers (not the shipped pipeline)');
   }
   // ---- classic campaign(s)
   const classic = Q ? [[12, 6, 0]] : [[48, 25, 0], [48, 25, 1000]];
@@ -282,10 +294,183 @@ function protoGates() {
   return runs;
 }
 
+// ------------------------------------------------------------------------------------- B pipeline mode --
+// W0_PIPE=1 (the default for the B gates): the prototype's rule modules drive the SHIPPED integration core instead of their own
+// wiring — INTEGRATION §6.3 says tests/v4-all.js re-measures the gates on the real month order:
+//   · js/registry.js + js/econ.js + js/battle-math.js are loaded into the prototype's game (ENGAGEMENT's loader), so
+//     StrategyAI.endMonth is the real endMonthV4 (phases 0–9), model.js Commands go through the real SG.Econ, and
+//     SG.AIBudget is the real singleton (purse in G.aiBudget, i.e. per game);
+//   · the prototype's provider table P is forwarded into SG.Mods.provide (when the variant is on);
+//   · its month work is registered as phase hooks: 'snapshot' (bond shields), 'items' (ITEMS restock, hidden items),
+//     'engage' (ENGAGEMENT's month end: order, projects, caravans, events, tribute, 文会 …), 'defections' (count),
+//     'titles' (Titles.monthStart), onSpend title → gear → project → festival per AI faction (phase 7), 'tourney', 'news'
+//     (syncFV) — defections now run AFTER ITEMS and ENGAGEMENT (the prototype ran them inside v3's month, before);
+//   · the command side effects of ENGAGEMENT and the prototype (domestic exp, order cost of recruits, relations, TITLES'
+//     离间 loss reduction, stats) come back through Commands.onCommand.
+//   ITEMS' and ENGAGEMENT's own month-end code keeps the calendar view it was written for (the month being entered), so their
+//   seeded streams and calendar rules (文会 in month 9, the tournament flag in month 1, festivals) are unchanged; only their
+//   position in the month moved. The tactical gate keeps the prototype's battle wiring (battle-model.js gets SG.Mods with
+//   W5's patch, INTEGRATION request 1) but reads the real singleton.
+const PIPE_ENGAGE = [   // design-v4/engage/engage-proto.js (read through the child's fs proxy)
+  ["for (const f of ['core.js', 'world-geo.js', 'data.js', 'world-data.js']) load(f);",
+   "for (const f of ['core.js', 'registry.js', 'world-geo.js', 'data.js', 'world-data.js', 'econ.js']) load(f);"],
+  ["for (const f of ['battle-model.js', 'specials-data.js', 'specials.js', 'tactics-data.js']) load(f);",
+   "for (const f of ['battle-math.js', 'battle-model.js', 'specials-data.js', 'specials.js', 'tactics-data.js']) load(f);"],
+  ['  const month = g.month;\n  const base = g.cities.map(c => (c.owner >= 0 ? inc(c) : 0));\n  const popB = g.cities.map(c => c.population);\n  const foodB = g.cities.map(c => c.food);',
+   '  if (SG.__pipe && !SG.__engMid) return oEnd.apply(this, arguments);   // W0 pipeline: the month is endMonthV4; this body is its phase 3\n' +
+   '  const month = g.month;\n  const base = g.cities.map(c => (c.owner >= 0 ? inc(c) : 0));\n' +
+   '  const popB = SG.__engSnap ? SG.__engSnap.popB : g.cities.map(c => c.population);\n  const foodB = SG.__engSnap ? SG.__engSnap.foodB : g.cities.map(c => c.food);'],
+  ['  const news = oEnd.apply(this, arguments);\n  for (const [x, add] of boosted)', '  const news = SG.__engMid ? SG.__engMid() : oEnd.apply(this, arguments);\n  for (const [x, add] of boosted)'],
+  ['function aiProjects() {\n  const g = G();\n  for (const c of g.cities) {\n    if (c.owner < 0 || c.owner === g.player || c._e.proj) continue;',
+   'function aiProjects(onlyF) {\n  const g = G();\n  for (const c of g.cities) {\n    if (c.owner < 0 || c.owner === g.player || c._e.proj || (onlyF !== undefined && c.owner !== onlyF)) continue;'],
+];
+const PIPE_PROTO = [    // design-v4/integration/v4-all-proto.js (its own source text; \n inside its string literals stays escaped)
+  // the v3 "gold < 0" counter also on phaseIncome's copy of the rule (second occurrence in strategy-ai.js)
+  [String.raw`    ['if (c.gold < 0) {\n          c.gold = 0;', 'if (c.gold < 0) {\n          if (SG.__neg) SG.__neg(c);\n          c.gold = 0;'],`,
+   String.raw`    ['if (c.gold < 0) {\n          c.gold = 0;', 'if (c.gold < 0) {\n          if (SG.__neg) SG.__neg(c);\n          c.gold = 0;'],
+    ['if (c.gold < 0) {\n          c.gold = 0;', 'if (c.gold < 0) {\n          if (SG.__neg) SG.__neg(c);\n          c.gold = 0;'],`],
+  // story exp: model.js Progress.gain multiplies 'story' / 'battle' itself once SG.Mods exists (no double multiplier)
+  ['routine || !SG.__v4 ? amt : SG.__v4.Mods.exp(gen, amt)', 'amt'],
+  ["Progress.gain = function (gen, amount, why) { if (V.on && why === 'battle') amount", "Progress.gain = function (gen, amount, why) { if (V.on && why === 'battle' && !SG.__pipe) amount"],
+  // festivals per faction (phase 7 runs per AI faction)
+  ["const __fest = () => { for (const F of g.factions) {'", "const __fest = (onlyF) => { for (const F of g.factions) { if (onlyF !== undefined && F.id !== onlyF) continue;'"],
+  // the raw model.js commands (before ENGAGEMENT's wrappers)
+  ['oDev, oTrain, oRec, oSearch, oDiscord };', 'oDev, oTrain, oRec, oSearch, oDiscord, oHire, oAlly, oPersuade, oAllyCh };'],
+  ['const SG = EN.SG, { E, GameState, C, StrategyAI, Conquest, B, M, Progress } = EN;', 'const SG = EN.SG, { E, GameState, C, StrategyAI, Conquest, B, M, Progress } = EN;\nSG.__pipe = true;'],
+  ['function installCommands() {', 'function installCommands() { if (SG.__pipe) return __pipeCommands();'],
+  ['function installEndMonth() {', 'function installEndMonth() { if (SG.__pipe) return __pipeEndMonth();'],
+  ['// ------------------------------------------------------------ runs --', String.raw`// ------------------------------------------------------------ W0 pipeline (tests/v4-all.js) --
+function __pipeCommands() {
+  // model.js Commands (through SG.Econ + the forwarded providers); the side effects return through Commands.onCommand
+  C.develop = EN.oDev; C.train = EN.oTrain; C.recruit = EN.oRec; C.search = EN.oSearch; C.hire = EN.oHire; C.ally = EN.oAlly;
+  C.persuade = EN.oPersuade; C.allyChance = EN.oAllyCh;
+  let discBefore = 0;
+  C.discord = function (agent, target) { discBefore = target.loyalty; return EN.oDiscord.apply(this, arguments); };
+  C.onCommand((cmd, r) => {
+    if (!V.on) return;
+    const g = G(), gen = r.gen != null ? g.generals[r.gen] : null, c = r.city != null ? g.cities[r.city] : null;
+    if (cmd === 'develop') {
+      if (!r.ok) return;
+      if (c.owner === g.player) V.stats.dev.push({ key: r.kind, before: r.before, after: r.after, g0: r.g0, gain: r.gain, roll: r.roll, pct: r.pct, city: c });
+      V.stats.devPct.push(r.pct);
+      EN.domExp(gen, 6 + (r.g0 >= 20 ? 2 : 0));
+    } else if (cmd === 'recruit') {
+      if (!r.ok) return;
+      EN.domExp(gen, 3);
+      if (E.order && c._e) c._e.order = clamp(c._e.order - Math.ceil(r.n / 3000), 0, 100);
+    } else if (cmd === 'train') { if (r.ok) EN.domExp(gen, 3); }
+    else if (cmd === 'search') {
+      V.stats.searchP.push(r.p);
+      if (r.outcome === 'talent') { EN.domExp(gen, 12); if (gen && gen.faction >= 0) EN.cnt(gen.faction, 'hiddenFound', 1); } else EN.domExp(gen, 4);
+    } else if (cmd === 'hire') { EN.domExp(gen, r.ok ? 10 : 2); if (r.ok) EN.cnt(g.generals[r.target].faction, 'hires', 1); }
+    else if (cmd === 'ally') { V.stats.allyP.push(r.p); if (g.allied(r.f, r.target)) EN.addRel(r.f, r.target, 10); }
+    else if (cmd === 'discord') {
+      if (r.reason === 'ruler') return;
+      const t = g.generals[r.target];
+      if (r.ok) {   // TITLES' prototype rule: an office-holder loses 8 % less loyalty per tier (INTEGRATION §4.5 puts it on the chance)
+        const d2 = t._t ? Math.max(1, Math.round(r.d * (1 - 0.08 * t._t.tier))) : r.d;
+        t.loyalty = Math.max(0, discBefore - d2);
+        EN.domExp(gen, t.loyalty < discBefore ? 6 : 2);
+      } else EN.domExp(gen, 2);
+      EN.addRel(gen.faction, t.faction, -5);
+    } else if (cmd === 'persuade') { const t = g.generals[r.target]; EN.domExp(gen, r.ok ? 15 : 2); EN.addRel(r.f, r.ok ? r.from : t.faction, -8); }
+  });
+}
+function __pipeEndMonth() {
+  const eng = StrategyAI.endMonth;           // ENGAGEMENT's wrapper; with SG.__pipe it passes straight to endMonthV4
+  const on = { owner: 'proto', when: () => V.on };
+  const asNext = (g, fn) => { const y = g.year, m = g.month; g.month++; if (g.month > 12) { g.month = 1; g.year++; } try { return fn(); } finally { g.year = y; g.month = m; } };
+  StrategyAI.on('snapshot', ctx => { const g = ctx.g; V.shields = bondShields(); SG.__engSnap = { popB: g.cities.map(c => c.population), foodB: g.cities.map(c => c.food) }; }, on);
+  StrategyAI.on('items', ctx => asNext(ctx.g, () => IT.monthEnd()), on);
+  StrategyAI.on('engage', ctx => {
+    const g = ctx.g, y = g.year, m = g.month;
+    SG.__engMid = () => { g.month++; if (g.month > 12) { g.month = 1; g.year++; } return ctx.news; };
+    try { eng.call(StrategyAI); } finally { g.year = y; g.month = m; SG.__engMid = null; SG.__engSnap = null; }
+  }, on);
+  StrategyAI.on('defections', ctx => { for (const d of ctx.defections) if (ctx.g.factions[d.from].alive) E.stats.defect++; }, on);
+  StrategyAI.on('titles', () => TI.monthStart(), on);
+  StrategyAI.onSpend('title', f => TI.aiManage(f), on);
+  StrategyAI.onSpend('gear', f => { IT.aiEquip(f); IT.aiPhase(f); }, on);
+  StrategyAI.onSpend('project', f => { if (E.aiProj) EN.aiProjects(f); }, on);
+  StrategyAI.onSpend('festival', f => { const fe = SG.__v4 && SG.__v4.deferred.fest; if (fe) fe(f); }, on);
+  StrategyAI.on('discretionary', ctx => {   // the scripted player's faction (the real phase 7 skips the player)
+    const g = ctx.g, p = g.player;
+    if (p >= 0 && g.factions[p].alive) {
+      AIB.accrue(p, ctx.gross[p] || 0);
+      if (V.playerPol === 'all') { TI.aiManage(p); IT.aiEquip(p); if (V.playerShops) IT.aiPhase(p); }
+      const fe = SG.__v4.deferred.fest; if (fe) fe(p);
+    }
+    SG.__v4.deferred.fest = null;
+  }, on);
+  StrategyAI.on('tourney', () => { if (SG.__v4.deferred.tourney) { SG.__v4.deferred.tourney = false; TO.run(); } }, on);
+  StrategyAI.on('news', ctx => { for (const F of ctx.g.factions) if (F.alive) EN.syncFV(F.id); }, on);
+  // the campaign statistics the prototype took inside its own income hooks
+  const E4 = SG.Econ, oGold = E4.cityGold, oHarv = E4.harvest;
+  E4.cityGold = function (c) { const r = oGold.call(this, c); if (V.on && V.stats) { V.stats.incomePct.push(r.pct); if (r.pct >= Mods.CAPS.incomeHi - 1e-9) V.stats.incomeAtCap++; V.stats.incomeN++; } return r; };
+  E4.harvest = function (c, roll) { const r = oHarv.call(this, c, roll); if (V.on && V.stats && c.owner === G().player) V.stats.harv.push({ rollRaw: roll, land: c.land, h: r.h, pct: r.pct }); return r; };
+  // a destroyed faction's armoury goes to the conqueror (ITEMS §8.8) — as in installEndMonth
+  const oApply = Conquest.apply;
+  Conquest.apply = function (s) {
+    const owner = s.target.owner;
+    const r = oApply.apply(this, arguments);
+    if (V.on && owner >= 0 && !G().factions[owner].alive && s.attackerWon) IT.transferArmoury(owner, s.attacker);
+    return r;
+  };
+}
+
+// ------------------------------------------------------------ runs --`],
+];
+function patchText(src, pairs, what) {
+  for (const [a, b] of pairs) {
+    const i = src.indexOf(a);
+    if (i < 0) throw new Error(what + ': pipeline anchor missing: ' + a.slice(0, 90));
+    if (src.indexOf(a, i + a.length) >= 0) throw new Error(what + ': pipeline anchor not unique: ' + a.slice(0, 90));
+    src = src.slice(0, i) + b + src.slice(i + a.length);
+  }
+  return src;
+}
+// the real SG.Mods / SG.Econ / SG.AIBudget singleton handed to the prototype's build(); its provider table P is forwarded
+function pipeShim() {
+  let Pcur = null, installed = false;
+  const NAMES = ['admin', 'aiSearchP', 'aiTargetK', 'allied', 'allyMonths', 'auraAtk', 'auraDef', 'baseFame', 'baseVirtue', 'bondAtk', 'bondDef', 'bondShield', 'cityDef',
+    'cityProtected', 'cmdAtk', 'cmdDef', 'discordRes', 'eventFame', 'eventHarvest', 'eventIncome', 'eventVirtue', 'expBoost', 'gearAtk', 'gearCrit', 'gearCritMul',
+    'gearDef', 'gearDev', 'gearDip', 'gearDiscord', 'gearFame', 'gearHire', 'gearMorale', 'gearPersuade', 'gearRecruit', 'gearReward', 'gearSearch', 'gearTrain',
+    'gearVirtue', 'gearWar', 'itemCity', 'itemLoyAura', 'needK', 'noAttack', 'order', 'pactIncome', 'persuadeRes', 'prestigeFame', 'project', 'rel', 'titleAtk',
+    'titleCity', 'titleCrit', 'titleDef', 'titleDev', 'titleDip', 'titleDiscord', 'titleHire', 'titleLoyAura', 'titleMorale', 'titleNat', 'titlePersuade',
+    'titleSearch', 'titleShield', 'titleTrain', 'tradeK', 'vetLevel'];
+  return {
+    CAPS: null,
+    create(SGp, P, opts) {
+      void opts;   // SHARE / CAPM: the real purse reads SG.Balance.Decisions.aiPurseShare (0.22) and AIBudget.CapMonths (12)
+      Pcur = P;
+      const M4 = SGp.Mods;
+      Object.assign(M4.CAPS, SGp.EconCore.BASE_CAPS, SGp.Balance.Caps);   // the nocap variant mutates CAPS: restore every build
+      if (!installed) {
+        installed = true;
+        const t = {};
+        for (const n of NAMES) {
+          const rep = M4.REPLACE.has(n), any = M4.ANY.has(n);
+          t[n] = (a, b, c) => { const f = Pcur[n]; return f ? f(a, b, c) : rep ? undefined : any ? false : 0; };
+        }
+        // items-mod's eff already subtracts gen.injury.war; the real SG.Mods.eff subtracts it once more → add it back
+        t.eff = (x, k) => { const f = Pcur.eff; if (!f) return undefined; const v = f(x, k); return k === 'war' ? v + M4.injuryWar(x) : v; };
+        // the prototype's text hooks on v3's endMonth / power() / recruit become providers of the real pipeline
+        t.popGrowth = c => (SGp.__v4 ? SGp.__v4.popK(c) - 1 : 0);
+        t.autoPower = x => (SGp.__v4 ? SGp.__v4.power(x) : undefined);
+        t.recruitDrill = c => (c._e && c._e.done && c._e.done.has('drill') ? 10 : 0);
+        M4.provide(t, { owner: 'v4-all-proto', when: () => !!SGp.__v4 });
+      }
+      SGp.AIBudget.reset();
+      return { CAPS: M4.CAPS, Mods: M4, Econ: SGp.Econ, AIBudget: SGp.AIBudget };
+    },
+  };
+}
+
 function protoChild(mode, scen, a, b) {
   const DV4 = path.join(ROOT, 'design-v4', 'integration');
+  const PIPE = process.env.W0_PIPE === '1' && process.env.W0_ECON !== 'proto';
   const own = load({ files: ['core.js', 'registry.js', 'data.js', 'econ.js', 'battle-math.js'] });
-  const shim = {
+  const shim = PIPE ? pipeShim() : {
     CAPS: own.EconCore.BASE_CAPS,
     create(SGp, P, opts) {
       const core = own.EconCore.create(SGp, P, { share: opts && opts.share, capMonths: opts && opts.capMonths, injury: false, purse: 'map' });
@@ -299,8 +484,14 @@ function protoChild(mode, scen, a, b) {
     if (src.indexOf(anchor) < 0) throw new Error('v4-all-proto.js anchor missing: ' + anchor);
     src = src.replace(anchor, 'const ECON = __W0_ECON;');
   }
+  if (PIPE) src = patchText(src, PIPE_PROTO, 'v4-all-proto.js');
+  const ENGF = path.join(ROOT, 'design-v4', 'engage', 'engage-proto.js');
   const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'w0-proto-'));
   const fsProxy = Object.assign({}, fs, {
+    readFileSync(p, o) {
+      const d = fs.readFileSync(p, o);
+      return PIPE && typeof p === 'string' && path.resolve(p) === ENGF ? patchText(String(d), PIPE_ENGAGE, 'engage-proto.js') : d;
+    },
     writeFileSync(p, d) { if (typeof p === 'string' && p.indexOf(path.join(DV4, 'results')) === 0) p = path.join(outDir, path.basename(p)); return fs.writeFileSync(p, d); },
   });
   const Mod = require('module');

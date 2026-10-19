@@ -11,15 +11,19 @@
    (a) 自动发现：模块对象 SG.Items / SG.Titles / SG.Engage / SG.Tourney / SG.Combos / SG.DomesticFx 上的
        migrate(G, from)、init(G)（或 setup(G)）、load(G, data)、enabled（布尔或函数）、saveKeys（数组）
    (b) SG.MigrateV4.register(id, def)     id ∈ ORDER；def = {
-       migrate(G, from)   读 v2 / v3 存档时补齐本模块的状态（from = 2 | 3）
+       migrate(G, from)   读 v2 / v3 存档时补齐本模块的状态（from = 2 | 3）；读到「没有本模块状态」的 v4 存档时 from = 4
+                          （本模块落地之前、或它关着时存的档：keys 声明的顶层字段一个也不在存档里）
        init(G)            新局（GameState.newGame 末尾）；缺省 = migrate(G, 0)
        load(G, data)      读 v4 存档之后重建本模块的非存档数据（缓存、Map …）；data = 存档的 JSON 对象
        enabled()          返回假时整模块跳过（关掉的系统不建任何状态，INTEGRATION §1.2）
-       keys: ['items']    本模块的顶层存档字段（G.items …）；登记到 GameState.addSaveKey
+       keys: ['items']    本模块的顶层存档字段（G.items …）；登记到 GameState.addSaveKey；没有声明 keys 的模块无法判断
+                          v4 存档里有没有自己的状态，只会收到 load
      }
-   SG.MigrateV4.run(G, from)  → [id…]   v2 / v3 存档：按次序调用 migrate；G.migratedFrom 由 GameState 设定
+   SG.MigrateV4.run(G, from)  → [id…]   v2 / v3 存档：按次序调用 migrate（没有 migrate 的模块调用 init）；G.migratedFrom 由 GameState 设定
    SG.MigrateV4.init(G)       → [id…]   新局
-   SG.MigrateV4.load(G, data) → [id…]   v4 存档
+   SG.MigrateV4.load(G, data) → [id…]   v4 存档：按次序对每个打开的模块——存档里没有它的状态（keys 全缺）时先 migrate(G, 4)
+                                        （没有 migrate 时 init(G)），再 load(G, data′)，data′ = data 加上刚补齐的字段；
+                                        返回的数组另带 .added = [补齐了状态的模块 id]（GameState 存为 g.systemsAdded，界面显示「新系统」卡片）
    SG.MigrateV4.ORDER / RANK / list() / unregister(id)
    每个调用期间 SG.G 临时指向 G（模块的工具函数大多读 SG.G），结束后还原。
    一个模块抛错时记入 SG.MigrateV4.errors 并继续下一个（存档仍可读）；tests/save-v4.js 断言次序与跳过。
@@ -69,6 +73,8 @@
         if (!active(d)) continue;
         let fn = d[fnName];
         if (fnName === 'init' && typeof fn !== 'function' && typeof d.migrate === 'function') fn = g => d.migrate(g, 0);
+        // 没有 migrate、只有 init 的模块：读旧存档时也用 init 建立状态（与 v4 存档缺状态时相同）
+        if (fnName === 'migrate' && typeof fn !== 'function' && typeof d.init === 'function') fn = g => d.init(g);
         if (typeof fn !== 'function') continue;
         try { fn.apply(d, [G].concat(args || [])); done.push(id); } catch (e) {
           MigrateV4.errors.push({ id, phase: fnName, error: e });
@@ -95,7 +101,43 @@
     has(id) { return mods.has(id) || !!discovered(id); },
     run(G, from) { return each(G, 'migrate', [from | 0]); },
     init(G) { return each(G, 'init'); },
-    load(G, data) { return each(G, 'load', [data]); },
+    load(G, data) {
+      data = data || {};
+      const done = [], added = [];
+      const prev = SG.G;
+      SG.G = G;
+      try {
+        for (const { id, d } of sorted()) {
+          if (!active(d)) continue;
+          let dd = data;
+          const keys = Array.isArray(d.keys) && d.keys.length ? d.keys : null;
+          if (keys && keys.every(k => data[k] === undefined)) {
+            // 没有本模块状态的 v4 存档：补跑迁移（INTEGRATION §6.2 的次序不变，前面的模块已就绪）
+            const fn = typeof d.migrate === 'function' ? g => d.migrate(g, 4) : typeof d.init === 'function' ? g => d.init(g) : null;
+            if (fn) {
+              try {
+                fn.call(d, G);
+                added.push(id);
+                dd = Object.assign({}, data);
+                for (const k of keys) if (G[k] !== undefined) dd[k] = G[k];
+              } catch (e) {
+                MigrateV4.errors.push({ id, phase: 'migrate', error: e });
+                if (typeof console !== 'undefined') console.error('SG.MigrateV4 migrate(4) ' + id, e);
+              }
+            }
+          }
+          if (typeof d.load !== 'function') continue;
+          try { d.load.call(d, G, dd); done.push(id); } catch (e) {
+            MigrateV4.errors.push({ id, phase: 'load', error: e });
+            if (typeof console !== 'undefined') console.error('SG.MigrateV4 load ' + id, e);
+          }
+        }
+      } finally { SG.G = prev; }
+      done.added = added;
+      MigrateV4.lastAdded = added;
+      return done;
+    },
+    lastAdded: [],
   };
   SG.MigrateV4 = MigrateV4;
   // 早于本文件登记的模块

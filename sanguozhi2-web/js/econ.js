@@ -134,6 +134,12 @@
     };
 
     // ============================================================ SG.Econ ==
+    // 民心项（ENGAGEMENT §3.1，DESIGN-V4 §20 问题 9）：(民心 − 50) / 50 × Decisions.orderIncomeWeight（推荐 0.05 = ±5 %）。
+    // 写成 (ov − 50) / (50 / w)：50 / 0.05 恰为 1000，缺省值与 (ov − 50) / 1000 逐位相同（参考向量、Unity）
+    const orderTerm = ov => {
+      const D = B() && B().Decisions, w = D && typeof D.orderIncomeWeight === 'number' ? D.orderIncomeWeight : 0.05;
+      return w === 0 ? 0 : (ov - 50) / (50 / w);
+    };
     const kindKey = kind => (typeof kind === 'number' ? KIND[kind] || 'town' : kind === 'land' ? 'land' : kind === 'industry' ? 'industry' : 'town');
     const Econ = {
       // 开发 (INTEGRATION §4.1). roll = the v3 R(0,4) drawn by Commands.develop.
@@ -157,7 +163,7 @@
         const project = z(P.project, c, 'income');
         const pact = z(P.pactIncome, c);
         const ov = rep(P.order, c);
-        const order = ov !== undefined ? (ov - 50) / 1000 : 0;
+        const order = ov !== undefined ? orderTerm(ov) : 0;
         const pct = clamp(titleCity + nat + item + project + pact + order, CAPS.incomeLo, CAPS.incomeHi);
         const ev = Math.max(CAPS.eventIncomeFloor, z(P.eventIncome, c));
         const gold = M.roundToInt(b * (1 + pct) * (1 + ev));
@@ -171,7 +177,7 @@
         const title = (a ? z(P.titleCity, a, 'harvest') : 0) + (c.owner >= 0 ? z(P.titleNat, c.owner, 'natHarvest') : 0);
         const item = z(P.itemCity, c, 'harvest'), project = z(P.project, c, 'harvest'), events = z(P.eventHarvest, c);
         const ov = rep(P.order, c);
-        const order = ov !== undefined ? (ov - 50) / 1000 : 0;
+        const order = ov !== undefined ? orderTerm(ov) : 0;
         const pct = clamp(title + item + project + events + order, CAPS.harvestLo, CAPS.harvestHi);
         return { h0, rollRaw: roll, pct, h: M.roundToInt(h0 * (1 + pct)), mods: { title, gear: item, project, events, order } };
       },
@@ -221,7 +227,8 @@
       persuadeP(agent, target, f) {
         if (G().isRuler(target)) return 0;
         const p = (100 - target.loyalty) / 110 * (0.45 + eff(agent, 'intel') / 180) * (0.55 + Mods.virtue(f) / 220) + z(P.gearPersuade, agent) + z(P.titlePersuade, agent);
-        return M.clamp(p * (1 - z(P.persuadeRes, target)), 0, CAPS.persuade);
+        // INTEGRATION §4.5 / TITLES §7.1：先一次截断（≤ 0.90），再乘 (1 − 对方官职的拉拢抗性)；与 discordP 同一次序
+        return M.clamp(p, 0, CAPS.persuade) * (1 - z(P.persuadeRes, target));
       },
       // the bonus terms of each chance (probability points; for the result record's chips, DOMESTIC-FX §3.2)
       hireMods(target, recruiter, promise) { return { gear: z(P.gearHire, recruiter), title: z(P.titleHire, recruiter), promise: promise || 0 }; },
@@ -305,10 +312,13 @@
         set(f, v) { const g = G(); if (!g) return; if (!g.aiBudget) g.aiBudget = { purse: {} }; if (!g.aiBudget.purse) g.aiBudget.purse = {}; g.aiBudget.purse[f] = v; },
         clear() { const g = G(); if (g && g.aiBudget) g.aiBudget.purse = {}; },
       };
+    // 钱袋份额：DESIGN-V4 §20 问题 2 的 Decisions.aiPurseShare（唯一的地方；Balance.AIBudget.Share 只是它的引用）；
+    // 设了 AIBudget.ShareByDifficulty 时按难度
     const shareOf = () => {
       if (opts.share) return +opts.share;
-      const A = AB(), g = G();
+      const A = AB(), g = G(), D = SGx.Balance && SGx.Balance.Decisions;
       if (A.ShareByDifficulty && g && g.difficulty && A.ShareByDifficulty[g.difficulty] > 0) return A.ShareByDifficulty[g.difficulty];
+      if (D && typeof D.aiPurseShare === 'number') return D.aiPurseShare;
       return A.Share;
     };
     const AIB = {

@@ -227,6 +227,39 @@ section('7 G.aiBudget purse is part of the save (INTEGRATION §5)', () => {
   eq(JSON.stringify(back.aiBudget), JSON.stringify(g.aiBudget), 'purse restored');
 });
 
+// ------------------------------------------------------------------------------------------------- 8 --
+// A version-4 save written before a module landed (or while it was switched off, INTEGRATION §1.2) holds no state for it.
+// MigrateV4.load gives such a module migrate(G, 4) (init(G) when it has no migrate) before its load, in the §6.2 order,
+// and lists it in g.systemsAdded (the UI's 'new systems' card). A save that has the state only gets load.
+section('8 v4 save without a module state: migrate(G, 4) before load, g.systemsAdded; with the state: load only', () => {
+  const g = game('liubei', 12, 2);
+  const textNoState = JSON.stringify(g);                       // what every phase-A/B save holds today (no G.items, no G.tourney)
+  const log = [];
+  MigrateV4.register('tourney', { keys: ['tourney'], migrate(G, from) { log.push('m:tourney:' + from + ':' + !!G.items); G.tourney = { held: G.year - 1, count: 0, wins: {}, stats: {}, history: [] }; }, load(G, d) { log.push('l:tourney:' + (d.tourney ? 'state' : 'none')); } });
+  MigrateV4.register('items', { keys: ['items'], migrate(G, from) { log.push('m:items:' + from); G.items = { next: 1, inst: {} }; }, load(G, d) { log.push('l:items:' + (d.items === G.items ? 'state' : 'none')); } });
+  MigrateV4.register('titles', { keys: ['officeSeq'], init(G) { log.push('i:titles'); G.officeSeq = 7; }, load(G, d) { log.push('l:titles:' + d.officeSeq); } });
+  MigrateV4.register('engage', { load() { log.push('l:engage'); } });                       // no keys: cannot tell, load only
+  MigrateV4.register('combat', { keys: ['combos'], enabled: () => false, migrate() { log.push('m:combat'); } });   // switched off: nothing
+  const back = GameState.fromJSON(textNoState);
+  eq(log.join(), 'm:items:4,l:items:state,i:titles,l:titles:7,l:engage,m:tourney:4:true,l:tourney:state',
+    'missing state: migrate(G, 4) (or init) then load, in the INTEGRATION §6.2 order (TOURNAMENT after ITEMS)');
+  eq(JSON.stringify(back.systemsAdded), JSON.stringify(['items', 'titles', 'tourney']), 'g.systemsAdded lists the modules that got their state now');
+  eq(back.migratedFrom, 0, 'still a version-4 save (migratedFrom 0)');
+  ok(back.items && back.tourney && back.officeSeq === 7, 'the module state exists after load');
+  ok(Object.getOwnPropertyDescriptor(back, 'systemsAdded').enumerable === false, 'systemsAdded is not saved');
+  // saved again: the state is in the save, so the next load calls load only
+  log.length = 0;
+  const again = GameState.fromJSON(JSON.stringify(back));
+  eq(log.join(), 'l:items:state,l:titles:7,l:engage,l:tourney:state', 'with the state: load only');
+  eq(again.systemsAdded.length, 0, 'nothing added the second time');
+  // a v3 save still migrates with from = 3
+  log.length = 0;
+  const d3 = JSON.parse(textNoState); d3.version = 3;
+  GameState.fromJSON(JSON.stringify(d3));
+  eq(log.filter(x => x[0] === 'm' || x[0] === 'i').join(), 'm:items:3,i:titles,m:tourney:3:true', 'v3 save: migrate(G, 3) (init for a module without migrate)');
+  for (const id of ['tourney', 'items', 'titles', 'engage', 'combat']) MigrateV4.unregister(id);
+});
+
 console.log(`${checks} checks`);
 console.log(fails === 0 ? 'ALL OK' : 'FAILURES: ' + fails);
 process.exitCode = fails;

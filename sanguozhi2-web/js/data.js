@@ -7,6 +7,30 @@
 (function () {
   const SG = window.SG;
 
+  // ------------------------------------------------------------------ 第四版：留待玩家决定的问题 --
+  // DESIGN-V4 §20：一律取规格的推荐值；改这里即可（唯一的一处：Balance.Decisions 与 Balance.AIBudget.Share 都引用它，
+  // js/econ.js 的钱袋份额与民心项、js/battle-math.js 的乘积上限在运行时读 Balance.Decisions；其他工作流的开关同样读这里）
+  const DECISIONS = Object.freeze({
+    stackProductCap: null,          // 问题 1：攻 × 防的乘积上限（推荐：不加 = null；要加时填 2.0；js/battle-math.js 读）
+    aiPurseShare: 0.22,             // 问题 2：电脑自由预算（SG.AIBudget 读；AIBudget.Share 引用它；随难度见 AIBudget.ShareByDifficulty）
+    duelBudget: 6,                  // 问题 3：全合一单挑预算（推荐 6；宽松方案 8）
+    duelBudgetLoose: Object.freeze({ budget: 8, gearHp: 12, abilityHp: 6 }),
+    safeSwastikaName: true,         // 问题 4：保留安全的名字「吉祥纹铜剑」
+    classicForeignChance: 0.15,     // 问题 5：经典剧本「异域奇珍」每届出现的机会
+    tourneyWinScale: 6,             // 问题 6：武林大会胜率曲线（COMBAT P1 之后重测并冻结）
+    voiceNativeReview: false,       // 问题 7：外语台词不必等母语者审读即可上线
+    slayRulersOnly: true,           // 问题 8：阵斩只限君主（设置里可打开「所有武将」）
+    slayOthersK: 1 / 3,             //         打开时其他武将的阵斩概率 = 君主的三分之一
+    orderIncomeWeight: 0.05,        // 问题 9：民心对收入 / 收成 ±5 %（SG.Econ 读：(民心 − 50) / 50 × 0.05 = (民心 − 50) / 1000）
+    wangdaoPrestige: 1500,          // 问题 10：王道胜利的声望门槛
+    wangdaoOrder: 75,               //          平均民心门槛
+    eventArtSets: 30,               // 问题 11：事件画先做 30 幅
+    tourneyHostTruce: true,         // 问题 12：东道主停战（主办城正月不受攻击）
+    tourneyRulersFight: false,      //          不额外让善战的君主亲自下场
+    hiredForeignKeepLanguage: true, // 问题 13：雇来的外族武将保留自己的语言（设置「一律汉语」可改）
+    voiceFrequency: 'essential',    //          默认语音频率：精简（'all' 全部 · 'essential' 精简 · 'critical' 关键）
+  });
+
   // ------------------------------------------------------------------ Balance --
   const Balance = Object.freeze({
     // ---- 令牌 ----
@@ -84,7 +108,7 @@
 
     // ---- 第四版：电脑预算（INTEGRATION §5；SG.AIBudget）----
     AIBudget: Object.freeze({
-      Share: 0.22,               // 自由预算 = 每月总收入的 22 %（DESIGN-V4 §20 问题 2 的推荐值）
+      Share: DECISIONS.aiPurseShare,   // 自由预算 = 每月总收入的 22 %（= Decisions.aiPurseShare，DESIGN-V4 §20 问题 2）
       ShareByDifficulty: null,   // 问题 2 的备选：{ easy: 0.18, normal: 0.22, hard: 0.26 }（null = 不随难度变化）
       CapMonths: 12,             // 最多积 12 个月
       ReserveBase: 150,          // 每城保留 150 + 8 × 武将数 金
@@ -121,27 +145,8 @@
       harvest: Object.freeze({ lean: 0.90, good: 1.04, great: 1.10, greatLand: 600 }),
     }),
 
-    // ---- 第四版：留待玩家决定的问题（DESIGN-V4 §20），一律取规格的推荐值；改这里即可 ----
-    Decisions: Object.freeze({
-      stackProductCap: null,          // 问题 1：攻 × 防的乘积上限（推荐：不加 = null；要加时填 2.0）
-      aiPurseShare: 0.22,             // 问题 2：电脑自由预算（与 AIBudget.Share 相同；随难度见 AIBudget.ShareByDifficulty）
-      duelBudget: 6,                  // 问题 3：全合一单挑预算（推荐 6；宽松方案 8）
-      duelBudgetLoose: Object.freeze({ budget: 8, gearHp: 12, abilityHp: 6 }),
-      safeSwastikaName: true,         // 问题 4：保留安全的名字「吉祥纹铜剑」
-      classicForeignChance: 0.15,     // 问题 5：经典剧本「异域奇珍」每届出现的机会
-      tourneyWinScale: 6,             // 问题 6：武林大会胜率曲线（COMBAT P1 之后重测并冻结）
-      voiceNativeReview: false,       // 问题 7：外语台词不必等母语者审读即可上线
-      slayRulersOnly: true,           // 问题 8：阵斩只限君主（设置里可打开「所有武将」）
-      slayOthersK: 1 / 3,             //         打开时其他武将的阵斩概率 = 君主的三分之一
-      orderIncomeWeight: 0.05,        // 问题 9：民心对收入 / 收成 ±5 %（(民心 − 50) / 1000）
-      wangdaoPrestige: 1500,          // 问题 10：王道胜利的声望门槛
-      wangdaoOrder: 75,               //          平均民心门槛
-      eventArtSets: 30,               // 问题 11：事件画先做 30 幅
-      tourneyHostTruce: true,         // 问题 12：东道主停战（主办城正月不受攻击）
-      tourneyRulersFight: false,      //          不额外让善战的君主亲自下场
-      hiredForeignKeepLanguage: true, // 问题 13：雇来的外族武将保留自己的语言（设置「一律汉语」可改）
-      voiceFrequency: 'essential',    //          默认语音频率：精简（'all' 全部 · 'essential' 精简 · 'critical' 关键）
-    }),
+    // ---- 第四版：留待玩家决定的问题（DESIGN-V4 §20）：见文件开头的 DECISIONS（一处定义，规则代码在运行时读它）----
+    Decisions: DECISIONS,
   });
 
   const Terrain = Object.freeze({ Plain: 0, Forest: 1, Hill: 2, Mountain: 3, River: 4, Wall: 5, Gate: 6, Castle: 7 });

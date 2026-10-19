@@ -129,6 +129,28 @@ try {
   void RULES;
 } catch (e) { ok(false, 'rule layer failed to load: ' + (e.stack || e)); }
 
+// SG.Settings: js/registry.js defines the registry right after core.js so rows can be registered before js/settings.js
+// (W8, UI-V4 §2) loads; settings.js must extend that object, never replace it (rows defined earlier would be lost).
+console.log('== SG.Settings: rows registered before js/settings.js survive it (registry.js ↔ settings.js)');
+{
+  const sp = path.join(JS, 'settings.js');
+  if (!fs.existsSync(sp)) console.log('  js/settings.js not landed yet (W8) — skipped');
+  else {
+    const vm = require('vm');
+    const ctx = { console, Math, JSON, Date, setTimeout, clearTimeout };
+    ctx.window = ctx; ctx.self = ctx;
+    vm.createContext(ctx);
+    try {
+      for (const f of ['core.js', 'registry.js']) vm.runInContext(fs.readFileSync(path.join(JS, f), 'utf8'), ctx, { filename: f });
+      const S0 = ctx.SG.Settings;
+      S0.define({ id: 'loadorder.probe', tab: 'game', order: 999, label: 'probe', type: 'toggle', default: true, owner: 'test' });
+      vm.runInContext(fs.readFileSync(sp, 'utf8'), ctx, { filename: 'settings.js' });
+      const S1 = ctx.SG.Settings;
+      ok(S1 === S0 || (typeof S1.rows === 'function' && S1.rows('game').some(d => d.id === 'loadorder.probe')), 'settings.js keeps the rows registered before it (extends SG.Settings, does not replace it)');
+    } catch (e) { console.log('  note: js/settings.js could not be loaded without a DOM (' + (e.message || e) + ') — checked in tests/settings.js'); }
+  }
+}
+
 console.log(`${checks} checks`);
 console.log(fails === 0 ? 'ALL OK' : 'FAILURES: ' + fails);
 process.exitCode = fails;

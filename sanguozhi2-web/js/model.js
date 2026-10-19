@@ -46,7 +46,15 @@
        然后 SG.Events.emit('command', cmd, res)（= Commands.onCommand(fn)）。不多取任何随机数。
        新增可选参数：ally(from, f, target, gift, envoy)、allyChance(f, target, gift, envoy)、hire(target, recruiter, f, city, { promise, via })、
        hireChance(target, recruiter, f, promise)；新指令 Commands.appoint(c, gen)（任命太守）。
-     GameState.generalsIn 跳过外出（gen.away.until > 月序）与「伤病且不能行动」（gen.injury.away）的武将（INTEGRATION §6.4）。
+     GameState.generalsIn 跳过外出（gen.away.until > 月序）与「伤病且不能行动」（gen.injury.away）的武将（INTEGRATION §6.4）；
+       G.absent(gen) 判断这一点；G.nearestCityOf(f, cityId) 按连线最近的 f 方城；G.rehomeStrays(list?) 把所在城已不归本势力的
+       外出 / 伤病武将（或 list 给出的刚回来的武将）送回本势力最近的城，本势力无城时下野（攻陷、出奔后的空城、拉拢献城、
+       伤病 / 外出到期时调用；事件 'general.rehomed'）。
+     Commands.record(cmd, city, gen, res)：别处的指令（出征、ENGAGEMENT 的新指令）写结果记录的同一入口（同 finish：
+       lastResult + onCommand + 'command' 事件）。拉拢的记录：city = 施计者所在城编号（与其他指令相同），献城时 surrendered: true、
+       cityId = 献出的城；率部来投与失败时 surrendered: false。
+     读 v4 存档时没有某模块的状态（该模块落地之前或关着时存的档）：SG.MigrateV4.load 先补跑它的 migrate(G, 4)；
+       补齐的模块记在 g.systemsAdded（不进存档，界面可显示一次「新系统」）；v2 / v3 存档的 g.systemsAdded = 迁移过的模块。
      GameState.allied 另读提供者 allied(a, b)（ENGAGEMENT 的盟约）；SG.cityDefense 加 SG.Mods.cityDefBonus(c)（官爵驻军、营建城墙）。
      Progress.vetLevel(gen) = levelFor(exp − 0.5 × dexp)（无内政经验时 = level）；vetK 用它；gain(gen, n, why)：
        why ≠ 'battle' 的经验记入 gen.dexp；why 为 'battle' / 'tourney' / 'story' 时先乘 SG.Mods.exp（'domestic' 由 ENGAGEMENT
@@ -265,6 +273,51 @@
       const mi = this.monthIndex;
       return this.generals.filter(x => x.city === city && x.faction === f && !x.dead
         && !(x.away && x.away.until > mi) && !(x.injury && x.injury.away && x.injury.until > mi));
+    }
+    // 第四版：这位武将本月不在城中（外出或伤病不能行动；generalsIn 不计他）
+    absent(x) {
+      const mi = this.monthIndex;
+      return !!x && !!((x.away && x.away.until > mi) || (x.injury && x.injury.away && x.injury.until > mi));
+    }
+    // 按连线路程（BFS）离 fromId 最近的势力 f 城池（含 fromId 本身）；f 没有城时 null
+    nearestCityOf(f, fromId) {
+      if (f < 0) return null;
+      const start = this.cities[fromId];
+      if (start && start.owner === f) return start;
+      if (start) {
+        const seen = new Set([fromId]); let q = [fromId];
+        while (q.length) {
+          const next = [];
+          for (const id of q) for (const j of this.cities[id].links) {
+            if (seen.has(j)) continue;
+            seen.add(j);
+            if (this.cities[j].owner === f) return this.cities[j];
+            next.push(j);
+          }
+          q = next;
+        }
+      }
+      return Seq.first(this.citiesOf(f)) || null;
+    }
+    // 第四版（INTEGRATION §6.4）：不在城中的武将（外出、伤病不能行动；或 list 给出的刚回来的武将）所在的城已不归本势力
+    // （被攻陷、出奔后成了空城、拉拢献城……）时，回到本势力最近的城；本势力已无城时下野。俘虏中的武将不动。
+    // 攻城结算、出奔、献城与伤病 / 外出到期时调用；没有这样的武将时什么也不做（第三版不变，不取随机数）。→ 被安置的武将
+    rehomeStrays(list) {
+      const out = [];
+      const C = SG.Conquest;
+      for (const x of list || this.generals) {
+        if (!x || x.dead || x.faction < 0) continue;
+        if (!list && !this.absent(x)) continue;
+        const c = this.cities[x.city];
+        if (c && c.owner === x.faction) continue;
+        if (C && typeof C.isCaptive === 'function' && C.isCaptive(x)) continue;
+        const home = this.nearestCityOf(x.faction, x.city);
+        if (home) x.city = home.id;
+        else { x.faction = -1; x.troops = 0; x.loyalty = 0; }
+        out.push(x);
+      }
+      if (out.length) emit('general.rehomed', out);
+      return out;
     }
     officersIn(c) { return c.owner < 0 ? [] : this.generalsIn(c.id, c.owner); }
     freeFoundIn(city) { return this.generals.filter(x => x.city === city && SG.isFree(x) && !x.hidden); }
@@ -510,8 +563,11 @@
           if (!SAVE_KEYS.has(k)) SAVE_KEYS.add(k);
           g[k] = d[k];
         }
-        if (SG.MigrateV4) SG.MigrateV4.load(g, d);
-      } else if (SG.MigrateV4) SG.MigrateV4.run(g, d.version | 0);
+        // 存档里没有某模块状态（该模块落地之前、或关着时存的档）时，MigrateV4.load 先为它补跑 migrate(G, 4)；
+        // 补齐的模块记在 g.systemsAdded（不进存档；界面可显示一次「新系统」卡片）
+        derived(g, 'systemsAdded', SG.MigrateV4 ? SG.MigrateV4.load(g, d).added || [] : []);
+      } else if (SG.MigrateV4) derived(g, 'systemsAdded', SG.MigrateV4.run(g, d.version | 0));
+      else derived(g, 'systemsAdded', []);
       if (SG.Clock) SG.Clock.monthStart(g, Math.max(g.tokens, g.player >= 0 ? g.tokensFor(g.player) : 0));
       return g;
     }
@@ -701,6 +757,9 @@
     // 第四版：ITEMS 的搜索寻宝（§8.5）。设为 (c, g) => ({ item, name }) | null；在寻人之后、金粮之前调用
     searchItem: null,
     econ,
+    // 第四版：别处的指令（出征 Conquest.prepare、ENGAGEMENT 的新指令）写结果记录的同一个入口：
+    //   填 cmd / city / gen / month / f / tier，写 Commands.lastResult，再通知 onCommand 与 SG.Events 'command'
+    record(cmd, city, gen, res) { return finish(cmd, city, gen, res || {}); },
     V3Econ,     // 测试用：没有 js/econ.js 时的 v3 公式（tests/econ.js 断言它与无提供者的 SG.Econ 逐位相同）
 
     devName(k) { return k === DevKind.Land ? '土地' : k === DevKind.Industry ? '产业' : '町'; },
@@ -937,7 +996,7 @@
       const c0 = G().cities[agent.city];
       const p = Commands.persuadeChance(agent, target, f);
       const mods = econ().persuadeMods(agent, target);
-      if (SG.Random.value() > p) { finish('persuade', c0, agent, { ok: false, target: target.id, city: false, p, mods }); return `${target.name}拒绝了劝诱。`; }
+      if (SG.Random.value() > p) { finish('persuade', c0, agent, { ok: false, target: target.id, surrendered: false, p, mods }); return `${target.name}拒绝了劝诱。`; }
       const g = G();
       const oldCity = g.cities[target.city];
       const oldF = target.faction;
@@ -947,13 +1006,15 @@
       if (alone) {
         oldCity.owner = f;
         g.autoGovernor(oldCity);
+        g.rehomeStrays();   // 第四版：原势力在这座城里外出 / 伤病的武将回到本势力最近的城
         g.checkFactionDeath(oldF);
-        finish('persuade', c0, agent, { ok: true, target: target.id, city: true, cityId: oldCity.id, p, from: oldF, mods });
+        // 记录的 city 与其他指令一样是城编号（agent 所在城）；献城以 surrendered: true 标明，献出的城为 cityId（DOMESTIC-FX §3.2）
+        finish('persuade', c0, agent, { ok: true, target: target.id, surrendered: true, cityId: oldCity.id, p, from: oldF, mods });
         return `${target.name}献城归降！${oldCity.name}归入我方。`;
       }
       target.city = agent.city; target.troops = M.idiv(target.troops, 2); target.moved = true;
       g.autoGovernor(oldCity); g.autoGovernor(g.cities[agent.city]);
-      finish('persuade', c0, agent, { ok: true, target: target.id, city: false, p, from: oldF, mods });
+      finish('persuade', c0, agent, { ok: true, target: target.id, surrendered: false, p, from: oldF, mods });
       return `${target.name}率部来投！`;
     },
   };
