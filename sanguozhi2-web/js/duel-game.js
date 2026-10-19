@@ -15,6 +15,7 @@
      playerSide: 0 | 1 | null,                   // 玩家操作哪一方（0 = a，1 = b）；null = 电脑对电脑（观战，可跳过）
      terrain,                                    // SG.Terrain 值：平原 / 森林 / 丘陵 / 山地 / 河川 / 城墙 / 城门 / 本城
      special: { a: SG.Specials?.of(a.gen), b: … }// 可选：绝技名称与配色 { name, color }
+     mood,                                       // 可选（第四版场地）：时刻 'afternoon' | 'golden' | 'dusk' | 'night' | 小时数；缺省按地形
    })
    // → { winner: 0 | 1（0 = a 胜）, kind: 'ko' | 'time' | 'skip', hpA, hpB, log: [{ who, dmg, hpA, hpB, move, guarded, t }],
    //     stats: [{ hits, parries, parryTries, counters, whiffs, parryBy: { stance, guard, hitstun } }, …]（a、b 各一项：可供成长系统计经验） }
@@ -111,9 +112,16 @@
   function critBase(war) { return CRIT.BASE + CRIT.WAR * M.clamp((war - 50) / 50, 0, 1); }
   // 下段 / 中段 / 上段（跃劈与空中攻击）的二择（§6.4）；关掉时 ↓ 攻击为中段、K+L 为站立中击、蹲下只是姿势（§17 风险表）
   let MIXUPS = true;
+  // 第四版调校（偏离第三版常数 1.6）：第四版单出的轻击被挡后就结束（不再自动接二、三段），连按 J 的人每一刀都是「被挡后立刻再出手」，
+  // 第三版的格开读招对他百发百中，格开后又接整串（约 30 HP）——连按对同武力电脑的胜率从第三版的 26% 跌到 3%（(2) 要求 ≥ 5%）
+  const AI_REPOKE_K = 0.8;
+  const AI_LOW_BASE = 0.7;         // 电脑平时蹲挡的基础倾向（× gs；只对看得及跃劈的电脑，见 AI.habitLow）
   // 装备在单挑里的白名单（COMBAT-V4 §3、INTEGRATION §8.2）：duel-game.js 只认这些字段，其余一律不读（SG.Items.validate 加载即报错）
+  // ITEMS 把几种词汇映射到这些行（js/items.js DUEL_ITEM_EFFECTS）：dCrit → crit / critDmg，dGuardBreak / dGuardBreakFull → 破防，
+  // dHpAdd → dHp，dEndure → 能力体力，dFear → 对手的 dRage / dSpd，dSpecial → 绝技冲刺，dSuperKnock → dProc 击退，dWeak → 弱点
   const DUEL_ITEM_EFFECTS = Object.freeze(['duelWar', 'dHp', 'dDmg', 'dGuard', 'crit', 'critDmg', 'dParry', 'dArmor', 'dProc', 'dCombo', 'dProjectile',
-    'dRegen', 'dLifesteal', 'dCounter', 'dRage', 'dLowHp', 'dDmgK', 'dSpd', 'dReach']);
+    'dRegen', 'dLifesteal', 'dCounter', 'dRage', 'dLowHp', 'dDmgK', 'dSpd', 'dReach',
+    'dCrit', 'dGuardBreak', 'dGuardBreakFull', 'dHpAdd', 'dEndure', 'dFear', 'dSpecial', 'dSuperKnock', 'dWeak']);
   // 全合一单挑预算（INTEGRATION §8.3）：伤害 % + 0.4 × (装备体力 + 神兵之能折算体力 + 0.5 × 格挡点) ≤ 6；超出时先减体力、再减伤害
   const DUEL_BUDGET = { TOTAL: 6, HP_CAP: 10, DMG_CAP: 3, DMG_ALL_CAP: 6, ABIL_HP_CAP: 4, GUARD_CAP: 6, PARRY_CAP: 0.01, REACH_CAP: 0.05, SPD_LO: -6, SPD_HI: 4, MOVE_CAP: 10, LIFESTEAL_CAP: 0.10, COUNTER_CAP: 1.7, LOWHP_CAP: 1.15, DMGK_CAP: 0.03 };
 
@@ -193,13 +201,13 @@
     snake: { name: '丈八蛇矛', style: 'pole', reach: 2.05 },
     ji: { name: '方天画戟', style: 'pole', reach: 2.0, pow: 1.06 },
     spear: { name: '长枪', style: 'pole', reach: 2.05 },
-    poleblade: { name: '大刀', style: 'pole', reach: 1.95, pow: 1.07 },
+    poleblade: { name: '大刀', style: 'pole', reach: 1.95, pow: 1.05 },        // 第四版兵器平衡（§15.2 (15)）：1.07 → 1.05
     axe: { name: '大斧', style: 'pole', reach: 1.88, pow: 1.12 },
     bigblade: { name: '斩马刀', style: 'pole', reach: 1.88, pow: 1.14 },
     sword: { name: '长剑', style: 'one', reach: 1.78 },
     dao: { name: '环首刀', style: 'one', reach: 1.75 },
     shortji: { name: '短戟', style: 'one', reach: 1.8 },
-    mace: { name: '骨朵', style: 'one', reach: 1.72, pow: 0.97 },
+    mace: { name: '骨朵', style: 'one', reach: 1.72, pow: 1.0 },              // 第四版兵器平衡：0.97 → 1.0
     twinsword: { name: '双股剑', style: 'dual', reach: 1.72, pow: 0.96 },
     twinji: { name: '双铁戟', style: 'dual', reach: 1.75, pow: 0.97 },
     twindao: { name: '双刀', style: 'dual', reach: 1.68 },
@@ -208,6 +216,12 @@
     lance: { name: '长矛', style: 'pole', reach: 2.12 },                    // 萨尔马提亚 / 安息 / 贵霜的骑矛
     handaxe: { name: '战斧', style: 'one', reach: 1.7, pow: 1.03 },        // 日耳曼
     tachi: { name: '直刀', style: 'one', reach: 1.76 },                     // 倭
+    // 装备带来的新兵器类型（ITEMS 的 duel.key 带 *：club* / staff* / fan* / vajra*）：规则按本表（兵器平衡由单挑统一调，§15.2 (15)），
+    // 不读各件装备自带的 pow——伤害加成只经 dDmg 进全合一预算
+    club: { name: '棍棒', style: 'one', reach: 1.74, pow: 1.0, item: true },
+    staff: { name: '杖', style: 'pole', reach: 2.0, pow: 1.06, item: true },
+    fan: { name: '羽扇', style: 'one', reach: 1.58, pow: 1.04, item: true },
+    vajra: { name: '金刚杵', style: 'one', reach: 1.62, pow: 1.04, item: true },
   };
 
   // 知名武将的外观（未列出的按能力值与姓名哈希确定性生成）
@@ -366,47 +380,63 @@
   // ============================================================ 装备（DUEL_ITEM_EFFECTS，INTEGRATION §8） --
   // 每名武将的单挑数值：SG.Gear.duelMods(gen)（ITEMS §3.3；未载入装备时为空）+ 官职 critDuel / dmgDuel（SG.Mods 提供者）
   // + 宿敌加伤（ENGAGEMENT），按全合一预算裁剪。返回 { war, hp, dmg, crit, critMul, reachK, parry, guard, spd, move, abil, src }
-  function duelModsOf(gen, foeGen) {
-    const out = { war: null, hp: 0, dmg: 0, crit: 0, critMul: 0, reachK: 0, parry: 0, guard: 0, spd: 0, move: 0, abil: [], abilHp: 0, weapon: null, trimmed: false };
-    let m = null;
-    try { if (SG.Gear && typeof SG.Gear.duelMods === 'function') m = SG.Gear.duelMods(gen, foeGen) || null; } catch (e) { m = null; }
+  // given：直接给一份 SG.Gear.duelMods 的结果（测试 / 武林大会预先算好的），不再向 SG.Gear 要
+  function duelModsOf(gen, foeGen, given) {
+    const out = { war: null, hp: 0, dmg: 0, crit: 0, critMul: 0, reachK: 0, parry: 0, guard: 0, guardBreak: 0, spd: 0, move: 0, abil: [], abilHp: 0, weapon: null, trimmed: false };
+    let m = given || null;
+    if (!given) { try { if (SG.Gear && typeof SG.Gear.duelMods === 'function') m = SG.Gear.duelMods(gen, foeGen) || null; } catch (e) { m = null; } }
     const Mo = SG.Mods;
     const z = (name, a, b) => { try { return Mo && typeof Mo.z === 'function' ? Mo.z(name, a, b) || 0 : 0; } catch (e) { return 0; } };
+    const num = v => (typeof v === 'number' && isFinite(v) ? v : 0);
     if (m) {
+      // SG.Gear.duelMods（js/items.js）的格式：hp = 总体力（100 + 装备体力）、dmg / spd / move 为小数、guardPP 为格挡点（pp）、
+      // critDuel / critMulDuel 为小数；伤害项已含官职与宿敌，预算也已按 INTEGRATION §8.3 裁过（此处再裁一次，结果相同）
+      const bud = m.budget || null;
       if (typeof m.war === 'number') out.war = m.war;
-      out.hp = Math.min(DUEL_BUDGET.HP_CAP, Math.max(0, +m.hp || 0));
-      out.dmg = Math.min(DUEL_BUDGET.DMG_CAP, Math.max(0, +m.dmg || 0));
-      out.crit = Math.max(0, +m.critDuel || 0);
-      out.critMul = Math.min(CRIT.MUL_CAP, Math.max(0, +m.critMulDuel || 0));
-      out.reachK = Math.min(DUEL_BUDGET.REACH_CAP, Math.max(0, +m.reachK || 0));
-      out.parry = Math.min(DUEL_BUDGET.PARRY_CAP, Math.max(0, +m.parry || 0));
-      out.guard = Math.min(DUEL_BUDGET.GUARD_CAP, Math.max(0, +m.guard || 0));
-      out.spd = M.clamp(+m.spd || 0, DUEL_BUDGET.SPD_LO, DUEL_BUDGET.SPD_HI);
-      out.move = Math.min(DUEL_BUDGET.MOVE_CAP, Math.max(0, +m.move || 0));
+      const gearHp = bud && typeof bud.gearHp === 'number' ? bud.gearHp : num(m.hp) >= 50 ? num(m.hp) - 100 : num(m.hp);
+      out.hp = M.clamp(gearHp, 0, DUEL_BUDGET.HP_CAP);
+      const dmgPct = bud && typeof bud.dmg === 'number' ? bud.dmg : num(m.dmg) * 100;
+      out.dmg = M.clamp(dmgPct, 0, DUEL_BUDGET.DMG_ALL_CAP);
+      out.crit = Math.max(0, num(m.critDuel));
+      out.critMul = M.clamp(num(m.critMulDuel), 0, CRIT.MUL_CAP);
+      out.reachK = M.clamp(num(m.reachK), 0, DUEL_BUDGET.REACH_CAP);
+      out.parry = M.clamp(num(m.parry), 0, DUEL_BUDGET.PARRY_CAP);
+      out.guard = M.clamp(typeof m.guardPP === 'number' ? m.guardPP : 0, 0, DUEL_BUDGET.GUARD_CAP);
+      out.guardBreak = M.clamp(num(m.guardBreak), 0, 0.12);
+      out.spd = M.clamp(num(m.spd) * 100, DUEL_BUDGET.SPD_LO, DUEL_BUDGET.SPD_HI);
+      out.move = M.clamp(num(m.move) * 100, 0, DUEL_BUDGET.MOVE_CAP);
       out.weapon = m.weapon || null;
       for (const a of m.abilities || []) {
-        if (!a || DUEL_ITEM_EFFECTS.indexOf(a.id || a.kind) < 0) continue;     // 白名单之外的一律不读
+        const id = a && (a.t || a.id || a.kind);
+        if (!id || DUEL_ITEM_EFFECTS.indexOf(id) < 0) continue;     // 白名单之外的一律不读
         out.abil.push(a);
-        out.abilHp += Math.max(0, +a.hp || 0);
       }
-      out.abilHp = Math.min(DUEL_BUDGET.ABIL_HP_CAP, out.abilHp);
-    } else if (Mo && typeof Mo.duelWar === 'function' && gen && typeof gen.war === 'number') {
-      try { out.war = Mo.duelWar(gen); } catch (e) { out.war = null; }
+      out.abilHp = M.clamp(typeof m.abilityHp === 'number' ? m.abilityHp : 0, 0, DUEL_BUDGET.ABIL_HP_CAP);
+      // 会心之能（dCrit）：装备的会心率 / 会心伤害若未折进 critDuel / critMulDuel，则在此并入（仍受上限）
+      for (const a of out.abil) if ((a.t || a.id || a.kind) === 'dCrit') {
+        if (!out.crit && a.crit) out.crit = num(a.crit) / 100;
+        if (!out.critMul && a.critDmg) out.critMul = M.clamp(num(a.critDmg) / 100, 0, CRIT.MUL_CAP);
+      }
+    } else {
+      if (Mo && typeof Mo.duelWar === 'function' && gen && typeof gen.war === 'number') { try { out.war = Mo.duelWar(gen); } catch (e) { out.war = null; } }
+      // 没有装备模块：官职（TITLES §7.5）与宿敌（ENGAGEMENT）的单挑加成直接从 SG.Mods 读（小数或百分数都认）
+      const pct = v => (Math.abs(v) <= 0.2 ? v * 100 : v);
+      out.dmg = Math.min(DUEL_BUDGET.DMG_ALL_CAP, Math.min(2, pct(z('titleDmgDuel', gen))) + Math.min(4, pct(z('rivalDmgDuel', gen, foeGen))));
+      const tc = z('titleCritDuel', gen);
+      out.crit = tc > 0.2 ? tc / 100 : tc;
     }
-    // 官职（TITLES §7.5）与宿敌（ENGAGEMENT）：并入伤害项与会心项
-    out.dmg += Math.min(2, z('titleDmgDuel', gen)) + Math.min(4, z('rivalDuel', gen, foeGen));
-    out.dmg = Math.min(DUEL_BUDGET.DMG_ALL_CAP, out.dmg);
-    out.crit = Math.min(CRIT.ITEM_CAP, out.crit + z('titleCritDuel', gen));
-    // 预算：dmg + 0.4 × (hp + abilHp + 0.5 × guard) ≤ 6，先减体力、再减伤害
+    out.crit = Math.min(CRIT.ITEM_CAP, out.crit);
+    // 预算：dmg + 0.4 × (hp + abilHp + 0.5 × guard) ≤ 6，先减体力、再减格挡、再减伤害（与 js/items.js 同序）
     const over = () => out.dmg + 0.4 * (out.hp + out.abilHp + 0.5 * out.guard) - DUEL_BUDGET.TOTAL;
     let ex = over();
-    if (ex > 1e-9) { out.trimmed = true; const cut = Math.min(out.hp, ex / 0.4); out.hp -= cut; ex = over(); }
+    if (ex > 1e-9) { out.trimmed = true; out.hp -= Math.min(out.hp, ex / 0.4); ex = over(); }
+    if (ex > 1e-9) { out.guard -= Math.min(out.guard, ex / 0.2); ex = over(); }
     if (ex > 1e-9) { out.dmg = Math.max(0, out.dmg - ex); }
     out.hp = Math.round(out.hp * 100) / 100;
     return out;
   }
   // 神兵之能（白名单内的几种在此解释；dProc / dProjectile / dParry.guardWindow 待 ITEMS 落地后接上，见报告）
-  function abilOf(f, id) { for (const a of f.abil) if ((a.id || a.kind) === id) return a; return null; }
+  function abilOf(f, id) { for (const a of f.abil) if ((a.t || a.id || a.kind) === id) return a; return null; }
 
   // ============================================================ 逻辑：武将 --
   const NOHELD = { x: 0, up: false, down: false, light: false, medium: false, heavy: false, guard: false, special: false, parry: false, dash: 0 };
@@ -424,7 +454,9 @@
       this.dm = dm;
       this.war = dm.war !== null && dm.war !== undefined ? M.clamp(dm.war, 1, 120) : warOf(gen);
       this.look = look;
-      this.wpn = (dm.weapon && WEAPONS[dm.weapon.key || dm.weapon]) || WEAPONS[look.weapon] || WEAPONS.sword;
+      const dw = dm.weapon;
+      const dkey = dw ? String(dw.key || dw).replace('*', '') : '';
+      this.wpn = (dkey && WEAPONS[dkey]) || (dw && dw.reach && dw.style ? { name: dw.name || '神兵', style: dw.style, reach: M.clamp(+dw.reach, 1.5, 2.15), pow: 1 } : null) || WEAPONS[look.weapon] || WEAPONS.sword;
       this.pow = (this.wpn.pow || 1) * (1 + dm.dmg / 100);
       this.reach = this.wpn.reach * (1 + dm.reachK);
       this.spd = actSpeed(this.war) * (STYLE_SPD[this.wpn.style] || 1) * (1 + dm.spd / 100);
@@ -433,13 +465,18 @@
       this.hpMax = 100 + dm.hp;
       this.guardRed = Math.min(0.86, 0.80 + dm.guard / 100);
       this.critAdd = dm.crit; this.critK = CRIT.K + dm.critMul;
+      this.chipK = 1 + (dm.guardBreak || 0);   // 破防之能（dGuardBreak）：被挡时的削血 +%
       this.abil = dm.abil || [];
+      const gbf = abilOf(this, 'dGuardBreakFull');
+      this.gbMin = gbf ? M.clamp(+gbf.minCharge || 0.85, 0.75, 1) : 0.85;   // 满蓄破防所需蓄力
+      this.burnT = 0; this.burnDps = 0; this.noRegenUntil = 0; this.fromDash = false; this.healed = 0;
       this.x = idx === 0 ? -2.3 : 2.3;
       this.y = 0; this.vx = 0; this.vy = 0;
       this.face = idx === 0 ? 1 : -1;
       this.hp = this.hpMax; this.rage = 0;
       const ra = abilOf(this, 'dRage');
-      if (ra && ra.start) this.rage = M.clamp(+ra.start, 0, 50);
+      if (ra && ra.start) this.rage = M.clamp(+ra.start <= 1 ? +ra.start * 100 : +ra.start, 0, 50);   // start 为怒气条的比例（ITEMS：0–0.3）
+      this.rageK = ra && ra.gainK ? M.clamp(+ra.gainK, 1, 1.3) : 1;
       this.state = 'idle'; this.t = 0; this.seq = 0;
       this.mv = null;         // 当前招式的数据（MOVES / STEP 的一项）
       this.hitIdx = 0;        // 本招已命中段数
@@ -490,7 +527,7 @@
       this.strEnded = false;  // 本串已在当前这一步结束（未按 / 按错）
       this.seenMask = 0;      // 本场出过的招式谱步（见识：res.seenSteps）
       this.stats = { swings: 0, hits: 0, guarded: 0, taken: 0, parryTries: 0, parries: 0, parried: 0, counters: 0, whiffs: 0, parryBy: { stance: 0, guard: 0, hitstun: 0 },
-        strings: 0, stringHits: 0, fullStrings: 0, breaks: 0, broken: 0, crits: 0, critDmg: 0, unguarded: 0, dmg: 0, guardCrushes: 0, lows: 0, overheads: 0, lowsBlocked: 0, ovhBlocked: 0, early: 0, late: 0, onBeat: 0, delays: 0 };
+        strings: 0, stringHits: 0, fullStrings: 0, breaks: 0, broken: 0, crits: 0, critDmg: 0, unguarded: 0, dmg: 0, guardCrushes: 0, lows: 0, overheads: 0, lowsBlocked: 0, ovhBlocked: 0, early: 0, late: 0, onBeat: 0, delays: 0, abilGain: 0 };   // abilGain：神兵之能折合的体力（回复 + 多打出的伤害 + 少挨的伤害，(15) 量）
       this.parryFrom = '';    // 进入格开架势前的状态（统计格开途径）
       this.bow = !!look.bow;  // 弓将（黄忠、夏侯渊）：绝技为连珠箭（远程），不突进
     }
@@ -533,6 +570,8 @@
       this.shots = [];            // 飞行中的箭（弓将绝技）：{ id, owner, x, y, vx, fin, n }
       this.shotId = 0;
       this.critOn = opts.crit !== false && DuelGame.critEnabled !== false;
+      // 慑敌之能（dFear）：对手出招略慢
+      for (const f of this.f) { const fe = abilOf(this.f[1 - f.idx], 'dFear'); if (fe && fe.foeSpdK) f.spd *= M.clamp(+fe.foeSpdK, 0.94, 1); }
       this.aiKnow = opts.aiKnow || null;
     }
     other(f) { return this.f[1 - f.idx]; }
@@ -573,18 +612,21 @@
         for (const f of this.f) {
           f.rage = Math.min(100, f.rage + dt * 0.7);
           if (f.abil.length) this.abilTick(f, dt);
+          if (f.burnT > 0) { f.burnT -= dt; if (f.hp > 1) { const hp0 = f.hp; f.hp = Math.max(1, f.hp - f.burnDps * dt); this.f[1 - f.idx].stats.abilGain += hp0 - f.hp; } }   // 灼烧（dProc burn）：不致命
         }
         if (this.time >= this.limit) this.timeUp();
       }
       if (this.result) this.endT += dt;
       this.record();
     }
+    // 神兵之能的回复（吸血 + 回春）每场合计至多 ABIL_HP_CAP（4）点体力（COMBAT-V4 §3：能力体力 ≤ 4 / 场）
+    healLeft(f) { return Math.max(0, DUEL_BUDGET.ABIL_HP_CAP - f.healed); }
     // 神兵之能的每步效果（dRegen：按条件回复体力）
     abilTick(f, dt) {
       const r = abilOf(f, 'dRegen');
-      if (r && f.hp > 0 && !f.ko) {
+      if (r && f.hp > 0 && !f.ko && this.clock >= f.noRegenUntil) {
         const ok = r.cond === 'guarding' ? (f.state === 'guard' || f.state === 'guardstun') : r.cond === 'grounded' ? f.grounded : true;
-        if (ok) f.hp = Math.min(f.hpMax, f.hp + Math.min(0.5, +r.hpPerSec || 0) * dt);
+        if (ok) { const hp0 = f.hp; f.hp = Math.min(f.hpMax, f.hp + Math.min(Math.min(0.8, +r.hpPerSec || 0) * dt, this.healLeft(f))); f.healed += f.hp - hp0; f.stats.abilGain += f.hp - hp0; }
       }
     }
 
@@ -867,6 +909,7 @@
     //   ↓ 按住：↓J 蹲轻（下段）· ↓K 扫腿（下段，击倒）· ↓L 上挑（对空）；K+L：跃劈（上段）；L：蓄力重击（v3）
     tryAttack(f, o, h, neutral, moving) {
       const crouch = MIXUPS && !!h.down && f.grounded;
+      f.fromDash = f.state === 'dash';
       if (this.fresh(f, 'ovh')) {
         this.use(f, 'ovh'); this.use(f, 'medium'); this.use(f, 'heavy');
         if (MIXUPS) { this.startAttack(f, 'ovh'); f.stats.overheads++; this.emit({ type: 'ovhGo', who: f.idx, su: OVH_SU }); } else this.startTyped(f, 'M');
@@ -924,6 +967,7 @@
       this.setState(f, 'str');
       const mv = f.mv = stepMove(f.seqStr, i);
       f.strOn = true; f.strIdx = i; f.t = carry || 0;
+      f.seenMask |= 1 << i;     // 见识：这一步出过了（打中、被挡、挥空都算，§12.2）
       f.lockType = ''; f.strEnded = false; f.delaying = false; f.delayed = false; f.delayT = 0;
       if (i === 0) { f.stats.strings++; f.blockedRun = 0; f.strHits = 0; f.strAllBeat = true; f.deflectUsed = false; f.strBeat = []; }
       f.winOpen = mv.startup - COMBO.WIN_EARLY;
@@ -1210,20 +1254,20 @@
       }
       const rf = SG.Random.rangeFloat(0.92, 1.08);
       let dmg;
-      if (guarded) dmg = damage(base, f.war, o.war) * rf * (1 - o.guardRed);     // 削血：不按连击递减，× 0.2
+      if (guarded) dmg = damage(base, f.war, o.war) * rf * (1 - o.guardRed) * f.chipK;     // 削血：不按连击递减，× 0.2
       else {
         let sc = scaleOf(n);
         if (isFin) sc = Math.max(COMBO.FIN_FLOOR, sc);
         if (name === 'special') sc = Math.max(COMBO.SPECIAL_FLOOR, sc);
         dmg = damage(base, f.war, o.war) * sc * rf * (crit ? f.critK : 1);
-        if (f.abil.length) dmg = this.abilDmg(f, o, h, dmg, isStr, isFin);
+        if (f.abil.length) { const d0 = dmg; dmg = this.abilDmg(f, o, h, dmg, isStr, isFin); f.stats.abilGain += dmg - d0; }
       }
       // 金刚不坏（dArmor）：起手中的重击 / 挨轻击时不硬直，只受 dmgK 的伤害
       let armored = false;
       if (!guarded && o.abil.length && o.hp > 0) {
         const ar = abilOf(o, 'dArmor');
         if (ar && ((ar.on === 'heavyStart' && (o.state === 'charge' || (o.state === 'heavy' && o.phase === 'startup'))) || (ar.on === 'lightTaken' && mv.type === 'L' && name !== 'special'))) {
-          armored = true; dmg *= M.clamp(+ar.dmgK || 0.6, 0.5, 0.7);
+          armored = true; const k = M.clamp(+ar.dmgK || 0.6, 0.5, 0.7); o.stats.abilGain += dmg * (1 - k); dmg *= k;
         }
       }
       // 取整：连击中把每击的小数余数带到下一击（整串的总伤害不因逐击四舍五入而偏离设计值；单击仍是整数）
@@ -1231,10 +1275,11 @@
         const ex = dmg + (n > 1 ? f.dmgCarry || 0 : 0);
         dmg = M.clamp(Math.round(ex), 1, 40);
         f.dmgCarry = M.clamp(ex - dmg, -0.5, 0.5);
+        if (riposte && f.counterK > COUNTER_K) f.stats.abilGain += dmg * (1 - COUNTER_K / f.counterK);   // 反击之能（dCounter / dParry.counterK）多打出的部分
       } else dmg = M.clamp(Math.round(dmg), 0, 40);
       o.hp = Math.max(0, o.hp - dmg);
       const dir = f.face;
-      const charged = name === 'heavy' && chg >= 0.85;
+      const charged = name === 'heavy' && chg >= f.gbMin;
       const crush = guarded && !deflect && isFin && f.blockedRun >= COMBO.CRUSH_RUN;
       const breaks = guarded && (charged || (name === 'special' && finisher) || crush);
       const big = !!mv.big || charged || riposte || crit;
@@ -1261,7 +1306,7 @@
           f.rage = Math.min(100, f.rage + 3 + dmg * 0.8);
         }
         const ls = f.abil.length ? abilOf(f, 'dLifesteal') : null;
-        if (ls && f.hp > 0) f.hp = Math.min(f.hpMax, f.hp + dmg * Math.min(DUEL_BUDGET.LIFESTEAL_CAP, +ls.k || 0));
+        if (ls && f.hp > 0) { const hp0 = f.hp; f.hp = Math.min(f.hpMax, f.hp + Math.min(dmg * Math.min(DUEL_BUDGET.LIFESTEAL_CAP, +ls.k || 0), this.healLeft(f))); f.healed += f.hp - hp0; f.stats.abilGain += f.hp - hp0; }
       }
       if (o.hp <= 0) {
         knock = true; o.ko = true;
@@ -1282,6 +1327,8 @@
           if (o.y > 0) o.vy = Math.max(o.vy, 2);
         }
       }
+      if (!guarded && f.abil.length && o.hp > 0) knock = this.abilProc(f, o, h, charged, counter || riposte, isFin, tip, knock);
+      if (!guarded && o.abil.length && !o.grounded && abilOf(o, 'dWeak')) o.noRegenUntil = this.clock + 3;   // 弱点：空中挨打后 3 秒不回复
       if (knock) {
         this.setState(o, 'knockdown');
         o.vx = dir * (o.ko ? 4.2 : 3.4); o.vy = o.ko ? 6.2 : 5.0; o.y = Math.max(o.y, 0.01);
@@ -1312,9 +1359,29 @@
       }
     }
     // 神兵之能对伤害的修正（白名单内：dLowHp 背水加伤、dCombo 连段加伤、dDmgK 小幅加伤）
+    // 神兵之能的命中附加（dProc / dSuperKnock，ITEMS §7.2）：击退、加硬直、灼烧；击倒只在满蓄重击或 p < 1 时（COMBAT-V4 §3）。返回是否击倒
+    abilProc(f, o, h, charged, counter, isFin, tip, knock) {
+      for (const a of f.abil) {
+        const id = a.t || a.id || a.kind;
+        if (id === 'dSuperKnock') { if ((a.on || 'heavy') === 'heavy' && h.name === 'heavy') o.vx *= M.clamp(+a.k || 1, 1, 1.5); continue; }
+        if (id !== 'dProc') continue;
+        const on = a.on || 'first';
+        const fire = on === 'first' ? f.stats.unguarded === 1 : on === 'heavy' ? h.name === 'heavy' : on === 'heavyFull' ? charged : on === 'counter' ? counter
+          : on === 'comboEnd' ? isFin : on === 'thrust' ? tip : on === 'dash' ? f.fromDash : false;
+        if (!fire) continue;
+        const p = a.p === undefined ? 1 : M.clamp(+a.p, 0, 1);
+        if (p < 1 && rnd() >= p) continue;      // p = 1 不取随机数
+        const eff = a.eff || a.kind;
+        if (eff === 'knockback') o.vx *= 1.4;
+        else if (eff === 'stun') { if (o.state === 'hitstun') o.stun += 0.12; }
+        else if (eff === 'burn') { o.burnT = Math.min(5, +a.dur || 3); o.burnDps = Math.min(1.5, +a.dps || 1); }
+        else if (eff === 'knockdown' && (charged || p < 1) && o.state === 'hitstun' && !(h.name === 'str' && f.strOn && f.strIdx < 7)) knock = true;   // 不在连段中途击倒
+      }
+      return knock;
+    }
     abilDmg(f, o, h, dmg, isStr, isFin) {
       const lh = abilOf(f, 'dLowHp');
-      if (lh && f.hp < (+lh.below || 30)) dmg *= Math.min(DUEL_BUDGET.LOWHP_CAP, Math.max(1, +lh.dmgK || 1));
+      if (lh && f.hp < (+lh.below > 0 && +lh.below <= 1 ? +lh.below * f.hpMax : +lh.below || 30)) dmg *= Math.min(DUEL_BUDGET.LOWHP_CAP, Math.max(1, +lh.dmgK || 1));   // below：体力比例（ITEMS 0.3）
       const dk = abilOf(f, 'dDmgK');
       if (dk) dmg *= 1 + Math.min(DUEL_BUDGET.DMGK_CAP, Math.max(0, +dk.k || 0));
       const dc = abilOf(f, 'dCombo');
@@ -1348,7 +1415,8 @@
         const s = f.stats;
         return { hits: s.hits, parries: s.parries, parryTries: s.parryTries, counters: s.counters, whiffs: s.whiffs, parryBy: Object.assign({}, s.parryBy),
           strings: s.strings, stringHits: s.stringHits, fullStrings: s.fullStrings, breaks: s.breaks, broken: s.broken, crits: s.crits, critDmg: s.critDmg,
-          unguarded: s.unguarded, dmg: s.dmg, guardCrushes: s.guardCrushes, lows: s.lows, overheads: s.overheads, delays: s.delays, onBeat: s.onBeat, late: s.late, early: s.early };
+          unguarded: s.unguarded, dmg: s.dmg, guardCrushes: s.guardCrushes, lows: s.lows, overheads: s.overheads, delays: s.delays, onBeat: s.onBeat, late: s.late, early: s.early,
+          taken: s.taken, guarded: s.guarded, lowsBlocked: s.lowsBlocked, ovhBlocked: s.ovhBlocked, abilGain: Math.round(s.abilGain * 100) / 100 };
       };
       const seenSteps = {};
       for (const f of this.f) if (f.gen && f.gen.name) seenSteps[f.gen.name] = (seenSteps[f.gen.name] | 0) | f.seenMask;
@@ -1430,6 +1498,7 @@
       // lowP 对手对我的格挡出下段；crouchT 对手蹲着挡
       this.pBreak = [0, 0, 0, 0, 0, 0, 0, 0]; this.pbSeq = -1;
       this.pDelay = 0.1; this.pdSeq = -1; this.pushy = 0.2; this.lowP = 0.1; this.crouchT = 0.1;
+      this.contB = 0.7; this.cbPend = null;   // 他的连段被我挡下后，还接不接下一步（只连按 J 的接不上：举防中格开下一步就落空）
       this.gLow = false;                 // 举防时蹲挡（↓）
       this.hand = 0.03 + 0.06 * (1 - s); // 看清来招高度后换挡的手上延迟（秒）
       this.gLowTo = null; this.gLowAt = 0;
@@ -1439,7 +1508,8 @@
     // 对手第 i 步（0 起）的类型：见过才知道（''）
     typeKnown(i, foe) { return i >= 0 && i < 8 && (this.known & (1 << i)) ? foe.seqStr[i] : ''; }
     // 举防高度的习惯（§14.4）：对手越常出下段越常蹲挡（≈ 下段倾向 0.1 → 0.3 之间平滑到 gs），否则站挡
-    habitLow() { return MIXUPS && rnd() < this.gs * M.clamp((this.lowP - 0.1) / 0.2, 0, 1); }
+    // 看得及跃劈（反应 + 手上延迟 ≤ 0.85 × 跃劈起手）的电脑把蹲挡当作平时的稳妥架势（§6.4「蹲挡是安全的默认姿势」）：基础 AI_LOW_BASE（0.7）× gs
+    habitLow() { return MIXUPS && rnd() < this.gs * M.clamp(Math.max((this.lowP - 0.1) / 0.2, this.react + this.hand <= OVH_SU * 0.85 ? AI_LOW_BASE : 0), 0, 1); }
     // 自己的起手键：招式谱第 1 步是 L（J）还是 M（K）
     s1Key() { return this.me.seqStr[0] === 'M' ? 'medium' : 'light'; }
     // 对手连段若按节拍接下一步，下一击打到的时刻（不知道下一步的类型就按 M 的节奏估计，§14.3）
@@ -1598,13 +1668,20 @@
       }
       if (sk && sk.delaying && this.pdSeq !== sk.seq) { this.pdSeq = sk.seq; this.pDelay += (1 - this.pDelay) * 0.4; }
       this.pDelay *= 1 - DT * 0.02;
-      // 他对我的格挡出下段 / 他蹲着挡
-      // 他出下段（看见即记，不论当时自己在做什么：多半是冲着自己的格挡来的）；他出中段 / 上段就慢慢淡忘
+      // 他对我的格挡出下段 / 他蹲着挡：他出下段就记下，出中段 / 上段就慢慢淡忘
+      // 下段看见即记（不论当时自己在做什么：挨了扫腿多半已倒地）；中段 / 上段只在冲着自己的格挡来时（§14.4「对手对我的格挡出下段」）才慢慢淡忘
       if (sk && sk.atk && sk.seq !== this.lowSeq && !(sk.state === 'str' && sk.step > 0) && Math.abs(sk.x - me.x) < foe.reach + 1.2) {   // 每次出手只算一次（连段的后续步不算）
-        this.lowSeq = sk.seq;
-        if (sk.state === 'cL' || sk.state === 'cM') this.lowP += (1 - this.lowP) * 0.5; else this.lowP -= this.lowP * 0.03;
+        const isLow = sk.state === 'cL' || sk.state === 'cM';
+        const myG = me.state === 'guard' || me.state === 'guardstun' || me.state === 'crouch' || this.held.guard;
+        if (isLow || myG) { this.lowSeq = sk.seq; if (isLow) this.lowP += (1 - this.lowP) * 0.5; else this.lowP -= this.lowP * 0.03; }
       }
       this.lowP *= 1 - DT * 0.03;
+      // 被挡后他接没接下一步（看得见的出手）
+      const cb = this.cbPend;
+      if (cb) {
+        if (foe.state === 'str' && foe.strOn && foe.strIdx > cb.step) { this.contB += (1 - this.contB) * 0.3; this.cbPend = null; }
+        else if (!(foe.state === 'str' && foe.strOn) || sim.clock - cb.t > 0.6) { this.contB -= this.contB * 0.3; this.cbPend = null; }
+      }
       // 试探频率：自己在对手轻击距离内、对手可出手的时长（约 14 秒的记忆）；近身时对手举防的时间比例
       const d = Math.abs(foe.x - me.x), foeR = foe.reach * MOVES.L.reachK + BODY * 0.5;
       const fade = 1 - DT * 0.07;
@@ -1770,6 +1847,8 @@
         const want = seen.line === 'overhead' ? false : seen.line === 'low' ? true : null;
         if (want !== null && want !== this.gLow && this.gLowTo !== want) { this.gLowTo = want; this.gLowAt = now + this.hand; this.gLowSrc = seen.clock; }
       }
+      // 看见起跳（离地即看得见）：空中攻击是上段，站起来挡
+      if (seen && seen.state === 'jump' && this.gLow && this.gLowTo === null) { this.gLowTo = false; this.gLowAt = now + this.hand; this.gLowSrc = seen.clock; }
       if (this.gLowTo !== null && now >= this.gLowAt) { this.gLow = this.gLowTo; this.gLowTo = null; }
       // 冲刺斩：冲到够得着（追退开的对手要更近）或冲势将尽再出斩
       if (now < this.chaseUntil && me.state === 'dash') { if (dist <= reach - (this.chaseFar ? 0.35 : 0.1) || me.t >= 0.19) { this.chaseUntil = 0; this.press('light'); } return; }
@@ -1824,13 +1903,16 @@
             if (rnd() < this.parryP * w * (kt ? 1 : 0.3) * (0.5 + 0.5 * rk)) {
               let T = this.nextStepHit(sim, foe);
               if (this.pDelay > 0.4 && kt === 'H') T += 0.10;
-              this.planParry(sim, T, COMBO.HS_K_TYPE[fin ? 'F' : (kt || 'M')] * 0.5, 0.65);
+              const planned = this.planParry(sim, T, COMBO.HS_K_TYPE[fin ? 'F' : (kt || 'M')] * 0.5, 0.65);
+              // 测试钩子（tests/duel-bots.js (12) 诚实检查）：预计打到的时刻 vs 按节拍的真实时刻
+              if (planned && this.onPlan) this.onPlan({ step: ni, known: !!kt, type: foe.seqStr[ni], T, trueT: now + (Math.max(0, foe.cp - foe.t) + stepMove(foe.seqStr, ni).startup) / foe.spd, at: this.parryAt, now });
             }
           }
           // 挡下连段的一步：下一步见过 → 多半格开它（全窗口），然后反击；没见过也偶尔一试
+          if (me.state === 'guardstun' && foe.state === 'str' && foe.strOn && foe.strIdx < 7) this.cbPend = { step: foe.strIdx, t: now };
           if (me.state === 'guardstun' && foe.state === 'str' && foe.strOn && foe.strIdx < 7 && sim.parryReady(me)) {
             const kt = this.typeKnown(foe.strIdx + 1, foe);
-            if (rnd() < this.parryP * (0.10 + 0.50 * (kt ? 1 : 0))) this.planParry(sim, this.nextStepHit(sim, foe));
+            if (rnd() < this.parryP * (0.10 + 0.50 * (kt ? 1 : 0)) * M.clamp(this.contB / 0.5, 0, 1)) this.planParry(sim, this.nextStepHit(sim, foe));
             // 下一步是已知的重步：防御硬直一结束就插一刀（重步前有 0.10 秒的空隙）
             else if (kt === 'H' && foe.strIdx + 1 < 7 && rnd() < this.punishP * 0.5) this.jabAt = now + Math.max(0, me.stun - me.t - DT);
           }
@@ -1913,7 +1995,7 @@
         }
         if (!big && dist <= reach + 0.8 && foe.state !== 'special') {
           const rp = this.repoke;
-          if (rp > 0.45 && sim.parryReady(me) && rnd() < this.parryP * (rp - 0.3) * 1.6 &&
+          if (rp > 0.45 && sim.parryReady(me) && rnd() < this.parryP * (rp - 0.3) * AI_REPOKE_K &&
             this.planParry(sim, now + left + MOVES.L.startup / foe.spd + 0.03)) { this.guardUntil = 0; H.guard = true; H.x = 0; return; }
           // 够不着（对手兵器长、挡下后又被推开）：冲刺斩抢回合
           const out = dist > reach;
@@ -1938,7 +2020,7 @@
           // 追击退开的对手：先冲刺，冲到够得着再出斩（冲刺一出斩就失去冲势，只多走半步）
           if (this.ttChase) this.dashStrike(now, true);
           else if ((this.ttDash || this.ttLate) && dist > reach) this.dashStrike(now);
-          else this.press('light');
+          else this.press(this.ttLate ? this.s1Key() : 'light');      // 慢半拍那一刀不拼快：以本人连段起手
           this.ttMine = { t: now, hits: me.stats.hits, guarded: me.stats.guarded, parried: me.stats.parried, taken: me.stats.taken, seq: -1, end: 0, back: false, dash: !!H.dash };
           return;
         }
@@ -1952,7 +2034,7 @@
         if (sn && sn.state === 'heavy' && sn.seq === foe.seq) {
           this.hvSeq = foe.seq;
           const mvH = MOVES.heavy, at = now + rnd() * 0.05 * (1.6 - s), T = now + (suOf(foe) - foe.t) / foe.spd;
-          if (at < T - 0.01 && dist <= foe.reach * mvH.reachK + BODY * 0.5 + 0.6 && rnd() < Math.min(HEAVY_PARRY_CAP, this.parryP * (0.55 + 0.45 * foe.charge))) {
+          if (at < T - 0.01 && Math.abs(sn.x - me.x) <= foe.reach * mvH.reachK + BODY * 0.5 + 0.6 && rnd() < Math.min(HEAVY_PARRY_CAP, this.parryP * (0.55 + 0.45 * foe.charge))) {   // 距离按看见的那一刻
             this.parryAt = at; H.guard = true; H.x = 0; return;
           }
         }
@@ -2083,13 +2165,15 @@
       if (seen && sim.actionable(me) && now >= this.pokeAt && (seen.state === 'walk' || seen.state === 'dash' || seen.state === 'idle')) {
         const prev = sim.seen(foe.idx, this.react + 0.05);
         const vx = prev && seen.clock > prev.clock ? (seen.x - prev.x) / (seen.clock - prev.clock) : 0;
-        const lead = MOVES.L.startup / me.spd;
+        // 第四版：迎击以本人连段起手（招式谱第 1 步是 M 的，用 M 的起手与距离预判；打中即可接整串，§14.1）
+        const s1 = this.s1Key(), mv1 = s1 === 'medium' ? MOVES.M : MOVES.L;
+        const lead = mv1.startup / me.spd;
         const pd = Math.abs(seen.x + vx * (this.react + lead) - (me.x + me.vx * lead * 0.3));
-        const reachM = me.reach * MOVES.M.reachK + BODY * 0.5 - 0.03;
-        if (pd <= reach) {
+        const reachM = me.reach * MOVES.M.reachK + BODY * 0.5 - 0.03, reach1 = s1 === 'medium' ? reachM : reach;
+        if (pd <= reach1) {
           this.pokeAt = now + 0.3;
-          if (rnd() < this.pokeP) { if (this.holdOff(sim, seen, rd) || this.wary(sim, seen)) return; this.press('light'); H.x = 0; this.planX = 0; return; }
-        } else if (pd <= reachM && rnd() < 0.4 * this.gs * this.pokeP) {
+          if (rnd() < this.pokeP) { if (this.holdOff(sim, seen, rd) || this.wary(sim, seen)) return; this.press(s1); H.x = 0; this.planX = 0; return; }
+        } else if (s1 === 'light' && pd <= reachM && rnd() < 0.4 * this.gs * this.pokeP) {
           // 第四版：L 够不着、M 够得着的距离——中击（刃尖会心）迎击（§14.1）
           this.pokeAt = now + 0.3;
           if (this.holdOff(sim, seen, rd) || this.wary(sim, seen)) return;
@@ -2101,7 +2185,7 @@
       if (seen && seen.state === 'charge' && dist < foe.reach * 1.08 + BODY * 0.5 + 0.9 && now >= this.next) {
         this.next = now + this.period;
         const r = rnd();
-        if (r < s * 0.6 && dist <= reach && sim.actionable(me)) { this.press('light'); return; }
+        if (r < s * 0.6 && dist <= reach && sim.actionable(me)) { this.press(this.s1Key()); return; }   // 打断蓄力：他站着不动，以连段起手（破绽 ×1.2）
         if (r < s * 0.9) {
           if (seen.charge > 0.55) { this.backUntil = now + 0.4; this.guardUntil = 0; }
           else this.guardUntil = Math.max(this.guardUntil, now + 0.3);
@@ -2114,7 +2198,7 @@
       }
       const canGuard = free || me.state === 'guardstun';
       // 举防高度的习惯（§14.4）：没有正在应对的来招时，隔一阵按对手惯出下段的程度重定一次
-      if (this.gLowTo === null && now >= (this.gHabitAt || 0) && !(seen && seen.atk)) { this.gHabitAt = now + 0.35 + rnd() * 0.3; this.gLow = this.habitLow(); }
+      if (this.gLowTo === null && now >= (this.gHabitAt || 0) && !(seen && (seen.atk || seen.state === 'jump'))) { this.gHabitAt = now + 0.35 + rnd() * 0.3; this.gLow = this.habitLow(); }
       if (now < this.guardUntil && canGuard) { H.guard = true; H.x = 0; return; }
       H.guard = false;
       if (now < this.backUntil && sim.actionable(me)) { H.x = -me.face; return; }
@@ -2249,15 +2333,16 @@
       taps: { light: 0, medium: 0, up: 0, special: 0, heavy: 0, dir: 0, parry: 0, ovh: 0 } };
     let nt = 0, pAt = -1, gsSeq = -1, hvSeq = -1, relAt = 0;
     let sSeq = -1, sAt = -1, sKey = '', sDelay = 0, lowAt = -9, brokeAt = -9, lastBroken = 0, mixPick = 0, mixAt = 0, mashAt = 0, kanSeq = -1;
+    let known = 0;                                // 见过的对手招式谱步（按位；人的反应延迟后才记下，§12.2）
     const gz = () => (rnd() + rnd() + rnd() + rnd() - 2) * 1.732;   // 近似标准正态
     const HRT = 0.22, SD = 0.045;
     const v4 = { hbguard: 1, combo: 1, breaker: 1, delay: 1, mixup: 1 }[kind] === 1;
     const strings = kind === 'combo' || kind === 'breaker' || kind === 'delay' || kind === 'mixup';
     const maxStep = 7;                            // 命中确认后打满整串（第三版的「命中才接连段」，第四版的连段即整串）
-    // 对手连段的下一步按节拍打到的时刻（人见过这串：知道类型）
+    // 对手连段的下一步按节拍打到的时刻：见过那一步就知道类型，没见过按中击的节奏估（同电脑，§14.3）
     const nextHitOf = (sim, o) => {
       if (o.state !== 'str' || !o.strOn || o.strIdx >= 7) return sim.clock + 0.2;
-      const ni = o.strIdx + 1, t = o.seqStr[ni];
+      const ni = o.strIdx + 1, t = known & (1 << ni) ? o.seqStr[ni] : 'M';
       return sim.clock + (Math.max(0, o.cp - o.t) + (ni === 7 ? STEP['F' + t] : STEP[t]).startup) / o.spd;
     };
     // 自己的连段：打中（或被挡 / 挥空）时决定一次，在接续点之后按节拍（σ）按下一步
@@ -2319,6 +2404,7 @@
         return;
       }
       const useParry = kind === 'parry' || kind === 'heavy' || kind === 'breaker';
+      { const sk = sim.seen(o.idx, HRT); if (sk && sk.step >= 0 && sk.state === 'str') known |= 1 << sk.step; }
       const reach = me.reach * MOVES.L.reachK + BODY * 0.5 - 0.03;
       if (me.state === 'charge') { H.heavy = now < relAt; H.x = 0; H.guard = false; return; }
       H.heavy = false;
@@ -2337,8 +2423,9 @@
       H.x = 0;
       if (me.state === 'parryok' || sim.countering(me)) { H.guard = false; if (d <= reach + 0.05) { if (now > nt) { T[TYPE_KEY[me.seqStr[0]]]++; nt = now + 0.08; } } else H.x = me.face; return; }
       // 看破对手的连段：挨了第 k ≥ 2 步，瞄准第 k + 1 步的节拍（parry 机器人：只看破第 3 步，同第三版）
+      // 只看破见过的那一步（第三版的通用三连人人皆知；第四版的招式谱要先见识过）
       if (useParry && me.state === 'hitstun' && me.seq !== gsSeq && o.state === 'str' && o.strOn && sim.parryReady(me) &&
-        (kind === 'breaker' ? o.strIdx >= 1 && o.strIdx < 7 : o.strIdx === 1)) {
+        (kind === 'breaker' ? o.strIdx >= 1 && o.strIdx < 7 : o.strIdx === 1) && (known & (1 << (o.strIdx + 1)))) {
         gsSeq = me.seq;
         const ni = o.strIdx + 1, typ = ni === 7 ? 'F' : o.seqStr[ni];
         const w = Math.min(me.parryW * COMBO.HS_K_TYPE[typ], stepGap(o.seqStr, o.strIdx) / o.spd - COMBO.HS_CAP_PAD);
@@ -3248,6 +3335,23 @@
     if (t < mv.startup + mv.active) return 1 + (t - mv.startup) / mv.active;
     return Math.min(3, 2 + (t - mv.startup - mv.active) / mv.recovery);
   }
+  // 第四版的出招状态在画面上借用已有片段（COMBAT-V4 §13.1 的临时映射，新片段落地前；见报告的片段清单）：
+  //   连段步 / 单出 L M（'str'）按 mv.clip —— L 步 light2、M 步与单出 M light3、单出 L 与 L 起手 light1、H 步 heavy；终结技 轻 light3、中 / 重 heavy；
+  //   ↓J / ↓K light1、↓L light2（下半身取落地的蹲姿）；跃劈 heavy（起手按实际秒数，举刀停一顿）；重击 heavy（随蓄力）。
+  //   迟滞的重步：规则时钟停走，画面自然停在举刀处。返回 { clip, mv, hold, low } 或 null（非出招状态）
+  const LOW_POSE = { lower: 'jump', lowerT: 0.72 };
+  function viewMove(f) {
+    const st = f.state;
+    if (st === 'str' && f.mv) {
+      let clip = f.mv.clip;
+      if (clip === 'special' || !(clip in FIG_SWING)) clip = f.mv.type === 'L' ? 'light3' : 'heavy';
+      return { clip, mv: f.mv, hold: 0, low: false };
+    }
+    if (st === 'cL' || st === 'cM' || st === 'cH') return { clip: MOVES[st].clip, mv: MOVES[st], hold: 0, low: true };
+    if (st === 'ovh') return { clip: 'heavy', mv: MOVES.ovh, hold: Math.max(0, suOf(f) - MOVES.ovh.startup), low: false };
+    if (st === 'heavy') return { clip: 'heavy', mv: MOVES.heavy, hold: Math.max(0, heavySU(f.charge, f.spd) - MOVES.heavy.startup), low: false };
+    return null;
+  }
 
   // 两段 IK：S（根）→ T（末端），返回中间关节 E（膝 / 肘）；hint 为弯曲方向
   const _ik = {};
@@ -3394,9 +3498,11 @@
     sample(dt) {
       const f = this.f, c = this.clips, out = this.tgt;
       let key = f.state + ':' + f.seq, dur = BLEND[f.state] !== undefined ? BLEND[f.state] : 0.05;
-      const mv = MOVES[f.state];
+      const vw = viewMove(f);
       if (this.intro >= 0) { key = 'intro'; sampleKeys(c.intro, this.intro, out); dur = 0.1; }
-      else if (mv && f.state !== 'special') { sampleKeys(c[f.state], phaseOf(mv, f.t, f.state === 'heavy' ? heavySU(f.charge, f.spd) - mv.startup : 0), out); }
+      else if (vw) { sampleKeys(c[vw.clip], phaseOf(vw.mv, f.t, vw.hold), out); }
+      else if (f.state === 'crouch') out.set(c.guard);
+      else if (f.state === 'air' || f.state === 'airM' || f.state === 'airH') sampleKeys(c.air || c.heavy, phaseOf(MOVES[f.state], f.t, 0), out);
       else switch (f.state) {
         case 'special': sampleKeys(f.bow ? c.bowSpecial : c.special, f.t, out); break;
         case 'charge': out.set(c.charge); break;
@@ -3904,31 +4010,34 @@
         return [clip, t, key, null, 0];
       }
       if (f.state === 'special') return f.bow ? this.bowSpecialPose(f.t).concat([null, 0]) : this.specialPose(f.t);
-      if (mv && f.state !== 'air') {
-        const c = C[f.state];
-        const hold = f.state === 'heavy' ? heavySU(f.charge, f.spd) - mv.startup : 0;
+      const vw = viewMove(f);
+      if (vw) {
+        const mv = vw.mv, c = C[vw.clip];
+        const hold = vw.hold;
         const ph = phaseOf(mv, f.t, hold);
-        const s0 = f.state === 'heavy' ? FIG_SWING.heavy[0] : 0;
-        clip = f.state;
+        const s0 = vw.clip === 'heavy' ? FIG_SWING.heavy[0] : 0;
+        clip = vw.clip;
         // 「打到」的片段时刻：起手期间按与对手的距离逐帧取（连续变化），进入判定后锁定（打击停顿时姿势不跳）
         if (ph < 1 || this.tcKey !== key) { this.tcKey = key; this.tcHit = this.contactT(c); }
         const tc = this.tcHit;
         // 判定段先贴住「打到」的姿势再加速挥过（命中多在判定开始的一两帧，挥击末段极快，线性推进会在定格前就挥过头）
-        t = ph < 1 ? lerpU(s0, tc, f.state === 'heavy' ? ph : ease2(ph) * 0.35 + ph * 0.65) : ph < 2 ? lerpU(tc, c.te, (ph - 1) * (ph - 1)) : lerpU(c.te, c.dur, ease2(ph - 2));
+        t = ph < 1 ? lerpU(s0, tc, vw.clip === 'heavy' ? ph : ease2(ph) * 0.35 + ph * 0.65) : ph < 2 ? lerpU(tc, c.te, (ph - 1) * (ph - 1)) : lerpU(c.te, c.dur, ease2(ph - 2));
         // 前冲包络：整个起手里迈步（重击在举刀蓄势的停顿之后才迈），判定开始时正好到位（命中定格的一帧刃口贴住对手），收招时退回
         const env = ph < 1 ? ease2(ph) : ph < 2 ? 1 : 1 - ease2(ph - 2);
-        return [clip, t, key, null, env, c];
+        return [clip, t, key, vw.low ? LOW_POSE : null, env, c];
       }
       const jumpT = () => 0.12 + M.clamp01((JUMP_V - f.vy) / (2 * JUMP_V)) * 0.5;
       switch (f.state) {
+        case 'crouch': return ['block', this.time, 'crouch', LOW_POSE, 0];
+        case 'airM': case 'airH':
         case 'air': {
-          const c = C.air, ph = phaseOf(MOVES.air, f.t, 0);
+          const c = C.air, ph = phaseOf(MOVES[f.state], f.t, 0);
           t = ph < 1 ? lerpU(0.36, c.tc, ph) : ph < 2 ? lerpU(c.tc, c.te, (ph - 1) * (ph - 1)) : lerpU(c.te, 0.74, ph - 2);
           return ['heavy', t, key, { lower: 'jump', lowerT: jumpT() }, ph < 1 ? ph : ph < 2 ? 1 : 3 - ph, c];
         }
         case 'walk': return ['idle', this.time, 'walk', { lower: 'walk', lowerT: this.walkPhase / (Math.PI * 2) * 1.0 }, 0];
-        case 'guard': return ['block', this.time, 'guard', null, 0];
-        case 'guardstun': return ['block', this.time, key, { blend: { clip: 'hit', t: Math.min(0.07, f.t * 1.2), w: 0.72 } }, 0];
+        case 'guard': return ['block', this.time, f.low ? 'guardL' : 'guard', f.low ? LOW_POSE : null, 0];
+        case 'guardstun': return ['block', this.time, key, f.low ? { lower: 'jump', lowerT: 0.72, blend: { clip: 'hit', t: Math.min(0.07, f.t * 1.2), w: 0.72 } } : { blend: { clip: 'hit', t: Math.min(0.07, f.t * 1.2), w: 0.72 } }, 0];
         case 'guardbreak': return ['guardbreak', f.t < 0.08 ? f.t / 0.08 * 0.1 : 0.1 + (f.t - 0.08) / Math.max(0.1, f.stun - 0.08) * 0.5, key, null, 0];
         case 'hitstun': {
           clip = f.hitBack || f.hitH !== 'high' ? 'hitB' : 'hit';
@@ -3990,7 +4099,7 @@
       }
       // 程序化叠加：重击举刀的一顿（后仰蓄势）、蓄力颤动、受击 / 被格开的抖动
       const bn = fig.bones;
-      const hold = st === 'heavy' ? heavySU(f.charge, f.spd) - MOVES.heavy.startup : 0;
+      const vw = viewMove(f), hold = vw ? vw.hold : 0;
       if (hold > 0 && f.t < hold) { const u = f.t / hold; bn.spine.rotation.x -= 0.1 * u; }
       let jx = 0, jy = 0;
       if (st === 'charge') { const q = f.charge, n = this.time * 61; jx += Math.sin(n) * 0.008 * q; jy += Math.cos(n * 1.3) * 0.006 * q; }
@@ -4807,6 +4916,492 @@
     }
   }
 
+  // ============================================================ 第四版：Lanternvale 风格的场地 --
+  // DESIGN-V4 §2（美术推广 · 单挑）：只换场地的画风（规则、AI、镜头、时间轴不变）——按试点批准的 SG.LP / SG.LPProps：
+  //   地面：绘制式顶点色（草地四色斑块、踩实的土路、河岸沙、山岩、远处的田）+ LP 笔触细节纹理与光照（不描墨线）；
+  //   景物：LPProps 的树（槐 · 栎 · 榆 · 松 · 云杉 · 垂柳 · 杨 · 黄山松）、石、灌木、芦苇 / 香蒲、火把，实例化 + 实例化墨线；
+  //         草丛与野花合成一个随风摆的网格；断枪残旗、弃盾、倒木为描墨线的 LP 网格；城门（城墙地形）用试点的城门楼与夯土城墙；
+  //   帅旗：LP 材质的旗面（势力色 + 姓氏贴图）与描墨线的旗杆；两军与两员武将脚下有柔和的圆影；
+  //   光照：本场一个 LP.Mood（接管场上的主光与天光：LP 材质得到 Lanternvale 的光照，旗面等原有材质按原值随时刻缩放），
+  //         时刻按地形：平原黄金时刻、森林 / 丘陵 / 河川午后、城门黄昏（opts.mood 可指定）；天空、雾、水面随之变色。
+  // 没有载入 js/lowpoly.js / js/lp-props.js 时（旧测试页）照旧用第三版的场地。
+  const duelLP = () => !!(SG.LP && SG.LP.MeshBuilder && SG.LP.material && SG.LP.Scatter && SG.LP.BlobShadows && SG.LP.Mood && SG.LPProps && SG.LPProps.geometry && SG.LPProps.parts);
+  const LP_ARENA = {
+    plain: { hour: 16.9, meadow: ['#A8B460', '#B8C26C', '#8EA050', '#7E9248'], lane: '#A89276', lane2: '#94806A', fog: '#E6CFA8', far: '#A4A2B2', mid: '#8A9670', grass: ['#9CB45A', '#B0C268', '#86A04E', '#C2C878'] },
+    forest: { hour: 15.5, meadow: ['#86A452', '#96B25E', '#6E8E46', '#5E7E40'], lane: '#9A8466', lane2: '#867258', fog: '#B4C8A8', far: '#86A094', mid: '#66866A', grass: ['#7EAA50', '#92BC5E', '#6A9646', '#A6C46C'] },
+    hill: { hour: 16.2, meadow: ['#A0AA66', '#B0B872', '#8A9658', '#7A864E'], lane: '#A88E70', lane2: '#94785E', fog: '#CCC8B8', far: '#929CAE', mid: '#808A6C', grass: ['#A0B064', '#B4C072', '#8A9C58', '#C2C882'] },
+    river: { hour: 15.0, meadow: ['#94AE5C', '#A6BC68', '#7C9A4E', '#6C8A46'], lane: '#B09A7A', lane2: '#9C8668', fog: '#C8D4CE', far: '#92A4B2', mid: '#728E74', grass: ['#8AB25A', '#A0C268', '#76A04E', '#B2C878'] },
+    castle: { hour: 19.2, meadow: ['#8E9C5C', '#9EAA66', '#7A8850', '#6C7848'], lane: '#A08868', lane2: '#8A7458', fog: '#C4A8A8', far: '#7E7494', mid: '#6E6874', grass: ['#8AA05A', '#9CB066', '#76904E', '#AABA74'] },
+  };
+  const _dhx = {};
+  const dhx = h => _dhx[h] || (_dhx[h] = SG.LP.Paint.hex(h));
+  const dmix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+  const dmul = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
+  function dnoise(x, z, s) {
+    const f = (i, j) => SG.LP.hash01([i, j, s], 17);
+    const ix = Math.floor(x), iz = Math.floor(z), tx = x - ix, tz = z - iz, sx = tx * tx * (3 - 2 * tx), sz = tz * tz * (3 - 2 * tz);
+    const a = f(ix, iz), b = f(ix + 1, iz), c = f(ix, iz + 1), d = f(ix + 1, iz + 1);
+    return (a + (b - a) * sx) * (1 - sz) + (c + (d - c) * sx) * sz;
+  }
+  // LP 地面材质（SG.LP.material 的着色器 + 笔触细节纹理，不加边缘光）；跨场次常驻
+  let LPGROUND;
+  function lpGroundMat() {
+    if (LPGROUND !== undefined) return LPGROUND;
+    LPGROUND = null;
+    const LP = SG.LP, base = LP.material({ detail: LP.grassDetail(), planar: 0.55, detailK: 0.8 });
+    let fs = base.fragmentShader;
+    const rl = fs.match(/float rim = pow\([^;]*;/);
+    if (rl) fs = fs.replace(rl[0], 'float rim = 0.0;');
+    const u = THREE.UniformsUtils.merge([THREE.UniformsLib.lights, THREE.UniformsLib.fog, {
+      uRimBoost: { value: 0 }, uFogScale: { value: 1 }, uWindScale: { value: 0 }, uFade: { value: 1 }, uLit: { value: -1 }, uPlanar: { value: 0.55 }, uDetailK: { value: 0.8 },
+    }]);
+    u.uTint = { value: new THREE.Vector3(1, 1, 1) };
+    u.uFlash = { value: new THREE.Vector4(1, 1, 1, 0) };
+    u.uDetail = { value: LP.grassDetail() };
+    for (const k in LP.globals) u[k] = LP.globals[k];
+    const m = new THREE.ShaderMaterial({ uniforms: u, vertexShader: base.vertexShader, fragmentShader: fs, lights: true, fog: true, vertexColors: true });
+    m.defines = Object.assign({}, base.defines || {});
+    m.name = 'DuelGroundLP';
+    LPGROUND = m;
+    return m;
+  }
+  // 水面（LP 版）：主场景水面材质的常驻副本，颜色随本场的时刻（时间与波纹与主场景共用）
+  let LPWATER = null;
+  function lpWaterMat() {
+    if (!LPWATER) {
+      const src = SG.Gfx.water();
+      LPWATER = src.clone();
+      for (const k of ['uTime', 'uRipple']) if (src.uniforms[k]) LPWATER.uniforms[k] = src.uniforms[k];
+    }
+    return LPWATER;
+  }
+  // 旗面：LP 材质（贴图）的副本——共用着色器程序，每面旗自己的贴图；全局量（氛围、风）仍与 SG.LP 共用
+  let LPCLOTH = null;
+  function lpClothMat(tex) {
+    const LP = SG.LP;
+    if (!LPCLOTH) LPCLOTH = LP.material({ map: new THREE.Texture(), side: THREE.DoubleSide });
+    const m = LPCLOTH.clone();
+    for (const k in LP.globals) m.uniforms[k] = LP.globals[k];
+    m.uniforms.uMap.value = tex;
+    return m;
+  }
+  // 配方对象（同 SG.LPProps.make），牌匾文字可按原文替换：城门楼的城名选项与配方名同名（LPProps 会把 o.name 覆盖成配方名）
+  function lpMakeNamed(name, opts, texts) {
+    const LP = SG.LP, g = SG.LPProps.geometry(name, opts), root = new THREE.Group();
+    if (g.ink) root.add(LP.mesh(g.ink, { castShadow: g.castShadow }));
+    if (g.plain) root.add(LP.mesh(g.plain, { outline: false, castShadow: g.plainShadow }));
+    for (const d of g.decals) {
+      const text = texts && texts[d.text] != null ? texts[d.text] : d.text;
+      const dm = LP.decal(LP.boardTexture(text, { w: 448, h: Math.round(448 * d.h / d.w), board: d.board, ink: d.ink, vertical: d.vertical, line: d.line }), d.w, d.h);
+      dm.position.set(d.at[0], d.at[1], d.at[2]);
+      if (d.yaw) dm.rotation.y = d.yaw * Math.PI / 180;
+      if (d.tilt) dm.rotation.x = d.tilt * Math.PI / 180;
+      if (d.local) dm.translateZ(d.local[2]);
+      root.add(dm);
+    }
+    root.userData.lp = { name, lamps: g.lamps, anchors: g.anchors, tris: g.tris, size: g.size };
+    return root;
+  }
+  class ArenaLP extends Arena {
+    constructor(scene, kind, colA, colB, glyphA, glyphB, seed, culA, culB) {
+      // 父类构造里会依次调用 buildGround / buildFarRidge / buildProps / flushInstances / buildArmies / addBanner（下面各自覆盖）
+      super(scene, kind, colA, colB, glyphA, glyphB, seed, culA, culB);
+      this.lp = true;
+    }
+    lpPrep() {
+      if (this.lpS) return;
+      this.lpPal = LP_ARENA[this.kind] || LP_ARENA.plain;
+      this.lpS = new SG.LP.Scatter({ chunk: 0, name: 'DuelProps' });
+      this.lpM = new SG.LP.MeshBuilder(((this.rnd.nextDouble() * 1e6) | 0) + 3);
+      this.lpM.jitter = 0.06;
+      this.lpGrass = [];
+      this.lpBlobs = [];
+      this.lpTris = 0;
+    }
+    // 一个配方副本：远处（z < −22）用远景细节、不描墨线、不投影
+    lpAdd(name, opts, x, y, z, yaw, scale, tint) {
+      try {
+        const far = z < -22, o = Object.assign({}, opts || {}, { lod: far ? 'far' : 'near' });
+        const g = SG.LPProps.geometry(name, o);
+        if (g.ink) this.lpS.add(g.ink, x, y, z, yaw, scale, tint || null, { castShadow: g.castShadow && !far && z > -14, outline: !far });
+        if (g.plain) this.lpS.add(g.plain, x, y, z, yaw, scale, tint || null, { outline: false, castShadow: false });
+        this.lpTris += g.tris;
+        return g;
+      } catch (e) { console.error(e); return null; }
+    }
+    // ---------------------------------------------------------- 地形 --
+    buildGround() {
+      this.lpPrep();
+      super.buildGround();
+      const g = this.ground.geometry, pos = g.getAttribute('position').array, nor = g.getAttribute('normal').array, am = g.getAttribute('aMat').array;
+      const N = pos.length / 3, C4 = new Float32Array(N * 4), lp = this.lpPal, kind = this.kind, P = M.perlinNoise;
+      const pal = lp.meadow.map(h => dmix(dhx(h), dhx('#D2D294'), 0.16)), lane = dhx(lp.lane), lane2 = dhx(lp.lane2);
+      const crops = ['#D8BE6C', '#C9B060', '#B8C46A', '#9EB45E', '#C8A464', '#A8875A'].map(dhx);
+      for (let i = 0; i < N; i++) {
+        const x = pos[i * 3], y = pos[i * 3 + 1], z = pos[i * 3 + 2], slope = 1 - nor[i * 3 + 1];
+        const n1 = dnoise(x * 0.16, z * 0.16, 1), n2 = dnoise(x * 0.55, z * 0.55, 2), n3 = dnoise(x * 1.3, z * 1.3, 3);
+        let c = dmix(dmix(pal[2], pal[0], ss(0.25, 0.75, n1)), pal[1], ss(0.55, 0.85, n2) * 0.7);
+        c = dmix(c, pal[3], ss(0.32, 0.12, n2) * 0.6);
+        c = dmul(c, 0.93 + n3 * 0.12);
+        // 对决场地：踩实的土路（边缘带噪声，两头过渡到草）
+        const lk = (1 - ss(1.0 + P(x * 0.3, 7) * 1.4, 3.4 + P(x * 0.21, 3) * 1.5, Math.abs(z))) * (1 - ss(11, 16, Math.abs(x)));
+        if (lk > 0.01) c = dmix(c, dmul(dmix(lane, lane2, ss(0.4, 0.8, n2)), 0.94 + 0.12 * n3), M.clamp01(lk * 1.05 + (n3 - 0.5) * 0.2));
+        // 远处的田（平原）
+        if (kind === 'plain' && am[i * 4 + 3] < 0.9) {
+          const fu = Math.floor(x / 7 + 0.4 * dnoise(z * 0.1, 3.1, 9)), fv = Math.floor(z / 5 + 0.3 * dnoise(x * 0.1, 7.3, 10));
+          c = dmix(c, dmul(crops[Math.floor(SG.LP.hash01([fu, fv, 13], 5) * crops.length) % crops.length], 0.95 + 0.1 * n3), M.clamp01((1 - am[i * 4 + 3]) * 1.2));
+        }
+        // 河岸沙、河床
+        if (am[i * 4] > 0.01) c = dmix(c, dmul(dhx('#E2CFA0'), 0.95 + 0.08 * n2), M.clamp01(am[i * 4]));
+        // 城下：铺石的门前
+        if (kind === 'castle') c = dmix(c, dmul(dmix(dhx('#A8A294'), dhx('#BDB6A6'), n3), 0.96 + 0.08 * n2), 0.4 * (1 - ss(6, 12, -z)) * ss(4, 7, -z));
+        // 岩石：陡坡、山巅
+        const hi = ss(6, 22, y) * ss(30, 60, -z);
+        if (hi > 0) c = dmix(c, dhx('#B4B276'), hi * 0.5);
+        const rW = ss(0.3, 0.52, slope + (n2 - 0.5) * 0.22 + am[i * 4 + 1] * 0.25 + hi * 0.3);
+        if (rW > 0.01) c = dmix(c, dmul(dmix(dhx('#8E877C'), dhx('#A89A84'), n1), 0.9 + 0.16 * n3), rW);
+        const sn = am[i * 4 + 2];
+        if (sn > 0.01) c = dmix(c, dmul(dhx('#EEF1F5'), 0.95 + 0.06 * n3), M.clamp01(sn) * (1 - ss(0.45, 0.75, slope)));
+        C4[i * 4] = M.clamp01(c[0]); C4[i * 4 + 1] = M.clamp01(c[1]); C4[i * 4 + 2] = M.clamp01(c[2]); C4[i * 4 + 3] = 0;
+      }
+      g.setAttribute('color', new THREE.BufferAttribute(C4, 4));
+      const mat = lpGroundMat();
+      if (mat) this.ground.material = mat;
+    }
+    buildFarRidge() {
+      const lp = this.lpPal || LP_ARENA.plain;
+      super.buildFarRidge();
+      // 远山：LP 材质（不描墨线），顶点色取本地形的远山 / 中景色
+      const o = this.group.children[this.group.children.length - 1], g = o.geometry, col = g.getAttribute('color').array, n = col.length / 3;
+      const far = dhx(lp.far), mid = dhx(lp.mid), C4 = new Float32Array(n * 4);
+      for (let i = 0; i < n; i++) { const u = ((i % 5) / 4), c = dmix(mid, far, 0.5 + 0.5 * u); C4[i * 4] = c[0]; C4[i * 4 + 1] = c[1]; C4[i * 4 + 2] = c[2]; C4[i * 4 + 3] = 0; }
+      g.setAttribute('color', new THREE.BufferAttribute(C4, 4));
+      o.material = SG.LP.material({ fogScale: 1 });
+    }
+    // ---------------------------------------------------------- 景物 --
+    lpTree(x, z, s, pine) {
+      const r = this.rnd, h = r.nextDouble(), kind = this.kind;
+      let name;
+      if (pine) name = kind === 'hill' && h < 0.3 ? 'tree_pine_cloud' : h < 0.5 ? 'tree_pine' : 'tree_spruce';
+      else if (kind === 'river') name = h < 0.45 ? 'tree_willow' : h < 0.7 ? 'tree_poplar' : 'tree_huai';
+      else name = h < 0.4 ? 'tree_huai' : h < 0.72 ? 'tree_oak' : 'tree_elm';
+      const sd = z < -22 ? 0 : (r.nextDouble() * 2) | 0, sz = SG.LPProps.geometry(name, { seed: sd }).size, tH = s * (pine ? 5.2 : 5.6) * 1.15;   // 远处只用一个变体（少几次绘制）
+      const v = 0.92 + r.nextDouble() * 0.16;
+      this.lpAdd(name, { seed: sd }, x, this.height(x, z) - 0.05, z, r.nextDouble() * 6.283, tH / Math.max(0.1, sz[1]), [v, v, v * 0.98]);
+    }
+    lpRock(x, z, s, big) {
+      const r = this.rnd, name = big ? (s > 3 ? 'cliff' : 'boulder') : s < 0.25 ? 'rock_small' : s < 0.5 ? 'rock_large' : 'boulder', sd = (r.nextDouble() * 2) | 0;
+      const sz = SG.LPProps.geometry(name, { seed: sd }).size, k = 2.4 * s / Math.max(0.1, sz[0]), g = 0.92 + r.nextDouble() * 0.14;
+      this.lpAdd(name, { seed: sd }, x, this.height(x, z) - 0.06 * s, z, r.nextDouble() * 6.283, [k, k * (0.85 + r.nextDouble() * 0.3), k], [g, g * 0.99, g * 0.97]);
+    }
+    lpBush(x, z, w) {
+      const r = this.rnd, v = r.nextDouble() < 0.6 ? 'pilot' : r.nextDouble() < 0.6 ? 'round' : 'flowering', sz = SG.LPProps.geometry('bush', { variant: v }).size, t = 0.92 + r.nextDouble() * 0.16;
+      this.lpAdd('bush', { variant: v, seed: (r.nextDouble() * 2) | 0 }, x, this.height(x, z) - 0.03, z, r.nextDouble() * 6.283, w / Math.max(0.1, sz[0]), [t, t, t]);
+    }
+    // 草丛 / 野花（合成一个网格）：与第三版同一分布（场中踩实、镜头近处稀疏）
+    grass(n, zMin, zMax, xr, density) {
+      const r = this.rnd, G = this.lpGrass;
+      for (let i = 0; i < n; i++) {
+        const x = (r.nextDouble() * 2 - 1) * xr, z = zMin + r.nextDouble() * (zMax - zMin);
+        const laneK = (1 - ss(1.6, 3.6, Math.abs(z))) * (1 - ss(11, 15, Math.abs(x)));
+        if (r.nextDouble() < laneK * (density || 0.97)) continue;
+        if (z > 2.5 && (Math.abs(x) < 4 || r.nextDouble() < 0.5)) continue;
+        if (z > 2.2) continue;
+        G.push({ t: 'tuft', x, y: this.height(x, z), z, k: 1.0 + r.nextDouble() * 0.9 });
+        if (r.nextDouble() < 0.08) G.push({ t: 'flowers', x: x + (r.nextDouble() - 0.5) * 0.6, y: this.height(x, z), z: z + (r.nextDouble() - 0.5) * 0.6, k: 1.3 + r.nextDouble() * 0.5 });
+      }
+    }
+    buildProps(mb, colA, colB) {
+      this.lpPrep();
+      const r = this.rnd, kind = this.kind, L = this.lpM, LP = SG.LP, PAL = LP.PAL, Pt = LP.Paint;
+      const scatter = (n, fn, zMin, zMax, xr) => {
+        for (let i = 0; i < n; i++) {
+          const x = (r.nextDouble() * 2 - 1) * (xr || 30), z = zMin + r.nextDouble() * (zMax - zMin);
+          if (Math.abs(z) < 2.4 && Math.abs(x) < 12) continue;
+          if (z > 2.2 && Math.abs(x) < 5) continue;
+          fn(x, z, r.nextDouble());
+        }
+      };
+      const wood = dhx('#8A6440'), steel = dhx('#C8CED8');
+      // 断枪残旗、弃盾（描墨线）
+      const debris = (n, z0, z1) => {
+        for (let i = 0; i < n; i++) {
+          const x = (r.nextDouble() * 2 - 1) * 11, z = z0 - r.nextDouble() * (z0 - z1);
+          const a = (r.nextDouble() - 0.5) * 0.7, y0 = this.height(x, z) - 0.15, len = 1.5 + r.nextDouble() * 0.6;
+          const top = [x + Math.sin(a) * len, y0 + Math.cos(a) * len, z];
+          L.color = Pt.shade(wood, 0.95 + r.nextDouble() * 0.1); L.segment([x, y0, z], top, 0.026, 0.02, 6);
+          L.color = steel; L.segment(top, [top[0] + Math.sin(a) * 0.26, top[1] + Math.cos(a) * 0.26, z], 0.035, 0.004, 5);
+          if (i % 3 === 0) {
+            const fc = Pt.hex(C(i % 2 ? colA : colB).getHexString()), fx = top[0], fy = top[1] - 0.1, ink = L.ink;
+            L.ink = 0.4; L.color = fc;
+            L.quadTwoSided([fx, fy, z], [fx + 0.5, fy - 0.1, z + 0.03], [fx + 0.46, fy - 0.45, z + 0.05], [fx, fy - 0.38, z]);
+            L.ink = ink;
+          }
+        }
+        for (let i = 0; i < 2; i++) {
+          const x = (r.nextDouble() * 2 - 1) * 9, z = -3.4 - r.nextDouble() * 2.6, y = this.height(x, z);
+          const c = Pt.shade(Pt.hex(C(i % 2 ? colA : colB).getHexString()), 0.75);
+          L.push().translate(x, y + 0.2, z).rotate(-72, r.nextDouble() * 360, 0);
+          L.color = dhx('#8A6A3A'); L.cylinder([0, -0.01, 0], 0.37, 0.36, 0.03, 14, false, true, true);
+          L.color = c; L.cylinder([0, 0.02, 0], 0.33, 0.2, 0.05, 14, false, false, true);
+          L.color = dhx('#C9A24E'); L.sphere([0, 0.08, 0], 0.08, 8, 4, false);
+          L.pop();
+        }
+      };
+      switch (kind) {
+        case 'plain':
+          this.grass(900, -14, 8, 24);
+          scatter(16, (x, z, k) => this.lpRock(x, z, 0.12 + k * 0.2), -14, 6);
+          debris(9, -2.8, -6.4);
+          for (let i = 0; i < 16; i++) this.lpTree((r.nextDouble() * 2 - 1) * 42, -17 - r.nextDouble() * 20, 0.85 + r.nextDouble() * 0.55, r.nextDouble() < 0.35);
+          for (let i = 0; i < 10; i++) this.lpBush((r.nextDouble() * 2 - 1) * 30, -9 - r.nextDouble() * 9, 1.6 + r.nextDouble() * 0.9);
+          break;
+        case 'forest':
+          for (let i = 0; i < 70; i++) {
+            const x = (r.nextDouble() * 2 - 1) * 44, z = -5.5 - r.nextDouble() * 34;
+            if (z > -11 && Math.abs(x) < 5.5 && r.nextDouble() < 0.6) continue;
+            this.lpTree(x, z, 0.9 + r.nextDouble() * 0.7, r.nextDouble() < 0.55);
+          }
+          for (const x of [-11.5, -9.2, 9.6, 12.2]) this.lpTree(x, -3.8 - r.nextDouble(), 1.1 + r.nextDouble() * 0.25, x > 0);
+          this.grass(800, -12, 8, 22, 0.9);
+          for (let i = 0; i < 26; i++) {
+            const x = (r.nextDouble() * 2 - 1) * 26, z = -3.4 - r.nextDouble() * 9;
+            if (Math.abs(z) < 3 && Math.abs(x) < 12) continue;
+            this.lpBush(x, z, 1.2 + r.nextDouble() * 0.9);
+          }
+          scatter(10, (x, z, k) => this.lpRock(x, z, 0.15 + k * 0.25), -10, 5);
+          {   // 倒木（树干 + 断枝 + 青苔）
+            const y = this.height(-3, -4.6) + 0.2;
+            L.color = dhx('#7A5A40'); L.segment([-4.6, y, -4.4], [-1.4, y + 0.02, -4.9], 0.24, 0.17, 9);
+            L.color = dhx('#8E6E50'); L.disc([-4.6 - 0.02, y, -4.4], 0.22, 9);
+            L.color = dhx('#7A5A40'); L.segment([-3.0, y + 0.12, -4.6], [-2.7, y + 0.6, -4.3], 0.06, 0.03, 5);
+            L.color = dhx('#7D9A55'); L.segment([-4.0, y + 0.16, -4.5], [-2.6, y + 0.15, -4.72], 0.12, 0.1, 6);
+          }
+          break;
+        case 'hill':
+          for (let i = 0; i < 14; i++) this.lpRock((r.nextDouble() * 2 - 1) * 30, -6 - r.nextDouble() * 12, 0.5 + r.nextDouble() * 1.2, true);
+          for (const [x, z, s] of [[-19, -17, 4.2], [-10, -22, 5.5], [15, -18, 5], [24, -24, 6], [3, -28, 5]]) this.lpRock(x, z, s, true);
+          scatter(26, (x, z, k) => this.lpRock(x, z, 0.1 + k * 0.2), -10, 6);
+          for (let i = 0; i < 20; i++) this.lpTree((r.nextDouble() * 2 - 1) * 42, -12 - r.nextDouble() * 24, 0.75 + r.nextDouble() * 0.5, true);
+          this.grass(650, -12, 8, 22, 0.95);
+          debris(5, -2.8, -6);
+          break;
+        case 'river': {
+          for (let i = 0; i < 70; i++) {
+            const x = (r.nextDouble() * 2 - 1) * 34, z = -2.9 - r.nextDouble() * 1.4, nm = r.nextDouble() < 0.6 ? 'reeds' : 'cattails';
+            this.lpAdd(nm, { seed: (r.nextDouble() * 2) | 0 }, x, this.height(x, z) - 0.02, z, r.nextDouble() * 6.283, 0.8 + r.nextDouble() * 0.4);
+          }
+          for (let i = 0; i < 30; i++) { const x = (r.nextDouble() * 2 - 1) * 40, z = -25.5 - r.nextDouble() * 1.6; this.lpAdd('reeds', { seed: 0 }, x, this.height(x, z) - 0.02, z, r.nextDouble() * 6.283, 1.0); }
+          scatter(30, (x, z, k) => this.lpRock(x, z, 0.08 + k * 0.14), -3, 6);
+          for (let i = 0; i < 26; i++) this.lpTree((r.nextDouble() * 2 - 1) * 52, -28 - r.nextDouble() * 12, 1 + r.nextDouble() * 0.6, r.nextDouble() < 0.3);
+          this.grass(650, -2.6, 8, 24);
+          const wg = new THREE.PlaneGeometry(160, 24, 40, 8);
+          wg.rotateX(-Math.PI / 2);
+          wg.translate(0, -0.22, -15);
+          const wp = wg.attributes.position, wc = new Float32Array(wp.count * 3);
+          for (let i = 0; i < wp.count; i++) { const z = wp.getZ(i); wc[i * 3] = M.clamp01(1 - Math.min(-3.4 - z, z + 26.6) / 5); }
+          wg.setAttribute('color', new THREE.BufferAttribute(wc, 3));
+          this.geos.push(wg);
+          const water = new THREE.Mesh(wg, lpWaterMat());
+          water.receiveShadow = false;
+          this.group.add(water);
+          break;
+        }
+        case 'castle': {
+          // 试点的城门楼与夯土城墙（墙正面约在 z = −11.3），城头火把，墙前铺石
+          const z = -12.5, wz = z - 0.2, objs = [];
+          const gate = lpMakeNamed('gate_tower', { color: '#' + C(colB).getHexString(), hallName: '宾阳楼' }, { gate_tower: '城门' });
+          gate.position.set(0, this.height(0, z) - 0.05, wz + 0.4);
+          objs.push(gate);
+          for (const s of [-1, 1]) for (let i = 0; i < 3; i++) {
+            const w = SG.LPProps.make('city_wall', { len: 18, variant: (i + (s > 0 ? 1 : 0)) & 1, color: '#' + C(i % 2 ? colA : colB).getHexString() });
+            const x = s * (6.5 + 9 - 0.3 + i * 18);
+            w.position.set(x, this.height(x, z) - 0.05, wz);
+            objs.push(w);
+          }
+          for (const o of objs) { this.group.add(o); o.traverse(q => { if (q.name === 'LP decal' && q.geometry) this.geos.push(q.geometry); }); }
+          this.lpLamps = [];
+          const gl = gate.userData.lp && gate.userData.lp.lamps;
+          if (gl) for (const l of gl) this.lpLamps.push({ pos: [l.pos[0], gate.position.y + l.pos[1], gate.position.z + l.pos[2]], o: l });
+          // 城墙后的屋顶（视差层次）
+          for (const x of [-30, -20, 22, 32]) this.lpAdd('house_han', { seed: x > 0 ? 1 : 0 }, x, 2.6, z - 7, 0, 1.15);
+          for (const x of [-3.6, 3.6]) {
+            const tg = SG.LPProps.geometry('torch', {}), k = 2.6 / Math.max(0.1, tg.size[1]);
+            this.lpAdd('torch', {}, x, this.height(x, -9.6), -9.6, 0, k);
+            this.torches.push(new THREE.Vector3(x, this.height(x, -9.6) + 2.75, -9.6));
+            // 修订：火把的灯池只在黄昏 / 夜里亮，范围收小（灯池是墙上的一圈暖光，不是把整面墙照亮）
+            this.lpLamps.push({ pos: [x, this.height(x, -9.6) + 2.7, -9.6], o: { color: '#ffb46c', intensity: 1.0, range: 3.4, nightOnly: true, haloSize: 1.0, flicker: 0.25 } });
+          }
+          scatter(20, (x, zz, k) => this.lpRock(x, zz, 0.08 + k * 0.14), -8, 6);
+          this.grass(350, -8, 8, 22, 1);
+          break;
+        }
+      }
+    }
+    flushInstances() {
+      const g = this.lpS.build();
+      this.group.add(g);
+      if (!this.lpM.isEmpty) { const geo = this.lpM.toGeometry(); this.geos.push(geo); const m = SG.LP.mesh(geo, { castShadow: true }); m.name = 'DuelDebris'; this.group.add(m); }
+      // 草丛 / 野花
+      if (this.lpGrass.length) {
+        const LP = SG.LP, Pt = LP.Paint, MB = new LP.MeshBuilder(((this.rnd.nextDouble() * 1e6) | 0) + 9);
+        MB.jitter = 0.08; MB.windGradient = true; MB.wind = 0.5;
+        const greens = this.lpPal.grass.map(dhx), flowers = ['#F5F0E6', '#F2B8C6', '#F4D35E', '#C9A8FF', '#F08C6C'].map(dhx);
+        for (const it of this.lpGrass) {
+          if (it.t === 'tuft') {
+            MB.windY0 = it.y; MB.windY1 = it.y + 0.3 * it.k;
+            MB.tuft([it.x, it.y - 0.01, it.z], (0.16 + MB.random01() * 0.1) * it.k, 4 + ((MB.random01() * 3) | 0), Pt.shade(greens[(MB.random01() * 4) | 0], 0.94 + MB.random01() * 0.12));
+          } else {
+            MB.windY0 = it.y; MB.windY1 = it.y + 0.25;
+            const fc = flowers[(MB.random01() * flowers.length) | 0];
+            for (let i = 0; i < 3; i++) {
+              const a = MB.random01() * Math.PI * 2, d = Math.sqrt(MB.random01()) * 0.1 * it.k, x = it.x + Math.cos(a) * d, z = it.z + Math.sin(a) * d, fy = (0.08 + MB.random01() * 0.08) * it.k;
+              MB.color = dhx('#5E8E42'); MB.segment([x, it.y, z], [x, it.y + fy, z], 0.006, 0.005, 3, false, false);
+              MB.color = fc; MB.emission = 0.06;
+              MB.push().translate(x, it.y + fy, z).rotate(-20 + MB.random01() * 40, MB.random01() * 360, 0);
+              MB.disc([0, 0, 0], 0.03 * it.k, 5); MB.disc([0, -0.003, 0], 0.03 * it.k, 5, true);
+              MB.pop(); MB.emission = 0;
+            }
+          }
+        }
+        if (!MB.isEmpty) { const geo = MB.toGeometry(); this.geos.push(geo); const m = LP.mesh(geo, { outline: false, castShadow: false }); m.name = 'DuelGrass'; this.group.add(m); }
+      }
+      this.instMeshes = (this.instMeshes || []).concat(this.lpS.meshes);
+    }
+    // ------------------------------------------------------ 两军阵列（与第三版同一布阵；另记下脚下圆影的位置）--
+    buildArmies(colA, colB) {
+      const byId = new Map();
+      const crowdFn = SG.Figure && SG.Figure.crowd;
+      if (crowdFn) {
+        // 包一层 setTransform：记下每名士兵的位置（圆影），其余照旧
+        const self = this;
+        // 城头的兵站在试点城墙的走道上（4.1 米）
+        SG.Figure.crowd = function (o) { const c = crowdFn.call(SG.Figure, o); const st = c.setTransform; c.setTransform = function (id, x, y, z, yaw, s) { if (self.kind === 'castle' && y > 5) y = 4.12; byId.set(id, [x, y, z]); return st.call(this, id, x, y, z, yaw, s); }; self._lpCrowdST = [c, st]; return c; };
+      }
+      try { super.buildArmies(colA, colB); } finally { if (crowdFn) SG.Figure.crowd = crowdFn; }
+      if (this._lpCrowdST) { const [c, st] = this._lpCrowdST; c.setTransform = st; this._lpCrowdST = null; }
+      // 每名士兵最后一次摆放的位置（crowd.add 自己也会先摆在原点）
+      const sx = [...byId.values()];
+      this.lpBlobs = sx;
+      const n = sx.length + 4;
+      this.blobs = new SG.LP.BlobShadows(n);
+      this.blobs.mesh.name = 'DuelShadows';
+      sx.forEach((p, i) => this.blobs.set(i, p[0], p[1] + 0.02, p[2], 0.3, 0.3, 0.4));
+      this.blobs.commit(sx.length);
+      this.group.add(this.blobs.mesh);
+    }
+    // 帅旗：描墨线的旗杆（LP），旗面为 LP 材质（势力色 + 姓氏贴图，随风飘）
+    addBanner(x, z, poleH, w, h, color, glyph, pennant, phase) {
+      const LP = SG.LP;
+      const tex = bannerTexture(SG.UI && SG.UI.cssColor ? SG.UI.cssColor(color) : color, glyph, pennant);
+      this.texs.push(tex);
+      const mat = lpClothMat(tex);
+      this.mats.push(mat);
+      const g = new THREE.PlaneGeometry(w, h, 10, 8);
+      g.translate(w / 2, -h / 2, 0);
+      const cc = new Float32Array(g.attributes.position.count * 4);
+      for (let i = 0; i < cc.length; i += 4) { cc[i] = cc[i + 1] = cc[i + 2] = 1; cc[i + 3] = 0; }
+      g.setAttribute('color', new THREE.BufferAttribute(cc, 4));
+      this.geos.push(g);
+      const cloth = new THREE.Mesh(g, mat);
+      cloth.castShadow = false; cloth.receiveShadow = false;
+      const y0 = this.height(x, z);
+      cloth.position.set(x + 0.05, y0 + poleH - 0.1, z);
+      this.group.add(cloth);
+      const mb = new LP.MeshBuilder(11), PAL = LP.PAL;
+      mb.color = dhx('#6E4B36'); mb.segment([x, y0 - 0.1, z], [x, y0 + poleH + 0.2, z], 0.06, 0.04, 8);
+      mb.segment([x, y0 + poleH - 0.05, z], [x + w + 0.05, y0 + poleH - 0.05, z], 0.025, 0.025, 5);
+      mb.color = PAL.gold; mb.cone([x, y0 + poleH + 0.18, z], 0.07, 0.38, 6);
+      mb.color = dhx(RED); mb.sphere([x, y0 + poleH + 0.02, z], 0.1, 8, 5, false);
+      const pg = mb.toGeometry();
+      this.geos.push(pg);
+      this.group.add(LP.mesh(pg, { castShadow: true }));
+      const base = Float32Array.from(g.attributes.position.array);
+      this.banners.push({ cloth, g, base, w, phase });
+    }
+    // 本场的氛围：接管场上的主光（key，0 号平行光：LP 材质读 Lanternvale 的太阳色）与天光；rim 只作原有材质的轮廓光
+    initMood(L, mood) {
+      try {
+        const lp = this.lpPal || LP_ARENA.plain, pal = this.pal, H = SG.LP.MOOD_HOURS || {};
+        // 修订：没有指定时刻、又是战场上发起的单挑时，沿用战场当前的时刻（与攻击画面同一规则：战场 → 攻击 → 单挑不跳时刻）；
+        // 单独的单挑（测试页、演武）才按地形取时刻
+        if (mood == null && SG.Game && SG.Game.battleView && SG.Gfx && SG.Gfx.moodState) { const st = SG.Gfx.moodState(); if (st && typeof st.hour === 'number') mood = st.hour; }
+        const hour = typeof mood === 'number' ? mood : typeof mood === 'string' && H[mood] != null ? H[mood] : lp.hour;
+        this.scene.background = C(lp.fog).clone();
+        this.scene.fog.color.copy(C(lp.fog));
+        this.mood = SG.Gfx.newMood(this.scene, {
+          sun: L.key, hemi: L.hemi, positionSun: false,
+          legacy: { sunColor: pal.key, sunIntensity: Math.PI * pal.keyI, skyColor: pal.hemiS, groundColor: pal.hemiG, hemiIntensity: Math.PI * pal.hemiI },
+          fog: { base: SG.LP.Paint.hex(lp.fog), background: true }, fogMax: 0.8, shadowStrength: 0.65, maxLamps: 4,
+        });
+        this.mood.set(hour);
+        // 修订：曝光与攻击画面、试点一致——rim 平行光不再照亮 LP 表面（武将的轮廓光由 LP 着色器自己的 rim 给出），
+        // 太阳与天光整体压低（同一时刻的地面明度与攻击画面相当，黄昏的城墙确实暗下来）
+        L.rim.intensity = 0;
+        // 黄昏、夜里再压低一些（镜头前的主光方向不随时刻变低，不压的话黄昏的城墙仍是一片正面的亮光）
+        // 黄金时刻也略压太阳（平原的黄金时刻不再一片橙亮）
+        // （深夜放松一些：月光本来就暗，武将仍须看得清）
+        const nk = (this.mood.state.nightK || 0) * (1 - 0.6 * (this.mood.state.deepK || 0)), gk = this.mood.state.golden || 0, u = this.mood.u;
+        const kS = ArenaLP.EXPOSURE[0] * (1 - 0.7 * nk) * (1 - 0.12 * gk * (1 - nk)), kA = ArenaLP.EXPOSURE[1] * (1 - 0.4 * nk);
+        if (u) { if (u.sun) u.sun.multiplyScalar(kS).setW(u.sun.w / kS); for (const k of ['sky', 'ground']) if (u[k]) u[k].multiplyScalar(kA).setW(u[k].w / kA); }
+        L.key.intensity *= kS; L.hemi.intensity *= kA;
+        // 修订：城门楼灯笼的灯池范围收小（单挑的镜头离城门很近，原范围把整面墙染成橙色）
+        for (const l of this.lpLamps || []) this.mood.addLamp(l.pos, Object.assign({}, l.o, { pos: undefined, range: Math.min(l.o.range || 4.6, 4.6) * 0.55 }));
+        this.lpSky(this.mood.state);
+      } catch (e) { console.error(e); this.mood = null; }
+    }
+    // 天空与水面随时刻（天顶取 Lanternvale 的天色，地平线 = 雾色，太阳色随黄金时刻）
+    lpSky(st) {
+      const u = this.sky.material.uniforms, fog = st.fog || [0.8, 0.84, 0.9], P = SG.LP.Paint, golden = st.golden || 0, deep = st.deepK || 0;
+      const top = P.mix(P.mix(st.sky, [0.36, 0.56, 0.86], 0.45), [0.05, 0.07, 0.17], deep);
+      u.uTop.value.setRGB(top[0], top[1], top[2]);
+      u.uHor.value.setRGB(fog[0], fog[1], fog[2]);
+      const low = P.mix(fog, P.hex(this.lpPal.mid), 0.5);
+      u.uLow.value.setRGB(low[0], low[1], low[2]);
+      const sc = P.mix(st.sunCol, [1, 0.72, 0.42], golden * 0.5).map(v => v * (0.55 + 0.45 * golden) * (1 - 0.85 * deep));
+      u.uSun.value.setRGB(sc[0], sc[1], sc[2]);
+      const W = LPWATER, b = SG.Gfx._waterBase;
+      if (W && b && this.kind === 'river') {
+        const noon = SG.LP.moodAt(12.5), ratio = (a, c) => [0, 1, 2].map(k => (c[k] > 1e-4 ? a[k] / c[k] : 0));
+        const rs = ratio(st.sunCol, noon.sunCol).map(v => v * st.sunI / noon.sunI), rk = ratio(st.sky, noon.sky).map(v => v * st.ambI / noon.ambI), wu = W.uniforms;
+        wu.uSunColor.value.setRGB(b.sun.r * rs[0], b.sun.g * rs[1], b.sun.b * rs[2]);
+        wu.uAmbient.value.setRGB(b.amb.r * rk[0], b.amb.g * rk[1], b.amb.b * rk[2]);
+        wu.uSheenColor.value.setRGB(b.sheen.r * rs[0], b.sheen.g * rs[1], b.sheen.b * rs[2]).lerp(new THREE.Color(1, 0.78, 0.5), golden * 0.5);
+        wu.uSkyColor.value.setRGB(fog[0], fog[1], fog[2]);
+        wu.uDeep.value.copy(b.deep).multiplyScalar(1 - 0.55 * deep);
+        wu.uShallow.value.copy(b.shallow).multiplyScalar(1 - 0.55 * deep);
+      }
+    }
+    update(t) {
+      super.update(t);
+      // 两员武将脚下的圆影（跳起时变小变淡）
+      const B = this.blobs, F = this.fighters;
+      if (B && F) {
+        let n = this.lpBlobs.length;
+        const v = this._lpV || (this._lpV = new THREE.Vector3());
+        for (const w of F) {
+          const p = w.root && w.root.position;
+          if (!p) continue;
+          // 圆影跟着骨盆（人物模型侧转 3/4，身体不在 root 的正上方）
+          const pb = w.fig && w.fig.bones && w.fig.bones.pelvis;
+          if (pb) pb.getWorldPosition(v); else v.copy(p);
+          const up = Math.max(0, p.y), k = 1 / (1 + up * 0.8);
+          B.set(n++, v.x, this.height(v.x, v.z) + 0.02, v.z, 0.62 * k + 0.08, 0.32 * k + 0.05, 0.34 * k);
+        }
+        B.commit(n);
+      }
+    }
+    dispose() {
+      if (this.blobs) { this.blobs.dispose(); this.blobs = null; }
+      if (this.mood) { try { this.mood.dispose(); } catch (e) { console.error(e); } this.mood = null; }
+      // 实例化景物的几何体是 SG.LPProps 的缓存：只释放实例属性（父类对 instMeshes 调 dispose）与墨线
+      for (const m of (this.lpS && this.lpS.meshes) || []) if (m.userData.outline) m.userData.outline.dispose();
+      super.dispose();
+    }
+  }
+  // 修订：LP 场地的曝光（太阳、天光的倍数；与攻击画面同一时刻的地面明度相当）
+  ArenaLP.EXPOSURE = [0.85, 0.9];
+
   // ============================================================ 视图：特效 --
   const PART_VS = 'attribute vec4 aColor;\nattribute float aSize;\nuniform float uScale;\nvarying vec4 vColor;\nvoid main(){ vColor = aColor; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = max(1.0, aSize * uScale / max(0.05, -mv.z)); gl_Position = projectionMatrix * mv; }';
   const PART_FS = 'uniform sampler2D uMap;\nuniform float uSoft;\nvarying vec4 vColor;\nvoid main(){ float a = pow(texture2D(uMap, gl_PointCoord).a, uSoft) * vColor.a; if (a < 0.004) discard; gl_FragColor = vec4(vColor.rgb, a); }';
@@ -5057,6 +5652,9 @@
   box-shadow:0 .2em .6em rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.15);color:#fff4dc;font:700 calc(var(--b)*.3)/1 ${KAI};
   text-shadow:0 1px 2px #000;transition:transform .06s ease, background .06s ease;-webkit-tap-highlight-color:transparent;}
 .sgd-tb.dir{font:700 calc(var(--b)*.36)/1 ${SANS};}
+.sgd-tb .gl{display:block;font-size:.62em;line-height:1;margin-bottom:-.1em;text-shadow:0 0 .2em rgba(0,0,0,.6);}
+.sgd-tb.ovh{border-color:rgba(240,190,110,.85);background:radial-gradient(circle at 50% 35%,rgba(224,162,74,.7),rgba(120,40,24,.65));}
+.sgd-tb.gd{width:calc(var(--b)*.8);height:calc(var(--b)*.8);font-size:calc(var(--b)*.26);}
 .sgd-tb.on{transform:scale(.92);background:radial-gradient(circle at 50% 35%,rgba(243,201,105,.75),rgba(140,90,30,.6));}
 .sgd-tb.big{width:calc(var(--b)*1.18);height:calc(var(--b)*1.18);font-size:calc(var(--b)*.34);border-color:rgba(255,140,110,.85);background:radial-gradient(circle at 50% 35%,rgba(200,56,44,.75),rgba(80,14,10,.65));}
 .sgd-tb.sp{border-color:rgba(200,160,255,.5);color:rgba(255,255,255,.55);}
@@ -5293,12 +5891,62 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
   }
 
   // ============================================================ 输入 --
-  const KEYMAP = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'up', KeyW: 'up', Space: 'up',
-    KeyJ: 'light', KeyK: 'heavy', KeyL: 'guard', ArrowDown: 'guard', KeyS: 'guard', KeyI: 'special', KeyU: 'parry' };
+  // 单挑设置（COMBAT-V4 §5.3；不入存档）：localStorage 'sanguozhi2_duel_v4'，读写都 try/catch
+  //   keys 单挑键位 'v4'（J 轻 · K 中 · L 重）| 'v3'（「v3习惯」：J 轻 · K 重 · L 中）· guardBtn 格挡键（O / 防，默认关）·
+  //   hints 招式提示（默认开）· ribbon 招式谱条 'auto'（前 5 场开，之后只在演武）| 'on' | 'off' · duels 已打场数 · bannerSeen 第四版操作提示已看过
+  const SETTINGS_KEY = 'sanguozhi2_duel_v4';
+  const SETTINGS_DEFAULT = Object.freeze({ keys: 'v4', guardBtn: false, hints: true, ribbon: 'auto', duels: 0, bannerSeen: false });
+  function loadSettings() {
+    let s = null;
+    try { s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null'); } catch (e) { s = null; }
+    const out = Object.assign({}, SETTINGS_DEFAULT, s && typeof s === 'object' ? s : {});
+    if (out.keys !== 'v3') out.keys = 'v4';
+    return out;
+  }
+  function saveSettings(patch) {
+    const s = Object.assign(loadSettings(), patch || {});
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch (e) { /* 无存储（隐私模式）：只在本次有效 */ }
+    return s;
+  }
+  // 键位（§5.1）：方向 ← → / A D，↑ W 空格 跳，↓ S 蹲（↓ + 背向 = 下段格挡），J 轻，K / L 中 / 重（按预设），K + L 同按 = 跃劈，U 格开，I 绝技，O 防（设置开时）
+  const KEYMAP_BASE = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'up', KeyW: 'up', Space: 'up',
+    ArrowDown: 'down', KeyS: 'down', KeyJ: 'light', KeyI: 'special', KeyU: 'parry' };
+  const KEY_PRESETS = { v4: { KeyK: 'medium', KeyL: 'heavy' }, v3: { KeyK: 'heavy', KeyL: 'medium' } };
+  function keymapOf(st) {
+    const m = Object.assign({}, KEYMAP_BASE, KEY_PRESETS[st && st.keys] || KEY_PRESETS.v4);
+    if (st && st.guardBtn) m.KeyO = 'guard';
+    return m;
+  }
+  // 各键的显示名（操作卡、图例、招式谱的键位标注）
+  function keyLabels(st) { const v3 = st && st.keys === 'v3'; return { L: 'J', M: v3 ? 'L' : 'K', H: v3 ? 'K' : 'L', guard: 'O' }; }
+  // 招式谱的字形与颜色（§12.1）：轻 青 ●、中 琥珀 ◆、重 朱 ▲
+  const GLYPH = { L: '●', M: '◆', H: '▲' }, GLYPH_COLOR = { L: '#5fb3a8', M: '#e0a24a', H: '#d2553a' };
+
+  // 触摸布局数据（§5.2；按钮的绘制与纸质质感交给界面任务）：
+  //   左 8 向摇杆：45° 扇区、14 px 死区；背向 = 格挡，↓背向 = 下段格挡，↓ = 蹲，↑ = 跳，前 = 走，↑前 = 前跳；双击 ◀ ▶（0.28 秒内）= 冲刺 / 后撤步
+  //   右手弧形：轻（大，右下）、中（轻之左）、重（轻之上）、⟨中+重⟩ 跃劈（两者之间的小菱形，44 px，与两键各重叠约 8 px）、格开（冷却环）、绝技（怒气满时发光）、
+  //   可选「防」（设置「格挡键」开时，摇杆右上，可与格开互相滑动）。位置以按钮尺寸 --b 为单位，从右下角量起；命中区 ≥ 56 px
+  const TOUCH_LAYOUT = {
+    pad: { sectors: 8, deadZone: 14, doubleTap: 0.28 },
+    minTarget: 56,
+    buttons: [
+      { key: 'light', label: '轻', glyph: '●', color: GLYPH_COLOR.L, cls: 'big', right: 0, bottom: 0 },
+      { key: 'medium', label: '中', glyph: '◆', color: GLYPH_COLOR.M, cls: '', right: 1.32, bottom: 0.02 },
+      { key: 'heavy', label: '重', glyph: '▲', color: GLYPH_COLOR.H, cls: '', right: 0.08, bottom: 1.3 },
+      { key: 'ovh', label: '中+重', cls: 'ovh', size: 0.56, right: 1.02, bottom: 1.02, both: ['medium', 'heavy'] },
+      { key: 'parry', label: '格开<i class="cd"></i>', cls: 'pa ready', right: 1.5, bottom: 1.5 },
+      { key: 'special', label: '绝技', cls: 'sp', right: 0.2, bottom: 2.48 },
+      { key: 'guard', label: '防', cls: 'gd', optional: 'guardBtn', pad: true, left: 2.3, bottom: 1.7 },
+    ],
+  };
+
   class PlayerInput {
-    constructor() {
-      this.held = { x: 0, up: false, light: false, heavy: false, guard: false, special: false, parry: false, dash: 0 };
-      this.taps = { light: 0, up: 0, special: 0, heavy: 0, dir: 0, parry: 0 };
+    constructor(st) {
+      this.st = st || loadSettings();
+      this.map = keymapOf(this.st);
+      this.held = { x: 0, up: false, down: false, light: false, medium: false, heavy: false, guard: false, special: false, parry: false, dash: 0 };
+      this.taps = { light: 0, medium: 0, up: 0, special: 0, heavy: 0, dir: 0, parry: 0, ovh: 0 };
+      this.klHold = true;     // K / L 同按（0.05 秒内）= 跃劈：由 Sim 等待另一键（§5.1）
       this.keys = new Set();
       this.touch = {};
       this.anyKey = null;
@@ -5314,7 +5962,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       const t = e.target;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
-      const k = KEYMAP[e.code];
+      const k = this.map[e.code];
       if (this.anyKey && !e.repeat) { const f = this.anyKey; this.anyKey = null; f(); e.preventDefault(); e.stopPropagation(); return; }
       if (!k) return;
       e.preventDefault(); e.stopPropagation();
@@ -5324,7 +5972,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       this.recompute();
     }
     onUp(e) {
-      const k = KEYMAP[e.code];
+      const k = this.map[e.code];
       if (!k) return;
       e.preventDefault();
       this.keys.delete(k);
@@ -5345,7 +5993,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       const K = this.keys, T = this.touch, h = this.held;
       const L = K.has('left') || T.left, R = K.has('right') || T.right;
       h.x = this.enabled ? (R ? 1 : 0) - (L ? 1 : 0) : 0;
-      for (const k of ['up', 'light', 'heavy', 'guard', 'special', 'parry']) h[k] = this.enabled && !!(K.has(k) || T[k]);
+      for (const k of ['up', 'down', 'light', 'medium', 'heavy', 'guard', 'special', 'parry']) h[k] = this.enabled && !!(K.has(k) || T[k]);
     }
     // 启用 / 停用：停用期间的按键与触摸一律丢弃，启用时清空残留的点击与按住状态
     setEnabled(on) {
@@ -5361,35 +6009,47 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
     }
   }
 
-  // 触摸按键：左下 ◀ ▶ ▲（同一指可滑动切换），右下 轻击 / 重击 / 格挡 / 格开 / 绝技；每个触点独立（多点触控）
-  //   格开紧挨格挡（同为防守，拇指一滑即到），按钮外圈为冷却环
+  // 8 向摇杆：从摇杆中心算角度，45° 一个扇区；死区内不算方向（§5.2）
+  function padDir(dx, dy, dead) {
+    if (dx * dx + dy * dy < dead * dead) return { x: 0, up: false, down: false };
+    const a = Math.atan2(-dy, dx), sec = ((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8;   // 0 右，1 右上，2 上 … 6 下，7 右下
+    const X = [1, 1, 0, -1, -1, -1, 0, 1][sec], up = sec >= 1 && sec <= 3, down = sec >= 5 && sec <= 7;
+    return { x: X, up, down };
+  }
+
+  // 触摸按键（第四版，按 TOUCH_LAYOUT）：左下 8 向摇杆（同一指可滑动切换方向），右下 轻 / 中 / 重 / ⟨中+重⟩ / 格开 / 绝技（/ 防）；每个触点独立（多点触控）
   function buildTouch(root, input) {
     const h = (cls, html, parent) => { const e = document.createElement('div'); e.className = cls; if (html) e.innerHTML = html; parent.appendChild(e); return e; };
-    const pad = h('sgd-pad', null, root);
-    const L = h('sgd-tb dir', '◀', pad), R = h('sgd-tb dir', '▶', pad), U = h('sgd-tb dir', '▲', pad);
-    L.style.cssText = 'left:0;bottom:0;'; R.style.cssText = 'left:calc(var(--b)*1.22);bottom:0;'; U.style.cssText = 'left:calc(var(--b)*.61);bottom:calc(var(--b)*1.04);';
+    const st = input.st || loadSettings(), LP = TOUCH_LAYOUT.pad;
+    const pad = h('sgd-pad v4', null, root);
+    const L = h('sgd-tb dir', '◀', pad), R = h('sgd-tb dir', '▶', pad), U = h('sgd-tb dir', '▲', pad), Dn = h('sgd-tb dir', '▼', pad);
+    L.style.cssText = 'left:0;bottom:calc(var(--b)*.52);'; R.style.cssText = 'left:calc(var(--b)*1.22);bottom:calc(var(--b)*.52);';
+    U.style.cssText = 'left:calc(var(--b)*.61);bottom:calc(var(--b)*1.1);'; Dn.style.cssText = 'left:calc(var(--b)*.61);bottom:calc(var(--b)*-.06);transform:scale(.86);';
     const zones = new Map();
     const zoneAt = (x, y) => {
       const r = pad.getBoundingClientRect();
       if (x < r.left - 40 || x > r.right + 40 || y < r.top - 50 || y > r.bottom + 40) return null;
-      const b = r.height / 2.05;
-      if (y < r.bottom - b * 1.02) return 'up';
-      return x < r.left + r.width / 2 ? 'left' : 'right';
+      const u = U.getBoundingClientRect(), d = Dn.getBoundingClientRect();
+      const cx = (u.left + u.right) / 2, cy = (u.bottom + d.top) / 2;
+      return padDir(x - cx, y - cy, LP.deadZone);
     };
     const sync = () => {
-      const on = { left: false, right: false, up: false };
-      for (const z of zones.values()) if (z) on[z] = true;
-      input.setTouch('left', on.left); input.setTouch('right', on.right); input.setTouch('up', on.up);
-      L.classList.toggle('on', on.left); R.classList.toggle('on', on.right); U.classList.toggle('on', on.up);
+      const on = { left: false, right: false, up: false, down: false };
+      for (const z of zones.values()) if (z) { if (z.x < 0) on.left = true; if (z.x > 0) on.right = true; if (z.up) on.up = true; if (z.down) on.down = true; }
+      input.setTouch('left', on.left); input.setTouch('right', on.right); input.setTouch('up', on.up); input.setTouch('down', on.down);
+      L.classList.toggle('on', on.left); R.classList.toggle('on', on.right); U.classList.toggle('on', on.up); Dn.classList.toggle('on', on.down);
     };
     const opt = { passive: false };
     pad.addEventListener('pointerdown', e => { e.preventDefault(); try { pad.setPointerCapture(e.pointerId); } catch (err) { /* 忽略 */ } zones.set(e.pointerId, zoneAt(e.clientX, e.clientY)); sync(); }, opt);
-    pad.addEventListener('pointermove', e => { if (!zones.has(e.pointerId)) return; e.preventDefault(); const z = zoneAt(e.clientX, e.clientY); if (z !== zones.get(e.pointerId)) { zones.set(e.pointerId, z); sync(); } }, opt);
+    pad.addEventListener('pointermove', e => {
+      if (!zones.has(e.pointerId)) return; e.preventDefault();
+      const z = zoneAt(e.clientX, e.clientY), o = zones.get(e.pointerId);
+      if (!z !== !o || (z && (z.x !== o.x || z.up !== o.up || z.down !== o.down))) { zones.set(e.pointerId, z); sync(); }
+    }, opt);
     const end = e => { if (zones.delete(e.pointerId)) sync(); };
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) pad.addEventListener(ev, end);
-    const btns = h('sgd-btns', null, root);
-    // 每个触点归哪个按钮（own）：按下时归所按的按钮；格挡与格开之间拇指一滑即换手（按住格挡滑到格开 = 松开格挡、轻触格开，
-    // 滑回来又按住格挡），其余按钮按下后滑出仍算按住（防误触）
+    const btns = h('sgd-btns v4', null, root);
+    // 每个触点归哪个按钮（own）：按下时归所按的按钮；格开与「防」之间拇指一滑即换手，其余按钮按下后滑出仍算按住（防误触）
     const own = new Map(), recs = {};
     const SLIDE = { guard: 'parry', parry: 'guard' };
     const take = (id, r) => {
@@ -5399,13 +6059,18 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       if (r) { r.ids.add(id); own.set(id, r); r.set(); } else own.delete(id);
     };
     const inside = (el, e) => { const q = el.getBoundingClientRect(); return e.clientX >= q.left && e.clientX <= q.right && e.clientY >= q.top && e.clientY <= q.bottom; };
-    const mk = (cls, label, key, css) => {
-      const b = h('sgd-tb ' + cls, label, btns);
-      b.style.cssText = css;
-      const r = { b, key, ids: new Set() };
-      r.set = () => { input.setTouch(key, r.ids.size > 0); b.classList.toggle('on', r.ids.size > 0); };
-      recs[key] = r;
-      b.addEventListener('pointerdown', e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (err) { /* 忽略 */ } take(e.pointerId, r); }, opt);
+    const B = {};
+    for (const d of TOUCH_LAYOUT.buttons) {
+      if (d.optional && !st[d.optional]) continue;
+      const b = h('sgd-tb ' + (d.cls || ''), d.glyph ? '<span class="gl" style="color:' + d.color + '">' + d.glyph + '</span>' + d.label : d.label, d.pad ? pad : btns);
+      const sz = d.size ? 'width:calc(var(--b)*' + d.size + ');height:calc(var(--b)*' + d.size + ');border-radius:22%;transform:rotate(45deg);font-size:calc(var(--b)*.2);' : '';
+      b.style.cssText = (d.pad ? 'left:calc(var(--b)*' + d.left + ');' : 'right:calc(var(--b)*' + d.right + ');') + 'bottom:calc(var(--b)*' + d.bottom + ');' + sz + (d.both ? 'z-index:2;' : '');
+      if (d.size) b.innerHTML = '<span style="display:block;transform:rotate(-45deg)">' + d.label + '</span>';
+      const r = { b, key: d.key, ids: new Set() };
+      // ⟨中+重⟩：同时送出中、重两键（Sim 的同按规则合成跃劈；连段窗口里算先到的那一键）
+      r.set = () => { const on = r.ids.size > 0; for (const k of d.both || [d.key]) input.setTouch(k, on); b.classList.toggle('on', on); };
+      recs[d.key] = r; B[d.key] = b;
+      b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); try { b.setPointerCapture(e.pointerId); } catch (err) { /* 忽略 */ } take(e.pointerId, r); }, opt);
       b.addEventListener('pointermove', e => {
         const cur = own.get(e.pointerId);
         if (!cur || !SLIDE[cur.key]) return;
@@ -5414,15 +6079,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       }, opt);
       const up = e => { if (own.has(e.pointerId)) take(e.pointerId, null); };
       for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) b.addEventListener(ev, up);
-      return b;
-    };
-    const B = {
-      light: mk('big', '轻击', 'light', 'right:0;bottom:0;'),
-      heavy: mk('', '重击', 'heavy', 'right:calc(var(--b)*1.32);bottom:calc(var(--b)*.02);'),
-      guard: mk('', '格挡', 'guard', 'right:calc(var(--b)*.1);bottom:calc(var(--b)*1.3);'),
-      parry: mk('pa ready', '格开<i class="cd"></i>', 'parry', 'right:calc(var(--b)*1.3);bottom:calc(var(--b)*1.2);'),
-      special: mk('sp', '绝技', 'special', 'right:calc(var(--b)*2.5);bottom:calc(var(--b)*.62);'),
-    };
+    }
     for (const el of [pad, btns]) for (const ev of ['touchstart', 'touchmove', 'touchend', 'contextmenu']) el.addEventListener(ev, e => { if (e.cancelable) e.preventDefault(); }, opt);
     return { pad, btns, B };
   }
@@ -5457,7 +6114,9 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       this.hybrid = false;
       try { this.hybrid = !!SG.isTouch && !!window.matchMedia && window.matchMedia('(any-pointer: fine)').matches && window.matchMedia('(any-hover: hover)').matches; } catch (e) { this.hybrid = false; }
       this.kind = terrainKind(opts.terrain);
-      this.sim = new Sim(this.genA, this.genB, this.lookA, this.lookB);
+      this.settings = loadSettings();
+      // 第四版：战斗 / 武林大会里电脑的见识（opts.aiKnow，Map，可变）随 Sim 传下去（§14.2）
+      this.sim = new Sim(this.genA, this.genB, this.lookA, this.lookB, { aiKnow: opts.aiKnow || null });
       this.slow = 1; this.slowT = 0;
       this.acc = 0; this.realT = 0;
       this.shake = 0; this.zoom = null;
@@ -5484,7 +6143,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       const sim = this.sim;
       // 操作者
       // 玩家一方：键盘 / 触摸；自动测试（DuelGame.auto）时仍显示操作界面，但交给电脑
-      this.input = this.player !== null ? new PlayerInput() : null;
+      this.input = this.player !== null ? new PlayerInput(this.settings) : null;
       if (this.input) this.input.setEnabled(false);       // 开场 / 操作说明期间不接受出招（开战时才启用）
       // 测试钩子 opts.ctrl：[a, b] 各为 (fighter, sim) → 操作者（如 DuelGame.scriptBot），用于在真实画面里看脚本玩家打
       const cf = this.opts.ctrl || [];
@@ -5501,7 +6160,8 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
         try { await SG.Figure.preload({ cultures: [...new Set([this.lookA.culture, this.lookB.culture])], types: [], lods: [], crowd: Arena.crowdSpecs(this.kind, this.lookA.culture, this.lookB.culture) }); } catch (e) { console.warn('figure preload', e); }
       }
       await SG.frame();
-      this.arena = new Arena(scene, this.kind, this.colA, this.colB, String(this.genA.name || '甲').charAt(0), String(this.genB.name || '乙').charAt(0), hashStr(this.genA.name + this.genB.name), this.lookA.culture, this.lookB.culture);
+      // 第四版：有 SG.LP / SG.LPProps 时用 Lanternvale 风格的场地（ArenaLP），否则第三版
+      this.arena = new (duelLP() ? ArenaLP : Arena)(scene, this.kind, this.colA, this.colB, String(this.genA.name || '甲').charAt(0), String(this.genB.name || '乙').charAt(0), hashStr(this.genA.name + this.genB.name), this.lookA.culture, this.lookB.culture);
       const pal = this.arena.pal;
       const hemi = new THREE.HemisphereLight(C(pal.hemiS), C(pal.hemiG), Math.PI * pal.hemiI);
       scene.add(hemi);
@@ -5515,12 +6175,14 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       const rim = new THREE.DirectionalLight(C(pal.rim), Math.PI * pal.rimI);
       scene.add(rim); scene.add(rim.target);
       this.lights = { hemi, key, rim };
+      if (this.arena.initMood) this.arena.initMood(this.lights, this.opts && this.opts.mood);   // 第四版：本场的氛围（LP.Mood）
       await SG.frame();
       // 第三版：js/figure.js 的高精度武将（未载入 figure.js 时退回旧的低多边形模型）
       const Fw = SG.Figure ? FigWarrior : Warrior;
       this.war = [new Fw(sim.f[0], this.colA), new Fw(sim.f[1], this.colB)];
       this.war[0].opp = sim.f[1]; this.war[1].opp = sim.f[0];
       for (const w of this.war) scene.add(w.root);
+      if (this.arena.lp) this.arena.fighters = this.war;      // 第四版：武将脚下的圆影
       // 特效
       this.sparks = new Particles(420, THREE.AdditiveBlending, 1.0, 12);
       this.dust = new Particles(240, THREE.NormalBlending, 1.6, 11);
@@ -5602,8 +6264,10 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       this.flashEl = h('sgd-flash');
       this.edgeEl = h('sgd-edge');
       if (this.player !== null && (!SG.isTouch || this.hybrid)) {
-        this.legend = h('sgd-legend', '<span><b class="sgd-k">←</b><b class="sgd-k">→</b>移动</span><span><b class="sgd-k">↑</b>跳</span><span><b class="sgd-k">J</b>轻击</span>' +
-          '<span><b class="sgd-k">K</b>重击·按住蓄力</span><span><b class="sgd-k">L</b>格挡</span><span><b class="sgd-k pk">U</b>格开</span><span><b class="sgd-k r">I</b>绝技</span>');
+        const KL = keyLabels(this.settings);
+        this.legend = h('sgd-legend', '<span><b class="sgd-k">←</b><b class="sgd-k">→</b>移动·背向格挡</span><span><b class="sgd-k">↑</b>跳</span><span><b class="sgd-k">↓</b>蹲</span>' +
+          '<span><b class="sgd-k">' + KL.L + '</b>轻</span><span><b class="sgd-k">' + KL.M + '</b>中</span><span><b class="sgd-k">' + KL.H + '</b>重·按住蓄力</span><span><b class="sgd-k">' + KL.M + '+' + KL.H + '</b>跃劈</span>' +
+          '<span><b class="sgd-k pk">U</b>格开</span><span><b class="sgd-k r">I</b>绝技</span>');
         this.legendU = this.legend.querySelector('.pk');
         this.legend.style.opacity = '0';
       }
@@ -5611,7 +6275,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
         this.touch = buildTouch(root, this.input);
         for (const el of [this.touch.pad, this.touch.btns]) { el.style.opacity = '0'; el.style.visibility = 'hidden'; }
         if (!this.hybrid) {
-          this.touchHint = h('sgd-touchhint', '双击 ◀ ▶ 冲刺 / 后撤 · 按住「重击」蓄力 · 看准来招轻触「格开」');
+          this.touchHint = h('sgd-touchhint', '按住背向对手格挡 · 双击 ◀ ▶ 冲刺 / 后撤 · 按住「重」蓄力 · 看准来招轻触「格开」');
           this.touchHint.style.opacity = '0';
         }
       }
@@ -6119,6 +6783,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       this.skipped = true;
       const sim = this.sim;
       sim.events.length = 0;
+      this.seenAtSkip = [sim.f[0].seenMask, sim.f[1].seenMask];   // 见识只算跳过之前看见的步（§12.2）
       if (!sim.result) sim.runToEnd();
       this.skipKind = true;
     }
@@ -6161,26 +6826,37 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       card.className = 'sgd-card';
       const vs = '<div class="vs">攻击力与伤害取决于武力：<b>' + SG.esc(me.name) + ' ' + warOf(me) + '</b> 对 <b>' + SG.esc(foe.name) + ' ' + warOf(foe) + '</b></div>';
       const k = s => '<b class="sgd-k">' + s + '</b>';
+      // 第四版（COMBAT-V4 §5.4）：招式谱一行 + 第一次第四版单挑的操作更新提示
+      const st = this.settings || loadSettings(), KL = keyLabels(st);
+      const ce = SG.Combos && SG.Combos.of ? (function () { try { return SG.Combos.of(me); } catch (e) { return null; } })() : null;
+      const seq = ce ? ce.seq : (this.sim.f[this.player].seqStr || DEFAULT_SEQ);
+      const gl = t => '<b style="color:' + GLYPH_COLOR[t] + '">' + GLYPH[t] + '</b>';
+      const scroll = seq.slice(0, 7).split('').map(gl).join(' ') + ' · ' + gl(seq[7]) + (ce && ce.finisher ? ' ' + SG.esc(ce.finisher.name) : '');
+      const keysOf = seq.split('').map(t => KL[t]).join(' ');
+      const banner = !st.bannerSeen ? '<div class="vs" style="color:#ffd27a">操作更新：格挡改为按住背向对手的方向；' + KL.H + ' 为重击，' + KL.M + ' 为中击；↓ 蹲下，↓+背向为下段格挡。</div>' : '';
+      if (!st.bannerSeen) { try { saveSettings({ bannerSeen: true }); } catch (e) { /* 忽略 */ } }
       if (SG.isTouch && !this.hybrid) {
-        card.innerHTML = '<h2>操作方法</h2>' + vs + '<div class="sgd-tl"><div>' +
-          '<div class="row"><span class="sgd-chip">◀</span><span class="sgd-chip">▶</span>移动（双击冲刺 / 后撤步）</div>' +
-          '<div class="row"><span class="sgd-chip">▲</span>跳跃（空中可轻击）</div></div><div>' +
-          '<div class="row"><span class="sgd-chip big">轻击</span>连按三连击</div>' +
-          '<div class="row"><span class="sgd-chip">重击</span>按住蓄力，满蓄破防</div>' +
-          '<div class="row"><span class="sgd-chip">格挡</span>按住减伤八成</div>' +
-          '<div class="row"><span class="sgd-chip pa">格开</span>来招打到前一瞬轻触：弹开对手，反击 ×1.5 不可挡。落空有破绽，冷却 2.5 秒；挨了第二击后踩准第三击再触可格开（早了无效）；满蓄重击见闪光即触；按住格挡滑过来亦可</div>' +
-          '<div class="row"><span class="sgd-chip">绝技</span>怒气满时「' + SG.esc(sp.name) + '」</div></div></div>' +
+        card.innerHTML = '<h2>操作方法</h2>' + banner + vs + '<div class="sgd-tl"><div>' +
+          '<div class="row"><span class="sgd-chip">◀</span><span class="sgd-chip">▶</span>移动（双击冲刺 / 后撤步）· 按住背向对手 = 格挡</div>' +
+          '<div class="row"><span class="sgd-chip">▼</span>蹲 · ↙ / ↘ 背向 = 下段格挡</div>' +
+          '<div class="row"><span class="sgd-chip">▲</span>跳（空中攻击须站立格挡）</div></div><div>' +
+          '<div class="row"><span class="sgd-chip big">轻</span><span class="sgd-chip">中</span><span class="sgd-chip">重</span>重：按住蓄力，满蓄破防</div>' +
+          '<div class="row"><span class="sgd-chip">中+重</span>跃劈（中段，蹲挡挡不住）</div>' +
+          '<div class="row"><span class="sgd-chip pa">格开</span>来招打到前一瞬轻触：弹开对手，反击 ×1.5 不可挡；落空有破绽，冷却 2.5 秒。连段第三击起可看破</div>' +
+          '<div class="row"><span class="sgd-chip">绝技</span>怒气满时「' + SG.esc(sp.name) + '」</div>' +
+          '<div class="row"><span class="sgd-chip">招式谱</span>' + scroll + '</div></div></div>' +
           '<div class="go">轻触开始</div>';
       } else {
-        card.innerHTML = '<h2>操作方法</h2>' + vs + '<div class="sgd-rows">' +
-          '<div class="keys">' + k('←') + k('→') + '<span style="opacity:.6">/</span>' + k('A') + k('D') + '</div><div class="desc">移动<small>向前双击冲刺，向后双击后撤步</small></div>' +
-          '<div class="keys">' + k('↑') + k('W') + k('空格') + '</div><div class="desc">跳跃<small>空中可轻击</small></div>' +
-          '<div class="keys">' + k('J') + '</div><div class="desc">轻击<small>连按三连击</small></div>' +
-          '<div class="keys">' + k('K') + '</div><div class="desc">重击<small>按住蓄力，满蓄破防</small></div>' +
-          '<div class="keys">' + k('L') + '<span style="opacity:.6">/</span>' + k('↓') + '</div><div class="desc">格挡<small>按住减伤八成；满蓄重击与绝技终结会破防</small></div>' +
-          '<div class="keys"><b class="sgd-k pk">U</b></div><div class="desc">格开<small>来招打到前一瞬轻按（约 ' + Math.round(parryWindow(warOf(me)) * 100) / 100 + ' 秒）：弹开对手，反击一击 ×1.5 不可挡；落空有破绽，冷却 2.5 秒。挨了连段第二击，踩准第三击的节奏再按可格开（按早无效）；满蓄重击见刃口闪光即按</small></div>' +
+        card.innerHTML = '<h2>操作方法</h2>' + banner + vs + '<div class="sgd-rows">' +
+          '<div class="keys">' + k('←') + k('→') + '<span style="opacity:.6">/</span>' + k('A') + k('D') + '</div><div class="desc">移动 · 按住背向对手 = 格挡<small>向前双击冲刺，向后双击后撤步' + (st.guardBtn ? '；' + k('O') + ' 原地格挡' : '') + '</small></div>' +
+          '<div class="keys">' + k('↓') + k('S') + '</div><div class="desc">蹲<small>↓ + 背向 = 下段格挡；↓ + ' + KL.L + ' / ' + KL.M + ' 下段，↓ + ' + KL.H + ' 上挑（对空）</small></div>' +
+          '<div class="keys">' + k('↑') + k('W') + k('空格') + '</div><div class="desc">跳<small>空中攻击须站立格挡</small></div>' +
+          '<div class="keys">' + k(KL.L) + k(KL.M) + k(KL.H) + '</div><div class="desc">轻 · 中 · 重<small>重：按住蓄力，满蓄破防</small></div>' +
+          '<div class="keys">' + k(KL.M) + '+' + k(KL.H) + '</div><div class="desc">跃劈<small>中段，蹲挡挡不住</small></div>' +
+          '<div class="keys"><b class="sgd-k pk">U</b></div><div class="desc">格开<small>来招打到前一瞬轻按（约 ' + Math.round(parryWindow(warOf(me)) * 100) / 100 + ' 秒）：弹开对手，反击一击 ×1.5 不可挡；落空有破绽，冷却 2.5 秒。连段第三击起可看破；满蓄重击见刃口闪光即按</small></div>' +
           '<div class="keys"><b class="sgd-k r">I</b></div><div class="desc">绝技「' + SG.esc(sp.name) + '」<small>怒气满时</small></div>' +
-          '</div>' + (this.hybrid ? '<div class="vs">触摸屏：左下 ◀ ▶ ▲ 移动，右下按钮出招</div>' : '') + '<div class="go">' + (this.hybrid ? '按任意键或轻触开始' : '按任意键开始') + '</div>';
+          '<div class="keys">招式谱</div><div class="desc">' + scroll + '<small>依次按 ' + keysOf + '（踩准节拍连成八式）</small></div>' +
+          '</div>' + (this.hybrid ? '<div class="vs">触摸屏：左下摇杆移动 / 蹲 / 跳，右下按钮出招</div>' : '') + '<div class="go">' + (this.hybrid ? '按任意键或轻触开始' : '按任意键开始') + '</div>';
       }
       this.root.appendChild(card);
       await new Promise(res => {
@@ -6319,7 +6995,9 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
         fade.style.opacity = '0';
         setTimeout(() => fade.remove(), 350);
       }
-      return this.sim.outcome(this.skipped ? 'skip' : null);
+      const out = this.sim.outcome(this.skipped ? 'skip' : null);
+      if (this.seenAtSkip) { out.seenSteps = {}; for (const f of this.sim.f) if (f.gen && f.gen.name) out.seenSteps[f.gen.name] = (out.seenSteps[f.gen.name] | 0) | this.seenAtSkip[f.idx]; }
+      return out;
     }
   }
 
@@ -6381,7 +7059,10 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
     const culOf = g => { if (g.culture) return g.culture; try { return SG.WorldData && SG.WorldData.cultureOfGeneral ? SG.WorldData.cultureOfGeneral(g.name) : undefined; } catch (e) { return undefined; } };
     let res;
     try {
+      // 电脑的见识（§14.2）：同一场战斗里一直有效（挂在 BattleController 上，战斗结束即弃），不入存档
+      if (!bc._duelAiKnow) bc._duelAiKnow = new Map();
       res = await play(Object.assign({
+        aiKnow: bc._duelAiKnow,
         a: { gen: a.gen, side: a.side, color: factionColorOf(a), culture: culOf(a.gen) },
         b: { gen: b.gen, side: b.side, color: factionColorOf(b), culture: culOf(b.gen) },
         playerSide: a.side === bc.playerSide ? 0 : 1,
@@ -6391,8 +7072,10 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
     } catch (e) {
       // 格斗画面出错：记录错误，改用无画面模拟（同一套规则）分出胜负，保证士气与溃散照常结算
       console.error('单挑画面出错，改为直接结算：', e);
-      try { res = simulate(a.gen, b.gen); } catch (e2) { res = scriptedDuel(a.gen, b.gen); }
+      try { res = simulate(a.gen, b.gen); res.seenSteps = null; } catch (e2) { res = scriptedDuel(a.gen, b.gen); }
     }
+    // 玩家见识过的招式谱步（§12.2：打过或看过的单挑；格斗画面出错改为模拟时不算）
+    try { if (res.seenSteps && SG.Combos && typeof SG.Combos.markSeen === 'function' && SG.G) for (const n in res.seenSteps) SG.Combos.markSeen(SG.G, n, res.seenSteps[n], true); } catch (e) { console.error(e); }
     // 第 5 个参数（第三版）：格斗细节，供成长系统（DESIGN-V3 §4）按单挑表现给经验；现有 duelFinish 忽略多余参数
     const r = Mdl.duelFinish(a, b, res.winner === 0, res.log, { kind: res.kind, hpA: res.hpA, hpB: res.hpB, stats: res.stats || null });
     const loser = res.winner === 0 ? b : a;
@@ -6438,6 +7121,8 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
     // 第四版（COMBAT-V4 §15：Node 可测的规则数据与开关）
     COMBO, GUARD, CRIT, KL_WAIT, OVH_SU, DUEL_ITEM_EFFECTS, DUEL_BUDGET,
     stepMove, stepGap, critBase, duelModsOf, lineOf,
+    // 单挑设置（§5.3，localStorage）、键位预设、触摸布局数据（§5.2）
+    settings: loadSettings, saveSettings, SETTINGS_DEFAULT, KEY_PRESETS, keymapOf, keyLabels, TOUCH_LAYOUT, padDir, GLYPH, GLYPH_COLOR,
     critEnabled: true,                  // 单挑会心（测试开关；关掉时照样取随机数）
     get MIXUPS() { return MIXUPS; },    // 下段 / 上段二择（§17：关掉时 ↓ 攻击为中段、K+L 为中击、蹲只是姿势）
     set MIXUPS(v) { MIXUPS = !!v; },

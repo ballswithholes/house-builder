@@ -62,14 +62,16 @@
    URL 参数：?a=关羽&b=张飞  双方武将 · &side=0|1|watch|auto  · &terrain=0..7 · &go=1 立即开战
              &duelauto=1 玩家一方交给电脑 · &speed=N 时间倍率 · &seed=N 随机种子 · &pr=N 最大像素比（软件渲染测试用）
              &fig=0 不载入 js/figure.js（退回旧模型，对照用）
+             &mood=golden|dusk|night|16.5 场地的时刻（第四版；缺省按地形：平原黄金时刻、森林 / 丘陵 / 河川午后、城墙黄昏）· &lp=0 第三版场地
              &bots=1 载入后立即跑「人机强度」回归 · &pbot=parry|heavy|guard|spam|masher|jumper 玩家一方交给脚本玩家（真实画面里看格开 / 反击；heavy 多用重击，看满蓄重击的举刀一顿与格开）
    测试钩子：window.runDuel(opts) → Promise<结果>（opts.bot = 脚本玩家种类）· window.tally(n, a, b) · window.memTest(n) · window.wireTest(opts) ·
              window.botTally(n) · window.parryDemo(a, b) · window.__log */
 (function () {
   const Q = new URLSearchParams(location.search);
-  const optional = ['../js/data.js', '../js/world-data.js', '../js/model.js', '../js/strategy-ai.js', '../js/battle-model.js', '../js/audio.js', '../js/ui.js', '../js/art.js',
-    '../js/portrait-data.js', '../js/portrait.js', '../js/figure.js', '../js/specials-data.js', '../js/specials.js', '../js/duel-game.js'];
+  const optional = ['../js/data.js', '../js/world-data.js', '../js/model.js', '../js/strategy-ai.js', '../js/battle-model.js', '../js/audio.js', '../js/ui.js', '../js/lowpoly.js', '../js/lp-props.js', '../js/art.js',
+    '../js/portrait-data.js', '../js/portrait.js', '../js/figure.js', '../js/specials-data.js', '../js/specials.js', '../js/combo-data.js', '../js/combos.js', '../js/duel-game.js'];
   if (Q.get('fig') === '0') optional.splice(optional.indexOf('../js/figure.js'), 1);   // &fig=0：不载入 figure.js（旧的低多边形模型，对照用）
+  if (Q.get('lp') === '0') optional.splice(optional.indexOf('../js/lowpoly.js'), 2);   // &lp=0：不载入低多边形工具包与道具库（第三版场地，对照用；figure.js 仍会自行载入 lowpoly.js）
   const loaded = {};
   function load(src) {
     return new Promise(res => {
@@ -138,7 +140,8 @@
       // 脚本玩家接管玩家一方（DuelGame.scriptBot，与 tests/duel-bots.js 同一套）
       const bot = o.bot || Q.get('pbot');
       const ctrl = bot && playerSide !== null ? [0, 1].map(i => i === playerSide ? f => SG.DuelGame.scriptBot(bot, f.idx) : null) : null;
-      const res = await SG.DuelGame.play({ a: { gen: A, side: 0, color: A.color }, b: { gen: B, side: 1, color: B.color }, playerSide, terrain, special: sp, ctrl });
+      const mood = o.mood !== undefined ? o.mood : Q.get('mood') ? (isNaN(+Q.get('mood')) ? Q.get('mood') : +Q.get('mood')) : undefined;
+      const res = await SG.DuelGame.play({ a: { gen: A, side: 0, color: A.color }, b: { gen: B, side: 1, color: B.color }, playerSide, terrain, special: sp, ctrl, mood });
       document.body.classList.remove('fighting');
       const w = res.winner === 0 ? A : B;
       const ps = res.stats ? ` 格开 ${res.stats[0].parries}/${res.stats[0].parryTries} : ${res.stats[1].parries}/${res.stats[1].parryTries} 反击 ${res.stats[0].counters}:${res.stats[1].counters}` : '';

@@ -350,8 +350,9 @@
     // ---- 存档 v4（INTEGRATION §6.1–§6.2；SG.MigrateV4 自动发现）----
     enabled: true,
     saveKeys: ['combos'],
-    migrate(G) { store(G); },
-    init(G) { store(G); },
+    // 见识与熟练是懒建的（第一次 markSeen / addMastery 时才有 G.combos）：新游戏与没见识过任何招式谱的存档不带此键（缺省即 0，§12.2）
+    migrate(G) { if (G && G.combos) store(G); },
+    init(G) { if (G && G.combos) store(G); },
   };
   SG.Combos = Combos;
 })();

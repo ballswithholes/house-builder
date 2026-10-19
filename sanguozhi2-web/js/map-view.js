@@ -1024,7 +1024,7 @@ void main() {
   vec2 p = vec2( vW.x, - vW.z );
   float t = uTime;
   float depth = max( 0.0, - sgTerrainH( p ) );
-  // 平涂的三档水色
+  // 平涂的三档水色（uShallow / uMid / uDeep / uFoam 已是线性色：省掉每像素的 sRGB → 线性换算）
   vec3 c = mix( uShallow, uMid, smoothstep( 0.04, 0.9, depth ) );
   c = mix( c, uDeep, smoothstep( 0.9, 3.4, depth ) );
   // 焦散亮纹：两层缓慢流动，浅处明显
@@ -1033,14 +1033,16 @@ void main() {
   float kk = k1 * 0.6 + k2 * 0.4;
   float shallowK = 1.0 - smoothstep( 0.25, 2.8, depth );
   float big = texture2D( uCaustic, p * 0.011 + vec2( 0.3, 0.7 ) ).r;
-  c *= 0.95 + 0.1 * kk * mix( 0.5, 1.0, shallowK ) + ( big - 0.5 ) * 0.08;
-  c = mix( c, c * 1.16 + 0.05, smoothstep( 0.64, 0.9, kk ) * mix( 0.1 * smoothstep( 0.45, 0.75, big ), 0.85, shallowK ) );
+  // （线性空间里的明暗：sRGB 中的 ×f 约等于线性中的 ×f²）
+  float cf = 0.95 + 0.1 * kk * mix( 0.5, 1.0, shallowK ) + ( big - 0.5 ) * 0.08;
+  c *= cf * cf;
+  c = mix( c, c * 1.36 + 0.012, smoothstep( 0.64, 0.9, kk ) * mix( 0.1 * smoothstep( 0.45, 0.75, big ), 0.85, shallowK ) );
   // 岸线（干净的白边）+ 一道离岸浪线
   float shore = 1.0 - smoothstep( 0.0, 0.06 + 0.05 * k2, depth );
   float band = smoothstep( 0.8, 0.97, 0.5 + 0.5 * sin( depth * 13.0 - t * 1.3 + k2 * 3.0 ) ) * ( 1.0 - smoothstep( 0.1, 0.42, depth ) );
   float foam = clamp( shore + band * 0.35, 0.0, 1.0 );
   // 光照（朝上的水面：包裹式太阳 + 天光；夜色调、黄金时刻提亮）
-  vec3 alb = wLin( c );
+  vec3 alb = c;
   vec3 L = normalize( uSunDir );
   vec3 sunC = lpSunC.w > 0.5 ? lpSunC.rgb : vec3( 0.95, 0.88, 0.76 );
   vec3 sky = lpSkyC.w > 0.5 ? lpSkyC.rgb : vec3( 0.3, 0.34, 0.45 );
@@ -1054,11 +1056,11 @@ void main() {
   vec3 V = normalize( cameraPosition - vW );
   float sheen = pow( max( dot( reflect( - V, vec3( 0.0, 1.0, 0.0 ) ), L ), 0.0 ), 12.0 ) * ( 1.0 - lpNight.x * 0.8 );
   col += sunC * sheen * ( 0.12 + 0.12 * kk );
-  col = mix( col, wLin( uFoam ) * light, foam * 0.85 );
+  col = mix( col, uFoam * light, foam * 0.85 );
   if ( lpWarmth.x > 0.0 ) { float cl = dot( col, W_LUMA ); col = max( cl + ( col - cl ) * ( 1.0 + lpWarmth.x ), 0.0 ); }
   #ifdef USE_FOG
     float fk = clamp( ( length( vW - cameraPosition ) - fogNear ) / max( fogFar - fogNear, 0.01 ), 0.0, 1.0 ) * lpFog.x;
-    col = mix( col, lpFog.y > 0.5 ? wLin( fogColor ) : fogColor, fk );
+    col = mix( col, lpFog.y > 0.5 ? fogColor * fogColor : fogColor, fk );
   #endif
   float alpha = mix( 0.58, 0.93, smoothstep( 0.0, 1.6, depth ) );
   alpha = max( alpha, foam * 0.92 );
@@ -1086,14 +1088,19 @@ void main() {
     _causticTex = t;
     return t;
   }
+  function srgbLin(r, g, b) {
+    const f = c => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+    return new THREE.Vector3(f(r), f(g), f(b));
+  }
   function mapWaterMaterial(tu) {
     const w = SG.Gfx.water().uniforms;   // 共用时间与太阳方向（随氛围转动）
     const mat = new THREE.ShaderMaterial({
       uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
-        uShallow: { value: new THREE.Color(0.56, 0.8, 0.78) },
-        uMid: { value: new THREE.Color(0.34, 0.62, 0.71) },
-        uDeep: { value: new THREE.Color(0.21, 0.43, 0.63) },
-        uFoam: { value: new THREE.Color(0.97, 0.97, 0.94) },
+        // 线性色（着色器不再逐像素换算；sRGB 原值 0.56,0.8,0.78 / 0.34,0.62,0.71 / 0.21,0.43,0.63 / 0.97,0.97,0.94）
+        uShallow: { value: srgbLin(0.56, 0.8, 0.78) },
+        uMid: { value: srgbLin(0.34, 0.62, 0.71) },
+        uDeep: { value: srgbLin(0.21, 0.43, 0.63) },
+        uFoam: { value: srgbLin(0.97, 0.97, 0.94) },
       }]),
       vertexShader: MAP_WATER_VS, fragmentShader: MAP_WATER_FS,
       transparent: true, depthWrite: false, fog: true,
@@ -1834,6 +1841,9 @@ void main() {
     r.autoClear = false;
     const cells = {};
     const corner = new THREE.Vector3();
+    // 图集里也描墨线（按 128 像素的格算线宽：公告板缩到四五十像素时只剩一圈淡淡的暗边，与近处 3D 树的墨线接得上）
+    const vw = LP.globals.lpView.value, saveView = vw.clone();
+    vw.set(IMP_C, IMP_C, 0.62, 0.9);
     VEG_KINDS.forEach((kind, i) => {
       const g = vegGeo(kind, 0, 1);
       const b = g.boundingBox || (g.computeBoundingBox(), g.boundingBox);
@@ -1852,12 +1862,13 @@ void main() {
       rt.scissor.set(col * IMP_C, row * IMP_C, IMP_C, IMP_C);
       rt.scissorTest = true;
       r.setRenderTarget(rt);
-      const mesh = LP.mesh(g, { castShadow: false, receiveShadow: false, outline: false });
+      const mesh = LP.mesh(g, { castShadow: false, receiveShadow: false, outline: true });
       scene.add(mesh);
       r.render(scene, cam);
       scene.remove(mesh);
       cells[kind] = { i, w: half * 2, h: half * 2, base: (0 - (cy - half)) / (half * 2), ox: (0 - (cx - half)) / (half * 2) - 0.5 };
     });
+    vw.copy(saveView);
     rt.scissorTest = false;
     rt.viewport.set(0, 0, rt.width, rt.height);
     r.setRenderTarget(prev.rt);
@@ -1972,6 +1983,35 @@ void main() {
     const r = SG.LPProps.geometry(name, { seed: variant || 0, lod: lod && info && info.lod ? 'far' : 'near' });
     return r.ink || r.plain;
   }
+  // 村舍的远景「小房块」：屋身 + 双坡顶（约 30 个三角形），尺寸取道具库模型的包围盒，颜色取配方的墙色、顶色
+  const SPECK = {
+    house_han: ['#E6DCC4', '#6F757C', 'gable'], house_thatch: ['#DDC9A0', '#C9994A', 'gable'], house_med: ['#EFE6D6', '#C4643E', 'gable'],
+    house_mud: ['#CF9C68', '#D9AA76', 'flat'], yurt: ['#EEE8DA', '#E2D8C2', 'cone'], haystack: ['#D9B45C', '#E2C068', 'cone'], well: ['#A29C92', '#7E6A50', 'flat'],
+  };
+  function speckGeo(name) {
+    return SG.LP.MeshCache.get('map:speck:' + name, () => {
+      const LP = SG.LP, H = LP.Paint.hex, d = SPECK[name] || SPECK.house_han;
+      const b = SG.LPProps.geometry(name, { seed: 0 }).box;
+      const w = b.max.x - b.min.x, dp = b.max.z - b.min.z, h = Math.max(0.05, b.max.y), cx = (b.max.x + b.min.x) / 2, cz = (b.max.z + b.min.z) / 2;
+      const F = new LP.MeshBuilder(7);
+      F.jitter = 0.04; F.ink = 0;
+      if (d[2] === 'cone') {
+        F.color = H(d[0]); F.cylinder([cx, 0, cz], w * 0.48, w * 0.46, h * 0.45, 6, false, false, false);
+        F.color = H(d[1]); F.cylinder([cx, h * 0.45, cz], w * 0.5, 0.0, h * 0.55, 6, false, false, false);
+      } else if (d[2] === 'flat') {
+        F.color = H(d[0]); F.box([cx, h * 0.5, cz], [w * 0.92, h, dp * 0.92], H(d[1]), 'tfkrl');
+      } else {
+        const alongX = w >= dp, bw = (alongX ? w : dp) * 0.84, bd = (alongX ? dp : w) * 0.8, wh = h * 0.5;
+        F.push();
+        F.translate(cx, 0, cz);
+        if (!alongX) F.rotate(0, 90, 0);
+        F.color = H(d[0]); F.box([0, wh * 0.5, 0], [bw, wh, bd], null, 'fkrl');
+        F.color = H(d[1]); F.roof([0, wh, 0], bw, bd, h - wh, bd * 0.12, 0.0001, true);
+        F.pop();
+      }
+      return F.toGeometry();
+    });
+  }
   // 草丛（道具库 grass，不描墨线）与野花（小簇：花茎 + 五瓣花，花瓣白色乘实例色）
   // 草丛：五片两面的草叶（每片 2 个三角形），叶根暗绿、叶尖暖亮（道具库 grass 的配色，但三角形只有它的四分之一），高约 0.2 单位
   function lpGrassGeometry() {
@@ -2011,10 +2051,25 @@ void main() {
   const CITY_LAMP_R = 3.4, CITY_LAMP_I = 2.0, CITY_LAMP_H = 1.1;
   // 地图的缺省时刻：温暖的午后（黄金时刻提亮约一半，太阳偏暖）。MapView.setMood / followClock 可改
   const MAP_HOUR = 16.3;
+  // 标题画面的飞越：黄昏，城里的灯笼亮起（开局后平滑转回午后）。标题画面 = game.js 的 .sg-title > .sg-title-hero 在页面上
+  //（标题背景也有一份临时的 SG.G，不能用它判断；每半秒查一次）
+  const TITLE_HOUR = 19.2;
+  let _titleT = -1, _titleUp = false, _titleForce = false;
+  function titleUp() {
+    if (_titleForce) return true;
+    const t = now();
+    if (t - _titleT > 500) { _titleT = t; _titleUp = !!(SG.Game && typeof document !== 'undefined' && document.querySelector('.sg-title > .sg-title-hero')); }
+    return _titleUp;
+  }
+  const defaultHour = () => (titleUp() ? TITLE_HOUR : MAP_HOUR);
   // 城池（CultureArt.scatter）：镜头到区块 < CITY_LOD 用近景模型，< CITY_INK 描墨线
-  const CITY_LOD = 72, CITY_INK = 44;
+  const CITY_LOD = 72, CITY_INK = 38;
   // 村落：远于 VILLAGE_HIDE 的区块不画（远看只是几个像素）；桥与关隘的墨线只在 PROP_INK 以内
   const VILLAGE_HIDE = 105, PROP_INK = 55;
+  // 村落近景（道具库远景细节 + 墨线 + 投影）的半径；更远处用十来个三角形的「小房块」（远看只有几个像素）
+  const VILLAGE_NEAR = 38;
+  // 树的墨线只描镜头 TREE_INK 以内的区块（更远的树只有二三十像素高，墨线把树冠涂成一团黑）
+  const TREE_INK = 26;
   // LP 旗：旗杆（木色，带金色顶尖）与旗面（白色，乘势力色；略带波浪），尺寸同第三版的旗（杆高 2.2、旗面 0.9 × 0.6）
   function lpFlagGeometry() {
     return SG.LP.MeshCache.get('map:flag', () => {
@@ -2539,7 +2594,7 @@ void main() {
         self._buildSelectRing(); self.refresh(state); yield;
         // 第四版：地图的时刻（缺省为温暖的午后；重建地图时沿用之前设定的时刻 / 跟随时钟）
         self._moodVis = undefined;
-        self._applyMood(self._follow && SG.Clock && SG.Clock.hour ? SG.Clock.hour() : self._moodWant != null ? self._moodWant : MAP_HOUR);
+        self._applyMood(self._follow && SG.Clock && SG.Clock.hour ? SG.Clock.hour() : self._moodWant != null ? self._moodWant : defaultHour());
         self._initGrass(); yield;
         // 按当前镜头预先补齐近处的细地形块（之后每帧按需补建）
         const cam = SG.Gfx.camera;
@@ -2579,6 +2634,7 @@ void main() {
       for (const m of this._ownMats || []) m.dispose();
       this._ownMats = [];
       if (this._lamps && SG.Gfx.removeLamp) for (const l of this._lamps) SG.Gfx.removeLamp(l);
+      if (this._glow) { this._glow.b.dispose(); this._glow = null; }
       this._lamps = null; this._lampSpecs = null; this._cityScatter = null; this._lampsOn = undefined;
       this._flags = null; this._rings = null; this._selectRing = null; this._debug = null; this._treeTiles = null; this._scatter = null; this._cityTiles = null; this._inkProps = null;
       this._grassT = null; this._flowerT = null; this._grassKey = null; this._grassJob = null;
@@ -2678,6 +2734,22 @@ void main() {
           if (v * 255 > X[q]) X[q] = b8(v);
         }
         if ((c.id & 31) === 31) yield;
+      }
+      // B = 沙滩的「附近有水」权重（四邻最低处的高度 0.03 → 0.2 由 1 渐到 0；高于 0.75 的地方用不到，记 1）。
+      // 原来着色器每个低地像素取四次高度图；这里按主高度网格（间距 res = step / 2）预先算好
+      const m = this._master;
+      if (m) {
+        const mh = m.h, W = m.nx, Hn = m.nz, r = step / m.res;
+        for (let j = 0; j < hgt; j++) {
+          const J = Math.min(Hn - 1, Math.round(j * r));
+          for (let i = 0; i < w; i++) {
+            const I = Math.min(W - 1, Math.round(i * r)), q = (j * w + i) * 4 + 2;
+            if (mh[J * W + I] > 0.75) { X[q] = 255; continue; }
+            const hmin = Math.min(mh[J * W + Math.max(0, I - 1)], mh[J * W + Math.min(W - 1, I + 1)], mh[Math.max(0, J - 1) * W + I], mh[Math.min(Hn - 1, J + 1) * W + I]);
+            X[q] = b8(1 - ss(0.03, 0.2, hmin));
+          }
+          if ((j & 63) === 63) yield;
+        }
       }
     }
 
@@ -3343,7 +3415,7 @@ void main() {
           const dry = cb === 'persia' || cb === 'arab' || cb === 'tarim' || cb === 'kushan';
           let kind = cb === 'seasia' || cb === 'yi' || cb === 'nanman' || cu === 'africa' ? 'palm' : dry ? (k ? 'poplar' : 'palm') : cb === 'roman' || cu === 'moor' ? (k ? 'olive' : 'cypress') : 'broad';
           // 第四版：汉地 / 朝鲜 / 倭的村边是桃李（花树）
-          if (LPV && kind === 'broad' && (cb === 'han' || cb === 'korea' || cb === 'wa') && k !== 1) kind = 'blossom';
+          if (LPV && kind === 'broad' && (cb === 'han' || cb === 'korea' || cb === 'wa') && k === 0 && LP_HASH(o.x, o.z) < 0.45) kind = 'blossom';
           const c = kind === 'palm' ? PALM : kind === 'poplar' ? POPLAR : kind === 'olive' ? OLIVE : kind === 'cypress' ? CYPRESS : [0.36, 0.6, 0.27];
           add(kind, px, h - 0.04, pz, 0.75, 0.75, a, c, (rnd.nextDouble() - 0.5) * 0.12);
         }
@@ -3467,7 +3539,9 @@ void main() {
           const yaw = -o.yaw + Math.PI / 2 + (rnd.next(2) ? 0 : Math.PI / 2) + (rnd.nextDouble() - 0.5) * 0.3;
           const s = 0.9 + rnd.nextDouble() * 0.3;
           if (LPV) {
-            const rec = HOUSE_LP[style] || 'house_han', sc = s * HOUSE_W[style] / PROP_W(rec), variant = rec === 'yurt' ? 0 : LP_HASH(px, pz) < 0.5 ? 0 : 1;
+            // 汉地村落：瓦房与草房相间（草顶的暖金色让村子在地图上一眼可见，同 Lanternvale 的农舍）
+            const hv = LP_HASH(px + 7.7, pz - 3.1), rec = style === 'han' && hv < 0.6 ? 'house_thatch' : HOUSE_LP[style] || 'house_han';
+            const sc = s * (rec === 'house_thatch' && style === 'han' ? HOUSE_W.round : HOUSE_W[style]) / PROP_W(rec), variant = rec === 'yurt' ? 0 : LP_HASH(px, pz) < 0.5 ? 0 : 1;
             HB.add(rec + ':' + variant, px, h - 0.02, pz, sc, sc, yaw + Math.PI, k, k, k);
           } else HB.add(style, px, h - 0.02, pz, s, s, yaw, c[0] * k, c[1] * k, c[2] * k);
           houses++;
@@ -3494,8 +3568,8 @@ void main() {
         }
         // 村舍近景也用道具库的远景细节（地图上一间屋只有十几个像素宽）；远处的区块整片隐去
         const before = this._scatter.length;
-        yield* this._lpInstMeshes(HB, (key, lod) => { const [k, v] = key.split(':'); return propGeo(k, +v, 1); }, 'Villages', this._scatter, true);
-        for (let i = before; i < this._scatter.length; i++) this._scatter[i].hideFar = VILLAGE_HIDE;
+        yield* this._lpInstMeshes(HB, (key, lod) => { const [k, v] = key.split(':'); return lod ? speckGeo(k) : propGeo(k, +v, 1); }, 'Villages', this._scatter, true);
+        for (let i = before; i < this._scatter.length; i++) { this._scatter[i].hideFar = VILLAGE_HIDE; this._scatter[i].nearR = VILLAGE_NEAR; }
       } else yield* this._instMeshes(HB, kind => houseGeometry(kind), treeMaterial(), 'Villages', this._scatter, true);
       this.houseCount = houses;
     }
@@ -4101,6 +4175,16 @@ void main() {
         const sc = this._cityScatter = SG.CultureArt.scatter(cityList, { chunk: 60, lodDist: CITY_LOD, inkDist: CITY_INK, name: 'Cities' });
         sc.group.traverse(o => { if (o.isMesh) o.userData.sharedGeometry = true; });
         this.root.add(sc.group);
+        // 投影代理：近景区块的城不自己投影（约 5 千三角形一座），改由同一区块的远景模型（≤ 400）只在阴影图里画一遍
+        //（_cityShadowLOD：主画面里实例数临时置 0，three 不发绘制）。阴影是柔边的，远景模型的轮廓足够
+        if (sc.scatter && sc.scatter.chunks) for (const c of sc.scatter.chunks) {
+          if (!c.near || !c.far) continue;
+          c.near.castShadow = false;
+          const f = c.far;
+          const pb = f.onBeforeRender, pa = f.onAfterRender;
+          f.onBeforeRender = function (...a) { pb.apply(this, a); if (this.userData.shadowOnly) { this.userData.n = this.count; this.count = 0; } };
+          f.onAfterRender = function (...a) { if (this.userData.shadowOnly) this.count = this.userData.n; pa.apply(this, a); };
+        }
         // 城门灯笼、殿前灯、篝火：夜里点亮。地图比例下一座城的几盏灯合成一盏（灯位取平均、灯池放大到约 3.4 单位、一团光晕），
         // 氛围的灯池（SG.Gfx.mood 的 6 盏点光源）因此能照亮离视野中心最近的六座城。
         // 灯在地图第一次入夜（黄昏）时才交给氛围（_ensureLamps）：灯池的点光源一旦建立，白天每个像素也要遍历它们
@@ -4254,21 +4338,26 @@ void main() {
 
     // ------------------------------------------------------ 氛围（第四版）--
     // setMood('dawn' | 'morning' | 'noon' | 'afternoon' | 'golden' | 'dusk' | 'night' | 小时数 | null)：地图的时刻
-    // （SG.LP.Mood：太阳方向与颜色、黄金时刻提亮、夜色调、城中灯笼的灯池）。null = 回到缺省的午后（MAP_HOUR）。
+    // （SG.LP.Mood：太阳方向与颜色、黄金时刻提亮、夜色调、城中灯笼的灯池）。null = 回到缺省：开局后是温暖的午后（MAP_HOUR），
+    // 标题画面（.sg-title > .sg-title-hero 在页面上）是灯笼亮起的黄昏（TITLE_HOUR），两者之间平滑过渡。
     // 只在地图显示时生效：地图隐藏（攻城、野战画面借用主场景）时还原为构建前的氛围，再显示时重新套用。
     // followClock(true)：跟随 SG.Clock.hour()（INTEGRATION §10.7：月初 07:00 → 用完令牌 20:00，电脑回合入夜），平滑过渡；
     // setMood(…) 会关掉跟随。返回当前的氛围状态（SG.Gfx.moodState()）
+    // setMood('title')：标题画面的黄昏（加色光晕，不建点光源灯池），game.js 可在标题流程开始时调、离开时 setMood(null)；
+    // 不调时按 .sg-title > .sg-title-hero 是否在页面上自动判断
     setMood(what) {
       this._follow = false;
-      this._moodWant = what == null ? MAP_HOUR : typeof what === 'number' ? what : (SG.LP && SG.LP.MOOD_HOURS && SG.LP.MOOD_HOURS[what] != null ? SG.LP.MOOD_HOURS[what] : MAP_HOUR);
-      return this._applyMood(this._moodWant);
+      _titleForce = what === 'title';
+      if (_titleForce) what = null;
+      this._moodWant = what == null ? null : typeof what === 'number' ? what : (SG.LP && SG.LP.MOOD_HOURS && SG.LP.MOOD_HOURS[what] != null ? SG.LP.MOOD_HOURS[what] : MAP_HOUR);
+      return this._applyMood(this._moodWant != null ? this._moodWant : defaultHour());
     }
     followClock(on) {
       this._follow = on !== false;
       if (this._follow && SG.Clock && typeof SG.Clock.hour === 'function') { this._moodWant = SG.Clock.hour(); this._applyMood(this._moodWant); }
       return this._follow;
     }
-    get moodHour() { return this._moodHour != null ? this._moodHour : MAP_HOUR; }
+    get moodHour() { return this._moodHour != null ? this._moodHour : defaultHour(); }
     _applyMood(h) {
       const Gfx = SG.Gfx;
       if (!Gfx || !Gfx.setMood || !Gfx.mood) return null;
@@ -4278,7 +4367,9 @@ void main() {
       return Gfx.moodState();
     }
     // 第一次入夜（氛围的夜色 > 0.15）时把城与关的灯交给氛围；之后一直保留（夜里点亮、白天自动熄灭，地图隐藏时熄灭）
+    // 只在明确要了时刻（setMood / followClock）时建：缺省时刻（标题画面的黄昏）用 _updateGlow 的加色光晕代替
     _ensureLamps() {
+      if (!(this._follow || this._moodWant != null)) return;
       const Gfx = SG.Gfx, st = Gfx && Gfx.moodState && Gfx.moodState();
       if (!this._lampSpecs || !this._lampSpecs.length || !st || !(st.night > 0.15) || !Gfx.addLamp) return;
       this._lamps = this._lamps || [];
@@ -4298,19 +4389,23 @@ void main() {
         if (this._lamps && Gfx.setLampLit) for (const l of this._lamps) Gfx.setLampLit(l, vis);
       }
       if (!vis) { if (this._focusSet && Gfx.mood) { Gfx.mood.focus = null; this._focusSet = false; } return; }
+      this._updateGlow(Gfx.moodState && Gfx.moodState());
       // 灯池给离视野中心最近的城（而不是离镜头最近的——俯视时镜头下方多在画面之外）
       if (this._lamps && this._lamps.length && Gfx.mood) {
         const c = this._viewCenter(), f = this._focus || (this._focus = [0, 0, 0]);
         f[0] = c.x; f[1] = 1; f[2] = -c.z;
         Gfx.mood.focus = f; this._focusSet = true;
       }
-      if (this._follow && SG.Clock && typeof SG.Clock.hour === 'function') {
-        const want = SG.Clock.hour(), cur = this.moodHour;
+      const follow = this._follow && SG.Clock && typeof SG.Clock.hour === 'function';
+      if (follow || this._moodWant == null) {
+        const want = follow ? SG.Clock.hour() : defaultHour(), cur = this.moodHour;
         let d = want - cur;
         if (d > 12) d -= 24; else if (d < -12) d += 24;
-        if (Math.abs(d) > 0.01) {
-          // 每秒约 2 小时的平滑过渡（一个月的白天在几步之间看得见地走过；月初的黎明不跳变）
-          const step = Math.sign(d) * Math.min(Math.abs(d), Math.max(0.02, 2 * dt));
+        // 进入标题画面时直接跳到黄昏（标题刚淡入，看不出跳变）；其余（开局转回午后、跟随时钟）平滑过渡
+        if (!follow && want === TITLE_HOUR && Math.abs(d) > 0.01) { this._moodHour = want; Gfx.setMood(want); }
+        else if (Math.abs(d) > 0.01) {
+          // 每秒约 2 小时的平滑过渡（一个月的白天在几步之间看得见地走过；月初的黎明不跳变）；离开标题画面回到午后快一些（每秒 5 小时）
+          const step = Math.sign(d) * Math.min(Math.abs(d), Math.max(0.02, (follow ? 2 : 5) * dt));
           this._moodHour = ((cur + step) % 24 + 24) % 24;
           Gfx.setMood(this._moodHour);
           this._ensureLamps();
@@ -4447,17 +4542,18 @@ void main() {
       const key = Math.round(cx / 4) + ',' + Math.round(cz / 4) + ',' + Math.round(cy / 4);
       // 每帧最多约 2.5 ms：没轮到的区块（key 未更新）下一帧继续
       const t0 = now();
-      const apply = (tiles, hide, R) => {
+      const apply = (tiles, hide, R0) => {
         if (!tiles) return;
         for (const t of tiles) {
           if (!hide && t.key !== key && now() - t0 > 2.5) { if (t.tree) { for (const m of t.near) m.visible = true; for (const m of t.hero) if (m) m.visible = true; t.far.visible = true; } else t.near.visible = t.far.visible = true; continue; }
-          if (t.tree) { this._treeTileLOD(t, hide, R, key, cx, cy, cz); continue; }
+          if (t.tree) { this._treeTileLOD(t, hide, R0, key, cx, cy, cz); continue; }
           t.near.visible = t.far.visible = !hide;
           if (hide || t.key === key) continue;
           t.key = key;
           const dh = Math.hypot(t.cx - cx, t.cz - cz);
           const dmin = Math.hypot(Math.max(0, dh - t.r), cy), dmax = Math.hypot(dh + t.r, cy);
           if (t.hideFar && dmin > t.hideFar) { t.near.visible = t.far.visible = false; continue; }
+          const R = t.nearR || R0;
           if (dmin > R) { if (t.mode !== 'far') { t.far.instanceMatrix.array.set(t.mats); t.far.instanceColor.array.set(t.cols); setInstCount(t.far, t.n); setInstCount(t.near, 0); t.far.instanceMatrix.needsUpdate = t.far.instanceColor.needsUpdate = true; t.mode = 'far'; } continue; }
           if (dmax < R) { if (t.mode !== 'near') { t.near.instanceMatrix.array.set(t.mats); t.near.instanceColor.array.set(t.cols); setInstCount(t.near, t.n); setInstCount(t.far, 0); t.near.instanceMatrix.needsUpdate = t.near.instanceColor.needsUpdate = true; t.mode = 'near'; } continue; }
           // 区块跨越近景边界：逐实例分配
@@ -4484,7 +4580,7 @@ void main() {
       apply(this._treeTiles, hideTrees, this._lpVeg ? VEG_NEAR : 42);
       apply(this._scatter, hideSmall, 50);
       // 城池：近景细致模型 / 远景简化模型
-      if (this._cityScatter) this._cityScatter.update(cam);
+      if (this._cityScatter) { this._cityScatter.update(cam); this._cityShadowLOD(); }
       // 桥、关隘：远处不描墨线（固定像素宽的墨线会把几十像素大的模型涂黑）——按对象中心到镜头的距离
       if (this._inkProps) for (const o of this._inkProps) {
         if (!o.userData.inkC) { o.updateMatrixWorld(true); const b = new THREE.Box3().setFromObject(o); o.userData.inkC = b.getCenter(new THREE.Vector3()); o.userData.inkR = b.getSize(new THREE.Vector3()).length() * 0.5; o.userData.inkOn = true; }
@@ -4500,6 +4596,41 @@ void main() {
         for (const m of t.meshes.far) m.visible = lod === 1;
       }
     }
+    // 缺省时刻（标题画面的黄昏）不建点光源灯池（灯池一旦建立，白天每个像素也要遍历它们：SwiftShader 下慢约 15–20%）：
+    // 城与关的灯改用一批加色光晕（LP.HaloBatch，一次绘制）——每处一大团暗金的「灯池」光 + 一颗亮的灯晕；建了真灯就熄掉
+    _updateGlow(st) {
+      const want = !(this._lamps && this._lamps.length) && !!st && st.night > 0.2;
+      if (!this._glow) {
+        if (!want || !this._lampSpecs || !this._lampSpecs.length || !SG.LP || !SG.LP.HaloBatch) return;
+        const specs = this._lampSpecs.slice(), b = new SG.LP.HaloBatch(specs.length * 2);
+        b.points.name = 'CityGlow';
+        this.root.add(b.points);
+        this._glow = { b, specs, k: -1 };
+      }
+      const g = this._glow, k = want ? Math.round(M.clamp01((st.night - 0.2) / 0.45) * 40) / 40 : 0;
+      if (k === g.k) return;
+      g.k = k;
+      const H = SG.LP.Paint.hex;
+      let i = 0;
+      for (const [pos, o] of g.specs) {
+        const c = H(o.color || '#ffd08a'), sz = o.haloSize || CITY_LAMP_H;
+        g.b.set(i++, [pos[0], pos[1] - 0.2, pos[2]], [c[0] * 0.34 * k, c[1] * 0.26 * k, c[2] * 0.15 * k], sz * 5, k > 0);
+        g.b.set(i++, pos, [c[0] * k, c[1] * 0.92 * k, c[2] * 0.78 * k], sz * 1.1, k > 0);
+      }
+      g.b.commit(i);
+    }
+    // 城的投影代理（见 _genCities）：近景区块的远景模型可见、投影、在主画面里不画；远景区块照常画、不投影
+    _cityShadowLOD() {
+      const sc = this._cityScatter && this._cityScatter.scatter;
+      if (!sc || !sc.chunks) return;
+      for (const c of sc.chunks) {
+        if (!c.near || !c.far) continue;
+        const proxy = !c.isFar && c.near.visible !== false;
+        c.far.userData.shadowOnly = proxy;
+        c.far.castShadow = proxy;
+        c.far.visible = proxy || !!c.isFar;
+      }
+    }
     // 树木区块：镜头 R 以内的树用平滑模型（按树种分到各近景网格），其余写入公告板网格
     _treeTileLOD(t, hide, R, key, cx, cy, cz) {
       for (const m of t.near) m.visible = !hide;
@@ -4508,6 +4639,10 @@ void main() {
       if (hide || t.key === key) return;
       t.key = key;
       const dh = Math.hypot(t.cx - cx, t.cz - cz);
+      if (t.lp) {
+        const dm = Math.hypot(Math.max(0, dh - t.r), cy), ink = t.ink ? dm < TREE_INK * 1.08 : dm < TREE_INK * 0.92;
+        if (ink !== t.ink) { t.ink = ink; for (const m of t.near) if (m.userData.outline) m.userData.outline.visible = ink; }
+      }
       const allFar = Math.hypot(Math.max(0, dh - t.r), cy) > R;
       if (allFar && t.mode === 'far') return;
       const R2 = R * R - cy * cy;

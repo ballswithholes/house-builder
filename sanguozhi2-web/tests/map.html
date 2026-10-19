@@ -153,7 +153,12 @@
         if (!o.isMesh || (o.isInstancedMesh && o.count === 0)) return;
         if (o.frustumCulled && !fr.intersectsObject(o)) return;
         const g = o.geometry, tri = (g.index ? g.index.count : g.getAttribute('position').count) / 3 * (o.isInstancedMesh ? o.count : 1);
-        const k = o.name || o.type;
+        let k = o.name || o.type;
+        if (/^(outline|LP instances|Mesh|InstancedMesh)$/.test(k)) {
+          let p = o.parent;
+          while (p && (!p.name || /^(outline|LP instances|Mesh|Group)$/.test(p.name))) p = p.parent;
+          if (p && p.name) k += '<' + p.name;
+        }
         out[k] = out[k] || [0, 0]; out[k][0]++; out[k][1] += Math.round(tri);
       });
       return out;

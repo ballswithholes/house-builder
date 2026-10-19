@@ -1710,35 +1710,43 @@ vec3 sgCropLV( float id ) {
 			sgForest = ic.a * sgWI;
 			sgAO = mix( 0.5, tn.b, sgWI );
 			sgNs = normalize( mix( sgNs, n2, sgWI ) );
-			if ( sgH < 0.6 ) {
-				// 附近有水（高度 < 0.02）才有沙滩：四个方向上取最低处
-				vec2 d1 = vec2( 1.0, 0.0 ) * sgXfN.zw, d2 = vec2( 0.0, 1.0 ) * sgXfN.zw;
-				float a1 = min( min( texture2D( sgMapN, uvN + d1 ).a, texture2D( sgMapN, uvN - d1 ).a ), min( texture2D( sgMapN, uvN + d2 ).a, texture2D( sgMapN, uvN - d2 ).a ) );
-				sgNearW = mix( 1.0, 1.0 - smoothstep( 0.03, 0.2, a1 * 8.0 - 4.0 ), sgWI );
-			}
+			// 附近有水（四邻最低处的高度 < 0.03–0.2）才有沙滩：构建时预先算好在 sgMapX.b（原来每像素四次取样）
+			sgNearW = 1.0 - sgWI + sgX.b;
 		}
 	}
-	// 固定三角格上的面法线（交替对角线；与 LOD 网格无关）与面编号
+	// 固定三角格上的面法线（交替对角线；与 LOD 网格无关）与面编号。
+	// sgFk：一格在屏幕上小于约 3 像素时淡出面化（远看的三角格只剩条纹状的闪烁）；导数在分支外求
+	vec2 sgFp = ( sgP - sgFacetXf.xy ) / sgFacetXf.z;
+	float sgFk = 1.0 - smoothstep( 0.12, 0.34, length( fwidth( sgFp ) ) );
 	vec3 sgNf = sgNs;
 	float sgFid = 0.5;
-	if ( sgWI > 0.0 ) {
-		vec2 fp = ( sgP - sgFacetXf.xy ) / sgFacetXf.z;
+	// 平地（平滑坡度很小、不在高山）不取面法线：面化只落在岩坡与高山上
+	if ( sgWI > 0.0 && sgFk > 0.001 && ( 1.0 - sgNs.y > 0.025 || sgH > 3.6 ) ) {
+		vec2 fp = sgFp;
 		vec2 cell = floor( fp ), f = fp - cell;
 		vec4 fn = texture2D( sgFacet, ( cell + 0.5 ) * sgFacetSz.xy );
 		float odd = mod( cell.x + cell.y, 2.0 );
 		float triB = odd < 0.5 ? step( f.y, f.x ) : step( 1.0, f.x + f.y );
 		vec2 nxz = mix( fn.rg, fn.ba, triB ) * 2.0 - 1.0;
 		vec3 nf = vec3( nxz.x, sqrt( max( 0.0, 1.0 - dot( nxz, nxz ) ) ), nxz.y );
-		sgNf = normalize( mix( sgNs, nf, sgWI ) );
-		sgFid = sgHash( cell * 2.0 + vec2( triB * 0.5, 0.25 ) );
+		sgNf = normalize( mix( sgNs, nf, sgWI * sgFk ) );
+		sgFid = mix( 0.5, sgHash( cell * 2.0 + vec2( triB * 0.5, 0.25 ) ), sgFk );
 	}
-	// 平原上几乎不面化（不显三角拼块），丘陵、山地按三角格平面着色
-	// （河岸、水下与海边的低地不面化：岸坡被三角格切成的尖楔很难看）
-	vec3 sgN = normalize( mix( sgNs, sgNf, sgFacetSz.z * mix( 0.3, 1.0, smoothstep( 0.015, 0.09, 1.0 - sgNf.y ) ) * smoothstep( 0.05, 0.55, sgH ) ) );
 	float sgSlopeS = 1.0 - sgNs.y, sgSlopeF = 1.0 - sgNf.y;
 	// 绘制：大 / 中两级水彩斑块 + 笔触
 	vec4 sgPL = texture2D( sgPaint, sgP * 0.031 + vec2( 0.17, 0.53 ) );
 	vec4 sgPM = texture2D( sgPaint, sgP * 0.113 + vec2( 0.61, 0.29 ) );
+	// 岩石：陡坡与高山（按面取石色：低多边形的手切岩面）
+	// （岩区的边界按平滑坡度与面坡度各半：不切成三角形的斑块）
+	// 平滑坡度已近岩坡、或已到高山时才让面坡度参与（草坡上全用平滑坡度：泥土 / 岩石的边界不显出格线）
+	float sgSlopeR = mix( sgSlopeS, sgSlopeF, 0.4 * max( smoothstep( 0.24, 0.42, sgSlopeS ), smoothstep( 4.2, 5.4, sgH ) ) );
+	float sgRockW = smoothstep( 0.36, 0.54, sgSlopeR + ( sgPL.g - 0.5 ) * 0.2 - sgMat.g * 0.1 ) * ( 1.0 - sgX.a );
+	sgRockW = max( sgRockW, smoothstep( 4.4, 6.4, sgH + ( sgPL.r - 0.5 ) * 1.4 + sgMat.g * 1.0 ) );
+	// 面化只在岩坡、高山（Lanternvale 的地面是平滑的绘制草地；草坡上的三角格会把人工削出的坡折显成长直线）；
+	// 河岸、水下与海边的低地不面化
+	// （只在岩色已明显的地方：草色的山顶上若隐若现的格线很难看）
+	float sgFacetW = sgFacetSz.z * smoothstep( 0.2, 0.6, sgRockW ) * smoothstep( 0.05, 0.55, sgH );
+	vec3 sgN = normalize( mix( sgNs, sgNf, sgFacetW ) );
 	float sgNear = 1.0 - smoothstep( sgPaintK.x, sgPaintK.y, sgCamD );
 	float sgBl = ( ( sgPL.r - 0.5 ) * 1.0 + ( sgPM.r - 0.5 ) * 0.55 ) * sgPaintK.w;
 	vec3 sgCol = sgTint * ( 1.0 + sgBl * 0.3 );
@@ -1748,7 +1756,7 @@ vec3 sgCropLV( float id ) {
 	// 林下：更暗、更冷的苔绿
 	sgCol = mix( sgCol, sgCol * vec3( 0.8, 0.88, 0.84 ), sgForest * 0.6 );
 	// 泥土：陡坡、荒地、城郊与村落踩出的地面
-	float sgDirtW = smoothstep( 0.62, 0.88, ( sgPL.g - 0.5 ) * 0.5 + 0.5 * sgPM.r + sgSlopeF * ( 1.1 - sgX.a ) + sgMat.g * 0.3 - 0.02 ) * ( 1.0 - sgMat.b );
+	float sgDirtW = smoothstep( 0.62, 0.88, ( sgPL.g - 0.5 ) * 0.5 + 0.5 * sgPM.r + sgSlopeR * ( 1.1 - sgX.a ) + sgMat.g * 0.3 - 0.02 ) * ( 1.0 - sgMat.b );
 	sgDirtW = max( sgDirtW, smoothstep( 0.15, 0.75, sgX.g + ( sgPM.r - 0.5 ) * 0.5 ) );
 	vec3 sgDirtC = mix( vec3( 0.66, 0.5, 0.34 ), vec3( 0.75, 0.6, 0.41 ), sgPM.r );
 	sgDirtC = mix( sgDirtC, vec3( 0.56, 0.41, 0.27 ), smoothstep( 0.55, 0.85, sgPM.g ) * 0.5 );
@@ -1776,17 +1784,16 @@ vec3 sgCropLV( float id ) {
 		sgCol = mix( sgCol, crop, sgFw );
 	}
 	// 沙：海滩、河滩（按高度，附近要有水）与沙漠（按群落）
-	vec4 sgDA = texture2D( sgDetA, sgP * 0.23 );
 	float sgBeach = ( 1.0 - smoothstep( 0.18, 0.46, sgH + ( sgPM.g - 0.5 ) * 0.14 ) ) * max( sgNearW, 1.0 - smoothstep( -0.02, 0.05, sgH ) );
-	float sgRip = mix( 0.06, 0.22, smoothstep( 0.3, 0.8, sgMat.r ) );
-	vec3 sgSand = mix( vec3( 0.91, 0.84, 0.64 ), sgTint * 1.04, clamp( sgMat.r * 0.7, 0.0, 0.6 ) );
-	sgSand *= 1.0 - sgRip * 0.5 + sgRip * sgDA.b + ( sgPM.r - 0.5 ) * 0.1;
-	sgSand *= mix( 0.86, 1.0, smoothstep( 0.0, 0.22, sgH ) );
 	float sgSandW = max( sgBeach, smoothstep( 0.2, 0.7, sgMat.r + ( sgPL.r - 0.5 ) * 0.3 ) * ( 1.0 - sgFw ) );
-	sgCol = mix( sgCol, sgSand, sgSandW );
-	// 岩石：陡坡与高山，按面取石色（低多边形的手切岩面）
-	float sgRockW = smoothstep( 0.36, 0.54, sgSlopeF + ( sgPL.g - 0.5 ) * 0.2 - sgMat.g * 0.1 ) * ( 1.0 - sgX.a );
-	sgRockW = max( sgRockW, smoothstep( 4.4, 6.4, sgH + ( sgPL.r - 0.5 ) * 1.4 + sgMat.g * 1.0 ) );
+	if ( sgSandW > 0.003 ) {
+		vec4 sgDA = texture2D( sgDetA, sgP * 0.23 );
+		float sgRip = mix( 0.06, 0.22, smoothstep( 0.3, 0.8, sgMat.r ) );
+		vec3 sgSand = mix( vec3( 0.91, 0.84, 0.64 ), sgTint * 1.04, clamp( sgMat.r * 0.7, 0.0, 0.6 ) );
+		sgSand *= 1.0 - sgRip * 0.5 + sgRip * sgDA.b + ( sgPM.r - 0.5 ) * 0.1;
+		sgSand *= mix( 0.86, 1.0, smoothstep( 0.0, 0.22, sgH ) );
+		sgCol = mix( sgCol, sgSand, sgSandW );
+	}
 	if ( sgRockW > 0.004 ) {
 		vec3 sgStone = mix( vec3( 0.66, 0.62, 0.57 ), vec3( 0.72, 0.63, 0.53 ), clamp( sgMat.g * 0.6 + sgMat.r, 0.0, 1.0 ) );
 		sgStone = mix( sgStone, vec3( 0.53, 0.49, 0.46 ), sgFid * 0.5 );
@@ -1812,7 +1819,7 @@ vec3 sgCropLV( float id ) {
 		sgCol = mix( sgCol, fc, fw );
 	}
 	// 面的亮度抖动（坡地才有：平地上看不出三角拼块）、向阳的脊亮 / 沟里暗
-	sgCol *= 1.0 + ( sgFid - 0.5 ) * sgFacetSz.w * smoothstep( 0.02, 0.18, sgSlopeF ) * smoothstep( 0.05, 0.55, sgH );
+	sgCol *= 1.0 + ( sgFid - 0.5 ) * sgFacetSz.w * smoothstep( 0.02, 0.18, sgSlopeF ) * smoothstep( 0.2, 0.6, sgRockW ) * smoothstep( 0.05, 0.55, sgH );
 	sgCol *= 0.86 + 0.28 * clamp( sgAO, 0.0, 1.0 );
 	vec3 n = normalize( ( viewMatrix * vec4( sgN, 0.0 ) ).xyz );
 `;
@@ -1866,6 +1873,7 @@ vec3 sgCropLV( float id ) {
     // 调试：opts.debug = GLSL 语句（在法线换算之前执行，如 'sgCol = vec3( sgDirtW, sgRockW, sgX.g );'）
     if (o.debug) fs = fs.replace('vec3 n = normalize( ( viewMatrix * vec4( sgN, 0.0 ) ).xyz );', o.debug + '\n\tvec3 n = normalize( ( viewMatrix * vec4( sgN, 0.0 ) ).xyz );');
     const mat = new THREE.ShaderMaterial({ uniforms: u, vertexShader: src.vs, fragmentShader: fs, lights: true, fog: true, vertexColors: false });
+    mat.extensions = { derivatives: true };   // fwidth（WebGL1 要扩展；WebGL2 内置）
     mat.name = 'TerrainLP';
     mat.userData.terrainUniforms = tu;
     mat.userData.lpKind = 'terrain';

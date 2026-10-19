@@ -142,29 +142,137 @@
     return p;
   };
 
-  // 按钮：点击时播放 click 音效（与 UIKit.Button 相同）
+  // ---------------------------------------------------------- 按钮（UI-V4 §4.1）--
+  // SG.UI.button(parent, html, onClick, { kind, icon, label, why, badge, sound, hotkey, size, primary, small, className, title, ariaLabel, disabled })
+  //   kind：'plaque' 漆牌（缺省）| 'seal' 印钮（= v3 primary）| 'paper' 纸签 | 'ghost' 空框 | 'icon' 铜钮 | 'tile' 指令印
+  //   why：不可用的原因（aria-disabled + 锁印；点按时抖动、ui-deny、提示原因）；badge：红蜡角标；hotkey：悬停时显示键帽
+  //   声音：按下时 ui-press-wood / -bronze / -paper（按 kind），印钮松开时 ui-stamp + 十滴朱墨；鼠标悬停 ui-hover
+  //   btn.setLabel(html) · btn.setEnabled(bool | why) · btn.setBadge(v) · btn.pulse()
+  const KIND_SOUND = { plaque: 'ui-press-wood', seal: 'ui-press-wood', ghost: 'ui-press-wood', paper: 'ui-press-paper', icon: 'ui-press-bronze', tile: 'ui-press-wood' };
+  function uiSfx(name, vol) { try { if (SG.Sfx && name) SG.Sfx.play(name, vol === undefined ? 0.9 : vol); } catch (e) { /* 无音频 */ } }
+  UI.sfx = uiSfx;
+  function iconHtml(id, size, opts) { try { return SG.UIIcons ? SG.UIIcons.svg(id, size, opts) : ''; } catch (e) { return ''; } }
+  UI.icon = iconHtml;
   UI.button = function (parent, html, onClick, opts) {
     opts = opts || {};
-    const b = el('button', 'sg-btn' + (opts.primary ? ' primary' : '') + (opts.small ? ' small' : '') + (opts.className ? ' ' + opts.className : ''), html);
+    const isClose = !!(opts.className && /\bsg-close\b/.test(opts.className));
+    let kind = opts.kind || (isClose ? 'icon' : opts.primary ? 'seal' : 'plaque');
+    const cls = 'sg-btn k-' + kind + (kind === 'seal' ? ' primary' : '') + (opts.small || opts.size === 'small' ? ' small' : '') +
+      (opts.size === 'big' ? ' big' : '') + (isClose ? ' k-close' : '') + (opts.className ? ' ' + opts.className : '');
+    const b = el('button', cls);
     b.type = 'button';
+    b._kind = kind;
+    if (kind === 'icon') {
+      const ic = opts.icon || (isClose ? 'x' : null);
+      const label = opts.label || (isClose ? '收' : '');
+      b.innerHTML = ic ? '<span class="sg-ib-face">' + iconHtml(ic) + '</span>' + (label ? '<span class="sg-ib-lbl">' + SG.esc(label) + '</span>' : '')
+        : (html === undefined || html === null ? '' : String(html));
+      if (!opts.ariaLabel && label) b.setAttribute('aria-label', label);
+    } else if (kind === 'tile') {
+      b.innerHTML = (opts.token ? '<i class="sg-tile-pip"></i>' : '') + iconHtml(opts.icon || 'help') + '<span class="sg-tile-lb">' + (html === undefined || html === null ? '' : String(html)) + '</span>';
+      b._lbl = b.querySelector('.sg-tile-lb');
+    } else if (opts.icon) {
+      b.innerHTML = iconHtml(opts.icon) + '<span class="sg-btn-l">' + (html === undefined || html === null ? '' : String(html)) + '</span>';
+      b._lbl = b.querySelector('.sg-btn-l');
+    } else if (html !== undefined && html !== null) b.innerHTML = String(html);
+    if (opts.hotkey && !SG.isTouch) b.dataset.key = opts.hotkey;
     if (opts.title) b.title = opts.title;
     if (opts.ariaLabel) b.setAttribute('aria-label', opts.ariaLabel);
     if (opts.disabled) b.disabled = true;
+    const pressSnd = opts.sound === 'none' ? null : opts.sound ? ({ wood: 'ui-press-wood', bronze: 'ui-press-bronze', paper: 'ui-press-paper', stamp: 'ui-press-wood' }[opts.sound] || opts.sound) : KIND_SOUND[kind];
+    // 按下：下沉 + 声音（按下即响，比 click 灵敏）；松开：回弹（CSS）
+    b.addEventListener('pointerdown', e => {
+      if (b.disabled || (e.button !== undefined && e.button !== 0)) return;
+      b.classList.add('is-press');
+      b.style.setProperty('--px', (e.offsetX || 0) + 'px'); b.style.setProperty('--py', (e.offsetY || 0) + 'px');
+      if (!b._why && pressSnd) uiSfx(pressSnd);
+    });
+    const unpress = () => b.classList.remove('is-press');
+    b.addEventListener('pointerup', unpress); b.addEventListener('pointerleave', unpress); b.addEventListener('pointercancel', unpress);
+    b.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse' && !b.disabled) uiSfx('ui-hover', 0.7); });
     if (onClick) {
       b.addEventListener('click', e => {
         if (b.disabled) return;
+        if (b._why) {
+          b.classList.remove('sg-cmd-hint');
+          UI.deny(b, (b.dataset.cmd ? '<span class="sg-cmd-name">' + SG.esc(b.dataset.cmd) + '</span>' : '') + b._why);
+          return;
+        }
         // 鼠标 / 触摸点击（detail>0）后，模态层之外的按钮（战斗 HUD、顶栏）不保留键盘焦点，
         // 否则之后的 Space/Enter（或长按 Enter 的自动重复）会再次触发它
         if (e.detail > 0 && !(L.modals && L.modals.contains(b))) b.blur();
-        sfxClick();
+        if (e.detail === 0 && pressSnd) uiSfx(pressSnd);       // 键盘触发
+        if (kind === 'seal' && opts.sound !== 'none') { uiSfx('ui-stamp'); inkBurst(b, e); }
+        else if (kind === 'tile') ringBurst(b);
         onClick(e);
       });
     }
-    b.setLabel = function (h) { b.innerHTML = String(h); return b; };
-    b.setEnabled = function (on) { b.disabled = !on; return b; };
+    b.setLabel = function (h) { if (b._lbl) b._lbl.innerHTML = String(h); else b.innerHTML = String(h); return b; };
+    b.setEnabled = function (on) {
+      if (typeof on === 'string' && on) {
+        b.disabled = false; b._why = on; b.dataset.why = on;
+        b.setAttribute('aria-disabled', 'true'); b.setAttribute('aria-description', on.replace(/<[^>]*>/g, ''));
+        b.classList.add('is-locked');
+      } else {
+        b._why = null; delete b.dataset.why; b.removeAttribute('aria-disabled'); b.removeAttribute('aria-description');
+        b.classList.remove('is-locked');
+        b.disabled = !on;
+      }
+      return b;
+    };
+    b.setBadge = function (v) { UI.badge(b, v); return b; };
+    b.pulse = function () { UI.pulse(b, 'is-pulse'); return b; };
+    if (opts.why) b.setEnabled(opts.why);
+    if (opts.badge !== undefined && opts.badge !== null && opts.badge !== 0) UI.badge(b, opts.badge);
     if (parent) parent.appendChild(b);
     return b;
   };
+  // 不可用时的反馈：抖动 0.38 秒、ui-deny、提示原因（同一时间只留一条）
+  let denyToast = null;
+  UI.deny = function (target, why) {
+    if (target) UI.pulse(target, 'sg-deny');
+    uiSfx('ui-deny');
+    if (!why) return;
+    if (denyToast && denyToast.parentNode) denyToast.parentNode.removeChild(denyToast);
+    denyToast = UI.toast(why, { seconds: 3.4, seal: '锁', kind: 'deny' });
+  };
+  // 红蜡角标：v 为数字或单字；0 / null / '' 移除；变大时跳两下
+  UI.badge = function (target, v) {
+    if (!target) return null;
+    let bd = target.querySelector(':scope > .sg-badge');
+    if (v === undefined || v === null || v === 0 || v === '' || v === false) { if (bd) bd.remove(); return null; }
+    if (!bd) { bd = el('span', 'sg-badge'); bd.setAttribute('aria-hidden', 'true'); target.appendChild(bd); }
+    const old = bd.textContent;
+    bd.textContent = String(v);
+    if (old !== String(v) && (!(+old >= 0) || +v > +old)) { UI.pulse(bd, 'is-pulse'); if (old) uiSfx('ui-badge', 0.7); }
+    return bd;
+  };
+  // 印钮盖下时的朱墨点（10 滴，300 ms，池化，减少动态时不放）
+  const inkPool = [];
+  function motionOff() { return !!(SG.Motion && (SG.Motion.reduced || SG.Motion.level === 'off')); }
+  function inkBurst(btn, e) {
+    if (motionOff() || !btn.animate) return;
+    ensure();
+    const r = btn.getBoundingClientRect();
+    const x = e && e.clientX ? e.clientX : r.left + r.width / 2, y = e && e.clientY ? e.clientY : r.top + r.height / 2;
+    for (let i = 0; i < 10; i++) {
+      let d = inkPool.pop();
+      if (!d) d = el('i', 'sg-ink-drop');
+      d.style.left = x + 'px'; d.style.top = y + 'px';
+      L.toasts.appendChild(d);
+      const a = (i / 10) * Math.PI * 2 + Math.random() * 0.5, dist = 18 + Math.random() * 26, s = 0.5 + Math.random() * 0.8;
+      const an = d.animate([{ transform: 'translate(-50%,-50%) scale(' + s + ')', opacity: 0.95 },
+        { transform: 'translate(calc(-50% + ' + (Math.cos(a) * dist).toFixed(1) + 'px), calc(-50% + ' + (Math.sin(a) * dist).toFixed(1) + 'px)) scale(' + (s * 0.4).toFixed(2) + ')', opacity: 0 }],
+      { duration: 300, easing: 'cubic-bezier(.2,.8,.2,1)' });
+      an.onfinish = () => { d.remove(); if (inkPool.length < 40) inkPool.push(d); };
+    }
+  }
+  function ringBurst(btn) {
+    if (motionOff()) return;
+    const ring = el('i', 'sg-tile-ring');
+    btn.appendChild(ring);
+    setTimeout(() => ring.remove(), 420);
+  }
 
   // 圆形徽章（武将头像位置的单字）。size 为参考像素（C# 中的数值）
   UI.medal = function (glyph, color, size) {
@@ -546,14 +654,21 @@
       const inner = el('div', 'sg-say-inner', text === null || text === undefined ? '' : String(text));
       body.appendChild(inner);
       panel.appendChild(body);
-      panel.appendChild(el('div', 'sg-say-hint', '▼'));
+      const hint = el('div', 'sg-say-hint');           // 笔尖「继续」记号（UI-V4 §4.7，取代 ▼）
+      hint.setAttribute('aria-hidden', 'true');
+      panel.appendChild(hint);
       const tw = typewriter(inner);
       let full = false, done = false;
+      // 文字速度（设置第 23 行：慢 20 · 中 40 · 快 80 字/秒 · 即时）与自动推进（第 24 行）
+      const US = SG.UISettings;
+      const cps = US ? US.textCps() : 120;
+      const auto = !!(US && US.get('ui.autoAdvance'));
       function setFull() {
         if (full) return;
         full = true;
         tw.showAll();
         panel.classList.add('is-full');
+        if (auto) setTimeout(() => { if (!done) advance(); }, 2500 + 50 * tw.total);
       }
       function advance() {
         if (done) return;
@@ -569,12 +684,12 @@
         return false;
       };
       focusEl(m.blocker);
-      // 每帧 2 字（60 帧 / 秒 → 每秒 120 字）
+      // 按设置的速度逐字显示（即时：一次显示完）
       let shown = 2, last = performance.now();
-      if (tw.total <= shown) setFull(); else tw.show(shown);
+      if (tw.total <= shown || !isFinite(cps)) setFull(); else tw.show(shown);
       function tick(now) {
         if (done || full) return;
-        shown += Math.max(0, now - last) / 1000 * 120;
+        shown += Math.max(0, now - last) / 1000 * cps;
         last = now;
         if (shown >= tw.total) { setFull(); return; }
         tw.show(Math.floor(shown));
@@ -944,11 +1059,19 @@
     return [a, b, c, d];
   }
 
-  const MAX_TOASTS = 6;
-  UI.toast = function (html, seconds) {
+  // 提示条（UI-V4 §4.7）：纸条从右侧滑入，左端朱印。UI.toast(html, seconds) 或 UI.toast(html, { seconds, seal: '记'|'成'|…, face: 武将, kind })
+  const MAX_TOASTS = 3;
+  UI.toast = function (html, secondsOrOpts) {
     ensure();
+    const o = secondsOrOpts && typeof secondsOrOpts === 'object' ? secondsOrOpts : { seconds: secondsOrOpts };
+    let seconds = o.seconds;
     if (seconds === undefined || seconds === null) seconds = 2.2;
-    const t = el('div', 'sg-toast', html);
+    const t = el('div', 'sg-toast' + (o.kind ? ' is-' + o.kind : ''));
+    t.setAttribute('role', 'status');
+    let lead = '';
+    if (o.seal) lead += '<span class="sg-toast-seal">' + SG.esc(String(o.seal).charAt(0)) + '</span>';
+    if (o.face) lead += UI.face(o.face, { size: Math.round(UI.facePx(1.75)) });
+    t.innerHTML = lead + '<span class="sg-toast-body">' + (html === undefined || html === null ? '' : String(html)) + '</span>';
     L.toastStack.appendChild(t);
     while (L.toastStack.childElementCount > MAX_TOASTS) L.toastStack.removeChild(L.toastStack.firstElementChild);
     const life = Math.max(0.3, seconds);
@@ -957,7 +1080,8 @@
     try {
       if (t.animate) {
         const kf = autoFadeFrames(life, false);
-        kf[0].transform = 'translateY(-.6rem)'; kf[1].transform = 'none'; kf[2].transform = 'none'; kf[3].transform = 'translateY(-.3rem)';
+        const reduced = motionOff();
+        kf[0].transform = reduced ? 'none' : 'translateX(1.6rem)'; kf[1].transform = 'none'; kf[2].transform = 'none'; kf[3].transform = reduced ? 'none' : 'translateY(-.3rem)';
         const anim = t.animate(kf, { duration: life * 1000, easing: 'linear', fill: 'both' });
         anim.onfinish = remove;
       }
@@ -1119,6 +1243,454 @@
     h.float = { t0: performance.now() };
     setTimeout(() => h.remove(), 1600);
     return h;
+  };
+
+  // =================================================================== 第四版部件（UI-V4 §4、§13）==
+  // ---- 动效 SG.Motion：reduced / level 由设置第 15、44 行写入（js/settings.js）----
+  const Motion = SG.Motion = SG.Motion || {};
+  if (Motion.reduced === undefined) {
+    let r = false;
+    try { r = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { r = false; }
+    Motion.reduced = r;
+  }
+  if (!Motion.level) Motion.level = Motion.reduced ? 'off' : 'full';
+  Motion.DUR = { instant: 80, quick: 140, base: 220, slow: 380, scene: 650 };
+  Motion.EASE = { out: 'cubic-bezier(.2,.8,.2,1)', in: 'cubic-bezier(.5,0,.75,0)', stamp: 'cubic-bezier(.3,1.6,.5,1)', spring: 'cubic-bezier(.34,1.56,.64,1)' };
+  // play(el, keyframes, { dur, ease, delay, fill }) → Promise（减少动态时立即完成，并直接停在最后一帧）
+  Motion.play = function (target, kf, o) {
+    o = o || {};
+    if (!target) return Promise.resolve();
+    if (Motion.reduced || Motion.level === 'off' || !target.animate) {
+      const last = kf[kf.length - 1] || {};
+      if (o.fill !== 'none') for (const k of Object.keys(last)) if (k !== 'offset' && k !== 'easing') { try { target.style[k] = last[k]; } catch (e) { /* 忽略 */ } }
+      return Promise.resolve();
+    }
+    try {
+      const a = target.animate(kf, { duration: o.dur || 220, easing: Motion.EASE[o.ease] || o.ease || Motion.EASE.out, delay: o.delay || 0, fill: o.fill || 'both' });
+      return a.finished.then(() => a, () => a);
+    } catch (e) { return Promise.resolve(); }
+  };
+  Motion.seq = async function (steps) { for (const s of steps) await (typeof s === 'function' ? s() : s); };
+  // 依次进场：步长 18 ms，总长不超过 216 ms（超出的一起出现）
+  Motion.stagger = function (els, fn, step, cap) {
+    step = step || 18; cap = cap || 216;
+    return Promise.all(Array.from(els).map((x, i) => fn(x, Math.min(i * step, cap), i)));
+  };
+  Motion.rise = function (els) {
+    return Motion.stagger(els, (x, d) => Motion.play(x, [{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { dur: 220, delay: d }));
+  };
+
+  // 界面字号设置（第 43 行）改变后重新读取根字号
+  UI.rescale = function () { updateScale(); };
+
+  // ---- 长按（触屏的「悬停」，设置第 40 行；手指周围画一圈进度）----
+  UI.longPress = function (target, fn, opts) {
+    opts = opts || {};
+    let timer = 0, sx = 0, sy = 0, fired = false;
+    const ms = () => (SG.UISettings ? SG.UISettings.longPressMs() : 450);
+    target.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && !opts.mouse) return;
+      fired = false; sx = e.clientX; sy = e.clientY;
+      clearTimeout(timer);
+      timer = setTimeout(() => { fired = true; try { fn(e); } catch (err) { console.error(err); } }, ms());
+    });
+    const cancel = () => clearTimeout(timer);
+    target.addEventListener('pointermove', e => { if (Math.hypot(e.clientX - sx, e.clientY - sy) > 10) cancel(); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => target.addEventListener(ev, cancel));
+    // 长按触发后吞掉随之而来的 click
+    target.addEventListener('click', e => { if (fired) { fired = false; e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+  };
+
+  // ---- 纸签提示（UI-V4 §4.7）：鼠标悬停 350 ms 或长按；不遮住目标，留在视口内 ----
+  let tipEl = null, tipTimer = 0;
+  function hideTip() { clearTimeout(tipTimer); if (tipEl) { tipEl.remove(); tipEl = null; } }
+  function showTip(target, html) {
+    hideTip();
+    if (!target.isConnected) return;
+    ensure();
+    const t = tipEl = el('div', 'sg-tip', typeof html === 'function' ? html() : html);
+    t.setAttribute('role', 'tooltip');
+    L.toasts.appendChild(t);
+    const r = target.getBoundingClientRect(), tw = t.offsetWidth, th = t.offsetHeight;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let x = Math.min(vw - tw - 6, Math.max(6, r.left + r.width / 2 - tw / 2));
+    let y = r.bottom + 10;
+    if (y + th > vh - 6) y = Math.max(6, r.top - th - 10);
+    t.style.left = x + 'px'; t.style.top = y + 'px';
+    t.style.setProperty('--tx', Math.max(10, Math.min(tw - 10, r.left + r.width / 2 - x)) + 'px');
+  }
+  UI.tip = function (target, html) {
+    if (!target) return target;
+    target._tip = html;
+    if (target._tipHooked) return target;
+    target._tipHooked = true;
+    target.addEventListener('pointerenter', e => {
+      if (e.pointerType !== 'mouse') return;
+      clearTimeout(tipTimer);
+      tipTimer = setTimeout(() => showTip(target, target._tip), 350);
+    });
+    target.addEventListener('pointerleave', hideTip);
+    target.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse') hideTip(); });
+    UI.longPress(target, () => { showTip(target, target._tip); setTimeout(hideTip, 2600); });
+    return target;
+  };
+  UI.hideTip = hideTip;
+
+  // ---- 页签 书签（UI-V4 §4.4）：items = [{ id, icon, label, badge }]；← → / Ctrl+Tab 由窗口转发 ----
+  UI.tabs = function (parent, items, onChange, opts) {
+    opts = opts || {};
+    const bar = el('div', 'sg-tabs' + (opts.vertical ? ' is-vertical' : '') + (opts.className ? ' ' + opts.className : ''));
+    bar.setAttribute('role', 'tablist');
+    const btns = new Map();
+    let cur = null;
+    const api = {
+      el: bar,
+      get() { return cur; },
+      set(id, quiet) {
+        if (!btns.has(id)) return;
+        const prev = cur;
+        cur = id;
+        for (const [k, b] of btns) { const on = k === id; b.classList.toggle('is-on', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); b.tabIndex = on ? 0 : -1; }
+        if (!quiet && prev !== id) { uiSfx('ui-tab'); if (onChange) onChange(id, prev); }
+      },
+      setBadge(id, v) { const b = btns.get(id); if (b) UI.badge(b, v); },
+      step(d) {
+        const ids = Array.from(btns.keys()).filter(k => !btns.get(k).disabled);
+        const i = ids.indexOf(cur);
+        api.set(ids[(i + d + ids.length) % ids.length]);
+        const b = btns.get(cur); if (b) { try { b.focus({ preventScroll: true }); } catch (e) { /* 忽略 */ } }
+      },
+      ids() { return Array.from(btns.keys()); },
+    };
+    for (const it of items) {
+      const b = el('button', 'sg-tab' + (it.disabled ? ' is-disabled' : ''));
+      b.type = 'button';
+      b.setAttribute('role', 'tab');
+      b.dataset.tab = it.id;
+      b.innerHTML = (it.icon ? iconHtml(it.icon) : '') + '<span class="sg-tab-l">' + it.label + '</span>';
+      if (it.disabled) b.disabled = true;
+      b.addEventListener('pointerdown', () => uiSfx('ui-press-paper', 0.6));
+      b.addEventListener('click', () => api.set(it.id));
+      b.addEventListener('keydown', e => {
+        const k = e.key;
+        if (k === 'ArrowRight' || (opts.vertical && k === 'ArrowDown')) { e.preventDefault(); e.stopPropagation(); api.step(1); }
+        else if (k === 'ArrowLeft' || (opts.vertical && k === 'ArrowUp')) { e.preventDefault(); e.stopPropagation(); api.step(-1); }
+      });
+      if (it.badge) UI.badge(b, it.badge);
+      btns.set(it.id, b);
+      bar.appendChild(b);
+    }
+    if (parent) parent.appendChild(bar);
+    const first = opts.value !== undefined ? opts.value : items.length ? items[0].id : null;
+    if (first !== null) api.set(first, true);
+    return api;
+  };
+
+  // ---- 分段 木牌：options = [[value, label], …] ----
+  UI.segmented = function (parent, options, value, onChange) {
+    const w = el('div', 'sg-seg');
+    w.setAttribute('role', 'radiogroup');
+    const btns = [];
+    let cur = value;
+    const set = (v, quiet) => {
+      cur = v;
+      for (const b of btns) { const on = b._v === v; b.classList.toggle('is-on', on); b.setAttribute('aria-checked', on ? 'true' : 'false'); b.tabIndex = on ? 0 : -1; }
+      if (!quiet && onChange) onChange(v);
+    };
+    for (const o of options) {
+      const [v, label] = Array.isArray(o) ? o : [o, o];
+      const b = el('button', 'sg-seg-o', SG.esc(String(label)));
+      b.type = 'button'; b._v = v;
+      b.setAttribute('role', 'radio');
+      b.addEventListener('pointerdown', () => uiSfx('ui-tab', 0.8));
+      b.addEventListener('click', () => { if (cur !== v) set(v); });
+      b.addEventListener('keydown', e => {
+        const i = btns.indexOf(b);
+        if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+          e.preventDefault(); e.stopPropagation();
+          const nb = btns[(i + (e.key === 'ArrowRight' ? 1 : -1) + btns.length) % btns.length];
+          uiSfx('ui-tab', 0.8); set(nb._v); try { nb.focus({ preventScroll: true }); } catch (err) { /* 忽略 */ }
+        }
+      });
+      btns.push(b); w.appendChild(b);
+    }
+    set(value, true);
+    w.set = v => set(v, true);
+    w.get = () => cur;
+    if (parent) parent.appendChild(w);
+    return w;
+  };
+
+  // ---- 印章开关：关 = 空印框，开 = 朱印 ----
+  UI.toggle = function (parent, value, onChange, opts) {
+    opts = opts || {};
+    const t = el('button', 'sg-toggle');
+    t.type = 'button';
+    t.setAttribute('role', 'switch');
+    if (opts.label) t.setAttribute('aria-label', opts.label);
+    let on = !!value;
+    const draw = () => { t.classList.toggle('is-on', on); t.setAttribute('aria-checked', on ? 'true' : 'false'); t.innerHTML = '<span class="sg-toggle-seal">' + (on ? '开' : '关') + '</span>'; };
+    t.addEventListener('click', () => { on = !on; draw(); uiSfx(on ? 'ui-toggle-on' : 'ui-toggle-off'); if (onChange) onChange(on); });
+    draw();
+    t.set = v => { on = !!v; draw(); };
+    t.get = () => on;
+    if (parent) parent.appendChild(t);
+    return t;
+  };
+
+  // ---- 玉珠滑杆：{ min, max, step, value, format, onInput, onCommit, preview, label } ----
+  UI.slider = function (parent, o) {
+    o = o || {};
+    const min = o.min === undefined ? 0 : o.min, max = o.max === undefined ? 100 : o.max, step = o.step || 1;
+    const fmt = o.format || (v => String(Math.round(v)));
+    const w = el('div', 'sg-slider');
+    const groove = el('div', 'sg-slider-groove');
+    groove.innerHTML = '<i class="sg-slider-fill"></i><i class="sg-slider-ticks"></i><i class="sg-slider-knob" role="slider" tabindex="0"></i>';
+    const knob = groove.querySelector('.sg-slider-knob');
+    const val = el('span', 'sg-slider-val');
+    w.appendChild(groove); w.appendChild(val);
+    if (o.label) knob.setAttribute('aria-label', o.label);
+    knob.setAttribute('aria-valuemin', String(min)); knob.setAttribute('aria-valuemax', String(max));
+    let v = M.clamp(o.value === undefined ? min : o.value, min, max);
+    let lastTick = -1;
+    const draw = () => {
+      const p = max > min ? (v - min) / (max - min) : 0;
+      w.style.setProperty('--v', p.toFixed(4));
+      val.textContent = fmt(v);
+      knob.setAttribute('aria-valuenow', String(v));
+      const tick = Math.floor(p * 10 + 1e-6);
+      if (lastTick >= 0 && tick !== lastTick) uiSfx('ui-bead', 0.8);
+      lastTick = tick;
+    };
+    const setV = (nv, commit) => {
+      nv = M.clamp(Math.round(nv / step) * step, min, max);
+      if (nv !== v) { v = nv; draw(); if (o.onInput) o.onInput(v); }
+      if (commit && o.onCommit) o.onCommit(v);
+    };
+    let drag = false;
+    const fromX = x => { const r = groove.getBoundingClientRect(); return min + (max - min) * M.clamp01((x - r.left) / Math.max(1, r.width)); };
+    groove.addEventListener('pointerdown', e => {
+      drag = true;
+      try { groove.setPointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
+      setV(fromX(e.clientX), false);
+    });
+    groove.addEventListener('pointermove', e => { if (drag) setV(fromX(e.clientX), false); });
+    const end = () => { if (!drag) return; drag = false; if (o.onCommit) o.onCommit(v); if (o.preview) { try { o.preview(v); } catch (e) { /* 忽略 */ } } };
+    groove.addEventListener('pointerup', end); groove.addEventListener('pointercancel', end);
+    knob.addEventListener('keydown', e => {
+      const big = (max - min) / 10;
+      let d = 0;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowUp') d = step;
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') d = -step;
+      else if (e.key === 'PageUp') d = big;
+      else if (e.key === 'PageDown') d = -big;
+      else if (e.key === 'Home') { e.preventDefault(); e.stopPropagation(); setV(min, true); return; }
+      else if (e.key === 'End') { e.preventDefault(); e.stopPropagation(); setV(max, true); return; }
+      if (!d) return;
+      e.preventDefault(); e.stopPropagation();
+      setV(v + d, true);
+    });
+    draw();
+    w.set = nv => { v = M.clamp(nv, min, max); lastTick = -1; draw(); };
+    w.get = () => v;
+    if (parent) parent.appendChild(w);
+    return w;
+  };
+
+  // ---- 计数器（UI-V4 §4.6）：数字滚动 + 增减签 + 图标弹跳；250 ms 内的变化合并 ----
+  UI.counter = function (target, o) {
+    o = o || {};
+    const fmt = o.format || (v => Math.round(v).toLocaleString('en-US'));
+    let shown = o.value || 0, goal = shown, raf = 0, t0 = 0, from = 0, dur = 0, pending = 0, pendT = 0, tagEl = null;
+    const num = el('span', 'sg-counter-n', fmt(shown));
+    target.classList.add('sg-counter');
+    if (o.icon) target.insertAdjacentHTML('afterbegin', iconHtml(o.icon));
+    target.appendChild(num);
+    const ease = x => 1 - Math.pow(1 - x, 3);
+    let lastWrite = 0;
+    function frame(now) {
+      const k = Math.min(1, (now - t0) / dur);
+      const v = from + (goal - from) * ease(k);
+      if (k >= 1 || now - lastWrite > 33) { num.textContent = fmt(k >= 1 ? goal : v); lastWrite = now; }
+      if (k < 1) raf = requestAnimationFrame(frame); else { raf = 0; shown = goal; }
+    }
+    function tag(delta) {
+      if (!delta) return;
+      const now = performance.now();
+      if (tagEl && now - pendT < 250) { pending += delta; tagEl.remove(); } else pending = delta;
+      pendT = now;
+      const t = tagEl = el('span', 'sg-delta ' + (pending > 0 ? 'up' : 'down'), (pending > 0 ? '+' : '−') + Math.abs(Math.round(pending)).toLocaleString('en-US'));
+      target.appendChild(t);
+      if (Motion.reduced || Motion.level === 'off' || !t.animate) { setTimeout(() => t.remove(), 1200); return; }
+      const a = t.animate([{ opacity: 0, transform: 'translate(-50%, 4px)' }, { opacity: 1, transform: 'translate(-50%, -6px)', offset: 0.15 },
+        { opacity: 1, transform: 'translate(-50%, -14px)', offset: 0.7 }, { opacity: 0, transform: 'translate(-50%, -18px)' }], { duration: 1200, easing: 'linear' });
+      a.onfinish = () => t.remove();
+      const ic = target.querySelector('svg');
+      if (ic && ic.animate) ic.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.18)' }, { transform: 'scale(1)' }], { duration: 240, easing: 'ease-out' });
+    }
+    return {
+      el: target,
+      get value() { return goal; },
+      set(v, opts2) {
+        opts2 = opts2 || {};
+        v = +v || 0;
+        if (v === goal) return;
+        const delta = v - goal;
+        if (opts2.delta !== false) {
+          tag(delta);
+          if (o.sound !== false) uiSfx(delta > 0 ? (o.sound || 'ui-coins') : (o.soundOut || 'ui-coin-out'), 0.8);
+        }
+        from = raf ? +String(num.textContent).replace(/[^\d.-]/g, '') || shown : shown;
+        goal = v;
+        if (Motion.reduced || Motion.level === 'off' || opts2.instant) { shown = v; num.textContent = fmt(v); if (raf) cancelAnimationFrame(raf); raf = 0; return; }
+        dur = 1000 * M.clamp(0.35 + 0.12 * Math.log10(Math.abs(delta) + 1), 0.35, 0.9);
+        t0 = performance.now();
+        if (!raf) raf = requestAnimationFrame(frame);
+      },
+    };
+  };
+
+  // ---- 立绘框（位阶 R1–R5，UI-V4 §4.6）与物品槽 ----
+  // 位阶：君主按国势位阶（SG.Titles.rankOf / faction.rank），有官职的按品阶（1–5），其余 R1
+  UI.rankOf = function (gen) {
+    if (!gen) return 1;
+    const g = SG.G;
+    try {
+      if (g && gen.faction >= 0 && g.isRuler && g.isRuler(gen)) {
+        const f = g.factions[gen.faction];
+        const r = SG.Titles && SG.Titles.rankOf ? SG.Titles.rankOf(f) : f && f.rank;
+        const n = typeof r === 'object' && r ? (r.level || r.rank || r.r) : r;
+        if (n >= 1) return Math.max(1, Math.min(5, n | 0));
+        return 2;
+      }
+      const o = gen.office;
+      if (o) { const t = typeof o === 'object' ? (o.tier || o.t) : null; if (t >= 1) return Math.max(1, Math.min(5, t | 0)); }
+    } catch (e) { /* 忽略 */ }
+    return 1;
+  };
+  // HTML：头像外加位阶框。opts：{ size（px）, rank, mood, round, cls }
+  UI.frame = function (gen, opts) {
+    opts = opts || {};
+    const size = opts.size || UI.facePx(2.5);
+    const rank = opts.rank || UI.rankOf(gen);
+    let img = '';
+    const P = SG.Portrait;
+    const gg = genOf(gen);
+    if (P && gg) { try { img = P.html(gg, { size: Math.round(size), mood: opts.mood, className: 'sg-frame-img' }); } catch (e) { img = ''; } }
+    if (!img) img = '<span class="sg-frame-glyph">' + SG.esc(gg && gg.name ? gg.name.charAt(0) : '?') + '</span>';
+    return '<span class="sg-frame r' + rank + (opts.round ? ' round' : '') + (opts.cls ? ' ' + opts.cls : '') + '" style="--s:' + Math.round(size) + 'px">' + img + '</span>';
+  };
+  const RARITY = ['common', 'uncommon', 'rare', 'epic', 'legend'];
+  const SLOT_ICON = { weapon: 'guandao', offhand: 'shield', armour: 'armour', helmet: 'helmet', mount: 'horse', treasure: 'book' };
+  const SLOT_ZH = { weapon: '兵器', offhand: '副手', armour: '铠甲', helmet: '头盔', mount: '坐骑', treasure: '宝物' };
+  UI.SLOT_ICON = SLOT_ICON; UI.SLOT_ZH = SLOT_ZH;
+  UI.rarityClass = function (r) {
+    if (typeof r === 'number') return RARITY[Math.max(0, Math.min(4, r))];
+    return r === 'legendary' ? 'legend' : RARITY.indexOf(r) >= 0 ? r : 'common';
+  };
+  // HTML：物品槽。item：装备条目（{ id, rarity, name }）或 null（空槽）；opts：{ size, slot, label, cls }
+  UI.slot = function (item, opts) {
+    opts = opts || {};
+    const size = opts.size || 48;
+    if (!item) {
+      return '<span class="sg-slot empty' + (opts.cls ? ' ' + opts.cls : '') + '" style="--s:' + size + 'px">' +
+        (opts.slot ? '<span class="sg-slot-ghost">' + iconHtml(SLOT_ICON[opts.slot] || 'help') + '</span>' : '') +
+        (opts.label ? '<span class="sg-slot-lbl">' + SG.esc(opts.label) + '</span>' : '') + '</span>';
+    }
+    let ic = '';
+    try { if (SG.ShopScreen && SG.ShopScreen.icon) ic = SG.ShopScreen.icon(item.id, Math.round(size * 0.78)); } catch (e) { ic = ''; }
+    if (!ic) ic = iconHtml(SLOT_ICON[opts.slot || item.slot] || 'help');
+    return '<span class="sg-slot ' + UI.rarityClass(item.rarity) + (opts.cls ? ' ' + opts.cls : '') + '" style="--s:' + size + 'px">' + ic +
+      (opts.label ? '<span class="sg-slot-lbl">' + SG.esc(opts.label) + '</span>' : '') + '</span>';
+  };
+  // HTML：墨笔进度条。v 0..1；opts：{ gear: 金色斜纹的长度 0..1, cls, h }
+  UI.brushBar = function (v, color, opts) {
+    opts = opts || {};
+    return '<span class="sg-bbar' + (opts.cls ? ' ' + opts.cls : '') + '" style="--v:' + M.clamp01(+v || 0).toFixed(3) + ';--c:' + (color || 'var(--war)') +
+      (opts.gear ? ';--g:' + M.clamp01(opts.gear).toFixed(3) : '') + '"><i></i>' + (opts.gear ? '<b></b>' : '') + '</span>';
+  };
+
+  // ---- 窗口（漆框 + 纸页，UI-V4 §4.3）----
+  // SG.UI.window(id, { title, seal, info, icon, width, height, onClose, tabs, tabValue, onTab, className, full })
+  //   → { el, head, info, tabs, page, side, foot, close(), onKey, setInfo(html) }
+  //   Esc 关闭（onKey 返回 true 表示已处理）；← → / Ctrl+Tab 切换页签；手机全屏；打开时 ui-paper-open，关闭 ui-paper-close
+  UI.window = function (id, o) {
+    o = o || {};
+    ensure();
+    const m = openModal('sg-window' + (o.className ? ' ' + o.className : ''), { blockerClass: 'sg-window-modal' });
+    m.panel.classList.remove('sg-panel');
+    m.panel.dataset.win = id || '';
+    if (o.width) m.panel.style.setProperty('--ww', typeof o.width === 'number' ? o.width + 'px' : o.width);
+    if (o.height) m.panel.style.setProperty('--wh', typeof o.height === 'number' ? o.height + 'px' : o.height);
+    if (o.title) m.panel.setAttribute('aria-label', String(o.title).replace(/<[^>]*>/g, ''));
+    const head = el('div', 'sg-win-head');
+    if (o.seal) head.appendChild(el('span', 'sg-win-seal', SG.esc(o.seal)));
+    const title = el('div', 'sg-win-title', o.title || '');
+    head.appendChild(title);
+    const info = el('div', 'sg-win-info', o.info || '');
+    head.appendChild(info);
+    const tools = el('div', 'sg-win-tools');
+    head.appendChild(tools);
+    let closed = false;
+    const rec = {
+      el: m.panel, modal: m, head, title, info, tools, tabs: null, page: null, side: null, foot: null, onKey: null,
+      setInfo(h) { info.innerHTML = h || ''; },
+      close() {
+        if (closed) return;
+        closed = true;
+        uiSfx('ui-paper-close', 0.8);
+        m.close();
+        if (o.onClose) { try { o.onClose(); } catch (e) { console.error(e); } }
+      },
+      get closed() { return closed; },
+    };
+    UI.button(head, '', () => rec.close(), { className: 'sg-close', ariaLabel: '关闭' });
+    m.panel.appendChild(head);
+    const body = el('div', 'sg-win-body' + (o.sideFirst ? ' side-first' : ''));
+    m.panel.appendChild(body);
+    if (o.side) { rec.side = el('div', 'sg-win-side'); body.appendChild(rec.side); }
+    const pageWrap = el('div', 'sg-win-main');
+    body.appendChild(pageWrap);
+    if (o.tabs) rec.tabs = UI.tabs(pageWrap, o.tabs, (tid, prev) => { if (o.onTab) o.onTab(tid, prev); }, { value: o.tabValue, className: 'sg-win-tabs' });
+    rec.page = el('div', 'sg-page' + (o.tabs ? ' has-tabs' : ''));
+    pageWrap.appendChild(rec.page);
+    if (o.foot) { rec.foot = el('div', 'sg-win-foot'); m.panel.appendChild(rec.foot); }
+    m.onKey = (k, e) => {
+      if (rec.onKey) { try { if (rec.onKey(k, e) === true) return true; } catch (err) { console.error(err); } }
+      if (k === 'Escape') { rec.close(); return true; }
+      if (rec.tabs && (k === 'ArrowLeft' || k === 'ArrowRight')) {
+        const a = document.activeElement;
+        if (a && (a.tagName === 'INPUT' || (a.closest && a.closest('.sg-seg, .sg-slider, .sg-tabs')))) return false;
+        rec.tabs.step(k === 'ArrowRight' ? 1 : -1);
+        return true;
+      }
+      return false;
+    };
+    uiSfx('ui-paper-open', 0.8);
+    if (!Motion.reduced && Motion.level !== 'off') Motion.play(m.panel, [{ opacity: 0, transform: 'scale(.96) translateY(12px)' }, { opacity: 1, transform: 'none' }], { dur: 260 });
+    try { const c = head.querySelector('.sg-close'); if (c) c.focus({ preventScroll: true }); } catch (e) { /* 忽略 */ }
+    return rec;
+  };
+
+  // ---- 手机底部抽屉（UI-V4 §4.3）：{ title, html, onClose } → { el, body, close } ----
+  UI.sheet = function (o) {
+    o = o || {};
+    ensure();
+    const m = openModal('sg-sheet', { blockerClass: 'sg-sheet-modal' });
+    m.panel.classList.remove('sg-panel');
+    m.panel.innerHTML = '<div class="sg-sheet-grab"></div>';
+    if (o.title) m.panel.appendChild(el('div', 'sg-sheet-title', o.title));
+    const body = el('div', 'sg-sheet-body', o.html || '');
+    m.panel.appendChild(body);
+    let closed = false;
+    const rec = { el: m.panel, body, close() { if (closed) return; closed = true; m.close(); if (o.onClose) o.onClose(); } };
+    m.blocker.addEventListener('click', e => { if (e.target === m.blocker) rec.close(); });
+    m.onKey = k => { if (k === 'Escape') { rec.close(); return true; } return false; };
+    let y0 = null;
+    m.panel.addEventListener('pointerdown', e => { if (e.target.classList.contains('sg-sheet-grab') || e.target === m.panel) y0 = e.clientY; });
+    m.panel.addEventListener('pointerup', e => { if (y0 !== null && e.clientY - y0 > 40) rec.close(); y0 = null; });
+    uiSfx('ui-paper-open', 0.7);
+    return rec;
   };
 
   SG.UI = UI;

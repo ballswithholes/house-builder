@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>版式检查 · 第四版</title>
+<style>
+  /* UI-V4 §15.1：五种视口（含 844 × 390、左右安全区 47 px 的最坏手机）依次载入游戏（?start=liubei 跳过标题），
+     城池面板打开后调用 SG.UITest.layoutReport()：区块不出安全视口、不互相覆盖、无横向滚动、手机触控目标 ≥ 40 px、指令印 ≥ 48 × 56。
+     一次只开一个框（省 CPU）；结果写在表格与 window.RESULT（tests 用）。?only=2 只跑第 3 个视口。
+     须经 http(s) 打开（同源才能读框内的 SG），例如在仓库根目录 python3 -m http.server 8765 后访问 /tests/ui-layout.html。 */
+  body { margin: 0; padding: 12px; background: #2b2420; color: #f3e7cc; font: 13px/1.5 system-ui, sans-serif; }
+  table { border-collapse: collapse; margin-bottom: 12px; }
+  td, th { border: 1px solid #5a4a3a; padding: 4px 8px; vertical-align: top; text-align: left; }
+  .ok { color: #8ddc93; } .bad { color: #ff8f73; }
+  #stage { position: relative; }
+  iframe { border: 2px solid #e8b54a; background: #000; display: block; }
+</style>
+</head>
+<body>
+<table id="t"><tr><th>视口</th><th>安全区</th><th>结果</th><th>区块</th></tr></table>
+<div id="stage"></div>
+<script>
+'use strict';
+const VIEWPORTS = [
+  { w: 1280, h: 720, ins: 0, name: '桌面 1280×720' },
+  { w: 1600, h: 900, ins: 0, name: '宽屏 1600×900' },
+  { w: 1024, h: 768, ins: 0, name: '平板 1024×768' },
+  { w: 844, h: 390, ins: 0, name: '手机 844×390' },
+  { w: 844, h: 390, ins: 47, name: '手机 844×390 · 安全区 47' },
+];
+const q = new URLSearchParams(location.search);
+const only = q.has('only') ? +q.get('only') : -1;
+const T = document.getElementById('t'), S = document.getElementById('stage');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function run(v) {
+  const f = document.createElement('iframe');
+  f.width = v.w; f.height = v.h;
+  f.src = '../index.html?seed=7&start=liubei' + (v.ins ? '&insets=' + v.ins : '');
+  S.innerHTML = ''; S.appendChild(f);
+  const t0 = Date.now();
+  for (;;) {
+    await sleep(500);
+    let w = null, ok = false;
+    try { w = f.contentWindow; ok = !!(w && w.SG && w.SG.Shell && w.SG.Shell.el && w.SG.Shell.el.beam && w.SG.G); }
+    catch (e) { return { problems: ['cannot read the frame (' + e.name + '): open this page over http(s), e.g. python3 -m http.server, not file://'], boxes: {} }; }
+    if (ok) {
+      // 打开君主所在城的面板
+      try { const g = w.SG.G, c = g.cities[g.ruler(g.player).city]; w.SG.Game.strategy.selectCity(c.id); } catch (e) { /* 忽略 */ }
+      await sleep(2500);
+      return w.SG.UITest.layoutReport();
+    }
+    if (Date.now() - t0 > 180000) return { problems: ['timeout: game did not start'], boxes: {} };
+  }
+}
+(async () => {
+  const results = [];
+  for (let i = 0; i < VIEWPORTS.length; i++) {
+    if (only >= 0 && i !== only) continue;
+    const v = VIEWPORTS[i];
+    const r = await run(v);
+    results.push(Object.assign({ name: v.name }, r));
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + v.name + '</td><td>' + (v.ins || 0) + ' px</td><td class="' + (r.problems.length ? 'bad' : 'ok') + '">' + (r.problems.length ? r.problems.join('<br>') : 'ok') + '</td><td>' +
+      Object.keys(r.boxes || {}).map(k => k + ' ' + r.boxes[k].join(',')).join('<br>') + '</td>';
+    T.appendChild(tr);
+  }
+  S.innerHTML = '';
+  window.RESULT = { fails: results.reduce((s, r) => s + r.problems.length, 0), results };
+  document.body.dataset.ready = '1';
+})();
+</script>
+</body>
+</html>

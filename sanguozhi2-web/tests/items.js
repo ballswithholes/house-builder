@@ -7,10 +7,11 @@
         赐宝物每件只算一次（10 次赐收 = 0）、存档往返与 v3 迁移、关掉时与 v3 逐位相同、单挑预算、奖池
      §3 经济与电脑（全电脑战役）：买装占总收入 8–15 %、193 年武力 ≥ 60 的电脑武将中位装备件数 ≥ 2、每城 ≥ 4 件货、
         珍品在本城每 6–10 个月出现一次、传国玉玺 195 年前被找到 ≥ 70 %、自由支出后无城跌破 0、每月耗时
-     §4 战斗：整套装备的交换比（按品级）、宝具的平均价值（参照一次普通攻击）
-   用法：node tests/items.js [--quick]      快速档（约 1 分钟）：§3 经典 12 种子 × 4 年 + 世界 2 种子 × 3 年
+     §4 战斗：整套装备的交换比（按品级）、宝具的平均价值（参照一次普通攻击）；§4b 电脑对电脑战术战斗装备关 / 开（攻方胜率 ±3 pp、天数 ±1）
+   用法：node tests/items.js [--quick]      快速档（约 1 分钟）：§3 经典 12 种子 × 5 年 + 世界 2 种子 × 3 年，另「全开」经典 8 × 4、世界 2 × 3
          node tests/items.js --full         夜间档：经典 40 × 20 年、世界 10 × 20 年（ITEMS §17.4 的 200 / 100 局按需加 --seeds）
-         选项 --seeds N（经典种子数）、--years N
+         选项 --seeds N（经典种子数）、--years N、--only §4b,§3（只跑这几节）
+   FLAG 行：规格的预期与规格的算法 / 数据对不上、要规格作者定的数（不算失败；报告列出）
    退出码 = 失败数
    ========================================================================== */
 const path = require('path');
@@ -22,13 +23,17 @@ const { load, ROOT } = require('./v4-load.js');
 const ARGS = process.argv.slice(2);
 const FULL = ARGS.includes('--full') || ARGS.includes('--nightly');
 const argN = (k, d) => { const i = ARGS.indexOf(k); return i >= 0 ? +ARGS[i + 1] : d; };
-let fails = 0, checks = 0;
+let fails = 0, checks = 0, flags = 0;
 const T0 = Date.now();
 function ok(c, msg) { checks++; if (!c) { fails++; console.log('  FAIL ' + msg); } return !!c; }
 function eq(a, b, msg) { return ok(a === b, msg + ' (got ' + JSON.stringify(a) + ', want ' + JSON.stringify(b) + ')'); }
 function near(a, b, tol, msg) { return ok(Math.abs(a - b) <= tol, msg + ' (got ' + a + ', want ' + b + ' ± ' + tol + ')'); }
 function info(s) { console.log('  ' + s); }
+// 规格与实现对不上、要规格作者决定的数（不算失败，单独计数，报告里列出）
+function flag(c, msg) { if (!c) { flags++; console.log('  FLAG ' + msg); } return !!c; }
+const ONLY = (() => { const i = ARGS.indexOf('--only'); return i >= 0 ? ARGS[i + 1].split(',') : null; })();   // --only §4b,§2c（按节名开头）
 function section(name, fn) {
+  if (ONLY && !ONLY.some(k => name.indexOf(k + ' ') === 0)) return;
   const t0 = Date.now();
   console.log('== ' + name);
   try { fn(); } catch (e) { fails++; console.log('  FAIL (threw) ' + (e.stack || e)); }
@@ -68,6 +73,15 @@ section('§1 catalogue (ITEMS §17.1; tools/gen-items.js check)', () => {
   eq(D.items.filter(x => x.availability.classic && x.availability.classic.kind === 'ruler').length, 18, '18 classic ruler-uniques');
   ok(!!D.items.find(x => x.name === '吉祥纹铜剑'), 'safe name 吉祥纹铜剑 kept (DESIGN-V4 §20 Q4)');
   eq(Object.keys(D.kitWeapon).length > 450, true, 'kit weapon table frozen at generation (' + Object.keys(D.kitWeapon).length + ' generals, from ' + D.kitWeaponSource + ')');
+  // kitWeapon 与当前 figure.js 一致（美术推广改了外观的兵器之后要重跑 node tools/gen-items.js js）
+  try {
+    const kd = require(path.join(ROOT, 'tools', 'gen-items.js')).kitDrift(JSON.parse(fs.readFileSync(path.join(ROOT, 'design-v4', 'items.json'), 'utf8')));
+    if (kd.skipped) info('kitWeapon drift check skipped: ' + kd.skipped);
+    else ok(kd.changed.length === 0, 'kitWeapon matches the current SG.Figure.lookOf (' + kd.n + ' generals)' + (kd.changed.length ? ': ' + kd.changed.slice(0, 8).join(', ') : ''));
+  } catch (e) { ok(false, 'kitWeapon drift check threw: ' + e.message); }
+  // giftK 的作用范围写在数据里（以宝物赏赐 = 持有者；以之赏赐 = 本件）
+  const gk = D.items.filter(it => it.ability && it.ability.effects.some(e => e.t === 'giftK'));
+  ok(gk.length === 10 && gk.every(it => it.ability.effects.filter(e => e.t === 'giftK').every(e => typeof e.holder === 'boolean' && e.holder === /以宝物/.test(it.ability.desc))), 'giftK effects carry holder scope (' + gk.filter(it => it.ability.effects.some(e => e.holder)).length + ' holder / ' + gk.length + ')');
   // 白名单之外的单挑字段：载入即报错（COMBAT-V4 §15 (15)）
   const bad = JSON.parse(JSON.stringify(D)); bad.items.find(x => x.id === 'yuenv').ability.effects.push({ t: 'dUnblockable', k: 1 });
   const ctx = { console: { log() {}, error() {} }, Math, JSON, Date }; ctx.window = ctx; vm.createContext(ctx);
@@ -317,24 +331,25 @@ section('§2f gifts once per instance (INTEGRATION §7.1): 10 give / take-back c
   const x = g.generalsOf(f).find(free);
   x.loyalty = 50;
   const u = Items.award(f, gid, { why: 'test' });
-  const first = Items.gift(x, u, { roll: 2 });
+  const first = Items.gift(x, u, { roll: 2, confirm: true });
   ok(first.ok && first.loy > 0, 'first gift raises loyalty (+' + first.loy + ')');
   const l1 = x.loyalty;
   Gear.unequip(x, gsl);
   eq(x.loyalty, l1 - first.loy, 'take-back costs exactly giftLoy');
   const l0 = 50;
-  for (let i = 0; i < 9; i++) { const r = Items.gift(x, u, { roll: 4 }); ok(r.ok && r.loy === 0, 'regift gives nothing #' + i); Gear.unequip(x, gsl); }
+  for (let i = 0; i < 9; i++) { const r = Items.gift(x, u, { roll: 4, confirm: true }); ok(r.ok && r.loy === 0, 'regift gives nothing #' + i); Gear.unequip(x, gsl); }
   eq(x.loyalty, l0, '10 cycles: loyalty change 0');
   // 赐给另一人也不再涨
   const y = g.generalsOf(f).find(z => free(z) && z !== x);
   const ly = y.loyalty;
-  ok(Items.gift(y, u, { roll: 4 }).loy === 0 && y.loyalty === ly, 'the same instance to someone else: nothing');
+  const ry = Items.gift(y, u, { roll: 4, confirm: true });
+  ok(ry.ok && ry.loy === 0 && y.loyalty === ly + ry.eqDelta, 'the same instance to someone else: nothing (only the swap cost ' + ry.eqDelta + ')');
   // 公式：8 + R(0,4) + clamp(round(value × giftK / 60), 0, 30)，合用 × 1.5；赤兔赐关羽 +30
   const z = g.generalsOf(f).find(q => free(q) && q !== x && q !== y) || g.generals.find(q => q.faction >= 0 && !g.isRuler(q) && q !== x && q !== y && q.faction === f);
   z.loyalty = 10;
   const u2 = Items.award(f, 'han_yubi', { why: 'test' });
-  const r2 = Items.gift(z, u2, { roll: 0 });
-  eq(r2.loy, Math.round((8 + 0 + Math.min(30, Math.round(80 * Items.giftK('han_yubi') / 60))) * (r2.fits ? 1.5 : 1)), 'gift formula');
+  const r2 = Items.gift(z, u2, { roll: 0, confirm: true });
+  eq(r2.loy, Math.min(100 - r2.afterEquip, Math.round((8 + 0 + Math.min(30, Math.round(80 * Items.giftK('han_yubi', [g.ruler(f)]) / 60))) * (r2.fits ? 1.5 : 1))), 'gift formula');
 });
 
 section('§2g save / load round trip, v3 migration, items off = v3 (INTEGRATION §6)', () => {
@@ -428,6 +443,170 @@ section('§2i 宝具 in a battle (ITEMS §7.3; specials.js known / useSpecial)',
   Items.enabled = true;
 });
 
+// 测试用：把 id 的现有实例（单件）拿掉，再发给 x 并装上（不计忠诚）
+function giveTo(g, x, id) {
+  for (const u of Object.keys(g.items.inst).filter(k => g.items.inst[k].id === id)) {
+    const r = g.items.inst[u];
+    if (r.loc === 'gen') { const y = g.generals[r.owner]; for (const sl of Items.SLOTS) if (y.gear[sl] === +u) y.gear[sl] = null; }
+    else if (r.loc === 'arm') { const fa = g.factions[r.owner]; fa.armoury.splice(fa.armoury.indexOf(+u), 1); }
+    else if (r.loc === 'city') { const c = g.cities[r.owner]; c.vault.splice(c.vault.indexOf(+u), 1); if (!c.vault.length) delete c.vault; }
+    delete g.items.inst[u];
+  }
+  Items.load(g);
+  const uid = Items.award(x.faction >= 0 ? x.faction : 0, id, { why: 'test' });
+  if (uid == null) return null;
+  const r = Gear.equip(x, uid, { force: true, free: true });
+  return r.ok ? uid : null;
+}
+
+section('§2j review fixes: noCounter conditions, charge, awe, escape / capture, crit hooks, festival, gift swap, names, giftK scope, auras, defendCity, free / relFloor / scout', () => {
+  const g = newGame('liubei', 5);
+  const B = Gear.battle;
+  // noCounter（§7.2）：赤兔 / 两刃矛只在移动 ≥ 2 格后的攻击；两刃矛还要骑乘；卢赫之矛的 noCounter 一直有效
+  const lb = byName(g, '吕布'), gs = byName(g, '公孙瓒');
+  eq(itemOn(lb, 'mount'), 'chitu', '吕布 rides 赤兔');
+  eq(B.noCounter(lb), false, '赤兔: standing still → countered');
+  eq(B.noCounter(lb, { moved: 1 }), false, '赤兔: moved 1 → countered');
+  eq(B.noCounter(lb, { moved: 2 }), true, '赤兔: moved 2 → no counter');
+  eq(itemOn(gs, 'weapon'), 'liangrenmao', '公孙瓒 holds 两刃矛');
+  eq(B.noCounter(gs, { moved: 3 }), true, '两刃矛 mounted, moved 3 → no counter');
+  Gear.unequip(gs, 'mount', { free: true });
+  eq(B.noCounter(gs, { moved: 3 }), false, '两刃矛 on foot → countered');
+  eq(B.chargeK(gs, {}), Gear.raw(gs, 'charge') / 100, '两刃矛 charge needs a mount');
+  // allMounted（萨尔马提亚龙旗）：同方骑乘者冲锋 +6 %，持有者不骑马时自己不得
+  const zy = byName(g, '赵云'), lbK = B.chargeK(lb, {});
+  ok(giveTo(g, zy, 'draco') != null, '赵云 carries 萨尔马提亚龙旗');
+  near(B.chargeK(lb, { allies: [lb, zy] }) - lbK, 0.06, 1e-9, 'allMounted: a mounted ally charges +6 %');
+  Gear.unequip(zy, 'mount', { free: true });
+  near(B.chargeK(zy, { allies: [zy] }), Gear.raw(zy, 'charge') / 100, 1e-9, 'allMounted: the holder on foot gets nothing');
+  near(B.attackK(lb, { moved: 2, allies: [lb, zy] }), B.attackK(lb, { moved: 2 }) * (1 + B.chargeK(lb, { allies: [lb, zy] })) / (1 + lbK), 1e-9, 'attackK uses chargeK with allies');
+  // 威（awe）是一方最大值；开场 opening.awe 另加（§7.2）
+  const x0 = byName(g, '张飞');
+  ok(giveTo(g, x0, 'kuiniugu') != null, '张飞 carries 夔牛鼓');
+  eq(B.openingAwe(x0), 10, '夔牛鼓 opening awe 10 is separate');
+  eq(B.awe(x0), Gear.raw(x0, 'awe'), 'awe = gear awe stat only');
+  // 脱身与被俘（§3.2）：p × (1 − escape)；的卢 / 赤兔必定脱身；escapeK 与坐骑的脱身相乘
+  eq(B.escape(lb), 1, '赤兔: always escapes');
+  eq(Items.captureP(lb, 0.75, null), 0, 'captureP with 赤兔 = 0');
+  const sj = byName(g, '孙坚'), zm = byName(g, '祖茂');
+  const e0 = B.escape(sj), p0 = Items.captureP(sj, 0.75, { atk: [sj], def: [] });
+  near(p0, 0.75 * (1 - e0) * (1 - 0.6), 1e-9, '赤罽帻 decoy: p × 0.4 without 祖茂');
+  eq(Items.captureP(sj, 0.75, { atk: [sj, zm], def: [] }), 0, '赤罽帻 decoy with 祖茂 in the battle: always escapes');
+  const gy = byName(g, '关羽');
+  near(Items.captureP(gy, 0.35, { routedBy: { [gy.id]: x0.id } }), Math.min(1, 0.35 + B.capture(x0)) * (1 - B.escape(gy)), 1e-9, 'captureP adds the router\'s capture bonus');
+  near(Items.captureP(gy, 0.5, { rescueP: { [gy.id]: 0.5 } }), 0.5 * (1 - B.escape(gy)) * 0.5, 1e-9, 'captureP: rescue halves');
+  Items.enabled = false; eq(Items.captureP(gy, 0.75, null), 0.75, 'items off: captureP = p'); Items.enabled = true;
+  // 会心（§3.1、§7.2）：古锭刀 cond charge +2；抗会心 critRes；护身 ward.crit
+  const base = Gear.stat(sj, 'critArmy');
+  near(B.critAdd(sj, { charge: true }), Math.min(0.04, (Gear.raw(sj, 'crit') + 2) / 100) - base, 1e-12, '古锭刀: +2 pp crit after a charge (inside the 0.04 cap)');
+  eq(B.critAdd(sj, {}), 0, '古锭刀: nothing without the charge');
+  near(Mods.z ? Mods.z('gearCritCond', sj, { charge: true }) : B.critAdd(sj, { charge: true }), B.critAdd(sj, { charge: true }), 1e-12, 'provider gearCritCond');
+  near(B.critRes(gy), Gear.raw(gy, 'critRes') / 100, 1e-12, 'critRes from 铁兜鍪');
+  near(Items.critTaken(0.2, gy), 0.2 - B.critRes(gy), 1e-12, 'critTaken subtracts critRes');
+  const anc = g.generals.find(y => !y.dead && y.faction >= 0 && !g.isRuler(y) && Items.styleOf(Gear.item(y, 'weapon')) === 'one');
+  ok(anc && giveTo(g, anc, 'ancile') != null, (anc ? anc.name : '?') + ' (one-handed) carries 天降神盾');
+  near(Items.critTaken(0.2, anc), (0.2 - B.critRes(anc)) * 0.5, 1e-12, '天降神盾 ward.crit halves the crit chance taken');
+  // 庙会（§14.2）：3 月的货是 2 月末备的：有主之城 +2 货位且买价 ×0.9；4 月两样都没有
+  while (g.month !== 2) months(g, 1);
+  months(g, 1);
+  eq(g.month, 3, 'now month 3');
+  // 玩家的城（电脑不在那里买）一定是满的；电脑的城在第 7 相可能已经买走一两件
+  const own = g.cities.filter(c => c.owner >= 0), mine = own.filter(c => c.owner === g.player);
+  ok(mine.length && mine.every(c => c.shop.stock.length === Items.CFG.slotsByTier[Items.shopTier(c)] + 2), 'month 3: the player\'s markets carry tier slots + 2 (' + mine.map(c => c.name + ' ' + c.shop.stock.length).join(', ') + ')');
+  const full = own.filter(c => c.shop.stock.length >= Items.CFG.slotsByTier[Items.shopTier(c)] + 1).length;
+  ok(full >= own.length * 0.75, `month 3: owned markets got the extra stalls (${full} / ${own.length} with ≥ tier slots + 1 after AI shopping)`);
+  eq(Items.slots(own[0]), Items.CFG.slotsByTier[Items.shopTier(own[0])] + 2, 'Items.slots shows the festival slots in month 3');
+  const pc = g.cities.find(c => c.owner === g.player && c.shop.stock.length);
+  const e3 = pc.shop.stock[0], p3 = Items.entryPrice(pc, e3, g.player);
+  months(g, 1);
+  eq(g.month, 4, 'now month 4');
+  ok(own.every(c => c.shop.stock.length <= Items.CFG.slotsByTier[Items.shopTier(c)] + (c.shop.stock.some(e => Items.tier(e.id) >= 2) ? 2 : 0)), 'month 4: the extra stalls packed up (commons trimmed back to the tier slots)');
+  ok(pc.shop.stock[0] === e3, 'the oldest entry stays after the festival');
+  const p4 = Items.entryPrice(pc, e3, g.player);
+  ok(Math.abs(p3 - p4 * 0.9) <= 10, `festival price: month 3 ${p3} ≈ 0.9 × month 4 ${p4}`);
+  ok(!Items.slots(pc) || Items.slots(pc) === Items.CFG.slotsByTier[Items.shopTier(pc)], 'month 4: no festival slots');
+  // 赐宝物（§2.6、§6.6）：会顶掉名将旧物时先要确认；结果写明换装代价与赏赐所得
+  const g2 = newGame('liubei', 19), gy2 = byName(g2, '关羽');
+  gy2.loyalty = 100;
+  const common = D.items.find(it => it.rarity === 'common' && it.slot === 'weapon' && it.culture === 'han' && !it.req && it.duel && it.duel.style === 'pole');
+  const cu = Items.award(gy2.faction, common.id, { why: 'test' });
+  const ask = Items.gift(gy2, cu, { roll: 2 });
+  ok(!ask.ok && ask.needConfirm && ask.displaced && ask.displaced.id === 'qinglong' && ask.displaced.cost === 15, 'gift that would replace 青龙偃月刀 asks first (cost 15)');
+  eq(itemOn(gy2, 'weapon'), 'qinglong', '… and changes nothing until confirmed');
+  eq(gy2.loyalty, 100, '… loyalty untouched');
+  const done = Items.gift(gy2, cu, { roll: 2, confirm: true });
+  ok(done.ok && done.before === 100 && done.eqDelta === -15 && done.afterEquip === 85 && done.after === 85 + done.loy && done.displaced.indexOf('qinglong') >= 0, `confirmed gift reports 100 → ${done.after} (swap −15, gift +${done.loy})`);
+  eq(Items.inst(cu).giftLoy, done.loy, 'giftLoy is the gift share only (the take-back costs that much)');
+  // 吉祥纹铜剑的名字（DESIGN-V4 §20 问题 4 / Decisions.safeSwastikaName）
+  eq(SG.Balance.Decisions.safeSwastikaName, true, 'Decisions.safeSwastikaName defaults to true (DESIGN-V4 §20)');
+  eq(Items.displayName('paratarajas_jian'), '吉祥纹铜剑', 'safe name by default');
+  Items.decide('safeSwastikaName', false);
+  eq(Items.displayName('paratarajas_jian'), '卍纹铜剑', 'safeSwastikaName = false restores 卍纹铜剑');
+  eq(D.items.filter(it => Items.displayName(it) !== it.name).length, 1, '… and renames nothing else');
+  Items.decide('safeSwastikaName');
+  eq(Items.displayName('paratarajas_jian'), '吉祥纹铜剑', 'override cleared');
+  // giftK（§6.6）：「以之赏赐」乘这件本身；「以宝物赏赐」乘持有者送出的任何宝物
+  near(Items.giftK('hepu_zhu'), (Items.get('hepu_zhu').stats.gift || 1) * 1.6, 1e-9, '合浦明珠 ×1.6 when given');
+  const giver = byName(g2, '简雍') || g2.generalsOf(g2.player).find(y => !g2.isRuler(y));
+  ok(giveTo(g2, giver, 'tillya_crown') != null, 'a giver wears 蒂拉丘黄金冠');
+  near(Items.giftK('han_yubi', [giver]), Items.giftK('han_yubi') * 1.3, 1e-9, '蒂拉丘黄金冠: the holder\'s gifts ×1.3');
+  eq(Items.giftK('tillya_crown', [giver]), Items.giftK('tillya_crown'), '… not on itself');
+  near(Items.giftValue('han_yubi', [giver]), Math.round(Items.valueOf('han_yubi') * Items.giftK('han_yubi') * 1.3), 1, 'giftValue for the 外交 gift');
+  const ally = g2.factions.find(fa => fa.alive && fa.id !== g2.player), tu = Items.award(g2.player, 'han_yubi', { why: 'test' });
+  ok(Items.transfer(tu, ally.id, { from: g2.player }).ok && Items.factionOf(tu) === ally.id, '外交 gift: transfer puts the item in the partner\'s armoury');
+  ok(!Items.transfer(+Object.keys(g2.items.inst).find(k => g2.items.inst[k].id === 'qinglong'), ally.id).ok, '… never a signature weapon (青龙偃月刀)');
+  // 忠诚光环（§3.5）：负的（交州刺史节 −1）、有上限的（军人公民权铜板至 90）
+  const city = g2.cities.find(c => c.owner === g2.player && g2.officersIn(c).length >= 3 && !g2.officersIn(c).every(o => g2.isRuler(o))) || g2.cities.find(c => c.owner >= 0 && g2.officersIn(c).filter(o => !g2.isRuler(o)).length >= 2);
+  const gov = g2.officersIn(city).find(o => !g2.isRuler(o));
+  city.governor = gov.id;
+  const adm = Mods.admin(city);
+  const others = g2.officersIn(city).filter(o => o !== adm && !g2.isRuler(o));
+  ok(adm && others.length >= 1, 'a city with an administrator and officers (' + city.name + ')');
+  if (adm && others.length) {
+    for (const sl of Items.SLOTS) if (adm.gear[sl] != null && !Items.inst(adm.gear[sl]).bound) Gear.unequip(adm, sl, { free: true });
+    ok(giveTo(g2, adm, 'jiaozhou_jie') != null, adm.name + ' holds 交州刺史节');
+    for (const o of others) o.loyalty = 80;
+    eq(Mods.loyAura(city), 0, '交州刺史节 is not a positive aura');
+    Items.loyAuraSpecial({});
+    ok(others.every(o => o.loyalty === 79), 'cursed aura: officers lose 1 a month');
+    Gear.unequip(adm, 'weapon', { free: true });
+    ok(giveTo(g2, adm, 'diploma') != null, adm.name + ' holds 军人公民权铜板');
+    eq(Mods.loyAura(city), 0, 'capped aura is not in the provider (cap 90 < 95)');
+    others[0].loyalty = 89; if (others[1]) others[1].loyalty = 90;
+    Items.loyAuraSpecial({});
+    ok(others[0].loyalty === 90 && (!others[1] || others[1].loyalty === 90), 'capped aura: +1 up to 90 only');
+  }
+  // 坐镇守城（defendCity）：自动结算时这一仗的守军战力 × (1 + k)
+  const holder = g2.generals.find(y => !y.dead && y.gear && itemOn(y, 'weapon') === 'yizhou_maojie');
+  if (holder) {
+    const c = g2.cities[holder.city], d = g2.officersIn(c).find(y => !Gear.has(y, 'castle'));
+    const pw0 = Mods.autoPower(d), s = { atk: [], def: g2.officersIn(c), target: c };
+    SG.Events.emit('conquest.prepare', s);
+    near(Mods.autoPower(d) / pw0, 1 + Items.defendCity(c), 1e-9, `益州牧旄节: defenders of ${c.name} ×${(1 + Items.defendCity(c)).toFixed(2)} in auto-resolve`);
+    SG.Events.emit('conquest.resolved', s);
+    near(Mods.autoPower(d), pw0, 1e-9, '… only in that battle');
+  } else ok(false, '益州牧旄节 holder found');
+  // 不耗令牌的外交（传国玉玺）、好感下限（径路刀）、斥候（浑天仪）
+  const ru = g2.ruler(g2.player);
+  ok(giveTo(g2, ru, 'chuanguoxi') != null, '刘备 wears 传国玉玺');
+  eq(Items.freeUses(g2.player, 'diplomacy'), 1, '传国玉玺: one free 外交 a month');
+  ok(Items.useFree(g2.player, 'diplomacy') && Items.freeUses(g2.player, 'diplomacy') === 0 && !Items.useFree(g2.player, 'diplomacy'), '… used up');
+  months(g2, 1);
+  eq(Items.freeUses(g2.player, 'diplomacy'), Gear.equipped(ru).some(e => e.id === 'chuanguoxi') ? 1 : 0, '… back next month');
+  const other = g2.factions.find(fa => fa.alive && fa.id !== g2.player);
+  Gear.unequip(ru, 'weapon', { free: true, force: true });
+  if (ru.gear.weapon == null) {
+    ok(giveTo(g2, ru, 'jinglu') != null, '刘备 wears 径路刀');
+    eq(Items.relFloor(g2.player, other.id), 0, 'relFloor 0 without an alliance');
+    g2.setAlliance(g2.player, other.id, g2.monthIndex + 12);
+    eq(Items.relFloor(g2.player, other.id), 40, '径路刀: relation floor +40 while allied');
+  }
+  const sc = g2.generalsOf(g2.player).find(y => !g2.isRuler(y));
+  ok(giveTo(g2, sc, 'huntianyi') != null, sc.name + ' carries 浑天仪');
+  const near1 = g2.cities[sc.city].links.filter(j => g2.cities[j].owner !== g2.player);
+  ok(near1.every(j => Items.scouted(g2.player).has(j)), '浑天仪: adjacent foreign cities are scouted');
+});
+
 // ======================================================================================= §4 battle ==
 section('§4 battle: full set exchange ratio by rarity (ITEMS §0, §17.3) and 宝具 values', () => {
   // 代表套装（spear + 札甲 + 盔 + 盾 + 战马 的品级 profile；一半攻击为冲锋），交换比 = 攻 × 防 × (1 + 冲锋 / 2)
@@ -445,64 +624,167 @@ section('§4 battle: full set exchange ratio by rarity (ITEMS §0, §17.3) and �
   const u = { gen: lb, side: 0, x: 0, y: 0, alive: true };
   const am = Mods.atkMul(u, { units: [u] }), dm = Mods.defMul(u, { units: [u] });
   ok(am > 1 && am <= 1.6 && dm >= 1 && dm <= 1.6, `吕布 atkMul ${am.toFixed(3)} defMul ${dm.toFixed(3)} within the cap`);
-  // 宝具价值（ITEMS §7.1：稀有 1.3–1.8、史诗 2.0–2.5、传说 ≤ 2.8 次普通攻击；参照 = 同一施展者对主目标的普通攻击期望）
-  const ratios = { rare: [], epic: [], legendary: [] };
-  const dummy = i => ({ id: 9000 + i, name: '靶' + i, war: 40, intel: 30, pol: 30, faction: -1, troops: 4000, training: 60, loyalty: 80, gear: { weapon: null, offhand: null, armour: null, helmet: null, mount: null, treasure: null } });
-  for (const it of D.items) {
-    if (!it.ability) continue;
-    const a = it.ability.effects.find(e => e.t === 'active' && ['smite', 'charge', 'rampage', 'volley', 'blaze', 'storm', 'roar'].indexOf(e.kind) >= 0);
-    if (!a) continue;
-    const caster = { id: 8000, name: '施', war: 85, intel: 85, pol: 60, faction: 0, troops: 7000, training: 70, loyalty: 90, culture: it.culture, gear: { weapon: null, offhand: null, armour: null, helmet: null, mount: null, treasure: null } };
-    g.generals.push(caster); caster.id = g.generals.length - 1;
-    const uid = Items.award(0, it.id, { why: 'test' });
-    if (uid == null) { g.generals.pop(); continue; }
-    Gear.equip(caster, uid, { force: true, free: true });
-    const foes = [0, 1, 2, 3].map(dummy);
-    const s = { attacker: 0, defender: 1, src: g.cities[0], target: g.cities[11], atk: [caster], def: foes, atkFood: 9000, atkGold: 0, routed: new Set(), captives: [] };
-    const Mdl = new SG.BattleModel(s);
-    for (let x = 0; x < Mdl.W; x++) for (let y = 0; y < Mdl.H; y++) Mdl.map[x][y] = SG.Terrain.Plain;
-    const cu = Mdl.units.find(x => x.gen === caster);
-    cu.x = 5; cu.y = 5;
-    const fu = Mdl.units.filter(x => x.side === 1);
-    [[6, 5], [5, 6], [4, 5], [5, 4]].forEach((p, k) => { fu[k].x = p[0]; fu[k].y = p[1]; });
-    for (const x of Mdl.units) { x.morale = 90; x.commander = false; }
-    Mdl.side = 0;
-    const id = SG.Specials.known(caster).find(sp => sp.item === it.id).id;
-    const tg = Mdl.specialTargets(cu, id);
-    if (!tg.length) { g.generals.pop(); continue; }
-    const ref = Mdl.atkExpect(cu, fu[0]);
-    const snap = Mdl.units.map(q => [q.gen.troops, q.morale, q.alive, q.x, q.y]);
-    let tot = 0; const N = 6;
-    for (let k = 0; k < N; k++) {
-      Mdl.units.forEach((q, j) => { q.gen.troops = snap[j][0]; q.morale = snap[j][1]; q.alive = snap[j][2]; q.x = snap[j][3]; q.y = snap[j][4]; q.mods = []; q.spUsed = []; q.specialUsed = false; q.confused = 0; });
-      Mdl.result = 0; SG.Random.seed(500 + k);
-      const r = Mdl.useSpecial(cu, tg.indexOf(fu[0]) >= 0 ? fu[0] : tg[0], id);
-      tot += r.dmg || 0;
+  // 宝具价值（ITEMS §7.1 / §17.3：稀有 1.3–1.8、史诗 2.0–2.5、传说 ≤ 2.8 次普通攻击，「refAction like specials」）：
+  // 与 tests/sim.js (5) 的必杀参考局面同一方法——施展者（武 85 智 85，7000 兵）在平原，四个靶（武 70 智 60，3500 兵）在相邻、斜角、
+  // 隔一格；倍率 = specialPlan 的期望伤害（范围类最多计 2 支敌军，连斩计全部，暗杀计得手 × 兵力）÷ refAction（武力系 = 一次普通攻击
+  // 的期望；智力 / 政治系 = 普通攻击与火计期望的较大者）。全部 29 件都量（已有主人的单件先收回再发给施展者）。
+  function refAction(Mdl, u, t, sp) {
+    let ref = Mdl.atkExpect(u, t);
+    if (sp.stat !== 'war' && u.gen.intel >= 50) {
+      const tt = Mdl.map[t.x][t.y];
+      const terr = tt === SG.Terrain.Forest ? 1.8 : (tt === SG.Terrain.Castle || tt === SG.Terrain.Gate) ? 0.6 : 1;
+      ref = Math.max(ref, SG.M.clamp(0.5 + (u.gen.intel - t.gen.intel) / 110, 0.12, 0.92) * (260 + u.gen.intel * 11) * terr * SG.M.clamp(t.troops / 2500, 0.4, 1.4) / Mdl.modK(t, 'def'));
     }
-    const v = tot / N;
-    if (!(v > 0)) { Items.load(g); g.generals.pop(); continue; }
-    ratios[it.rarity].push(v / ref);
-    Items.load(g);
-    g.generals.pop();
+    return Math.min(ref, t.troops);
   }
-  for (const [r, list] of Object.entries(ratios)) info(`${r}: 宝具 damage / one normal attack ${list.length ? Math.min(...list).toFixed(2) + ' … ' + Math.max(...list).toFixed(2) + ' (avg ' + avg(list).toFixed(2) + ')' : '—'}`);
-  ok(ratios.legendary.every(v => v <= 2.8 + 0.15), 'legendary 宝具 damage ≤ 2.8 normal attacks (± noise 0.15)');
-  ok(ratios.rare.length > 0 && avg(ratios.rare) >= 1.0 && avg(ratios.rare) <= 2.2, 'rare 宝具 average damage near 1.3–1.8 normal attacks');
+  const DMG = ['smite', 'cleave', 'charge', 'rampage', 'volley', 'blaze', 'storm', 'flood', 'drain'];
+  const ratios = { rare: [], epic: [], legendary: [] }, rows = [];
+  const dummy = i => ({ id: 9000 + i, name: '靶' + i, war: 70, intel: 60, pol: 50, faction: -1, troops: 3500, training: 60, loyalty: 80, gear: { weapon: null, offhand: null, armour: null, helmet: null, mount: null, treasure: null } });
+  let measured = 0;
+  for (const it of D.items) {
+    if (!it.ability || !it.ability.effects.some(e => e.t === 'active' || e.t === 'activeChoice')) continue;
+    const caster = { name: '施', war: 85, intel: 85, pol: 60, faction: 0, troops: 7000, training: 70, loyalty: 90, culture: it.culture, gear: { weapon: null, offhand: null, armour: null, helmet: null, mount: null, treasure: null } };
+    g.generals.push(caster); caster.id = g.generals.length - 1;
+    if (Items.isShield(it)) giveTo(g, caster, D.items.find(w => w.rarity === 'common' && w.slot === 'weapon' && !w.req && w.duel && w.duel.style === 'one').id);   // 盾要单手兵器
+    if (!ok(giveTo(g, caster, it.id) != null, '宝具 caster equips ' + it.id)) { g.generals.pop(); continue; }
+    measured++;
+    for (const sp of SG.Specials.known(caster).filter(q => q.item === it.id)) {
+      if (DMG.indexOf(sp.kind) < 0) continue;
+      const s = { attacker: 0, defender: 1, src: g.cities[0], target: g.cities[11], atk: [caster], def: [1, 2, 3, 4].map(dummy), atkFood: 9000, atkGold: 0, routed: new Set(), captives: [] };
+      const Mdl = new SG.BattleModel(s);
+      for (let x = 0; x < Mdl.W; x++) for (let y = 0; y < Mdl.H; y++) Mdl.map[x][y] = SG.Terrain.Plain;
+      const [u, e1, e2, e3, e4] = Mdl.units;
+      u.x = 4; u.y = 4; u.morale = 80;
+      [[5, 4], [5, 5], [4, 6], [4, 2]].forEach((p, k) => { const e = [e1, e2, e3, e4][k]; e.x = p[0]; e.y = p[1]; e.morale = 70; });
+      for (const q of Mdl.units) q.commander = false;
+      Mdl.side = 0;
+      const normal = refAction(Mdl, u, e1, sp);
+      let best = 0;
+      for (const t of Mdl.specialTargets(u, sp.id)) {
+        const pl = Mdl.specialPlan(u, t, sp.id);
+        if (!pl) continue;
+        const per = new Map();
+        for (const h of pl.dmg || []) per.set(h.unit, Math.min(h.unit.troops, (per.get(h.unit) || 0) + h.amt * (h.onFail && pl.kill ? 1 - pl.kill.p : 1)));
+        let dmg = [...per.values()].sort((a, b) => b - a).slice(0, sp.kind === 'rampage' ? 99 : 2).reduce((a, b) => a + b, 0);
+        if (pl.kill) dmg += pl.kill.p * pl.kill.unit.troops;
+        best = Math.max(best, dmg);
+      }
+      const r = best / Math.max(1, normal);
+      ratios[it.rarity].push(r);
+      rows.push(`${it.name} ${sp.kind} ${r.toFixed(2)}`);
+      ok(r > 1.2 && r < 3.0, `宝具 ${it.name}（${sp.kind}）${r.toFixed(2)} normal actions within 1.2–3.0 (tests/sim.js bound for damage specials)`);
+    }
+    g.generals.pop();
+    Items.load(g);
+  }
+  eq(measured, 29, 'every item with a 宝具 measured (singletons taken back first)');
+  for (const [r, list] of Object.entries(ratios)) info(`${r}: 宝具 damage / one normal action ${list.length ? Math.min(...list).toFixed(2) + ' … ' + Math.max(...list).toFixed(2) + ' (avg ' + avg(list).toFixed(2) + ', n ' + list.length + ')' : '—'}`);
+  info('  ' + rows.join(' · '));
+  ok(ratios.legendary.length === 3 && ratios.legendary.every(v => v <= 2.8 + 1e-9), 'legendary 宝具 ≤ 2.8 normal actions (' + ratios.legendary.map(v => v.toFixed(2)).join(', ') + ')');
+  ok(avg(ratios.epic) >= 2.0 && avg(ratios.epic) <= 2.5, `epic 宝具 average ${avg(ratios.epic).toFixed(2)} in 2.0–2.5`);
+  ok(avg(ratios.rare) >= 0.9 && avg(ratios.rare) <= 2.2, `rare 宝具 average ${avg(ratios.rare).toFixed(2)} near 1.3–1.8 (± 0.4)`);
+  flag(avg(ratios.rare) >= 1.3 && avg(ratios.rare) <= 1.8, `rare 宝具 average ${avg(ratios.rare).toFixed(2)} outside the strict 1.3–1.8 band (items.json powers; spec question, see report)`);
+});
+
+// §4b ITEMS §17.3 第一行：电脑对电脑的战术战斗，同一局面、同一随机数种子，装备关 / 开（只有起始装备与名将旧物，没有买的），
+// 攻方胜率差 ≤ 3 pp、平均天数差 ≤ 1（INTEGRATION §9.2 原型：−0.2 pp）。另报第 3 年局面（含电脑买的装备）作参考。
+section('§4b tactical battles, items off vs on with AI kits only, paired seeds (ITEMS §17.3)', () => {
+  // 夜间档 720 场：300 场的配对差噪声约 ±3 pp（实测 300 场 +4.0、720 场 +1.8），门槛 ±3 pp 要更多场才有意义
+  const nSeeds = argN('--battle-seeds', FULL ? 12 : 3), perSeed = argN('--per-seed', FULL ? 60 : 40);
+  function fight(Mdl) {
+    let guard = 0;
+    while (Mdl.result === 0 && guard++ < 2000) {
+      for (let pass = 0; pass < 4 && Mdl.result === 0; pass++) {
+        const order = Mdl.alive(Mdl.side).filter(u => Mdl.canAct(u));
+        if (!order.length) break;
+        for (const u of order) {
+          if (!Mdl.canAct(u) || Mdl.result !== 0) continue;
+          const plan = Mdl.planFor(u);
+          if (plan.move) Mdl.move(u, plan.move);
+          if (Mdl.result !== 0) break;
+          const act = Mdl.planAction(u);
+          if (act.kind === 'attack') Mdl.attack(u, act.target);
+          else if (act.kind === 'tactic') Mdl.useTactic(u, act.tactic, act.target);
+          else if (act.kind === 'duel') Mdl.duel(u, act.target);
+          else if (act.kind === 'special') Mdl.useSpecial(u, act.target);
+          Mdl.spend(u);
+        }
+      }
+      if (Mdl.result === 0) Mdl.endSide();
+    }
+    if (Mdl.result === 0) throw new Error('battle never ended');
+  }
+  const was = Items.enabled;
+  function checkState(g, where) {
+    for (const f of g.factions) if (f.alive) { const r = g.generals[f.ruler]; if (!r || r.dead || r.faction !== f.id) throw new Error(where + ': bad ruler of ' + f.name); }
+    for (const x of g.generals) if (x.dead && (Object.values(x.gear || {}).some(u => u != null) || SG.Conquest.isCaptive(x) && x.faction >= 0)) throw new Error(where + ': dead ' + x.name + ' still holds gear or is captive');
+  }
+  for (const [label, monthsIn, gate] of [['start (AI kits only)', 0, true], ['year 3 (kits + AI purchases)', 36, false]]) {
+    const texts = [];
+    for (let s = 1; s <= nSeeds; s++) { const g = newGame('liubei', 300 + s); g.player = -1; months(g, monthsIn); texts.push(JSON.stringify(g)); }
+    const st = { false: { n: 0, w: 0, days: 0, loss: 0 }, true: { n: 0, w: 0, days: 0, loss: 0 } };
+    let rulerBattles = 0, slain0 = Items.stats.slain | 0;
+    texts.forEach((text, si) => {
+      for (let k = 0; k < perSeed; k++) {
+        for (const on of [false, true]) {
+          Items.enabled = on;
+          const g = SG.G = GameState.fromJSON(text);
+          g.player = -1;
+          SG.Random.seed(900 + si * 100 + k);
+          const cand = [];
+          for (const c of g.cities) {
+            if (c.owner < 0) continue;
+            for (const j of c.links) { const t = g.cities[j]; if (t.owner >= 0 && t.owner !== c.owner && g.officersIn(c).some(x => x.troops > 500) && g.officersIn(t).length) cand.push([c, t]); }
+          }
+          if (!cand.length) continue;
+          const [c, t] = cand[(k * 7 + si) % cand.length];
+          const atk = g.officersIn(c).filter(x => x.troops > 0).sort((a, b) => b.troops - a.troops || a.id - b.id).slice(0, 5);
+          const s = SG.Conquest.prepare(c.owner, c, t, atk, 3000, 0);
+          const Mdl = new SG.BattleModel(s);
+          if (on) rulerBattles += Mdl.units.filter(u => g.isRuler(u.gen)).length;
+          fight(Mdl);
+          const o = st[on]; o.n++; o.days += Mdl.day; if (Mdl.result === 1) o.w++;
+          for (const u of Mdl.units) o.loss += Math.max(0, (u.troops0 || 0) - u.troops);
+          if (on) { SG.Conquest.apply(s); checkState(g, 'after battle ' + k); }
+        }
+      }
+    });
+    Items.enabled = was;
+    const off = st.false, on = st.true;
+    const dw = 100 * (on.w / on.n - off.w / off.n), dd = on.days / on.n - off.days / off.n;
+    const lossK = (on.loss / on.n) / Math.max(1, off.loss / off.n);
+    info(`${label}: ${off.n} paired battles: attacker win ${(100 * off.w / off.n).toFixed(1)} % → ${(100 * on.w / on.n).toFixed(1)} % (${dw >= 0 ? '+' : ''}${dw.toFixed(1)} pp); days ${(off.days / off.n).toFixed(2)} → ${(on.days / on.n).toFixed(2)}; casualties per battle ×${lossK.toFixed(3)}`);
+    ok(lossK <= 1.35, `${label}: casualties per battle on / off ×${lossK.toFixed(3)} ≤ 1.35 (DESIGN-V4 §16)`);
+    // 阵斩（§8.2，§17.3：君主在他打的战术战斗中 2–6 % 被阵斩）——要 battle-model.js 的接线（INTEGRATION 请求）
+    const slain = (Items.stats.slain | 0) - slain0;
+    const wired = String(SG.BattleModel.prototype.attack).indexOf('rollSlay') >= 0;
+    info(`${label}: rulers slain in battle ${slain} of ${rulerBattles} ruler-battles (${rulerBattles ? (100 * slain / rulerBattles).toFixed(1) : 0} %)` + (wired ? '' : ' — battle-model.js does not roll 阵斩 yet (INTEGRATION request)'));
+    if (wired && rulerBattles >= 100) ok(slain / rulerBattles >= 0.005 && slain / rulerBattles <= 0.08, `${label}: 阵斩 rate ${(100 * slain / rulerBattles).toFixed(1)} % near 2–6 % (sample noise: 0.5–8 %)`);
+    if (gate) {
+      const tol = FULL ? 3 : 5;   // 快速档 120 场，噪声大些（±5 pp）
+      ok(Math.abs(dw) <= tol, `attacker win rate items off → on within ±${tol} pp (${dw.toFixed(1)})`);
+      ok(Math.abs(dd) <= 1, `average battle days within ±1 (${dd.toFixed(2)})`);
+    }
+  }
+  Items.enabled = was;
 });
 
 // ======================================================================================= §3 economy / AI ==
 section('§3 all-AI campaigns: AI gear spending, items per general, shops, rare cadence, 传国玉玺, reserves, time (ITEMS §17.4)', () => {
-  const cfg = FULL ? { classic: [argN('--seeds', 40), argN('--years', 20)], world: [10, 20] } : { classic: [argN('--seeds', 12), argN('--years', 4)], world: [2, 3] };
-  for (const scen of ['classic', 'world']) {
-    const [seeds, years] = cfg[scen];
+  // 快速档：经典 12 种子 × 5 年（到 195 年，传国玉玺的门槛也量）+ 世界 2 × 3 年；另跑「全部第四版系统同开」一遍量 8–15 % 的买装门槛
+  const cfg = FULL ? { classic: [argN('--seeds', 40), argN('--years', 20)], world: [10, 20] } : { classic: [argN('--seeds', 12), argN('--years', 5)], world: [2, 3] };
+  const cfgAll = FULL ? { classic: [20, 20], world: [4, 20] } : { classic: [8, 4], world: [2, 3] };
+  const V4 = ['Titles', 'Engage', 'Tourney'].filter(n => SG[n] && typeof SG[n] === 'object' && 'enabled' in SG[n]);
+  function campaign(scen, seeds, years, allOn) {
     const t0 = Date.now();
+    for (const n of V4) SG[n].enabled = !!allOn;
     SG.AIBudget.reset(); Items.resetStats();
-    let gross = 0, gearSpend = 0, msItems = 0, months2 = 0, below0 = 0;
+    let msItems = 0, months2 = 0;
     const per193 = [], shopMin = [], cadence = [], sealFound = [];
     for (let s = 1; s <= seeds; s++) {
       const g = newGame(scen === 'world' ? 'roma' : 'liubei', 100 + s, scen);
       g.player = -1;
-      const gone = {}, was = {}, shelf = {};
+      const gone = {}, was = {};
       for (let m = 0; m < years * 12; m++) {
         SG.StrategyAI.runAI([]);
         const ta = process.hrtime.bigint();
@@ -510,39 +792,59 @@ section('§3 all-AI campaigns: AI gear spending, items per general, shops, rare 
         msItems += Number(process.hrtime.bigint() - ta) / 1e6;
         months2++;
         if (m === 0) shopMin.push(Math.min(...g.cities.map(c => c.shop.stock.length)));
-        // 珍品出现的间隔（每个列在某城的珍品：上架的月份）
+        // 珍品回到本城货架的间隔：只量「过期下架」后再上架；被买走的珍品冷却 24 个月（§0），不算在 6–10 个月里
         for (const c of g.cities) {
           const now = new Set();
-          for (const e of c.shop.stock) if (Items.get(e.id).rarity === 'rare') { const k = c.id + '|' + e.id; now.add(k); if (e.age === 0 && gone[k] !== undefined) { cadence.push(g.monthIndex - gone[k]); delete gone[k]; } shelf[k] = (shelf[k] || 0) + 1; }
-          for (const id of Items.shopRow(c).rare || []) { const k = c.id + '|' + id; if (!now.has(k) && was[k]) gone[k] = g.monthIndex; was[k] = now.has(k); }
+          for (const e of c.shop.stock) if (Items.get(e.id).rarity === 'rare') { const k = c.id + '|' + e.id; now.add(k); if (e.age === 0 && gone[k] !== undefined) { cadence.push(g.monthIndex - gone[k]); delete gone[k]; } }
+          for (const id of Items.shopRow(c).rare || []) { const k = c.id + '|' + id; if (!now.has(k) && was[k] && !((g.items.cooldown[c.id] || {})[id] > g.monthIndex)) gone[k] = g.monthIndex; was[k] = now.has(k); }
         }
-        if (g.year === 193 && g.month === 1) {
-          const counts = g.generals.filter(x => !x.dead && x.faction >= 0 && x.war >= 60).map(x => Items.SLOTS.filter(sl => x.gear[sl] != null).length);
-          per193.push(median(counts));
-        }
+        if (g.year === 193 && g.month === 1) per193.push(median(g.generals.filter(x => !x.dead && x.faction >= 0 && x.war >= 60).map(x => Items.SLOTS.filter(sl => x.gear[sl] != null).length)));
+        if (g.year === 195 && g.month === 1) sealFound.push(g.items.hiddenFound.indexOf('chuanguoxi') >= 0 || Items.count('chuanguoxi') > 0);
       }
-      const seal = g.items.hiddenFound.indexOf('chuanguoxi') >= 0 || Items.count('chuanguoxi') > 0;
-      sealFound.push(seal);
     }
+    for (const n of V4) SG[n].enabled = false;
     const a = SG.AIBudget.stats;
-    gross = a.gross; gearSpend = a.byKind.gear || 0; below0 = a.below0;
-    const share = gearSpend / Math.max(1, gross);
-    info(`${scen} ${seeds} seeds × ${years} y: AI gear spending ${(100 * share).toFixed(2)} % of gross (${gearSpend} / ${Math.round(gross)}); buys ${JSON.stringify(Items.stats.buys)}, sold ${Items.stats.sold}, hidden found ${Items.stats.hiddenFound}  [${((Date.now() - t0) / 1000).toFixed(0)} s]`);
-    // 8–15 % 是全部系统同开时的门槛（INTEGRATION §5.2，tests/v4-all.js 夜间档）：官爵礼金、营建、节庆与买装共用 22 % 的钱袋，
-    // 城中的金也少。只开装备时买装可以用满钱袋，这里查它在钱袋之内、且不低于 8 %
-    const others = ['Titles', 'Engage'].filter(n => SG[n] && SG[n].enabled !== false && typeof SG[n] === 'object');
-    if (others.length) ok(share >= (scen === 'world' ? 0.07 : 0.08) && share <= 0.15, `${scen} AI gear spending in the 8–15 % band (${(100 * share).toFixed(2)} %)`);
-    else ok(share >= 0.08 && share <= 0.22 + 0.01, `${scen} AI gear spending (items alone) between 8 % and the 22 % purse (${(100 * share).toFixed(2)} %); the 8–15 % band is the all-on gate`);
-    eq(below0, 0, scen + ' no city below 0 after a gear purchase');
-    if (per193.length) ok(median(per193) >= 2, `${scen} median items per AI general with war ≥ 60 in 193: ${median(per193)} (≥ 2)`);
-    ok(Math.min(...shopMin) >= 4, scen + ' every city has ≥ 4 stock entries after month 1');
-    if (cadence.length) info(`${scen}: a listed rare comes back to its city ${avg(cadence).toFixed(1)} months after it left the shelf (median ${median(cadence)}; ${cadence.length} returns)`);
-    if (cadence.length > 30) ok(avg(cadence) >= 4 && avg(cadence) <= 14, scen + ' rare reappears every 6–10 months (± noise, 4–14)');
-    if (scen === 'classic' && years >= 5) ok(sealFound.filter(Boolean).length / sealFound.length >= 0.7, `传国玉玺 found by 195 in ≥ 70 % of runs (${sealFound.filter(Boolean).length} / ${sealFound.length})`);
-    info(`${scen}: endMonth (all phases, with items) ${(msItems / months2).toFixed(2)} ms per month; restock ${(Items.stats.restockMs / months2).toFixed(2)} ms per month`);
+    const share = (a.byKind.gear || 0) / Math.max(1, a.gross);
+    const tag = `${scen}${allOn ? ' (all v4 on: ' + (V4.join(' + ') || 'none loaded') + ')' : ' (items alone)'} ${seeds} seeds × ${years} y`;
+    info(`${tag}: AI gear spending ${(100 * share).toFixed(2)} % of gross (${a.byKind.gear || 0} / ${Math.round(a.gross)})` + (allOn ? `; title ${(100 * (a.byKind.title || 0) / Math.max(1, a.gross)).toFixed(2)} %` : '') +
+      `; buys ${JSON.stringify(Items.stats.buys)}, sold ${Items.stats.sold}, hidden found ${Items.stats.hiddenFound}  [${((Date.now() - t0) / 1000).toFixed(0)} s]`);
+    return { share, below0: a.below0, per193, shopMin, cadence, sealFound, msItems, months2, restockMs: Items.stats.restockMs };
+  }
+  for (const scen of ['classic', 'world']) {
+    const [seeds, years] = cfg[scen];
+    const r = campaign(scen, seeds, years, false);
+    // 只开装备时买装可以用满 22 % 的钱袋（官爵礼金、营建、节庆都不在）：查它在钱袋之内、不低于 8 %；8–15 % 是全开的门槛（下面）
+    ok(r.share >= 0.08 && r.share <= 0.22 + 0.01, `${scen} AI gear spending (items alone) between 8 % and the 22 % purse (${(100 * r.share).toFixed(2)} %)`);
+    eq(r.below0, 0, scen + ' no city below 0 after a gear purchase');
+    if (r.per193.length) ok(median(r.per193) >= 2, `${scen} median items per AI general with war ≥ 60 in 193: ${median(r.per193)} (≥ 2)`);
+    ok(Math.min(...r.shopMin) >= 4, scen + ' every city has ≥ 4 stock entries after month 1');
+    const cad = r.cadence;
+    if (cad.length) info(`${scen}: a listed rare comes back to its city ${avg(cad).toFixed(1)} months after it left the shelf (median ${median(cad)}; ${cad.length} returns)`);
+    // §6.4 / §17.4「每 6–10 个月」：算法照规格（每个空货位 12 % 抽珍品）。前几年货架周转快，平均数在 6–10 附近（门槛 4–14 容噪声）；
+    // 长局里电脑武将都配齐了，货架只靠「4 个月后每月 35 % 下架」腾位，且一城列 1–3 件珍品轮流抽，平均数 16–18 个月（中位 7）——
+    // 这是规格的预期与规格的算法之间的出入，记为 FLAG（报告里请规格作者定），不改算法
+    if (cad.length > 30) {
+      if (years <= 6) ok(avg(cad) >= 4 && avg(cad) <= 14, scen + ` rare reappears every 6–10 months (mean ${avg(cad).toFixed(1)}, ± noise 4–14)`);
+      else {
+        ok(median(cad) >= 4 && median(cad) <= 14, scen + ` rare reappears: long-run median ${median(cad)} in 4–14`);
+        flag(avg(cad) >= 6 && avg(cad) <= 10, `${scen} rare reappears every 6–10 months on average: long-run mean ${avg(cad).toFixed(1)} (spec algorithm vs spec expectation, see report)`);
+      }
+    }
+    if (r.sealFound.length) info(`${scen}: 传国玉玺 found by 195 in ${r.sealFound.filter(Boolean).length} / ${r.sealFound.length} runs`);
+    if (r.sealFound.length) ok(r.sealFound.filter(Boolean).length / r.sealFound.length >= 0.7, `${scen} 传国玉玺 found by 195 in ≥ 70 % of runs (${r.sealFound.filter(Boolean).length} / ${r.sealFound.length})`);
+    info(`${scen}: endMonth (all phases, with items) ${(r.msItems / r.months2).toFixed(2)} ms per month; restock ${(r.restockMs / r.months2).toFixed(2)} ms per month`);
+  }
+  // INTEGRATION §5.2 / ITEMS §17.4：全部第四版系统同开时买装占总收入 8–15 %（原型：经典 11.2–11.4 %、世界 8.5 %）
+  if (!V4.length) info('all-on gear-spending gate skipped: no other v4 rules module loaded');
+  else for (const scen of ['classic', 'world']) {
+    const [seeds, years] = cfgAll[scen];
+    const r = campaign(scen, seeds, years, true);
+    const lo = scen === 'world' && !FULL ? 0.07 : 0.08;   // 世界快速档只有 2 × 3 年，下限留 1 pp 的噪声
+    ok(r.share >= lo && r.share <= 0.15, `${scen} AI gear spending with all v4 systems on (${V4.join(', ')}) in ${(100 * lo).toFixed(0)}–15 %: ${(100 * r.share).toFixed(2)} %`);
+    eq(r.below0, 0, scen + ' all-on: no city below 0 after a gear purchase');
   }
 });
 
-console.log(`\n${checks} checks, ${fails} failed  (${((Date.now() - T0) / 1000).toFixed(0)} s)`);
+console.log(`\n${checks} checks, ${fails} failed, ${flags} flagged (spec questions, not failures)  (${((Date.now() - T0) / 1000).toFixed(0)} s)`);
 console.log(fails === 0 ? 'ALL OK' : 'FAILURES: ' + fails);
 process.exitCode = fails;

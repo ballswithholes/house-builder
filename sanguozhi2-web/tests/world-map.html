@@ -184,6 +184,9 @@
     sep();
     for (const [k, t] of [[null, '无叠加'], ['land', '陆海'], ['coast', '海岸距离'], ['river', '河流'], ['plateau', '高原/山'], ['biome', '群落']]) btn(t, () => map.debugOverlay(k), 'o');
     flyRegion('china', true);
+    // ?mood=dawn|morning|noon|afternoon|golden|dusk|night|小时：地图的时刻（缺省为地图自己的午后）
+    const moodQ = new URLSearchParams(location.search).get('mood');
+    if (moodQ && map.setMood) map.setMood(isNaN(+moodQ) ? moodQ : +moodQ);
     requestAnimationFrame(loop);
     const st = map.buildStats;
     const hud = document.getElementById('hud');

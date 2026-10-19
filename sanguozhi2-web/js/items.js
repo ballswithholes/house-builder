@@ -32,7 +32,10 @@
    pool({ culture, types, rarity, slots }) → [id]   offers(gen, rarity, n, rng) → [id]   tourneyPrize(gen, place, rng, opts) → { id, gold, foreign }
    titleRelic(gen) → uid | null（武林大会三冠：金刚杵）   takeReveals() → [{ id, uid, to, from, how }]（界面的神品揭示）
    ---- 赠送、府库 ----
-   gift(gen, uid, opts) → { ok, why, loy, before, after, fits, line }   armoury(f, { vault }) → [uid]   giftK(id)
+   gift(gen, uid, opts) → { ok, why, loy, before, afterEquip, after, eqDelta, displaced, fits, line } | { ok: false, needConfirm, displaced }
+   giftDisplace(gen, uid) → { uid, id, cost, sig, worse } | null   giftK(id, givers)   giftValue(uid | id, givers)   armoury(f, { vault }) → [uid]
+   transfer(uid, t, { from }) → { ok, why }（外交礼物：送进 t 的府库）
+   takeCost(gen, uid, replacement?) → { cost, refuse?, gift? }（从 gen 身上拿走 uid 的忠诚代价；界面预告用）
    ---- 电脑（§13）----
    score(gen, id) role(gen) aiEquip(f) aiShop(f) aiSell(f)   stats（本局统计）
    ---- 图鉴（§14.2）----
@@ -46,14 +49,22 @@
    eff(gen, k) duelWar(gen) abilities(gen, t?) has(gen, t) duelMods(gen, foe?) summary(gen)
    candidates(gen, slot) → [{ uid, id, item, delta, ok, why, from }]   equip(gen, uid, opts) → { ok, why, loyaltyDelta, displaced }
    unequip(gen, slot, opts) → { ok, why, loyaltyDelta }   canEquip(gen, uid) → { ok, why }   invalidate()
-   battle.*：战斗规则的纯函数（ITEMS §3.2 / §7.2；battle-model.js 接线，见 INTEGRATION 请求）
+   battle.*：战斗规则的纯函数（ITEMS §3.2 / §7.2；battle-model.js 接线，见 INTEGRATION 请求）：mobility ease hard awe openingAwe
+     escape tac tacHit fireWeak antiHorse antiHorseK heal counter counterGuard armorBreak mounted chargeK attackK(ctx) condAtk condDef
+     noCounter(gen, { moved }) critAt critAdd critMulAdd critRes critWard critTaken dmgTaken ward splash trample procs capture rescue
+     decoy guard opening defenderOpening oath onRout rally regen throwAttack hitRun zoc defendCityK expBoost medic
+   ---- 世界 / 内政能力的接线点（调用处见 INTEGRATION 请求）----
+   duelLure(gen) freeUses(f, cmd) useFree(f, cmd) relFloor(f, t, envoy?) scout(gen) scouted(f) → Set(城) defendCity(c)
+   captureP(gen, p, setup) rescueAt(model, unit) critTaken(p, targetGen)
 
    提供者（SG.Mods.provide，owner 'items'，when = SG.Items.enabled）：eff gearWar gearAtk gearDef gearCrit gearCritMul gearMorale
    auraAtk auraDef gearDev gearRecruit gearTrain gearSearch gearHire gearDip gearDiscord gearPersuade expBoost gearFame gearVirtue
-   gearReward tradeK allyMonths itemCity itemLoyAura autoPower aiTargetK
-   月末（StrategyAI，第 2 相 'items'：补货、每月装备效果、电脑寻宝；第 7 相 onSpend('gear')：电脑换装与买装，经 SG.AIBudget）
+   gearReward tradeK allyMonths itemCity itemLoyAura autoPower aiTargetK；另有新名（battle-math 接线前不起作用）：
+   gearCritCond(gen, ctx) gearCritMulCond(gen, ctx) gearCritRes(gen) gearCritWard(gen)
+   月末（StrategyAI，第 2 相 'items'：补货（为下个月备货）、每月装备效果、电脑寻宝；第 5 相 'loyAura'：负的 / 有上限的 / 限文化的忠诚光环；
+   第 7 相 onSpend('gear')：电脑换装与买装，经 SG.AIBudget）
    事件（SG.Events）：captive.taken / captive.released / captive.executed（战利品、缴械）、faction.death（府库转交）、
-   conquest.apply（线索）、command（搜索失败时的线索）
+   conquest.prepare / resolved / apply（自动结算的守方加成；线索）、command（搜索失败时的线索）
    ========================================================================== */
 (function () {
   const SG = window.SG;
@@ -66,8 +77,10 @@
   const SLOT_NAME = Object.freeze({ weapon: '兵器', offhand: '副手', armour: '铠甲', helmet: '头盔', mount: '坐骑', treasure: '宝物' });
 
   // ================================================================ 配置（一处）==
+  // DESIGN-V4 §20 的玩家决定：数据在 js/data.js 的 Balance.Decisions（冻结，唯一的一处）；Items.decide(k, v) 在运行时覆盖（测试、设置用，不存档）
   const DEC = () => (SG.Balance && SG.Balance.Decisions) || {};
-  const dec = (k, d) => { const v = DEC()[k]; return v === undefined || v === null ? d : v; };
+  const OVR = {};
+  const dec = (k, d) => { if (OVR[k] !== undefined) return OVR[k]; const v = DEC()[k]; return v === undefined || v === null ? d : v; };
   const CFG = {
     // §2.4 有效属性
     attrCap: 110, gearAttrCap: 15, duelWarCap: 3, duelWarDiv: 3,
@@ -103,12 +116,14 @@
     // 战斗中的光环合计上限（INTEGRATION §3.2 第 4 组）
     auraCap: 0.12,
     // 城的装备收入 / 收成项上限（与官职、营建合计后由 SG.Econ 再截断）
-    itemCityCap: 0.25, itemLoyCap: 3,
+    itemCityCap: 0.25, itemLoyCap: 3, loyAuraTop: 95,
     get duelBudget() { const v = dec('duelBudget', 6); return typeof v === 'number' && v > 0 ? v : 6; },
     get slayRulersOnly() { return dec('slayRulersOnly', true) !== false; },
     get slayOthersK() { const v = dec('slayOthersK', 1 / 3); return typeof v === 'number' ? v : 1 / 3; },
     get classicForeignChance() { const v = dec('classicForeignChance', 0.15); return typeof v === 'number' ? v : 0.15; },
     get safeSwastikaName() { return dec('safeSwastikaName', true) !== false; },
+    // DESIGN-V4 §20 问题 4 / ITEMS Q7：数据里用安全名；Decisions.safeSwastikaName = false 时显示这里的原名（只此一件）
+    altNames: { paratarajas_jian: '卍纹铜剑' },
   };
 
   // ================================================================ 单挑白名单（COMBAT-V4 §3，INTEGRATION §8.2）==
@@ -163,7 +178,7 @@
     dEndure: 'hp rage', dLowHp: 'below dmgK', dArmor: 'on dmgK', dWeak: 'fire onAirborne', dSpecial: 'dashDist', dReach: 'm on', dLifesteal: 'k',
     dFear: 'foeRageK foeSpdK', dSpd: 'k', dDmgK: 'k', dHpAdd: 'n', dSuperKnock: 'on k',
     cmd: 'cmd kind k', free: 'cmd n', income: 'gold food', harvest: 'k', pop: 'k', loyalAura: 'n factionWide cap culture', expMonthly: 'n sameCity',
-    talent: 'p', fame: 'n', virtue: 'n', dipPlus: 'k months relFloor with persuade', giftK: 'k', treasureHunt: 'k', scout: 'k', shopDiscount: 'cat k',
+    talent: 'p', fame: 'n', virtue: 'n', dipPlus: 'k months relFloor with persuade', giftK: 'k holder', treasureHunt: 'k', scout: 'k', shopDiscount: 'cat k',
     defendCity: 'k', aggro: 'k', deterrence: 'minWar aggroK', omen: 'p loyalty', duelLure: 'accept',
   });
   const WORLD_EFFECTS = new Set(['cmd', 'free', 'income', 'harvest', 'pop', 'loyalAura', 'expMonthly', 'talent', 'fame', 'virtue', 'dipPlus', 'giftK',
@@ -181,8 +196,9 @@
     SHOP_CITIES.classic.clear(); SHOP_CITIES.world.clear();
     if (!D) return;
     for (const it of D.items) ITEM.set(it.id, it);
-    // 吉祥纹铜剑（DESIGN-V4 §20 问题 4）：Decisions.safeSwastikaName = false 时恢复原名
-    for (const it of D.items) if (it.name === '吉祥纹铜剑' && it.origName) it.safeName = it.name;
+    // giftK 的两种作用范围（§7.2）：「以之赏赐」= 这件东西被赐出时价值 ×k；「以宝物赏赐」= 持有者（君主 / 使者）赐出的任何宝物 ×k（holder）。
+    // tools/gen-items.js 把 holder 写进数据；直接读 items.json（check 模式）时按能力说明补上
+    for (const it of D.items) if (it.ability) for (const e of it.ability.effects) if (e.t === 'giftK' && e.holder === undefined) e.holder = /以宝物/.test(it.ability.desc || '');
     for (const sid of ['classic', 'world']) {
       const shops = D.shops && D.shops[sid];
       if (!shops) continue;
@@ -207,7 +223,8 @@
   const styleOf = it => (it && it.duel ? it.duel.style : null);
   const sidOf = g => (g && g.scenario === 'world' ? 'world' : 'classic');
   const avail = (it, sid) => (it && it.availability ? it.availability[sid || sidOf(G())] : null) || null;
-  const displayName = it => (it ? (!CFG.safeSwastikaName && it.origName ? it.origName : it.name) : '');
+  // 显示名：吉祥纹铜剑在 Decisions.safeSwastikaName = false 时显示原名「卍纹铜剑」（CFG.altNames；其余物品一律 it.name）
+  const displayName = x => { const it = itemOf(x); return it ? (!CFG.safeSwastikaName && CFG.altNames[it.id] ? CFG.altNames[it.id] : it.name) : ''; };
   const valueOf = x => { const it = itemOf(x); return it ? it.value || it.price || 0 : 0; };
 
   // ---------------------------------------------------------------- 杂项工具 --
@@ -507,10 +524,13 @@
     return Math.min(CFG.auraCap, pos) + neg;
   }
   // 自动结算（Conquest.autoResolve）的战力：v3 的 power()，武力取有效值，× (1 + (攻 + 防) / 250)（ITEMS §3.2）
+  //   守方（正在自动结算的这一仗的守军）另 × (1 + 坐镇守城 defendCity) × (1 + 守城 castle.def)：自动结算里只有这两种能力算（§3.2、§7.1）
+  let sortie = null;   // Conquest.prepare 发出的最近一仗（conquest.prepare 事件记下，结算完清掉）
   function autoPower(x) {
     const Mo = SG.Mods;
     const war = Mo ? Mo.eff(x, 'war') : eff(x, 'war');
-    const k = 1 + (Math.min(40, raw(x, 'atk')) + Math.min(45, raw(x, 'def'))) / 250;
+    let k = 1 + (Math.min(40, raw(x, 'atk')) + Math.min(45, raw(x, 'def'))) / 250;
+    if (sortie && sortie.def && sortie.def.indexOf(x) >= 0) k *= (1 + defendCityK(sortie.target)) * (1 + maxOf(abil(x, 'castle'), 'def'));
     return x.troops * (0.55 + war / 220) * (0.7 + x.training / 330) * k;
   }
   // 电脑的目标排序（StrategyAI：守军 × (1 + k)，k 越小越想打）：怀璧（aggro）× k、威慑 × 0.85、他国君主持神品 / 天宝 × 1.10（§3.5、§13.6）
@@ -556,12 +576,41 @@
     else if (key === 'harvest') v = Math.max(maxOf(abil(a, 'harvest'), 'k'), maxOf(abil(a, 'income'), 'food'));
     return Math.min(CFG.itemCityCap, v);
   }
+  // 忠诚光环（§3.5，INTEGRATION §3.4）：提供者 itemLoyAura 只报「普通」的正光环（主政者的同城光环、君主的全势力光环、loyal 属性），
+  // 由 SG.Mods.loyAura 与官职光环取较大者（≤ 95）。三种特别的在本模块的 loyAura 相钩子里另算（loyAuraSpecial）：
+  //   负光环（交州刺史节 −1：同城武将每月 −1，不被正光环抵消）、带上限的（军人公民权铜板：至 90 为止）、限文化的全势力光环（滇王之印：南中武将）
+  const plainAura = e => (e.n || 0) > 0 && !e.culture && !(typeof e.cap === 'number' && e.cap < CFG.loyAuraTop);
   function itemLoyAura(c) {
     const g = G(), Mo = SG.Mods, a = Mo ? Mo.admin(c) : null;
     let v = 0;
-    if (a) { for (const e of abil(a, 'loyalAura')) if (!e.factionWide) v = Math.max(v, e.n || 0); v = Math.max(v, raw(a, 'loyal')); }
-    if (c.owner >= 0) { const r = g.ruler(c.owner); if (r) for (const e of abil(r, 'loyalAura')) if (e.factionWide) v = Math.max(v, e.n || 0); }
+    if (a) { for (const e of abil(a, 'loyalAura')) if (!e.factionWide && plainAura(e)) v = Math.max(v, e.n); v = Math.max(v, raw(a, 'loyal')); }
+    if (c.owner >= 0) { const r = g.ruler(c.owner); if (r) for (const e of abil(r, 'loyalAura')) if (e.factionWide && plainAura(e)) v = Math.max(v, e.n); }
     return Math.min(CFG.itemLoyCap, v);
+  }
+  function loyAuraSpecial(ctx) {
+    const g = G(), Mo = SG.Mods;
+    if (!on() || !Mo) return;
+    const top = (Mo.CAPS && Mo.CAPS.loyAuraCap) || CFG.loyAuraTop;
+    for (const c of g.cities) {
+      if (c.owner < 0) continue;
+      const a = Mo.admin(c), r = g.ruler(c.owner);
+      const local = a ? abil(a, 'loyalAura').filter(e => !e.factionWide && !plainAura(e)) : [];
+      const wide = r ? abil(r, 'loyalAura').filter(e => e.factionWide && !plainAura(e)) : [];
+      if (!local.length && !wide.length) continue;
+      const la = Math.max(0, Mo.loyAura(c));   // 第 5 相已经加过的
+      for (const o of g.officersIn(c)) {
+        if (g.isRuler(o)) continue;
+        let pos = 0, cap = top, neg = 0;
+        for (const e of local.concat(wide)) {
+          if (e.culture && (o.culture || 'han') !== e.culture) continue;
+          const n = e.n || 0;
+          if (n < 0) { neg = Math.min(neg, n); continue; }
+          if (n > pos) { pos = n; cap = Math.min(top, typeof e.cap === 'number' ? e.cap : top); }
+        }
+        if (pos > la && o.loyalty < cap) o.loyalty = Math.min(cap, o.loyalty + Math.min(CFG.itemLoyCap, pos) - la);
+        if (neg < 0) o.loyalty = Math.max(0, o.loyalty + neg);
+      }
+    }
   }
   function bestInCity(c, fn) { let b = 0; for (const x of G().officersIn(c)) b = Math.max(b, fn(x)); return b; }
   const PROVIDERS = {
@@ -571,6 +620,11 @@
     gearDef: x => raw(x, 'def') / 100,
     gearCrit: x => stat(x, 'critArmy'),
     gearCritMul: x => stat(x, 'critMulArmy'),
+    // 会心的条件项与抗会心（battle-math 的 rollCrit / critChance 接线前为 0 影响；INTEGRATION 请求）
+    gearCritCond: (x, ctx) => (ctx ? Gear.battle.critAdd(x, ctx) : 0),
+    gearCritMulCond: (x, ctx) => (ctx ? Gear.battle.critMulAdd(x, ctx) : 0),
+    gearCritRes: x => Gear.battle.critRes(x),
+    gearCritWard: x => Gear.battle.critWard(x),
     gearMorale: x => raw(x, 'morale'),
     auraAtk: (u, model) => auraSum(u, model, 'atk'),
     auraDef: (u, model) => auraSum(u, model, 'def'),
@@ -608,7 +662,10 @@
     if (E && typeof E.shopTier === 'function' && SG.Balance && SG.Balance.CityLevel) return E.shopTier(c);
     const row = shopRow(c); return row ? row.tier : 1;
   }
-  const festivalOn = c => { const g = G(); return !!(g && g.month === CFG.festival.month && c.owner >= 0); };
+  // 庙会（§14.2）：每年 3 月，有主之城的市场 +2 个货位、本势力买价 −10 %。month 缺省 = 当月（买价、货位显示）；
+  // 补货在月末（第 2 相，g.month 还是刚结束的那个月）为「下个月」备货，所以 restock 传入下个月（2 月末为 3 月备 +2，3 月末收摊）
+  const festivalOn = (c, month) => { const g = G(); return !!(g && (month === undefined ? g.month : month) === CFG.festival.month && c.owner >= 0); };
+  const nextMonth = g => (g.month % 12) + 1;
   function slotsOf(c) { return CFG.slotsByTier[clamp(shopTier(c), 1, 4)] + (festivalOn(c) ? CFG.festival.slots : 0); }
   function basePrice(it, sid) { const a = avail(it, sid); return (a && a.price) || it.price || it.value || 100; }
   function originOf(it, c, sid) {
@@ -680,6 +737,7 @@
     if (!c.shop) c.shop = { stock: [], merchant: null };
     const st = c.shop.stock, R = CFG.restock, k = SG.SeededRandom(restockSeed(g, c.id));
     const added = [];
+    const stockMonth = first ? g.month : nextMonth(g), fest = festivalOn(c, stockMonth);
     if (!first) for (const e of st) e.age = (e.age | 0) + 1;
     for (let i = st.length - 1; i >= 0; i--) {
       const e = st[i], it = ITEM.get(e.id);
@@ -694,7 +752,9 @@
       const it = ITEM.get(id);
       if (it && count(id) === 0 && !have.has(id) && !(cd[id] > g.monthIndex)) { const e = { id, qty: 1, price: listPrice(it, c, originOf(it, c, sid)), age: 0 }; st.push(e); added.push(e); have.add(id); }
     }
-    const tier = shopTier(c), slots = CFG.slotsByTier[clamp(tier, 1, 4)] + (festivalOn(c) ? CFG.festival.slots : 0);
+    const tier = shopTier(c), slots = CFG.slotsByTier[clamp(tier, 1, 4)] + (fest ? CFG.festival.slots : 0);
+    // 庙会收摊：多出来的货位上最新的凡品 / 良品撤下（珍品、神品留着；不取随机数）
+    for (let i = st.length - 1; i >= 0 && st.length > slots; i--) if (TIER[(ITEM.get(st[i].id) || {}).rarity] <= 1) st.splice(i, 1);
     let guard = 0;
     let rares = null;
     while (st.length < slots && guard++ < 40) {
@@ -975,12 +1035,21 @@
   // ================================================================ 战斗规则的纯函数（ITEMS §3.2、§7.2；battle-model.js 接线）==
   const MOUNTED = new Set(['horse', 'warhorse', 'pony', 'camel', 'elephant', 'chariot', 'cataphract']);
   const mountType = x => { const it = Gear.item(x, 'mount'); return it ? it.type : null; };
+  // mount 能力（§7.2）：只在骑着对应的坐骑时（elephant / camel）
+  const mountMatch = (x, e) => (e.elephant && mountType(x) === 'elephant') || (e.camel && mountType(x) === 'camel');
   Gear.battle = {
     mobility(x) { return clamp(raw(x, 'mob') + maxOf(abil(x, 'mobility').filter(e => !e.cond), 'move'), -1, 2); },
     ease(x) { const s = new Set(calc(x).ease); for (const e of abil(x, 'mobility')) for (const t of e.ease || []) s.add(t); for (const e of abil(x, 'aura')) for (const t of e.ease || []) s.add(t); return s; },
     hard(x) { return new Set(calc(x).hard); },
-    awe(x) { return raw(x, 'awe') + maxOf(abil(x, 'opening'), 'awe'); },
-    escape(x) { const k = abil(x, 'escapeK').reduce((m, e) => Math.min(m, e.k), 1); return Math.max(raw(x, 'escape') / 100, 1 - k); },
+    // 威（§3.2）：开战时敌方每支部队士气 − 我方的最大值（取一方最大，不相加）；开场 opening.awe 是另加的（§7.2「awe here is an extra」）
+    awe(x) { return raw(x, 'awe'); },
+    openingAwe(x) { return maxOf(abil(x, 'opening'), 'awe'); },
+    // 脱身（§3.2 capture rolls）：被俘几率 × (1 − escape)；escape = 1 − (1 − 坐骑脱身 %) × min(escapeK) × (1 − 骑驼 / 骑象时的 mount.escape %)
+    escape(x) {
+      const k = abil(x, 'escapeK').reduce((m, e) => Math.min(m, typeof e.k === 'number' ? e.k : 1), 1);
+      let me = 0; for (const e of abil(x, 'mount')) if (e.escape && mountMatch(x, e)) me = Math.max(me, e.escape);
+      return clamp(1 - (1 - raw(x, 'escape') / 100) * k * (1 - me / 100), 0, 1);
+    },
     tac(x) { return Math.min(40, raw(x, 'tac') + maxOf(abil(x, 'tacAmp'), 'power') * 100) / 100; },
     tacHit(x) { return Math.min(12, raw(x, 'tacHit') + maxOf(abil(x, 'tacAmp'), 'hit') * (maxOf(abil(x, 'tacAmp'), 'hit') < 1 ? 100 : 1)) / 100; },
     fireWeak(x) { return raw(x, 'fireWeak') / 100 + maxOf(abil(x, 'dmgTaken'), 'fire'); },
@@ -990,11 +1059,12 @@
     counterGuard(x) { return Math.min(35, raw(x, 'counterGuard') + maxOf(abil(x, 'counterGuard'), 'k') * 100) / 100; },
     armorBreak(x) { return Math.min(25, raw(x, 'armorBreak') + maxOf(abil(x, 'sunderAll'), 'k') * 100) / 100; },
     mounted(x) { return MOUNTED.has(mountType(x)); },
-    // 攻击的条件乘数（§3.2）：ctx = { moved: 本次行动移动的格数, firstAttack, targetCommander, targetOnFort, outnumbered, focused, targetMounted }
+    // 攻击的条件乘数（§3.2）：ctx = { moved: 本次行动移动的格数, firstAttack, targetCommander, targetOnFort, outnumbered, focused, targetMounted,
+    //   allies: 同一方仍在场的武将（萨尔马提亚龙旗 allMounted：己方骑乘部队冲锋 +k，取一方最大）}
     attackK(x, ctx) {
       ctx = ctx || {};
       let k = 1;
-      if ((ctx.moved | 0) >= 2) { let ch = raw(x, 'charge') / 100; for (const e of abil(x, 'charge')) if (!e.cond || (e.cond === 'mounted' && Gear.battle.mounted(x))) ch += e.k || 0; k *= 1 + ch; }
+      if ((ctx.moved | 0) >= 2) k *= 1 + Gear.battle.chargeK(x, ctx);
       if (ctx.firstAttack) k *= 1 + raw(x, 'first') / 100 + maxOf(abil(x, 'first'), 'k');
       if (ctx.targetCommander) k *= 1 + maxOf(abil(x, 'vsCommander'), 'k');
       if (ctx.targetOnFort) k *= 1 + maxOf(abil(x, 'siege'), 'k');
@@ -1005,13 +1075,100 @@
       return k;
     },
     // 条件攻防（作为 SG.Mods.atkMul / defMul 的 cond 传入）：地形、城门城楼、海战、背水
-    condAtk(x, ctx) { ctx = ctx || {}; const out = []; for (const e of abil(x, 'terrain')) if (ctx.terrain && (e.terrains || []).indexOf(ctx.terrain) >= 0 && e.atk) out.push(e.atk); for (const e of abil(x, 'castle')) if (ctx.onFort && e.atk) out.push(e.atk); for (const e of abil(x, 'sea')) if (ctx.sea && e.atk) out.push(e.atk); for (const e of abil(x, 'lastStand')) if (ctx.troopsK !== undefined && ctx.troopsK < e.below && e.atk) out.push(e.atk); return out; },
+    condAtk(x, ctx) { ctx = ctx || {}; const out = []; for (const e of abil(x, 'terrain')) if (ctx.terrain && (e.terrains || []).indexOf(ctx.terrain) >= 0 && e.atk) out.push(e.atk); for (const e of abil(x, 'castle')) if (ctx.onFort && e.atk) out.push(e.atk); for (const e of abil(x, 'sea')) if (ctx.sea && e.atk) out.push(e.atk); for (const e of abil(x, 'lastStand')) if (ctx.troopsK !== undefined && ctx.troopsK < e.below && e.atk) out.push(e.atk); for (const e of abil(x, 'mount')) if (e.atk && mountMatch(x, e)) out.push(e.atk); return out; },
     condDef(x, ctx) { ctx = ctx || {}; const out = []; for (const e of abil(x, 'terrain')) if (ctx.terrain && (e.terrains || []).indexOf(ctx.terrain) >= 0 && e.def) out.push(e.def); for (const e of abil(x, 'castle')) if (ctx.onFort && e.def) out.push(e.def); for (const e of abil(x, 'sea')) if (ctx.sea && e.def) out.push(e.def); for (const e of abil(x, 'lastStand')) if (ctx.troopsK !== undefined && ctx.troopsK < e.below && e.def) out.push(e.def); return out; },
+    // 会心（§3.1、§7.2）：条件会心能力（cond charge / vsCommander / moreTroops / plain）与以寡击众的会心伤害，
+    //   ctx = { charge: 移动 ≥ 2 格, vsCommander, moreTroops: 我方兵多于目标, plain: 攻方站在平原, outnumbered }。
+    //   critAt = 此刻的装备会心（仍 ≤ 0.04 / ≤ 0.30）；critAdd / critMulAdd = 比无条件的 stat('critArmy' / 'critMulArmy') 多出的部分
+    critAt(x, ctx) {
+      const c = ctx || {};
+      const crit = Math.min(0.04, (raw(x, 'crit') + critAbil(x, 'crit', c)) / 100);
+      const critMul = Math.min(CFG.duel.critMul, (raw(x, 'critDmg') + critAbil(x, 'critDmg', c) + (c.outnumbered ? maxOf(abil(x, 'outnumbered'), 'critDmg') : 0)) / 100);
+      return { crit, critMul };
+    },
+    critAdd(x, ctx) { return Math.max(0, Gear.battle.critAt(x, ctx).crit - stat(x, 'critArmy')); },
+    critMulAdd(x, ctx) { return Math.max(0, Gear.battle.critAt(x, ctx).critMul - stat(x, 'critMulArmy')); },
+    // 抗会心（§3.2 新项 p(a) −= critRes(t)/100，≤ 5 pp）与护身（ward.crit：敌军对其的会心率 × (1 − k)，吉祥纹铜剑 0.4、天降神盾 0.5）
+    critRes(t) { return raw(t, 'critRes') / 100; },
+    critWard(t) { return Math.min(1, maxOf(abil(t, 'ward'), 'crit')); },
+    critTaken(p, t) { return t ? Math.max(0, p - Gear.battle.critRes(t)) * (1 - Gear.battle.critWard(t)) : p; },
+    // 拒马（骆驼 antiHorse，§3.2）：攻方骑乘（马 / 战马 / 矮马 / 战车）且与持有者相邻时，攻方攻击 × (1 − max antiHorse)
+    antiHorseK(x, adjacentFoes) {
+      const mt = mountType(x);
+      if (!mt || mt === 'camel' || mt === 'elephant' || !Array.isArray(adjacentFoes)) return 1;
+      let m = 0; for (const y of adjacentFoes) if (y && y.gear) m = Math.max(m, raw(y, 'antiHorse'));
+      return 1 - m / 100;
+    },
+    // 坐镇守城（defendCity，§7.2）：城中本势力武将的最大值；守方部队防御 × (1 + k)，自动结算守方战力 × (1 + k)
+    defendCityK(c) { return defendCityK(c); },
+    // ---- battle-model 的一站式上下文（纯计算，不取随机数；battle-model.patch 调用）----
+    // 战场格 → 能力数据里的地形名（plain forest hill mountain river wall gate castle）
+    terrainKey(tt) { const T = SG.Terrain || {}; for (const k of Object.keys(T)) if (T[k] === tt) return k.toLowerCase(); return null; },
+    // attack(a, t) 的条件：{ moved, firstAttack, targetCommander, targetOnFort, outnumbered, targetMounted, allies, crit: { charge, vsCommander, moreTroops, plain, outnumbered } }
+    attackCtx(model, a, t) {
+      const T = SG.Terrain || {}, tt = model.map[t.x][t.y], at = model.map[a.x][a.y];
+      let mine = 0, foes = 0; const allies = [];
+      for (const o of model.units) if (o.alive) { if (o.side === a.side) { mine++; allies.push(o.gen); } else foes++; }
+      const moved = a.movedThisAct | 0, outnumbered = foes > mine;
+      return { moved, firstAttack: !(a.attacks > 0), targetCommander: !!t.commander, targetOnFort: tt === T.Gate || tt === T.Castle, outnumbered,
+        targetMounted: Gear.battle.mounted(t.gen), allies,
+        crit: { charge: moved >= 2, vsCommander: !!t.commander, moreTroops: a.troops > t.troops, plain: at === T.Plain, outnumbered } };
+    },
+    // atkMul / defMul 的条件项（SG.Mods.atkMul(u, model, cond)）：地形、城门城楼（castle）、海战（setup.sea）、背水（lastStand）、
+    // 骑驼 / 骑象（mount.atk）；守方另加坐镇守城（defendCity）
+    condTerms(model, u, kind) {
+      if (!u || !u.gen || !model || !model.map) return [];
+      const T = SG.Terrain || {}, tt = model.map[u.x] ? model.map[u.x][u.y] : null;
+      const ctx = { terrain: Gear.battle.terrainKey(tt), onFort: tt === T.Gate || tt === T.Castle, sea: !!(model.setup && model.setup.sea), troopsK: u.troops0 > 0 ? u.troops / u.troops0 : undefined };
+      const out = kind === 'def' ? Gear.battle.condDef(u.gen, ctx) : Gear.battle.condAtk(u.gen, ctx);
+      if (kind === 'def' && u.side === 1 && model.setup && model.setup.target) { const k = defendCityK(model.setup.target); if (k) out.push(k); }
+      return out;
+    },
+    // 拒马：a 的攻击 × (1 − 相邻敌军的 antiHorse)，a 骑马时
+    antiHorseAt(model, a) {
+      const adj = []; for (const o of model.units) if (o.alive && o.side !== a.side && Math.abs(o.x - a.x) + Math.abs(o.y - a.y) === 1) adj.push(o.gen);
+      return Gear.battle.antiHorseK(a.gen, adj);
+    },
+    // 开战（BattleModel 构造之末）：威（awe，一方最大）与开场（opening：士气 +、威 另加）；不取随机数。返回 [{ side, awe, morale }]
+    applyOpening(model) {
+      const out = [];
+      for (let sd = 0; sd < 2; sd++) {
+        let awe = 0, extra = 0, morale = 0;
+        for (const u of model.units) if (u.side === sd && u.gen) { awe = Math.max(awe, Gear.battle.awe(u.gen)); extra = Math.max(extra, Gear.battle.openingAwe(u.gen)); morale = Math.max(morale, maxOf(abil(u.gen, 'opening'), 'morale')); }
+        out.push({ side: sd, awe: Math.min(capOf('awe'), awe) + extra, morale });
+      }
+      for (const o of out) for (const u of model.units) {
+        if (u.side === o.side && o.morale > 0) u.morale = Math.min(100, u.morale + o.morale);
+        if (u.side !== o.side && o.awe > 0) u.morale = Math.max(1, u.morale - o.awe);
+      }
+      return out;
+    },
     dmgTaken(x, kind) { let v = 0; for (const e of abil(x, 'dmgTaken')) if (typeof e[kind] === 'number' && Math.abs(e[kind]) > Math.abs(v)) v = e[kind]; return v; },
     ward(x, kind) { return maxOf(abil(x, 'ward'), kind); },
     splash(x) { return maxOf(abil(x, 'splash'), 'k'); },
     trample(x) { return maxOf(abil(x, 'trample'), 'k'); },
-    noCounter(x) { return abil(x, 'noCounter').length > 0 || abil(x, 'charge').some(e => e.noCounter); },
+    // 冲锋（移动 ≥ 2 格后）的加成：装备 charge % + 自身的 charge 能力（cond mounted 只在骑乘时；allMounted 只给骑乘者）
+    //   + 同方 allMounted 的最大值（骑乘者，不与自身的那件重复计）
+    chargeK(x, ctx) {
+      ctx = ctx || {};
+      const mt = Gear.battle.mounted(x);
+      let ch = raw(x, 'charge') / 100, side = 0;
+      for (const e of abil(x, 'charge')) {
+        if (e.allMounted) { if (mt) side = Math.max(side, e.k || 0); continue; }
+        if (!e.cond || (e.cond === 'mounted' && mt)) ch += e.k || 0;
+      }
+      if (mt && Array.isArray(ctx.allies)) for (const y of ctx.allies) if (y && y !== x && y.gear) for (const e of abil(y, 'charge')) if (e.allMounted) side = Math.max(side, e.k || 0);
+      for (const e of abil(x, 'mount')) if (e.charge && mountMatch(x, e)) ch += e.charge;
+      return ch + side;
+    },
+    // 敌军不能反击（§7.2）：noCounter 能力（卢赫之矛：所有普通攻击）；charge.noCounter（赤兔、两刃矛）只在移动 ≥ 2 格后的攻击，
+    // cond mounted（两刃矛）还要骑乘。ctx = { moved }（battle-model 传 a.movedThisAct）
+    noCounter(x, ctx) {
+      if (abil(x, 'noCounter').length > 0) return true;
+      const moved = ctx && typeof ctx === 'object' ? ctx.moved | 0 : 0;
+      if (moved < 2) return false;
+      return abil(x, 'charge').some(e => e.noCounter && (e.cond !== 'mounted' || Gear.battle.mounted(x)));
+    },
     procs(x, on) { return abil(x, 'proc').filter(e => !on || e.on === on); },
     capture(x) { return maxOf(abil(x, 'capture'), 'k'); },
     rescue(x) { return abil(x, 'rescue')[0] || null; },
@@ -1029,6 +1186,86 @@
     expBoost(x) { return PROVIDERS.expBoost(x); },
     medic(x) { return Gear.battle.heal(x); },
   };
+
+  function defendCityK(c) {
+    const g = G();
+    if (!g || !c || c.owner < 0) return 0;
+    let k = 0;
+    for (const x of g.officersIn(c)) if (x.faction === c.owner) k = Math.max(k, maxOf(abil(x, 'defendCity'), 'k'));
+    return k;
+  }
+  // 被俘几率（§3.2，Conquest.apply 的两处俘虏判定：v3 的 SG.Random.value() < p 照取一次，只改 p）：
+  //   p' = (p + 击溃者的 capture) × (1 − escape(x)) × (1 − 替身 decoy) × (1 − 救主 rescue)；s.routedBy / s.rescueP 由 battle-model 记下
+  function captureP(x, p, s) {
+    if (!on() || !x) return p;
+    const g = G();
+    let q = p;
+    const by = s && s.routedBy ? s.routedBy[x.id] : undefined;
+    if (by != null && g.generals[by]) q += Gear.battle.capture(g.generals[by]);
+    q *= 1 - Gear.battle.escape(x);
+    const dc = Gear.battle.decoy(x);
+    if (dc) {
+      const partner = dc.partner && s && (s.atk || []).concat(s.def || []).some(y => y && y.name === dc.partner && y.faction === x.faction);
+      q *= 1 - (partner ? (dc.partnerP !== undefined ? dc.partnerP : 1) : (dc.p || 0));
+    }
+    const rp = s && s.rescueP ? s.rescueP[x.id] || 0 : 0;
+    if (rp > 0) q *= 1 - rp;
+    return clamp(q, 0, 1);
+  }
+  // 救主（照夜玉狮子 rescue：周围 radius 格内的友军主将溃散时 p 几率被救出）：battle-model 在主将溃散时调用，记进 s.rescueP
+  function rescueAt(model, u) {
+    if (!on() || !model || !u || !u.commander) return 0;
+    let p = 0;
+    for (const v of model.units || []) {
+      if (!v || v === u || v.alive === false || v.side !== u.side || !v.gen) continue;
+      const e = Gear.battle.rescue(v.gen); if (!e) continue;
+      if (Math.abs(v.x - u.x) + Math.abs(v.y - u.y) <= (e.radius || 0)) p = Math.max(p, e.p || 0);
+    }
+    return p;
+  }
+
+  // 不耗令牌的指令（free：{ cmd, n }，君主佩持）：本月还剩几次；useFree 用掉一次（记在 G.items.free，随存档）
+  function freeUses(f, cmd) {
+    const g = G(), st = S();
+    if (!on() || !st || f < 0) return 0;
+    const r = g.ruler(f);
+    const n = r ? abil(r, 'free').filter(e => e.cmd === cmd).reduce((m, e) => m + (e.n || 0), 0) : 0;
+    if (!n) return 0;
+    const rec = st.free && st.free[f];
+    const used = rec && rec.mi === g.monthIndex ? rec.used[cmd] | 0 : 0;
+    return Math.max(0, n - used);
+  }
+  function useFree(f, cmd) {
+    const g = G(), st = S();
+    if (freeUses(f, cmd) <= 0) return false;
+    if (!st.free) st.free = {};
+    let rec = st.free[f];
+    if (!rec || rec.mi !== g.monthIndex) rec = st.free[f] = { mi: g.monthIndex, used: {} };
+    rec.used[cmd] = (rec.used[cmd] | 0) + 1;
+    return true;
+  }
+  // 好感下限（dipPlus.relFloor）：f 与 t 结盟期间，f 的君主（或 envoy）佩持时；with 限对方文化
+  function relFloor(f, t, envoy) {
+    const g = G();
+    if (!on() || f < 0 || t < 0 || f === t) return 0;
+    if (typeof g.allied === 'function' && !g.allied(f, t)) return 0;
+    const tc = g.factions[t] ? g.factions[t].culture : null;
+    let v = 0;
+    for (const x of [g.ruler(f), envoy || null]) if (x) for (const e of abil(x, 'dipPlus')) if (e.relFloor && (!e.with || e.with === tc)) v = Math.max(v, e.relFloor);
+    return v;
+  }
+  // 斥候（scout k）：本势力持有者所在城 k 条路以内的他国城
+  function scouted(f) {
+    const g = G(), out = new Set();
+    if (!on() || f < 0) return out;
+    for (const x of g.generalsOf(f)) {
+      const k = maxOf(abil(x, 'scout'), 'k'); if (!(k > 0)) continue;
+      let front = [x.city]; const seen = new Set(front);
+      for (let d = 0; d < k; d++) { const nx = []; for (const ci of front) for (const j of g.cities[ci].links) if (!seen.has(j)) { seen.add(j); nx.push(j); } front = nx; }
+      for (const ci of seen) if (g.cities[ci].owner !== f) out.add(ci);
+    }
+    return out;
+  }
 
   // ================================================================ 武将估值与电脑（§13）==
   const W = {
@@ -1536,13 +1773,34 @@
   }
 
   // ---------------------------------------------------------------- 赐宝物（§6.6，INTEGRATION §7.1）--
-  function giftK(id) { const it = ITEM.get(id); if (!it) return 1; let k = (it.stats && it.stats.gift) || 1; if (it.ability) for (const e of it.ability.effects) if (e.t === 'giftK') k *= e.k || 1; return k; }
+  // 礼物价值倍数（§6.6）：这件东西自己的 gift 属性 ×「以之赏赐」giftK × 送礼者（givers：君主、使者）身上「以宝物赏赐」giftK 的最大值
+  function giftK(id, givers) {
+    const it = ITEM.get(id); if (!it) return 1;
+    let k = (it.stats && it.stats.gift) || 1;
+    if (it.ability) for (const e of it.ability.effects) if (e.t === 'giftK' && !e.holder) k *= e.k || 1;
+    let h = 1;
+    for (const y of [].concat(givers || [])) if (y && y.gear) for (const e of abil(y, 'giftK')) if (e.holder && e.item !== id) h = Math.max(h, e.k || 1);
+    return k * h;
+  }
   function fits(x, it) {
     const rl = role(x);
     if (rl === 'war') return it.cat === 'weapon' || it.slot === 'armour' || it.slot === 'mount';
     if (rl === 'intel') return it.type === 'milbook' || it.type === 'fan';
     return it.type === 'seal' || it.type === 'tool' || it.type === 'civbook';
   }
+  // 赐宝物会顶掉的那件（§2.6）：{ uid, id, cost, refuse, sig, worse } —— 赐出的东西总是装备上，所以先告诉玩家会替换什么
+  function giftDisplace(x, uid) {
+    const r = instRec(uid), it = r && ITEM.get(r.id);
+    if (!x || !it || !x.gear) return null;
+    const old = x.gear[it.slot];
+    if (old == null || old === +uid) return null;
+    const or = instRec(old), oi = or && ITEM.get(or.id);
+    if (!oi) return null;
+    const tc = takeCost(x, old, uid), a = avail(oi, sidOf(G()));
+    return { uid: old, id: oi.id, cost: tc.cost || 0, refuse: tc.refuse || null, sig: !!(a && a.kind === 'signature' && a.holder === x.name), worse: TIER[it.rarity] < TIER[oi.rarity] };
+  }
+  // o = { roll（测试）, confirm: true（会顶掉招牌装备或更高品级的东西时，玩家已确认）}
+  // 返回 { ok, loy（赏赐所得）, before（赐之前）, afterEquip（换装代价之后）, after, eqDelta（换装的忠诚代价，≤ 0）, displaced, fits, line }
   function gift(x, uid, o) {
     o = o || {};
     const g = G(), r = instRec(uid);
@@ -1553,24 +1811,32 @@
     const it = ITEM.get(r.id);
     if (factionOfInst(uid) !== x.faction) return { ok: false, why: '不是本势力之物。' };
     if (r.loc === 'gen' && r.owner === x.id) return { ok: false, why: x.name + '已经佩着此物。' };
+    const dp = giftDisplace(x, uid);
+    if (dp && (dp.sig || dp.worse) && !o.confirm) {
+      const di = ITEM.get(dp.id);
+      return { ok: false, needConfirm: true, displaced: dp, why: `赐出「${displayName(it)}」会替换${x.name}的「${displayName(di)}」` + (dp.cost ? `（忠诚 −${dp.cost}）` : '') + '。' };
+    }
+    const before = x.loyalty;
     const eq = Gear.equip(x, uid, { free: false, dropShield: true });
     if (!eq.ok) return { ok: false, why: eq.why };
-    const before = x.loyalty;
+    const afterEquip = x.loyalty;
     let loy = 0, line = '';
     const fit = fits(x, it);
     if (r.gifted == null) {   // 每件实物只算一次（INTEGRATION §7.1）
       const GF = CFG.gift;
       const roll = o.roll !== undefined ? o.roll : SG.Random.rangeInt(0, GF.rollMax + 1);
-      loy = GF.base + roll + clamp(Math.round(valueOf(it) * giftK(it.id) / GF.valueDiv), 0, GF.max);
+      const ru = g.ruler(x.faction);
+      loy = GF.base + roll + clamp(Math.round(valueOf(it) * giftK(it.id, ru ? [ru] : []) / GF.valueDiv), 0, GF.max);
       if (fit) loy = Math.round(loy * GF.fitK);
       if (it.id === 'chitu' && x.name === '关羽') { loy = Math.max(loy, GF.chituGuanyu); line = '「吾知此马日行千里，今幸得之，若知兄长下落，可一日而见面矣。」'; }
     }
     x.loyalty = Math.min(100, x.loyalty + loy);
     r.gifted = x.id;
-    r.giftLoy = x.loyalty - before;    // 收回时扣回同样多（再赐一次 = 0）
+    r.giftLoy = x.loyalty - afterEquip;    // 收回时扣回同样多（再赐一次 = 0）；换装的代价不在其中
     const C = SG.Commands;
-    if (C && typeof C.record === 'function') C.record('reward', g.cities[x.city], x, { ok: true, before, after: x.loyalty, cost: 0, gift: it.id, giftFits: fit, giftUid: +uid, loy });
-    return { ok: true, loy, before, after: x.loyalty, fits: fit, line, item: it, loyaltyDelta: eq.loyaltyDelta };
+    if (C && typeof C.record === 'function') C.record('reward', g.cities[x.city], x, { ok: true, before, after: x.loyalty, cost: 0, gift: it.id, giftFits: fit, giftUid: +uid, loy, eqDelta: afterEquip - before });
+    const displaced = (eq.displaced || []).map(u => { const q = instRec(u); return q ? q.id : null; }).filter(Boolean);
+    return { ok: true, loy: x.loyalty - afterEquip, before, afterEquip, after: x.loyalty, eqDelta: afterEquip - before, displaced, fits: fit, line, item: it, loyaltyDelta: eq.loyaltyDelta };
   }
 
   // ================================================================ 图鉴（§14.2）==
@@ -1668,12 +1934,17 @@
     if (!A || typeof A.on !== 'function') return;
     hooksInstalled = true;
     A.on('items', monthItems, { owner: 'items', when: on, order: 50 });
+    A.on('loyAura', loyAuraSpecial, { owner: 'items', when: on, order: 50 });
     A.onSpend('gear', f => spendGear(f), { owner: 'items', when: on });
   }
   // 俘虏：记下俘获者；电脑释放俘虏时 50 % 没收其珍品以上的非专属装备（种子随机数）
   const captors = new Map();
   function installEvents() {
     const E = SG.Events; if (!E) return;
+    // 自动结算的守方加成（autoPower：defendCity、castle）只对正在结算的这一仗
+    E.on('conquest.prepare', s => { sortie = s || null; });
+    E.on('conquest.resolved', s => { if (sortie === s) sortie = null; });
+    E.on('conquest.apply', s => { if (sortie === s) sortie = null; });
     E.on('captive.taken', (s, x) => { if (!on() || !s || !x) return; captors.set(x.id, s.attackerWon ? s.attacker : s.defender); });
     E.on('captive.released', x => {
       if (!on() || !x) return;
@@ -1879,6 +2150,7 @@
 
   Object.assign(Items, {
     CFG, SLOTS, SLOT_NAME, RARITIES, TIER, DUEL_ITEM_EFFECTS, EFFECTS, saveKeys: ['items'],
+    decide(k, v) { if (v === undefined) delete OVR[k]; else OVR[k] = v; bump(); return dec(k); },
     get data() { return D; },
     setData(d) { setData(d); bump(); },
     get, all: () => (D ? D.items : []), tier: tierOf, isShield, styleOf, displayName, valueOf, giftK,
@@ -1894,19 +2166,38 @@
     // 获取
     searchHidden, hiddenIn, clueFor, hiddenP, spoils, slay, slayChance, rollSlay, slayRule, disarm, award, grant, pool, offers, tourneyPrize, titleRelic,
     takeReveals() { return REVEALS.splice(0, REVEALS.length); }, takeNews() { return NEWS.splice(0, NEWS.length); }, lastClue: null,
-    gift, fits,
+    gift, giftDisplace, fits, takeCost: (x, uid, replacement) => takeCost(x, uid, replacement),
+    // 外交礼物（§6.6）：把本势力的一件装备送进 t 的府库（专属、名将旧物、镇城之宝不送；从武将身上取下照常计忠诚代价）
+    transfer(uid, t, opts) {
+      const g = G(), r = instRec(uid);
+      if (!on() || !r || !g.factions[t]) return { ok: false, why: '无此物。' };
+      const it = ITEM.get(r.id), a = avail(it, sidOf(g));
+      if (r.bound || (a && (a.kind === 'signature' || a.kind === 'cityTreasure'))) return { ok: false, why: '此物不能送人。' };
+      if (opts && opts.from >= 0 && factionOfInst(uid) !== opts.from) return { ok: false, why: '不是本势力之物。' };
+      if (r.loc === 'gen') { const u = Gear.unequip(g.generals[r.owner], it.slot, { toArmoury: true }); if (!u.ok) return u; }
+      place(uid, 'arm', t);
+      if (t !== g.player) aiEquip(t);
+      return { ok: true, item: it };
+    },
+    // 外交礼物（§6.6）：一件宝物折合的金 = 价值 × giftK（givers = [君主, 使者]，「以宝物赏赐 / 外交」的持有者倍数取最大）
+    giftValue(x, givers) { const id = typeof x === 'number' || /^\d+$/.test(String(x)) ? (instRec(x) || {}).id : x; return id ? Math.round(valueOf(id) * giftK(id, givers)) : 0; },
     // 电脑
-    score, role, aiEquip, aiShop, aiSell, aiHiddenSearch, monthItems, spendGear, stats: ST,
+    score, role, aiEquip, aiShop, aiSell, aiHiddenSearch, monthItems, loyAuraSpecial, spendGear, stats: ST,
     resetStats() { for (const k of Object.keys(ST)) ST[k] = typeof ST[k] === 'object' ? {} : 0; },
     // 图鉴
     markSeen, markOwned, collection,
     // 校验
     checkCatalogue, validateDuel,
     // 宝具
-    actives, duelLure: x => abil(x, 'duelLure').length > 0, freeUses: (f, cmd) => { const r = f >= 0 ? G().ruler(f) : null; return r ? abil(r, 'free').filter(e => e.cmd === cmd).reduce((s, e) => s + (e.n || 0), 0) : 0; },
-    relFloor(f, t) { const r = f >= 0 ? G().ruler(f) : null; return r ? maxOf(abil(r, 'dipPlus'), 'relFloor') : 0; },
-    scout(x) { return maxOf(abil(x, 'scout'), 'k'); },
-    defendCity(c) { let v = 0; for (const x of G().officersIn(c)) v = Math.max(v, maxOf(abil(x, 'defendCity'), 'k')); return v; },
+    actives,
+    // 世界 / 内政能力的接线点（INTEGRATION 请求里列出调用处；没人调用时它们什么也不做）
+    duelLure: x => on() && abil(x, 'duelLure').length > 0,                       // BattleModel.duelAccepts：持有者发起的单挑必定应战
+    freeUses, useFree,                                                           // 传国玉玺：每月 1 次不耗令牌的外交
+    relFloor,                                                                    // 径路刀：同盟期间两国好感不低于 +40
+    scout(x) { return on() ? maxOf(abil(x, 'scout'), 'k') : 0; }, scouted,         // 浑天仪 / 地理学：可查看几城之内敌城的武将与装备
+    defendCity: c => (on() ? defendCityK(c) : 0),                                // 坐镇守城：守方防御 × (1 + k)
+    captureP, rescueAt,                                                          // Conquest.apply 的俘虏几率；battle-model 主将溃散时记救主
+    critTaken: (p, t) => (on() && t ? Gear.battle.critTaken(p, t) : p),
     installHooks, providers: PROVIDERS,
   });
   SG.Items = Items;

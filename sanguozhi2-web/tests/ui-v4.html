@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>界面组件 · 第四版</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>
+  /* 测试页：组件一览（UI-V4 §4）+ 自动检查（图标轮廓、对比度、纹理分片、减少动态）。结果写在 #r 与 window.RESULT（tests 用） */
+  html, body { overflow: auto; height: auto; }
+  body { margin: 0; background: #2b2420; color: #f3e7cc; font-family: var(--f-body); }
+  .row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; padding: 10px 16px; }
+  .sheet { margin: 12px 16px; padding: 14px 16px; }
+  h2.t { font-family: var(--f-display); font-weight: 400; letter-spacing: .2em; margin: 18px 16px 4px; color: var(--gold-hi); }
+  .icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; padding: 8px 16px; }
+  .ic { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-radius: 6px; background: var(--paper); color: var(--ink); font-size: 10px; }
+  .ic.l { background: var(--lq-2); color: var(--paper); }
+  .ic svg { width: 44px; height: 44px; }
+  #r { margin: 12px 16px 40px; padding: 10px 12px; white-space: pre-wrap; font: 12px/1.5 monospace; background: #111; border-radius: 6px; }
+  #r .bad { color: #ff8f73; } #r .ok { color: #8ddc93; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="ui"></div>
+<h2 class="t">按钮</h2>
+<div class="row" id="btns"></div>
+<h2 class="t">表单 · 数据</h2>
+<div class="sheet sg-paper is-paper" id="forms"></div>
+<h2 class="t">图标</h2>
+<div class="icons" id="icons"></div>
+<h2 class="t">检查</h2>
+<div id="r">running…</div>
+
+<script src="../vendor/three.min.js"></script>
+<script src="../js/core.js"></script>
+<script src="../js/registry.js"></script>
+<script src="../js/audio.js"></script>
+<script src="../js/settings.js"></script>
+<script src="../js/ui-icons.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../js/ui-art.js"></script>
+<script>
+'use strict';
+(async function () {
+  const SG = window.SG, UI = SG.UI, I = SG.UIIcons;
+  const out = [], R = { fails: 0, checks: 0 };
+  const ok = (c, msg) => { R.checks++; if (!c) R.fails++; out.push((c ? '<span class="ok">ok  </span>' : '<span class="bad">FAIL</span>') + ' ' + msg); };
+  UI.init && UI.init();
+  // 机器忙闲的标定：固定的一段计算（2020 年笔记本约 3 ms）；预算按比例放宽（负载很高的测试机上墙钟时间会成倍变长）
+  function calib() { const t = performance.now(); let a = 0; for (let i = 0; i < 300000; i++) a += Math.sin(i) * Math.sqrt(i); window.__calib = a; return performance.now() - t; }
+  const cal = Math.min(calib(), calib(), calib()), slowK = Math.max(1, cal / 3);
+  const tArt = performance.now();
+  await SG.UIArt.init();
+  const artMs = performance.now() - tArt;
+  SG.UISettings.bridge(); SG.UISettings.applyAll();
+
+  // ---- 按钮：六种 × 状态 ----
+  const B = document.getElementById('btns');
+  UI.button(B, '新的征程', () => UI.toast('印钮：盖印 + 朱墨', { seal: '印', seconds: 2 }), { kind: 'seal' });
+  UI.button(B, '征兵', () => {}, { kind: 'plaque', icon: 'recruit', hotkey: '3' });
+  UI.button(B, '设置', () => {}, { kind: 'plaque', icon: 'settings', badge: 2 });
+  UI.button(B, '锁住的', () => {}, { kind: 'plaque', icon: 'hire', why: '城中没有已发现的在野人才。' });
+  UI.button(B, '纸签', () => {}, { kind: 'paper', icon: 'filter' });
+  UI.button(B, '空框', () => {}, { kind: 'ghost' });
+  UI.button(B, '', () => {}, { kind: 'icon', icon: 'generals', label: '武将' });
+  UI.button(B, '', () => {}, { className: 'sg-close' });
+  const tile = UI.button(B, '开发', () => {}, { kind: 'tile', icon: 'develop', token: true });
+  tile.style.width = '72px';
+  const tl = UI.button(B, '营建', () => {}, { kind: 'tile', icon: 'build', why: '营建随第四版的城池视图开放。' });
+  tl.style.width = '72px';
+  UI.button(B, '窗口', () => {
+    const w = UI.window('demo', { title: '窗　口', seal: '窗', info: 'Esc 关闭', width: 760, height: 460, tabs: [{ id: 'a', label: '一', icon: 'list' }, { id: 'b', label: '二', icon: 'grid', badge: '新' }], foot: true });
+    w.page.innerHTML = '<div class="sg-sec"><span class="sg-sec-t">纸页</span></div><p>墨字在纸上。</p>';
+    UI.button(w.foot, '完　成', () => w.close(), { kind: 'seal' });
+  }, { kind: 'plaque', icon: 'list' });
+  UI.button(B, '对话', () => UI.say('大字报捷：关羽斩华雄于汜水关前。'), { kind: 'plaque', icon: 'chronicle' });
+  UI.button(B, '确认', () => UI.confirm('覆盖「一」？', '覆　盖', '取消', { body: '原有记录将被替换。' }), { kind: 'plaque' });
+
+  // ---- 表单与数据 ----
+  const F = document.getElementById('forms');
+  const r1 = document.createElement('div'); r1.className = 'row'; F.appendChild(r1);
+  UI.tabs(r1, [{ id: 'x', label: '总览', icon: 'list' }, { id: 'y', label: '装备', icon: 'armour', badge: '新' }, { id: 'z', label: '武艺', icon: 'combo' }], () => {});
+  UI.segmented(r1, [['a', '全部'], ['b', '武'], ['c', '谋'], ['d', '文']], 'a', () => {});
+  UI.toggle(r1, true, () => {}); UI.toggle(r1, false, () => {});
+  UI.slider(r1, { min: 0, max: 100, step: 5, value: 70, format: v => v + ' %' });
+  const r2 = document.createElement('div'); r2.className = 'row'; F.appendChild(r2);
+  const cnt = UI.counter(document.createElement('span'), { icon: 'gold', value: 1200 }); r2.appendChild(cnt.el);
+  UI.button(r2, '+250', () => cnt.set(cnt.value + 250), { kind: 'paper', small: true });
+  UI.button(r2, '−180', () => cnt.set(cnt.value - 180), { kind: 'paper', small: true });
+  r2.insertAdjacentHTML('beforeend', [1, 2, 3, 4, 5].map(rk => UI.frame({ name: '甲乙丙丁戊'[rk - 1] }, { size: 44, rank: rk })).join(''));
+  r2.insertAdjacentHTML('beforeend', ['common', 'uncommon', 'rare', 'epic', 'legend'].map(rr => UI.slot({ id: 'x', rarity: rr, slot: 'weapon' }, { size: 44, slot: 'weapon' })).join('') + UI.slot(null, { size: 44, slot: 'mount' }));
+  const r3 = document.createElement('div'); r3.className = 'row'; F.appendChild(r3);
+  r3.insertAdjacentHTML('beforeend', '<div style="width:220px">' + UI.brushBar(0.62, 'var(--war)', { gear: 0.08 }) + '</div><div style="width:220px">' + UI.brushBar(0.45, 'var(--int)') + '</div>' +
+    '<span class="sg-tag sg-tag-ruler">君</span><span class="sg-tag sg-tag-gov">守</span><span class="sg-newtag">新</span><span class="sg-lvseal">7</span><span class="sg-sealmark">印</span><kbd>Esc</kbd>');
+
+  // ---- 图标 ----
+  const ids = I.list();
+  document.getElementById('icons').innerHTML = ids.map((id, k) => '<div class="ic' + (k % 5 === 2 ? ' l' : '') + '">' + I.svg(id, 44) + '<span>' + id + '</span></div>').join('');
+
+  // ---- 检查 1：37 个指令图标齐全、名字唯一 ----
+  const cmd = I.list('cmd');
+  ok(cmd.length >= 37, 'command icons (DOMESTIC-FX §6): ' + cmd.length + ' ≥ 37');
+  ok(ids.length >= 90, 'icons in total: ' + ids.length);
+  ok(/^\s*<svg[\s>]/.test(I.svg('unknown-icon-id', 24)) && I.svg('unknown-icon-id', 24).indexOf('ico-help') >= 0, 'unknown id falls back to the help icon');
+  // ---- 检查 2：24 px 轮廓 Jaccard 距离 ≥ 0.18（UI-V4 §3.6）----
+  async function sil(id) {
+    const img = new Image(); img.src = 'data:image/svg+xml,' + encodeURIComponent(I.svg(id, 24)); await img.decode();
+    const c = document.createElement('canvas'); c.width = c.height = 24; const x = c.getContext('2d'); x.drawImage(img, 0, 0, 24, 24);
+    const d = x.getImageData(0, 0, 24, 24).data; const a = new Uint8Array(576); for (let i = 0; i < 576; i++) a[i] = d[i * 4 + 3] > 127 ? 1 : 0; return a;
+  }
+  const S = {}; for (const id of ids) S[id] = await sil(id);
+  let min = 1, minp = '';
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+    const a = S[ids[i]], b = S[ids[j]]; let x = 0, u = 0;
+    for (let k = 0; k < 576; k++) { x += a[k] ^ b[k]; u += a[k] | b[k]; }
+    const d = u ? x / u : 0; if (d < min) { min = d; minp = ids[i] + ' / ' + ids[j]; }
+  }
+  ok(min >= 0.18, 'icon silhouettes at 24 px: min Jaccard distance ' + min.toFixed(3) + ' (' + minp + ') ≥ 0.18');
+  // ---- 检查 3：对比度（WCAG：正文 ≥ 4.5，大字 / 图形 ≥ 3）----
+  const cs = getComputedStyle(document.documentElement);
+  const hex = n => cs.getPropertyValue(n).trim();
+  function lum(h) { const v = h.replace('#', ''); const c = [0, 2, 4].map(i => parseInt(v.substr(i, 2), 16) / 255).map(x => (x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4))); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; }
+  const ratio = (a, b) => { const A = lum(a), Bv = lum(b); return (Math.max(A, Bv) + 0.05) / (Math.min(A, Bv) + 0.05); };
+  const PAIRS = [['--ink', '--paper', 4.5], ['--ink-2', '--paper', 4.5], ['--ink-3', '--paper', 4.5], ['--ink-3', '--paper-2', 3], ['--paper', '--lq-1', 4.5], ['--gold-hi', '--lq-1', 4.5],
+    ['--gold', '--lq-1', 3], ['--zhu', '--paper', 4.5], ['--good', '--paper', 4.5], ['--bad', '--paper', 4.5], ['--war-t', '--paper', 3], ['--int-t', '--paper', 3], ['--pol-t', '--paper', 3], ['--paper', '--zhu', 4.5]];
+  for (const [fg, bg, need] of PAIRS) {
+    const a = hex(fg), b = hex(bg);
+    if (!/^#[0-9a-f]{6}$/i.test(a) || !/^#[0-9a-f]{6}$/i.test(b)) { ok(false, 'token missing or not #rrggbb: ' + fg + ' ' + a + ' / ' + bg + ' ' + b); continue; }
+    const r = ratio(a, b);
+    ok(r >= need, 'contrast ' + fg + ' on ' + bg + ': ' + r.toFixed(2) + ' ≥ ' + need);
+  }
+  // ---- 检查 4：纹理分片（每片 ≤ 8 ms 目标；机器忙时放宽到 50 ms）----
+  const st = SG.UIArt.stats;
+  ok(SG.UIArt.ready && st.slices >= 1 && st.bytes > 1000, 'textures generated: ' + st.slices + ' slices, ' + Math.round(st.ms) + ' ms total, ' + Math.round(st.bytes / 1024) + ' KB (init ' + Math.round(artMs) + ' ms)');
+  const sl = (st.list || []).slice().sort((a, b) => a - b), med = sl.length ? sl[sl.length >> 1] : 0, p90 = sl.length ? sl[Math.floor(sl.length * 0.9)] : 0;
+  ok(med <= 8 * slowK, 'texture slices (budget 8 ms × machine factor ' + slowK.toFixed(1) + ', calibration ' + cal.toFixed(1) + ' ms): median ' + med + ' ms, p90 ' + p90 + ' ms, max ' + st.maxSlice.toFixed(1) + ' ms over ' + sl.length + ' slices [' + (st.list || []).join(', ') + '] (budget 8 ms; the max includes the canvas warm-up and OS preemption on a loaded box)');
+  ok(!!cs.getPropertyValue('--tx-paper').trim() && cs.getPropertyValue('--tx-paper').indexOf('url(') >= 0, '--tx-paper set');
+  // ---- 检查 5：设置行数（UI-V4 §7：53 行，拥有者没载入的行不显示）----
+  const rc = SG.UISettings.rowCount();
+  ok(rc.table >= 53, 'settings table rows: ' + rc.table);
+  ok(rc.defined >= SG.UISettings.UI_ROWS.length, 'UI rows defined: ' + rc.defined + ' ≥ ' + SG.UISettings.UI_ROWS.length + ' (owner rows appear when their module loads)');
+  // ---- 检查 6：减少动态 ----
+  const was = SG.Motion.reduced;
+  SG.Motion.reduced = true;
+  const t0 = performance.now();
+  await SG.Motion.play(document.body, [{ opacity: 1 }, { opacity: 1 }], { dur: 600 });
+  ok(performance.now() - t0 < 100, 'Motion.play resolves at once under reduced motion');
+  SG.Motion.reduced = was;
+  SG.UISettings.set('ui.reduceMotion', 'on');
+  ok(document.documentElement.classList.contains('sg-reduced'), 'ui.reduceMotion = on → html.sg-reduced');
+  SG.UISettings.set('ui.reduceMotion', 'system');
+  SG.UISettings.set('ui.textScale', '130');
+  ok(Math.abs(parseFloat(cs.getPropertyValue('--sg-text-k')) - 1.3) < 1e-6, 'ui.textScale 130 → --sg-text-k 1.3');
+  SG.UISettings.set('ui.textScale', '100');
+  // ---- 检查 7：按钮的锁住状态 ----
+  const lockBtn = Array.from(document.querySelectorAll('.sg-btn')).find(b => b.textContent.indexOf('锁住的') >= 0);
+  ok(lockBtn && lockBtn.getAttribute('aria-disabled') === 'true' && !lockBtn.disabled, 'locked button: aria-disabled, still focusable / clickable for the reason');
+
+  out.unshift((R.fails ? '<span class="bad">' + R.fails + ' FAILED</span>' : '<span class="ok">ALL OK</span>') + ' — ' + R.checks + ' checks');
+  document.getElementById('r').innerHTML = out.join('\n');
+  window.RESULT = { fails: R.fails, checks: R.checks, minIcon: min, minPair: minp, lines: out.map(s => s.replace(/<[^>]+>/g, '')) };
+  document.body.dataset.ready = '1';
+})().catch(e => { document.getElementById('r').textContent = 'ERROR ' + (e.stack || e); window.RESULT = { fails: 1, error: String(e) }; document.body.dataset.ready = '1'; });
+</script>
+</body>
+</html>

@@ -335,10 +335,20 @@
         `<div class="sg-bar" style="--c:${sideColor(u.side)};--v:${M.clamp01(u.troops / max).toFixed(3)}"><i class="sg-bar-fill"></i></div>` +
         `<div>兵力 <b>${u.troops}</b>　士气 ${u.morale}　训练 ${u.gen.training}</div>` +
         `<div>武力 ${u.gen.war}　智力 ${u.gen.intel}${this.vetText(u.gen)}</div>` +
-        `<div>阵型 <span class="sg-goldc">${f.name}</span>（攻×${f.atk.toFixed(2)} 防×${f.def.toFixed(2)}）</div>` +
+        `<div>阵型 <span class="sg-goldc">${f.name}</span>（攻×${f.atk.toFixed(2)} 防×${f.def.toFixed(2)}）${this.critText(u)}</div>` +
         `<div>地形 ${SG.Defs.terrainName(this.M.map[u.x][u.y])}${u.confused > 0 ? '　<span style="color:#c79bff">混乱中</span>' : ''}</div>` +
         this.specialLine(u);
       if (SG.Portrait) this.card.prepend(SG.Portrait.el(u.gen, { size: 70, className: u.alive ? '' : 'is-dead' }));
+    }
+
+    // 第四版：军队会心率（COMBAT-V4 §2.5，情报卡「会心率 7%」；会心关闭或未载入时为空）
+    critText(u) {
+      try {
+        const Mo = SG.Mods;
+        if (!Mo || typeof Mo.critChance !== 'function' || (typeof Mo.critEnabled === 'function' && !Mo.critEnabled()) || SG.BattleModel.critEnabled === false) return '';
+        const p = Mo.critChance(u);
+        return p > 0 ? `　<span style="color:#e8c25a">会心率 ${Math.round(p * 100)}%</span>` : '';
+      } catch (e) { return ''; }
     }
 
     // 情报卡姓名旁的等级与经验进度（第三版成长；未载入成长规则时为空）
@@ -644,19 +654,29 @@
       await V.lunge(a, t);
       const beforeA = a.troops, beforeT = t.troops;
       const r = Mdl.attack(a, t);
-      // 攻击画面（SG.Clash：开 / 快 / 关）。电脑行动时 ×1.5，委任时 ×1.8（再乘「快」的 ×2）
+      // 攻击画面（SG.Clash：开 / 快 / 关）。电脑行动时 ×1.5，委任时 ×1.8（再乘「快」的 ×2）。
+      // 第四版（COMBAT-V4 §1.3–§1.4）：攻击画面放慢到 4.86 秒后，电脑行动 ×1.7、委任 ×2.0；clash.js 换上第四版时间轴（有 tlMap）之前仍用第三版的倍率
       if (SG.Clash && SG.Clash.enabled && typeof SG.Clash.play === 'function') {
         try {
-          const speed = this.autoPlayer ? 1.8 : this.watching() ? 1.5 : 1;
+          const v4tl = typeof SG.Clash.tlMap === 'function';
+          const speed = this.autoPlayer ? (v4tl ? 2.0 : 1.8) : this.watching() ? (v4tl ? 1.7 : 1.5) : 1;
           await SG.Clash.play(SG.Clash.fromBattle(Mdl, a, t, beforeA, beforeT, {
             playerSide: this.playerSide >= 0 ? this.playerSide : null,
             speed,
+            crit: r.crit ? { side: 0, k: r.critK || 1.5 } : null,     // 会心一击（§2.6：攻击画面里的会心一拍）
           }));
         } catch (e) { console.error(e); }
         this.syncAnimBtn();                      // 攻击画面里的「动画」按钮也能切换
       }
-      sfx('hit');
-      V.hit(t, r.dmg);
+      // 会心一击（§2.5）：棋盘上金色飘字与墨溅（V.critHit，battle-view.js 尚未提供时退回 V.hit）、提示、音效
+      if (r.crit) {
+        sfx('hit'); sfx('crit', 0.9);          // 'crit'（太鼓 + 金属亮音）由音频任务提供；未提供时是静音，'hit' 兜底
+        if (typeof V.critHit === 'function') { try { V.critHit(t, r.dmg); } catch (e) { console.error(e); V.hit(t, r.dmg); } } else V.hit(t, r.dmg);
+        UI().toast(a.gen.name + '部会心一击！', 1.2);
+      } else {
+        sfx('hit');
+        V.hit(t, r.dmg);
+      }
       if (r.counter > 0) { await SG.wait(0.15); V.hit(a, r.counter); }
       V.refresh(a); V.refresh(t);
       await SG.wait(0.35);

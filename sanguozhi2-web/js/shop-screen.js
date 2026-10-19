@@ -12,6 +12,7 @@
    SG.ShopScreen.gift(gen) → Promise<结果 | null>   赏赐的「赐宝物」：从府库挑一件赐给 gen（每件实物只涨一次忠诚）
    SG.ShopScreen.reveal({ id, from, how }) → Promise  神品 / 天宝的揭示（战利品、寻宝、奖品；SG.Items.takeReveals() 的条目）
    SG.ShopScreen.icon(id, size) → HTML      SG.ShopScreen.card(id, opts) → HTML（详情卡）    SG.ShopScreen.statsText(item) → 文字
+   SG.ShopScreen.giftMsg(gen, result, html) → 文字      SG.ShopScreen.shieldOff(gen, weaponId) → 会被卸下的盾 | null
    SG.ShopScreen.current → 打开中的画面状态（测试用：{ city, f, gen, tab, sel, el }）；SG.ShopScreen.close()
    载入：ui.js、items.js 之后（INTEGRATION §11：… character-screen.js, shop-screen.js, engage-screen.js …）。
    类名（本文件注入的样式，前缀 .sg-shop-）：.sg-shop（对话框）、-head、-tabs、-body、-keeper、-grid、-tile（.is-sel / .is-sold / .r-<稀有度>）、
@@ -57,6 +58,7 @@
 .sg-shop-keeper .sg-shop-banner { font-family: var(--sg-font-title); font-size: 1.25rem; color: var(--sg-gold, #f3c969); }
 .sg-shop-main { min-height: 0; display: flex; flex-direction: column; gap: .4rem; }
 .sg-shop-note { font-size: .95rem; color: var(--sg-muted, #ada392); }
+.sg-shop-note b { color: var(--c-strong, var(--sg-text, inherit)); }
 .sg-shop-grid { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; display: grid; grid-template-columns: repeat(auto-fill, minmax(8.6rem, 1fr)); gap: .5rem; align-content: start; padding: .15rem; }
 .sg-shop-tile { position: relative; display: flex; align-items: center; gap: .5rem; min-height: 56px; padding: .4rem .5rem; border-radius: .6rem; cursor: pointer; text-align: left;
   background: rgba(255,240,210,.06); border: 1px solid rgba(255,240,210,.12); color: var(--sg-text, #f5eddb); font: inherit; transition: transform .12s, box-shadow .12s, background .12s; }
@@ -64,8 +66,8 @@
 .sg-shop-tile.is-sel { box-shadow: 0 0 0 2px var(--rc, #f3c969), 0 0 14px color-mix(in srgb, var(--rc, #f3c969) 50%, transparent); background: rgba(255,240,210,.13); }
 .sg-shop-tile.is-off { opacity: .5; }
 .sg-shop-tile .sg-shop-tname { font-size: .98rem; line-height: 1.2; color: var(--rc, #f5eddb); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.sg-shop-tile .sg-shop-tsub { font-size: .8rem; color: var(--sg-muted, #ada392); white-space: nowrap; }
-.sg-shop-tile .sg-shop-tag { position: absolute; top: .2rem; right: .3rem; font-size: .72rem; color: #e8c88a; }
+.sg-shop-tile .sg-shop-tsub { display: block; font-size: .8rem; color: var(--sg-muted, #ada392); white-space: normal; line-height: 1.35; }
+.sg-shop-tile .sg-shop-tag { display: inline-block; white-space: nowrap; margin-left: .35rem; padding: 0 .25rem; border-radius: .25rem; font-size: .72rem; color: #2b2622; background: #e8c88a; }
 .sg-shop-icon { --sz: 44px; flex: none; position: relative; width: var(--sz); height: var(--sz); border-radius: 22%; display: inline-flex; align-items: center; justify-content: center;
   background: linear-gradient(145deg, var(--c1, #8e939c), var(--c2, #3a3a44)); box-shadow: 0 0 0 2px var(--rc, #9aa3ad), inset 0 0 0 1px rgba(0,0,0,.45), inset 0 -.4em .8em rgba(0,0,0,.28);
   font-family: var(--sg-font-title); font-size: calc(var(--sz) * .55); color: #fff7e8; text-shadow: 0 1px 0 #2b2622, 0 0 3px #2b2622; overflow: hidden; }
@@ -106,8 +108,10 @@
 .sg-shop-req { font-size: .88rem; margin-top: .25rem; }
 .sg-shop-delta { font-size: .88rem; margin-top: .3rem; line-height: 1.5; }
 .sg-shop-delta .up { color: var(--sg-good, #73d98c); } .sg-shop-delta .down { color: var(--sg-bad, #ff7361); }
-.sg-shop-actions { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .45rem; }
-.sg-shop-actions .sg-btn { min-height: 44px; }
+/* 操作钮一行并排，钉在详情栏的下缘（长卡也不必滚动就看得到；ITEMS §6.7） */
+.sg-shop-actions { display: flex; gap: .4rem; flex-wrap: nowrap; margin: .45rem -.4rem -.3rem; padding: .35rem .4rem .3rem; position: sticky; bottom: -.1rem; z-index: 2;
+  background: var(--paper, #f3e7cc); box-shadow: 0 -6px 10px -6px rgba(60, 40, 20, .35); border-radius: 0 0 .5rem .5rem; }
+.sg-shop-actions .sg-btn { min-height: 44px; flex: 1 1 0; min-width: 0; padding: .2rem .45rem; font-size: .92rem; line-height: 1.15; white-space: normal; }
 .sg-shop-price { font-variant-numeric: tabular-nums; color: var(--sg-gold, #f3c969); }
 .sg-shop-book { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column; gap: .7rem; }
 .sg-shop-page h4 { margin: 0 0 .3rem; font-family: var(--sg-font-title); font-weight: normal; font-size: 1.15rem; color: var(--sg-gold, #f3c969); }
@@ -130,9 +134,19 @@
   .sg-shop-keeper { display: none; }
   .sg-shop-grid { grid-template-columns: repeat(auto-fill, minmax(7.4rem, 1fr)); gap: .35rem; }
   .sg-shop-tile { min-height: 48px; padding: .25rem .35rem; }
+  .sg-shop-tile .sg-shop-tname { -webkit-line-clamp: 1; }
   .sg-shop-icon { --sz: 36px; }
   .sg-shop-who .sg-portrait { display: none; }
   .sg-shop-tabs .sg-btn { min-width: 4rem; }
+  /* 手机横屏：选中的货（详情卡与「购买」）排在武将条下面、装备位之上，不必往下滚才看到 */
+  .sg-shop-side > .sg-shop-who, .sg-shop-side > .sg-shop-slots { order: 2; }
+  .sg-shop-side > .sg-shop-card, .sg-shop-side > .sg-shop-note { order: 1; }
+  .sg-shop-gens { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; flex: none; }
+  .sg-shop-gens .sg-btn { flex: none; }
+  .sg-shop-chead .sg-shop-icon { --sz: 44px; }
+  .sg-shop-cname { font-size: 1.1rem; }
+  .sg-shop-actions { margin: .35rem -.35rem -.2rem; padding: .3rem .35rem .25rem; }
+  .sg-shop-actions .sg-btn { padding: .15rem .35rem; font-size: .85rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   .sg-shop-icon.r-epic::after, .sg-shop-icon.r-legendary::after { animation: none; display: none; }
@@ -170,7 +184,8 @@
       const sk = K[k];
       if (Array.isArray(v)) { parts.push((sk ? sk.name : k) + ' ' + v.join('/')); continue; }
       if (typeof v !== 'number') continue;
-      const u = !sk ? '' : sk.unit === '%' ? '%' : sk.unit === 's' ? ' 秒' : sk.unit === 'm' ? ' 米' : sk.unit === 'x' ? ' 倍' : '';
+      if (k === 'gift' && v === 1) { parts.push('宜作礼物'); continue; }   // 馈赠倍率 ×1：珍玩本身就是礼物（价值按原价算）
+      const u = !sk ? '' : sk.unit === '%' ? '%' : sk.unit === 's' ? ' 秒' : sk.unit === 'm' ? ' 米' : '';
       const val = sk && sk.unit === 'x' ? '×' + v : (v > 0 ? '+' : '') + v;
       parts.push((sk ? sk.name : k) + ' ' + val + u);
     }
@@ -198,9 +213,9 @@
     h += '<div class="sg-shop-chead">' + icon(id, 56) + '<div><div class="sg-shop-cname">' + esc(I().displayName(it)) + (it.orig ? ' <small class="sg-muted" style="font-size:.7em">' + esc(it.orig) + '</small>' : '') +
       '</div><div class="sg-shop-csub">' + esc(sub) + '</div></div></div>';
     h += '<div class="sg-shop-stats">' + esc(statsText(it)) + '</div>';
-    if (it.ability) h += '<div class="sg-shop-ability"><b>「' + esc(it.ability.name) + '」</b>' + esc(it.ability.desc) + '</div>';
     const rq = reqText(opts.gen, it); if (rq) h += '<div class="sg-shop-req">' + rq + '</div>';
     if (opts.gen && opts.compare !== false) h += compareHtml(opts.gen, it);
+    if (it.ability) h += '<div class="sg-shop-ability"><b>「' + esc(it.ability.name) + '」</b>' + esc(it.ability.desc) + '</div>';
     if (it.source) h += '<div class="sg-shop-lore">' + (SRC[it.source.kind] ? '【' + SRC[it.source.kind] + '】' : '') + esc(it.source.note || '') + (it.source.refs && it.source.refs.length ? '（' + esc(it.source.refs.slice(0, 2).join('；')) + '）' : '') + '</div>';
     if (opts.extra) h += opts.extra;
     h += '</div>';
@@ -262,9 +277,10 @@
       '<div class="sg-shop-banner">' + (c ? TIER_NAME[tier] : '府库') + '</div>' +
       '<div class="sg-shop-line">' + esc(keeperLine(st)) + '</div>';
     body.appendChild(keeper);
-    const main = UI().el('div', 'sg-shop-main');
+    // 货架与详情两栏是纸面（W8 的皮肤）：is-paper 把语义色（正文、<b>、金色字）换成墨色系，保证 ≥ 4.5 : 1（UI-V4）
+    const main = UI().el('div', 'sg-shop-main is-paper');
     body.appendChild(main);
-    const side = UI().el('div', 'sg-shop-side');
+    const side = UI().el('div', 'sg-shop-side is-paper');
     body.appendChild(side);
     if (st.tab === 'buy') renderBuy(st, main);
     else if (st.tab === 'sell') renderSell(st, main);
@@ -287,7 +303,7 @@
     const b = UI().el('button', 'sg-shop-tile' + (sel ? ' is-sel' : '') + (extra && extra.off ? ' is-off' : ''));
     b.type = 'button';
     b.style.setProperty('--rc', rarityColor(it.rarity));
-    b.innerHTML = icon(id, 44) + '<span><span class="sg-shop-tname">' + esc(I().displayName(it)) + '</span><span class="sg-shop-tsub">' + sub + '</span></span>' + (extra && extra.tag ? '<span class="sg-shop-tag">' + extra.tag + '</span>' : '');
+    b.innerHTML = icon(id, 44) + '<span><span class="sg-shop-tname">' + esc(I().displayName(it)) + '</span><span class="sg-shop-tsub">' + sub + (extra && extra.tag ? '<span class="sg-shop-tag">' + extra.tag + '</span>' : '') + '</span></span>';
     b.addEventListener('click', () => onClick());
     parent.appendChild(b);
     return b;
@@ -400,13 +416,46 @@
       const acts = UI().el('div', 'sg-shop-actions');
       actionsFor(st, acts);
       if (cardEl) {
-        // 按钮放在比较之后、典据之前（长卡在短屏上不必滚到底才看到「购买」）
-        const lore = cardEl.querySelector('.sg-shop-lore');
-        if (lore) cardEl.insertBefore(acts, lore); else cardEl.appendChild(acts);
+        // 按钮放在属性与比较之后、能力说明与典据之前（长卡在短屏上不必滚到底才看到「购买」）
+        const after = cardEl.querySelector('.sg-shop-ability') || cardEl.querySelector('.sg-shop-lore');
+        if (after) cardEl.insertBefore(acts, after); else cardEl.appendChild(acts);
         side.appendChild(cardEl);
         if (st.justBought != null && st.sel.uid === st.justBought) st.justBought = null;   // 购买的翻牌只播一次
       }
     } else side.appendChild(UI().el('div', 'sg-shop-note', '点一件货看详情；点右上的武将切换比较对象；点装备位筛选府库。'));
+  }
+  // 赐宝物的结果：换装的代价与赏赐所得分开写（忠诚 100 → 99（替换「青龙偃月刀」−15，赏赐 +14））
+  function giftMsg(gen, r, html) {
+    const e = html ? esc : (x => x);
+    if (!r || !r.ok) return e(r ? r.why : '');
+    let m = gen.name + '受赐「' + I().displayName(r.item) + '」，忠诚 ' + r.before + ' → ' + r.after;
+    if (r.eqDelta) m += '（替换「' + (r.displaced || []).map(id => I().displayName(id)).join('、') + '」−' + Math.abs(r.eqDelta) + '，赏赐 +' + r.loy + '）';
+    else if (r.loy === 0) m += '（此物赐过，不再涨忠诚）';
+    return e(m) + (r.line ? (html ? '<br>' : ' ') + e(r.line) : '');
+  }
+  // 会顶掉名将旧物或更好的东西时先问（ITEMS §2.6；赐出的东西总是装备上）
+  async function giftFlow(gen, uid) {
+    const Iv = I();
+    let r = Iv.gift(gen, uid);
+    if (r && r.needConfirm) {
+      const yes = SG.UI && SG.UI.confirm ? await SG.UI.confirm(esc(r.why) + '<br>仍要赐出吗？', '赐出', '再想想') : true;
+      if (!yes) return null;
+      r = Iv.gift(gen, uid, { confirm: true });
+    }
+    return r;
+  }
+  // 换上双手 / 双持 / 扇时，盾要收回府库（ITEMS §2.2「UI asks」）：返回会被卸下的盾（没有则 null）
+  function shieldOff(gen, id) {
+    const Iv = I(), it = Iv.get(id);
+    if (!gen || !it || it.slot !== 'weapon' || Iv.styleOf(it) === 'one') return null;
+    const sh = SG.Gear.item(gen, 'offhand'), u = gen.gear ? gen.gear.offhand : null;
+    if (!sh || !Iv.isShield(sh) || (u != null && Iv.inst(u) && Iv.inst(u).bound)) return null;
+    return sh;
+  }
+  async function shieldOk(gen, id) {
+    const sh = shieldOff(gen, id);
+    if (!sh || !SG.UI || !SG.UI.confirm) return true;
+    return SG.UI.confirm('「' + esc(I().displayName(id)) + '」须双手持握，' + esc(gen.name) + '的盾「' + esc(I().displayName(sh)) + '」将收回府库。', '换上', '取消');
   }
   function actionsFor(st, acts) {
     const Iv = I(), Gv = Gr(), g = SG.G, gen = st.gen, s = st.sel, c = st.city;
@@ -417,7 +466,8 @@
       const e = list[s.i];
       if (!e) return;
       const price = Iv.entryPrice(c, s.merch ? Object.assign({ merchant: true }, e) : e, st.f);
-      const buyAnd = equipTo => {
+      const buyAnd = async equipTo => {
+        if (equipTo && !(await shieldOk(equipTo, s.id))) return;
         const r = Iv.buy(st.f, c, s.i, { merchant: !!s.merch });
         if (!r.ok) { done(r.why || '买不成。'); return; }
         playSfx('coins');
@@ -442,8 +492,15 @@
       }
       if (gen) {
         const ce = Gv.canEquip(gen, s.uid);
-        UI().button(acts, '装备给' + esc(gen.name), () => { const q = Gv.equip(gen, s.uid); playSfx('equip'); done(q.ok ? gen.name + '装备上了「' + Iv.displayName(Iv.get(r.id)) + '」' + (q.loyaltyDelta ? '（忠诚 ' + q.loyaltyDelta + '）' : '') : q.why); }, { primary: !st.justBought || true, disabled: !ce.ok });
-        if (!g.isRuler(gen)) UI().button(acts, r.gifted == null ? '赐给' + esc(gen.name) : '赐给' + esc(gen.name) + '（已赐过）', () => { const q = Iv.gift(gen, s.uid); done(q.ok ? '赐' + gen.name + '「' + Iv.displayName(q.item) + '」，忠诚 ' + q.before + ' → ' + q.after + (q.line ? ' ' + q.line : '') : q.why); }, { disabled: !ce.ok });
+        UI().button(acts, '装备给' + esc(gen.name), async () => {
+          if (!(await shieldOk(gen, r.id))) return;
+          const q = Gv.equip(gen, s.uid); playSfx('equip');
+          done(q.ok ? esc(gen.name + '装备上了「' + Iv.displayName(Iv.get(r.id)) + '」' + (q.loyaltyDelta ? '（忠诚 ' + q.loyaltyDelta + '）' : '')) : esc(q.why));
+        }, { primary: true, disabled: !ce.ok });
+        if (!g.isRuler(gen)) UI().button(acts, r.gifted == null ? '赐给' + esc(gen.name) : '赐给' + esc(gen.name) + '（已赐过）', async () => {
+          const q = await giftFlow(gen, s.uid);
+          if (q) done(giftMsg(gen, q, true));
+        }, { disabled: !ce.ok });
       }
       if (!holder) {
         const ok = Iv.sellable(r.id, s.uid).ok && c && c.owner === st.f;
@@ -488,12 +545,22 @@
     if (!gen || !Iv || !Iv.enabled) return null;
     const list = Iv.armoury(gen.faction).filter(u => SG.Gear.canEquip(gen, u).ok);
     if (!list.length) { if (SG.UI.notice) await SG.UI.notice('赐宝物', '府库里没有' + esc(gen.name) + '能用的装备。'); return null; }
-    const items = list.map(u => { const r = Iv.inst(u), it = Iv.get(r.id); return SG.UI.item(icon(r.id, 28) + ' <span style="color:' + rarityColor(it.rarity) + '">' + esc(Iv.displayName(it)) + '</span>', r.gifted != null ? '<span class="sg-muted">已赐过</span>' : '', true, esc(statsText(it))); });
+    // 每件写明会替换掉什么（赐 = 给他装上；替换名将旧物要扣忠诚，ITEMS §2.6），空位或估值更高的排在前面
+    const rows = list.map(u => {
+      const r = Iv.inst(u), it = Iv.get(r.id), cur = SG.Gear.item(gen, it.slot), curU = gen.gear ? gen.gear[it.slot] : null;
+      const tc = curU != null && Iv.takeCost ? Iv.takeCost(gen, curU, u) : { cost: 0 };
+      const d = Iv.score(gen, it.id) - (cur ? Iv.score(gen, cur.id) : 0);
+      const rep = cur ? ' · <span class="' + (tc.cost ? 'sg-bad' : 'sg-muted') + '">替换「' + esc(Iv.displayName(cur)) + '」' + (tc.cost ? '（忠诚 −' + tc.cost + '）' : '') + '</span>' : ' · <span class="sg-good">空位</span>';
+      return { u, r, it, d: d - (tc.cost || 0) * 2 + (cur ? 0 : 5), rep };
+    }).sort((a, b) => b.d - a.d);
+    list.length = 0; for (const x of rows) list.push(x.u);
+    const items = rows.map(({ r, it, rep }) => SG.UI.item(icon(r.id, 28) + ' <span style="color:' + rarityColor(it.rarity) + '">' + esc(Iv.displayName(it)) + '</span>', r.gifted != null ? '<span class="sg-muted">已赐过</span>' : '', true, esc(statsText(it)) + rep));
     injectCss();
     const k = await SG.UI.choose('赐给' + gen.name + '哪一件？', items, '每件实物只涨一次忠诚；收回时扣回同样多。', 720);
     if (k < 0) return null;
-    const r = Iv.gift(gen, list[k]);
-    if (SG.UI.notice) await SG.UI.notice('赐宝物', r.ok ? esc(gen.name) + '受赐「' + esc(Iv.displayName(r.item)) + '」，忠诚 ' + r.before + ' → ' + r.after + (r.line ? '<br>' + esc(r.line) : '') : esc(r.why));
+    const r = await giftFlow(gen, list[k]);
+    if (!r) return null;
+    if (SG.UI.notice) await SG.UI.notice('赐宝物', giftMsg(gen, r, true));
     return r;
   };
   // 神品 / 天宝的揭示（ITEMS §5.5；占位：墨晕 + 图标 + 朱印）
@@ -521,6 +588,8 @@
   ShopScreen.icon = icon;
   ShopScreen.card = card;
   ShopScreen.statsText = statsText;
+  ShopScreen.giftMsg = giftMsg;      // 测试与人物菜单用：赐宝物结果的文字（换装代价与赏赐所得分开）
+  ShopScreen.shieldOff = shieldOff;  // 换上双手兵器会卸下的盾（没有则 null）
   ShopScreen.TYPE_GLYPH = TYPE_GLYPH;
   SG.ShopScreen = ShopScreen;
 

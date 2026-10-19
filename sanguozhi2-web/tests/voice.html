@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>人声测试 · 三国志II</title>
+<style>
+  :root { --bg: #f1e9d8; --paper: #f8f1e2; --ink: #2a2018; --ink-soft: #6b5640; --gold: #a8741a; --red: #b0362a; --ok: #2f7a3a; --bad: #b0362a; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #16141c; --paper: #221f2a; --ink: #efe6d2; --ink-soft: #b3a68f; --gold: #f3c969; --ok: #74d283; --bad: #ff7a6a; } }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: "PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif; }
+  body { padding: 14px max(16px, env(safe-area-inset-right)) 40px max(16px, env(safe-area-inset-left)); }
+  h1 { font-size: 22px; margin: 4px 0 10px; color: var(--gold); font-weight: normal; letter-spacing: .08em; }
+  h2 { font-size: 15px; margin: 14px 0 6px; color: var(--gold); font-weight: normal; }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  button, select { min-height: 44px; min-width: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid rgba(168,116,26,.5); background: var(--paper); color: var(--ink); font: inherit; font-size: 14px; cursor: pointer; }
+  button.on { background: var(--red); color: #fff; }
+  .panel { background: var(--paper); border: 1px solid rgba(168,116,26,.3); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; max-width: 980px; }
+  table { border-collapse: collapse; font-size: 13px; width: 100%; }
+  td, th { border-bottom: 1px solid rgba(128,100,60,.18); padding: 4px 6px; text-align: left; vertical-align: top; }
+  td.ok { color: var(--ok); } td.bad { color: var(--bad); }
+  #summary { font-size: 15px; margin: 6px 0; }
+  .muted { color: var(--ink-soft); font-size: 12px; }
+  #cues { max-height: 320px; overflow: auto; }
+</style>
+</head>
+<body>
+<h1>人声测试 · 霸王的世界</h1>
+<div class="panel">
+  <div class="row">
+    <span class="muted">说话人</span><select id="who"></select>
+    <span class="muted">语言</span><select id="lang"><option value="native">原声</option><option value="zh">一律汉语</option><option value="off">关</option></select>
+    <span class="muted">频率</span><select id="freq"><option value="all">全部</option><option value="essential">精简</option><option value="critical">关键</option></select>
+    <button id="unlock">解锁音频</button>
+    <button id="music">播放地图曲（闪避试听）</button>
+  </div>
+  <h2>台词</h2>
+  <div class="row" id="cues"></div>
+  <h2>用力声 · 群呼</h2>
+  <div class="row" id="cries"></div>
+</div>
+<div class="panel">
+  <h2>自动检查（?auto=1）</h2>
+  <div id="summary">—</div>
+  <table id="res"><thead><tr><th>检查</th><th>结果</th><th>说明</th></tr></thead><tbody></tbody></table>
+</div>
+
+<script src="../vendor/three.min.js"></script>
+<script src="../js/core.js"></script>
+<script src="../js/registry.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/world-data.js"></script>
+<script src="../js/audio.js"></script>
+<script src="../js/music.js"></script>
+<script src="../js/music-inst.js"></script>
+<script src="../js/music-han.js"></script>
+<script src="../js/music-world.js"></script>
+<script src="../js/music-suites.js"></script>
+<script src="../js/music-suites-gen.js"></script>
+<script src="../js/voice-data.js"></script>
+<script src="../js/voice.js"></script>
+<script src="../js/voice-cry.js"></script>
+<script src="../voice/manifest.js"></script>
+<script>
+'use strict';
+(function () {
+  const S = SG.Sfx, V = SG.Voice, VD = SG.VoiceData;
+  const $ = id => document.getElementById(id);
+  const results = [];
+  const T = window.__voiceTest = { done: false, results, fails: [] };
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  function rec(name, pass, note) {
+    results.push({ name, pass, note });
+    if (!pass) T.fails.push(name + ': ' + note);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${name}</td><td class="${pass ? 'ok' : 'bad'}">${pass ? '通过' : '失败'}</td><td>${note || ''}</td>`;
+    $('res').querySelector('tbody').appendChild(tr);
+  }
+  S.init();
+  // ---------------------------------------------------------------- manual UI
+  const speakers = ['曹操', '刘备', '关羽', '卑弥呼', '康茂德', '沃洛吉斯', '胡维色迦', '魁头', '区连', '加达拉特', '阿根托科克斯', '菲利默', '故国川王', '迦梨迦罗', '阿布加尔', 'herald', 'merchant'];
+  for (const n of speakers) { const o = document.createElement('option'); o.value = n; o.textContent = n === 'herald' ? '传令官' : n === 'merchant' ? '商人' : n; $('who').appendChild(o); }
+  for (const id of VD.CORE.concat(['cmd.develop.start', 'cmd.develop.great', 'bat.select', 'duel.finisher', 'sig'])) {
+    const b = document.createElement('button'); b.textContent = id; b.className = 'sm';
+    b.onclick = () => { S.unlock(); V.say($('who').value, id, { force: true }); };
+    $('cues').appendChild(b);
+  }
+  for (const k of Object.keys(SG.VoiceCry.KINDS)) { const b = document.createElement('button'); b.textContent = '~' + k; b.onclick = () => { S.unlock(); V.cry($('who').value, k); }; $('cries').appendChild(b); }
+  for (const k of ['charge', 'cheer', 'dismay']) { const b = document.createElement('button'); b.textContent = '群呼 ' + k; b.onclick = () => { S.unlock(); V.crowd(k, 8); }; $('cries').appendChild(b); }
+  $('lang').onchange = e => V.settings.set('language', e.target.value);
+  $('freq').onchange = e => V.settings.set('frequency', e.target.value);
+  $('unlock').onclick = () => S.unlock();
+  $('music').onclick = () => { S.unlock(); S.setSuite('曹操'); S.music('map'); };
+
+  // ---------------------------------------------------------------- automatic checks
+  async function waitCtx() {
+    S.unlock();
+    for (let i = 0; i < 100; i++) { const c = S.context; if (c && c.state === 'running') return c; await sleep(50); S.unlock(); }
+    return S.context;
+  }
+  async function decodeAll(mp3) {
+    const MF = SG.VoiceManifest;
+    if (!MF) { rec(mp3 ? 'MP3 解码' : 'Opus 解码', false, 'voice/manifest.js 不存在'); return; }
+    V._forceMp3(!!mp3);
+    let n = 0, bad = 0, worst = 0, errs = [];
+    const t0 = performance.now();
+    for (const pid of Object.keys(MF.packs)) {
+      const ok = await V.loadPack(pid);
+      if (!ok) { bad++; errs.push(pid + ' 载入失败'); continue; }
+      const P = SG.VoicePacks.get(pid);
+      const ids = [];
+      for (const [cue, arr] of Object.entries(P.meta.clips)) arr.forEach((e, i) => { if (e) ids.push([cue + '#' + i, e]); });
+      for (const [r, e] of Object.entries(P.meta.sig || {})) ids.push(['sig#' + r, e]);
+      for (const [id, e] of ids) {
+        const b = await V.decodeClip(pid, id);
+        n++;
+        if (!b) { bad++; if (errs.length < 8) errs.push(pid + '/' + id + ' 解码失败'); continue; }
+        const d = Math.abs(b.duration * 1000 - e[2]);
+        worst = Math.max(worst, d);
+        if (d > (mp3 ? 80 : 20)) { bad++; if (errs.length < 8) errs.push(`${pid}/${id} 长度差 ${d.toFixed(0)} ms`); }
+      }
+    }
+    rec(mp3 ? '(2) MP3 回退：解码每个片段' : '(1) Opus：解码每个片段', bad === 0, `${n} 段，失败 ${bad}，长度最大偏差 ${worst.toFixed(1)} ms（容差 ${mp3 ? 80 : 20} ms），${((performance.now() - t0) / 1000).toFixed(1)} 秒 ${errs.join('；')}`);
+    V._forceMp3(false);
+  }
+  function rmsOf(an, buf) { an.getFloatTimeDomainData(buf); let s = 0; for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i]; return 10 * Math.log10(s / buf.length + 1e-12); }
+  async function ducking(ctx) {
+    // a steady test tone through the music bus; an AnalyserNode after the bus
+    const bus = S.musicBus;
+    if (!bus) { rec('(3) 闪避', false, '没有音乐总线'); return; }
+    const osc = ctx.createOscillator(), og = ctx.createGain(); osc.frequency.value = 220; og.gain.value = 0.2;
+    const an = ctx.createAnalyser(); an.fftSize = 512;
+    osc.connect(og); og.connect(bus); bus.connect(an);
+    osc.start();
+    await sleep(300);
+    const buf = new Float32Array(an.fftSize);
+    const base = rmsOf(an, buf);
+    V._reset();
+    const t0 = performance.now();
+    let dur = 0;
+    const p = V.say('曹操', 'great', { force: true, pri: 3, onStart: d => { dur = d; } });
+    let dropAt = null;
+    for (let i = 0; i < 40; i++) { await sleep(10); const r = rmsOf(an, buf); if (dropAt === null && r <= base - 5) { dropAt = performance.now() - t0; break; } }
+    await p;
+    const tEnd = performance.now();
+    let backAt = null;
+    for (let i = 0; i < 120; i++) { const r = rmsOf(an, buf); if (r >= base - 1) { backAt = performance.now() - tEnd; break; } await sleep(10); }
+    osc.stop(); try { bus.disconnect(an); } catch (e) { /* 忽略 */ }
+    rec('(3) 闪避：语音开始后 100 ms 内音乐降 ≥ 5 dB，结束后 600 ms 内恢复', dropAt !== null && dropAt <= 100 && backAt !== null && backAt <= 600,
+      `基线 ${base.toFixed(1)} dB；下降用时 ${dropAt === null ? '—' : dropAt.toFixed(0) + ' ms'}；片段 ${dur.toFixed(2)} 秒；恢复用时 ${backAt === null ? '—' : backAt.toFixed(0) + ' ms'}`);
+  }
+  async function priorities() {
+    V._reset();
+    V.settings.set('frequency', 'all');
+    const names = ['关羽', '张飞', '赵云', '马超', '黄忠'];
+    for (let i = 0; i < 10; i++) { V.say(names[i % 5], 'bat.select', { scene: 'battle', side: 0 }); await sleep(100); }
+    await sleep(50);
+    const played = V.log.filter(x => x.cue === 'bat.select' && (x.action === 'play' || x.action === 'cry')).length;
+    rec('(4a) 1 秒内连发 10 条优先级 1：最多放 1 条', played <= 1, `放了 ${played} 条；丢弃 ${V.log.filter(x => x.action === 'drop').length} 条`);
+    await sleep(2600);
+    V._reset();
+    // the core cues are pre-decoded on idle in the game (warmCore); do the same for the two lines used here
+    for (const c of ['cmd.develop.start', 'special']) { const l = V.pickLine('关羽', c, { variant: 0 }); if (l && l.pack) { await V.loadPack(l.pack); await V.decodeClip(l.pack, l.clipId); } }
+    V.say('关羽', 'cmd.develop.start', { force: true, command: true, variant: 0 });
+    await sleep(150);
+    const t0 = performance.now();
+    let started = null;
+    V.say('关羽', 'special', { variant: 0, onStart: () => { started = performance.now() - t0; } });
+    for (let i = 0; i < 30 && started === null; i++) await sleep(10);
+    const pre = V.log.find(x => x.action === 'preempt');
+    rec('(4b) 优先级 3 在 100 ms 内抢占优先级 1', !!pre && started !== null && started <= 100, `抢占 ${pre ? '是' : '否'}；新台词开始用时 ${started === null ? '—' : started.toFixed(0) + ' ms'}`);
+    V.settings.set('frequency', VD.CONFIG.frequency);
+    await sleep(2500);
+  }
+  async function latency() {
+    V._reset();
+    // pre-decode one clip, then time say() → first sample (source start)
+    const line = V.pickLine('曹操', 'ack', { variant: 0 });
+    await V.loadPack(line.pack); await V.decodeClip(line.pack, line.clipId);
+    await sleep(1300);
+    const t0 = performance.now();
+    let t1 = null;
+    V.say('曹操', 'ack', { force: true, variant: 0, onStart: () => { t1 = performance.now() - t0; } });
+    for (let i = 0; i < 20 && t1 === null; i++) await sleep(5);
+    rec('(5) 预解码的 say() 到发声 ≤ 30 ms', t1 !== null && t1 <= 30, t1 === null ? '没有开始' : t1.toFixed(1) + ' ms');
+    await sleep(1500);
+  }
+  async function subtitles() {
+    // the longest line of every lingua in its own script; at 844 × 390 the cards must fit
+    V._reset();
+    let bad = [], n = 0;
+    const vw = innerWidth, vh = innerHeight;
+    for (const [lg, L] of Object.entries(VD.LINES)) {
+      let best = null;
+      for (const [cue, vars] of Object.entries(L)) for (let i = 0; i < vars.length; i++) { const t = vars[i].replace(/~[a-z.]+/g, '').trim(); if (t && (!best || t.length > best.t.length)) best = { cue, i, t }; }
+      if (!best) continue;
+      const zh = lg === 'zh' ? '' : VD.CUES[best.cue].zh[best.i] || VD.CUES[best.cue].zh[0];
+      const card = V._subtitle('曹操', { lingua: lg, cue: best.cue, variant: best.i, text: best.t, zh }, 5, { subtitle: true });
+      const host = document.querySelector('.sgv-subs');
+      if (!card || !host) { bad.push('没有字幕'); break; }
+      await sleep(240);
+      const r = card.getBoundingClientRect();
+      n++;
+      if (r.right > vw + 0.5 || r.left < -0.5 || r.bottom > vh + 0.5 || r.top < -0.5 || card.scrollWidth > card.clientWidth + 1) bad.push(`${lg} (${Math.round(r.left)},${Math.round(r.top)})–(${Math.round(r.right)},${Math.round(r.bottom)})`);
+      card.remove();
+    }
+    rec(`(6) 字幕：${n} 种语言的最长台词在 ${vw}×${vh} 内不溢出`, bad.length === 0, bad.join('；') || '全部在视口内');
+  }
+  async function auto() {
+    const ctx = await waitCtx();
+    rec('音频上下文', !!(ctx && ctx.state === 'running'), ctx ? ctx.state : '无');
+    for (let i = 0; i < 60 && !V.codec; i++) await sleep(50);
+    rec('编解码探测', !!V.codec, 'codec = ' + V.codec);
+    await subtitles();
+    if (!SG.VoiceManifest) { rec('语音包', false, '缺 voice/manifest.js'); }
+    else {
+      await latency();
+      await priorities();
+      await ducking(ctx);
+      await decodeAll(false);
+      if (!/quick/.test(location.search)) await decodeAll(true);
+    }
+    const pass = results.filter(r => r.pass).length;
+    $('summary').textContent = `${pass} / ${results.length} 通过`;
+    T.done = true;
+  }
+  if (/auto=1/.test(location.search)) setTimeout(auto, 200);
+})();
+</script>
+</body>
+</html>

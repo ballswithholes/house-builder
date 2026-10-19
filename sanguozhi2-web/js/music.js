@@ -1338,6 +1338,12 @@
     defineInst, add, variant, resolve, compile, compileAsync, prepare, prepareSync,
     get(key) { return PIECES[key] || null; },
     keys() { return Object.keys(PIECES).filter(k => !PIECES[k]._derived); },
+    // 第四版：注销曲目（君主乐章同时最多 4 套，AUDIO-V4 §A11）连同它的派生版本；正在播放的曲目由调用者避开
+    remove(key) {
+      if (!PIECES[key]) return false;
+      for (const k of Object.keys(PIECES)) if (k === key || PIECES[k]._base === key) { delete PIECES[k]; delete COMPILED[k]; }
+      return true;
+    },
     // 曲目的主音音级（0 = C … 11 = B）
     tonic(key) { const C = compile(key); return C ? C.tonicPc : null; },
     validate(key) { const C = compile(key); return C ? C.errors.slice() : ['未知曲目 ' + key]; },

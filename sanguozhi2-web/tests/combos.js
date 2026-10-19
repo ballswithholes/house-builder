@@ -106,7 +106,7 @@ section('(5) glyphs, knowledge, describe, mastery, save', () => {
   ok(C.glyphText('MMLHMLHH') === '◆ ◆ ● ▲ ◆ ● ▲ · ▲', 'glyph text with the finisher after ·');
   SG.ScenarioData = SG.Scenarios.classic; SG.Random.seed(5);
   const G = SG.G = SG.GameState.newGame('cao');
-  ok(G.combos && typeof G.combos.known === 'object' && typeof G.combos.mastery === 'object', 'new game gets G.combos = { known, mastery } (MigrateV4 init)');
+  ok(G.combos === undefined, 'a new game has no G.combos until something is seen (lazy state: a fresh save carries no v4 key, INTEGRATION §1.2)');
   const me = G.generals.find(x => x.name === '曹操'), foe = G.generals.find(x => x.name === '吕布');
   ok(C.known(G, '曹操') === 255, 'own-faction generals are fully known');
   ok(C.known(G, '吕布') === 0, 'other generals start unknown');
@@ -128,7 +128,7 @@ section('(5) glyphs, knowledge, describe, mastery, save', () => {
   // 旧档迁移：没有 G.combos 的存档读入后补齐（空的见识）
   const old = { generals: [] };
   if (SG.MigrateV4) SG.MigrateV4.run(old, 3);
-  ok(old.combos && Object.keys(old.combos.known).length === 0, 'a migrated v3 save gets empty combo knowledge');
+  ok(!old.combos && C.known(old, '关羽') === 0, 'a migrated v3 save has empty combo knowledge (missing = 0)');
   ok(SG.GameState.saveKeys().indexOf('combos') >= 0, 'G.combos is a save key');
 });
 

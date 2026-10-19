@@ -187,6 +187,16 @@
     // 收到同一次点击（幽灵点击），也顺带阻止 iOS 旧版的双击缩放。
     if (canvas) canvas.addEventListener('touchend', e => { if (e.cancelable) e.preventDefault(); }, opts);
   }
+  // 矮屏（手机横屏）：html.sg-short（UI-V4 §15.1；CSS 主要用媒体查询，JS 用这个类判断）
+  function installShortClass() {
+    try {
+      const mq = matchMedia('(max-height: 559px)');
+      const fn = () => document.documentElement.classList.toggle('sg-short', mq.matches);
+      fn();
+      if (mq.addEventListener) mq.addEventListener('change', fn); else if (mq.addListener) mq.addListener(fn);
+      document.documentElement.classList.toggle('sg-touch', !!SG.isTouch);
+    } catch (e) { /* 忽略 */ }
+  }
   // 首次用户手势：解锁音频
   function installAudioUnlock() {
     const evs = ['pointerdown', 'pointerup', 'touchend', 'mousedown', 'click', 'keydown'];
@@ -222,12 +232,22 @@
           const n = parseInt(q.get('seed'), 10);
           if (!isNaN(n)) SG.Random.seed(n);
         }
+        // 测试钩子（tests/ui-layout.html）：?insets=47 模拟左右安全区（px）；?start=liubei 跳过标题直接开局（经典剧本）
+        if (q.has('insets')) {
+          const px = Math.max(0, Math.min(80, parseInt(q.get('insets'), 10) || 0)) + 'px';
+          document.documentElement.style.setProperty('--sg-sal', px);
+          document.documentElement.style.setProperty('--sg-sar', px);
+        }
         migrateV3();
         try { document.title = TITLE; } catch (e) { /* 忽略 */ }
         const app = document.getElementById('app') || document.body;
         SG.Gfx.init(app);
         try { SG.Sfx.init(); } catch (e) { console.warn(e); }
         SG.UI.init();
+        // 第四版界面：程序化材质（空闲分片）、设置（登记拥有者的行并施加一遍）、矮屏标记（UI-V4 §15.1）
+        try { if (SG.UIArt) SG.UIArt.init(); } catch (e) { console.warn(e); }
+        try { if (SG.UISettings) { SG.UISettings.bridge(); SG.UISettings.applyAll(); } } catch (e) { console.warn(e); }
+        installShortClass();
         installGestureGuards(SG.Gfx.renderer.domElement);
         installAudioUnlock();
 
@@ -299,6 +319,8 @@
       this._last = performance.now();
       const loop = now => {
         requestAnimationFrame(loop);
+        // 帧率上限 30（设置第 13 行）：隔帧渲染
+        if (SG.UISettings && SG.UISettings.get('ui.fps') === '30' && now - this._last < 1000 / 31) return;
         const dt = Math.min(0.1, Math.max(0, (now - this._last) / 1000));
         this._last = now;
         this.frame(dt);
@@ -328,69 +350,124 @@
       const rig = this.rig;
       music('title');
       rig.inputEnabled = false;
-      const title = h('div', 'sg-title', null, layer('screens'));
+      // ?start=<势力键>：直接开局（测试 / 版式检查用）
+      let quick = null;
+      try { quick = new URLSearchParams(location.search).get('start'); } catch (e) { quick = null; }
+      if (quick) {
+        try {
+          SG.ScenarioData = scenarioOf('classic');
+          await this.ensureMap('classic');
+          SG.G = SG.GameState.newGame(quick, 'classic');
+          preloadPortraits();
+          rig.desiredYaw = 0;
+          rig.inputEnabled = true;
+          this.map.refresh(SG.G);
+          await this.strategy.run();
+          return;
+        } catch (e) { console.warn('start=' + quick + ' failed', e); }
+      }
+      // 第四版标题（UI-V4 §5.11）：左上墨书大字（「霸」放大为朱色）+ 朱印，右侧挂在横梁上的漆木牌；
+      // 「继续征程」是一张纸卡（最近一份记录的君主立绘 + 剧本 · 势力 · 年月 · 城数）
+      const title = h('div', 'sg-title v4', null, layer('screens'));
+      const wash = h('div', 'sg-title-wash', null, title);
+      wash.setAttribute('aria-hidden', 'true');
       const hero = h('div', 'sg-title-hero', null, title);
       hero.setAttribute('role', 'heading');
       hero.setAttribute('aria-level', '1');
       hero.setAttribute('aria-label', TITLE);
-      h('div', 'sg-title-seal', '霸', hero).setAttribute('aria-hidden', 'true');
-      // 「三国志」上行（两侧金线收于菱形，即书名里的「-」）+「霸王的世界」主标题（金色渐变 + 流光）
-      const top = h('div', 'sg-title-sub0', null, hero);
+      const top = h('div', 'sg-title-sub0', '<i></i><span class="sg-title-sgz">三 国 志</span><i></i>', hero);
       top.setAttribute('aria-hidden', 'true');
-      h('span', 'sg-title-rule', null, top);
-      h('span', 'sg-title-sgz', '三国志', top);
-      h('span', 'sg-title-rule', null, top);
-      const main = h('div', 'sg-title-main', '霸王的世界', hero);
+      const main = h('div', 'sg-title-main', '<span class="sg-title-ba">霸</span><span>王的世界</span>', hero);
       main.setAttribute('aria-hidden', 'true');
-      h('div', 'sg-title-sub', '群雄逐鹿 · 四海归一', hero).setAttribute('aria-hidden', 'true');
-      const menu = h('div', 'sg-title-menu', null, title);
+      h('div', 'sg-title-seal', '霸', hero).setAttribute('aria-hidden', 'true');
+      h('div', 'sg-title-sub', '群雄逐鹿　·　四海归一', hero).setAttribute('aria-hidden', 'true');
+      const board = h('div', 'sg-title-board', '<i class="sg-tb-beam"></i>', title);
+      const menu = h('div', 'sg-title-menu', null, board);
       let choice = -1;
-      SG.UI.button(menu, '新的征程', () => { choice = 0; }, { primary: true });
-      const cont = SG.UI.button(menu, '继续征程', () => { choice = 1; });
       const GS = SG.GameState;
       const legacy = !!(GS.hasLegacySave && GS.hasLegacySave());
-      cont.disabled = !GS.hasSave() && !legacy;
-      SG.UI.button(menu, '操作说明', () => { choice = 2; });
-      // 存档摘要（剧本 · 势力 · 年月）；旧版存档读不了时直接说明
+      // 最近的一份记录（自动 / 手动，按记录时间）
+      let newest = null;
+      try { for (const e of (GS.listSaves ? GS.listSaves() : [])) if (e && e.slot !== 'legacy' && !e.broken && (!newest || (e.savedAt || 0) > (newest.savedAt || 0))) newest = e; } catch (e) { newest = null; }
+      SG.UI.button(menu, '新的征程', () => { choice = 0; }, { kind: 'seal', className: 'sg-tb-new' });
       const info = GS.saveInfo ? GS.saveInfo() : null;
-      if (info) h('div', 'sg-title-saveinfo', SG.esc(scenarioName(info.scenario).split(' · ')[0] + ' · ' + info.faction + ' · ' + info.year + '年' + info.month + '月'), menu);
-      else if (legacy) h('div', 'sg-title-saveinfo', '旧版存档（新版本无法读取）', menu);
-      h('div', 'sg-title-foot', SG.isTouch ? '拖动平移 · 双指缩放 · 轻触选取' : '拖动平移 · 滚轮缩放 · WASD 移动 · Q / E 旋转 · 单挑 U 格开', title);
-
+      const cont = SG.UI.button(menu, '', () => { choice = 1; }, { kind: 'paper', className: 'sg-tb-cont' });
+      if (newest || info) {
+        const e = newest || { scenario: info.scenario, factionName: info.faction, year: info.year, month: info.month };
+        const ru = e.ruler ? (SG.UI.frame ? SG.UI.frame({ name: e.ruler }, { size: 46 }) : '') : '';
+        cont.innerHTML = ru + '<span class="sg-tb-cl"><b>继续征程</b><small>' + SG.esc(scenarioName(e.scenario).split(' · ')[0] + ' · ' + (e.factionName || '') + ' · ' + e.year + '年' + e.month + '月' + (e.cities ? ' · 城 ' + e.cities : '')) + '</small></span>';
+      } else {
+        cont.innerHTML = '<span class="sg-tb-cl"><b>继续征程</b><small>' + (legacy ? '旧版存档（新版本无法读取）' : '尚无记录') + '</small></span>';
+        cont.setEnabled(legacy ? '旧版（第一版）存档无法读取。' : '还没有记录——先开始新的征程。');
+      }
+      const hasAny = !!(newest || info || (GS.listSaves && GS.listSaves().length));
+      SG.UI.button(menu, '读取记录', () => { choice = 3; }, { kind: 'plaque', icon: 'load', why: hasAny || legacy ? null : '还没有记录。' });
+      SG.UI.button(menu, '功业 · 图鉴', () => { choice = 4; }, { kind: 'plaque', icon: 'dossier', className: 'sg-tb-dossier', why: '开局之后在「菜单 → 卷宗」查看功业与图鉴。' });
+      SG.UI.button(menu, '设　　置', () => { choice = 5; }, { kind: 'plaque', icon: 'settings' });
+      SG.UI.button(menu, '操作说明', () => { choice = 2; }, { kind: 'plaque', icon: 'help' });
+      h('div', 'sg-title-foot', '第四版 · 程序生成的山河与人物　　' + (SG.isTouch ? '拖动平移 · 双指缩放 · 轻触选取' : '拖动平移 · 滚轮缩放 · WASD 移动 · Q / E 旋转'), title);
+      // 游戏中「读取」：菜单记下档位后重新载入页面，这里直接读入，跳过标题
+      let bootSlot = null;
+      try { bootSlot = sessionStorage.getItem('sanguozhi2_boot_load'); if (bootSlot) sessionStorage.removeItem('sanguozhi2_boot_load'); } catch (e) { bootSlot = null; }
+      if (bootSlot) choice = 6;
+      const loadInto = async (loaded) => {
+        title.style.display = 'none';
+        SG.G = loaded;
+        await this.ensureMap(loaded.scenario);
+        preloadPortraits();
+        title.remove();
+        UI().toast('读取进度：' + SG.esc(scenarioName(loaded.scenario)) + '　' + loaded.year + '年' + loaded.month + '月', 2.4);
+        if (loaded.migratedFrom === 2) UI().toast('存档已升级：众将从 1 级起步，征战可获经验、习得新招', 3.2);
+      };
       let ang = 0, last = performance.now();
       for (;;) {
         while (choice < 0) {
           const now = performance.now();
           const dt = Math.min(0.1, (now - last) / 1000);
           last = now;
-          ang += dt * 2.5;
+          // 空闲环绕（设置第 33 行；减少动态时也停）
+          const orbit = !(SG.UISettings && (SG.UISettings.get('cam.idleOrbit') === false || SG.UISettings.reducedMotion()));
+          ang += dt * (orbit ? 2.5 : 0);
           rig.desiredYaw = Math.sin(ang * 0.05) * 25;
           rig.focusMap(58 + Math.sin(ang * 0.03) * 18, 48 + Math.cos(ang * 0.04) * 12, 85);
           await SG.frame();
         }
         if (choice === 2) {
           choice = -1;
-          await UI().say(helpText(), null, null, { className: 'sg-help' });   // 字略小：七节一屏放得下
+          if (SG.MenuScreen && SG.MenuScreen.help) await SG.MenuScreen.help();
+          else await UI().say(helpText(), null, null, { className: 'sg-help' });   // 字略小：七节一屏放得下
           last = performance.now();
           continue;
         }
+        if (choice === 4 || choice === 5) {
+          if (choice === 5 && SG.SettingsScreen) await SG.SettingsScreen.open();
+          choice = -1;
+          last = performance.now();
+          continue;
+        }
+        if (choice === 3 || choice === 6) {
+          let res = null;
+          if (choice === 6) {
+            let loaded = null;
+            try { loaded = GS.loadSlot(/^\d$/.test(bootSlot) ? +bootSlot : bootSlot); } catch (e) { loaded = null; }
+            if (loaded) res = { loaded };
+            else { choice = -1; await UI().say(SG.esc(GS.loadError || '存档无法读取。')); last = performance.now(); continue; }
+          } else if (SG.MenuScreen) res = await SG.MenuScreen.open('load', { fromTitle: true });
+          if (!res || !res.loaded) { choice = -1; last = performance.now(); continue; }
+          await loadInto(res.loaded);
+          break;
+        }
         if (choice === 1) {
           let loaded = null;
-          try { loaded = GS.load(); } catch (e) { console.warn(e); loaded = null; }
+          try { loaded = newest && GS.loadSlot ? GS.loadSlot(newest.slot) : GS.load(); } catch (e) { console.warn(e); loaded = null; }
+          if (!loaded) { try { loaded = GS.load(); } catch (e) { loaded = null; } }
           if (!loaded) {
             choice = -1;
             await UI().say(GS.loadError || '存档无法读取。');
             last = performance.now();
             continue;
           }
-          title.style.display = 'none';
-          SG.G = loaded;
-          await this.ensureMap(loaded.scenario);
-          preloadPortraits();
-          title.remove();
-          UI().toast('读取进度：' + SG.esc(scenarioName(loaded.scenario)) + '　' + loaded.year + '年' + loaded.month + '月', 2.4);
-          // 第二版存档（DESIGN-V3 §4）：已补齐成长数据，提示一次
-          if (loaded.migratedFrom === 2) UI().toast('存档已升级：众将从 1 级起步，征战可获经验、习得新招', 3.2);
+          await loadInto(loaded);
           break;
         }
         // 新的征程：选择剧本 → 选择君主；中途返回则回到标题

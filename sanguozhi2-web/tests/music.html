@@ -66,6 +66,16 @@
 </div>
 
 <div class="panel">
+  <h2>君主乐章（AUDIO-V4 甲部）</h2>
+  <div class="row"><span class="lbl">君主</span><select id="suiteWho" style="min-height:44px;font:inherit;background:#23212d;color:var(--text);border-radius:8px;border:1px solid rgba(243,201,105,.45)"></select>
+    <button id="suitePin">设为玩家乐章</button><button id="suiteReg">地域（第三版）</button></div>
+  <div class="row" id="suiteKinds" style="margin-top:6px"></div>
+  <div class="row" style="margin-top:6px"><button id="suiteCheck">乐章检查（42 套手写 × 12 首，离线渲染）</button><span class="lbl" id="suiteProg"></span></div>
+  <div id="suiteSummary"></div>
+  <table id="suiteTbl"><thead><tr><th>曲目</th><th>标题</th><th>峰值</th><th>RMS</th><th>目标</th><th>NaN</th><th>动机比例</th></tr></thead><tbody></tbody></table>
+</div>
+
+<div class="panel">
   <h2>离线检查（OfflineAudioContext，每首前 <span id="secs">20</span> 秒）</h2>
   <div class="row"><button id="runAll">全部检查</button><span class="lbl" id="prog"></span></div>
   <div id="summary"></div>
@@ -307,6 +317,68 @@
   };
   window.__drawViz = drawViz;
   window.__demoPiece = name => demoPiece(name).key_;
+
+  // ------------------------------------------------------------ 君主乐章 --
+  (function suites() {
+    const MS = SG.MusicSuites;
+    const ready = () => !!(SG.MusicSuites && SG.MusicSuites.buildSuite && SG.MusicSuites.GEN);
+    const SK = ['map', 'council', 'battle', 'battle-defend', 'victory', 'defeat', 'fanfare', 'clash', 'clash-b', 'clash-short', 'clash-crit', 'ending'];
+    // §A12 targets for this page: no NaN, peak ≤ 0.98; map / council / ending RMS −30…−19 dB, battle / defend −22…−15, short pieces −24…−16
+    // (defeat is a quiet one-shot: measured −30…−22 dB in the design render, window −32…−18)
+    const WIN = { map: [-30, -19], council: [-30, -19], ending: [-30, -19], battle: [-22, -15], 'battle-defend': [-22, -15], defeat: [-32, -18] };
+    const winOf = k => WIN[k] || [-24, -16];
+    let who = '曹操';
+    function fill() {
+      const sel = $('suiteWho');
+      if (!ready() || sel.options.length) return;
+      for (const n of Object.keys(SG.MusicSuites.HAND).concat(['吕布', '关羽', '诸葛亮', '貂蝉'])) { const o = document.createElement('option'); o.value = n; o.textContent = n + (SG.MusicSuites.HAND[n] ? '' : '（生成）'); sel.appendChild(o); }
+      sel.onchange = () => { who = sel.value; };
+    }
+    const iv = setInterval(() => { if (ready()) { clearInterval(iv); fill(); } }, 200);
+    for (const k of SK) btn($('suiteKinds'), k, () => {
+      Sfx.unlock(); Sfx.setMusic(true); if (!ready()) return;
+      SG.MusicSuites.ensure(who);
+      if (/^clash/.test(k)) Sfx.stinger('clash', { force: true, suite: who, variant: 'suite:' + who + ':' + k });
+      else if (k === 'fanfare') Sfx.fanfare(who);
+      else Sfx.music(k, { suite: who });
+    }, 'sm');
+    $('suitePin').onclick = () => { Sfx.unlock(); Sfx.setSuite(who); Sfx.music('map'); };
+    $('suiteReg').onclick = () => { Sfx.setSetting('musicStyle', Sfx.settings.musicStyle === 'region' ? 'suite' : 'region'); $('suiteReg').classList.toggle('on', Sfx.settings.musicStyle === 'region'); };
+    const out = window.__suiteResults = [];
+    async function check(nRulers, secs) {
+      if (!ready()) { await new Promise(r => setTimeout(r, 1500)); }
+      out.length = 0; $('suiteTbl').querySelector('tbody').innerHTML = '';
+      const names = Object.keys(SG.MusicSuites.HAND).slice(0, nRulers || 42);
+      const t0 = performance.now();
+      for (let i = 0; i < names.length; i++) {
+        const n = names[i];
+        SG.MusicSuites.ensure(n);
+        for (const k of SK) {
+          const key = 'suite:' + n + ':' + k;
+          $('suiteProg').textContent = (i + 1) + ' / ' + names.length + ' ' + key;
+          const P = MU.get(key);
+          const errs = MU.validate(key);
+          const short = /^(clash|fanfare)/.test(k);
+          let r;
+          try { r = await MU.renderOffline(key, short ? 5 : (k === 'victory' || k === 'defeat' ? 22 : secs), {}); } catch (e) { r = { error: String(e) }; }
+          const rdb = r.rms ? 20 * Math.log10(r.rms) : -999, w = winOf(k);
+          const share = (k === 'map' || k === 'battle') ? SG.MusicSuites.motifShare(P) : null;
+          const pass = !r.error && r.nan === 0 && r.peak <= 0.98 && rdb >= w[0] && rdb <= w[1] && !errs.length && (share === null || share >= 0.25);
+          out.push({ key, pass, peak: r.peak, rmsDb: +rdb.toFixed(1), nan: r.nan, share, errors: errs.length, error: r.error });
+          const tr = document.createElement('tr'); const c = ok => ok ? 'ok' : 'bad';
+          tr.innerHTML = `<td class="${c(pass)}">${key}</td><td>${(P && P.title) || ''}</td><td class="${c(r.peak <= 0.98)}">${r.peak !== undefined ? r.peak.toFixed(3) : '—'}</td>` +
+            `<td class="${c(rdb >= w[0] && rdb <= w[1])}">${rdb.toFixed(1)} dB</td><td>${w[0]}…${w[1]}</td><td class="${c(r.nan === 0)}">${r.nan}</td><td>${share === null ? '' : (100 * share).toFixed(0) + ' %'}</td>`;
+          $('suiteTbl').querySelector('tbody').appendChild(tr);
+        }
+      }
+      const bad = out.filter(r => !r.pass);
+      $('suiteSummary').innerHTML = bad.length ? `<span style="color:#ff7a6a">${bad.length} / ${out.length} 首未通过：${bad.map(r => r.key).slice(0, 20).join('、')}</span>` : `<span style="color:#6fcf7a">全部 ${out.length} 首通过</span>`;
+      $('suiteProg').textContent = '完成，用时 ' + ((performance.now() - t0) / 1000).toFixed(1) + ' 秒';
+      window.__suitesDone = true;
+    }
+    $('suiteCheck').onclick = () => check(42, SECS);
+    if (q.get('suites')) setTimeout(() => check(+q.get('suites') || 42, +(q.get('sec') || 12)), 300);
+  })();
   if (q.get('auto')) setTimeout(runAll, 100);
 })();
 </script>

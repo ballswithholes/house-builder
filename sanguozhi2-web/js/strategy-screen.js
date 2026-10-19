@@ -310,7 +310,8 @@
       // 从标题 / 读档进入时直接切到都城（世界地图上从中原飞到罗马要好几秒，城池面板却已打开）
       game.rig.focusMap(p.x, p.y, 48, true);
       this.selectCity(cap.id);
-      UI().banner(G().year + '年 ' + G().month + '月', G().playerFaction.name + '军');
+      try { if (SG.Clock) { SG.Clock.monthStart(G(), G().tokensFor(G().player)); SG.Clock.setPhase('day'); } } catch (e) { /* 无时钟 */ }
+      UI().banner(G().year + '年 ' + G().month + '月', G().playerFaction.name === G().ruler(G().player).name ? G().playerFaction.name + '军' : G().playerFaction.name);
       this.growthReminder();
       for (;;) {
         this.endMonth = false;
@@ -318,30 +319,51 @@
         while (!this.endMonth) await SG.frame();
         this.busy = true;
         this.refreshAll();
-        UI().toast('诸侯行动中……', 1.2);
-        await SG.wait(0.4);
+        // 黄昏 → 「诸侯行动中」挂轴（UI-V4 §5.7）
+        SG.Shell.aiScroll(true);
+        this.refreshAll();
+        await SG.wait(0.5);
         const news = [];
         const battles = SG.StrategyAI.runAI(news);
         game.map.refresh(G()); this.refreshAll();
         for (const b of battles) {
           // 同月先到的进攻可能已使该城易主：不再针对玩家的就按电脑之间结算（或撤兵），不再向玩家告急
           if (!SG.StrategyAI.recheckBattle(b, news)) { game.map.refresh(G()); this.refreshAll(); continue; }
+          SG.Shell.aiScroll(false);
           await this.defend(b);
           if (!G().playerFaction.alive) break;
         }
         if (G().playerFaction.alive) for (const n of SG.StrategyAI.endMonth()) news.push(n);
-        game.map.refresh(G()); this.refreshAll();
-        if (!G().playerFaction.alive) { await this.gameOver(false); return; }
-        if (G().cities.every(c => c.owner === G().player)) { await this.gameOver(true); return; }
+        SG.Shell.aiScroll(false);
+        game.map.refresh(G());
+        if (!G().playerFaction.alive) { this.refreshAll(); await this.gameOver(false); return; }
+        if (G().cities.every(c => c.owner === G().player)) { this.refreshAll(); await this.gameOver(true); return; }
+        // 月名书写 → 黎明（箭筒补满、计数器滚动）→ 本月消息
+        await SG.Shell.monthTransition(G());
+        try { if (SG.Clock) SG.Clock.setPhase('day'); } catch (e) { /* 无时钟 */ }
+        this.refreshAll();
+        await this.itemReveals();
         if (news.length > 0) await this.sayNews(news);
-        try { G().save(); } catch (e) { console.warn(e); }
-        UI().banner(G().year + '年 ' + G().month + '月', '令牌 ' + G().tokens + ' 枚', 1.8);
-        // 上月取得新城时「移动」还不能用（武将都已行动 / 令牌用完）：月初横幅之后补弹提示
-        if (this._tipPending && this.moveUsableCity()) await SG.wait(1.2);
+        if (SG.TitleUI) { try { await SG.TitleUI.flush(); } catch (e) { console.error(e); } }   // 第四版：玩家的晋位仪式（TITLES §9.6）
+        // 月初自动记录（设置第 25 行；UI-V4 §6：「自动」档）
+        if (!SG.UISettings || SG.UISettings.get('ui.autoSave') !== false) {
+          SG.Shell.syncPlayMs();
+          try { G().save(); } catch (e) { console.warn(e); }
+        }
+        try { if (SG.Voice && G().month % 3 === 1) SG.Voice.say(G().ruler(G().player), 'ui.monthStart', { pri: 1, scene: 'strategy' }); } catch (e) { /* 无人声 */ }
+        // 上月取得新城时「移动」还不能用（武将都已行动 / 令牌用完）：月初补弹提示
+        if (this._tipPending && this.moveUsableCity()) await SG.wait(0.6);
         this.busy = false;
         this.growthReminder();
         if (this._tipPending) await this.moveTip(false);
       }
+    }
+
+    // 第四版 ITEMS §5.5 / §8.2：本势力得到的珍品以上（战利品、阵斩、处斩、寻宝、奖品）逐件揭示（SG.Items.takeReveals）
+    async itemReveals() {
+      const Iv = SG.Items, g = G();
+      if (!Iv || !Iv.enabled || !Iv.takeReveals || !SG.ShopScreen) return;
+      try { for (const rv of Iv.takeReveals()) if (rv.to === g.player && Iv.tier(rv.id) >= 2) await SG.ShopScreen.reveal(rv); } catch (e) { console.error(e); }
     }
 
     // 月末消息：世界剧本中先列与玩家相关的（提到我方、本地域势力或与我方接壤的势力），至多 6 条
@@ -430,56 +452,19 @@
     }
 
     // ---------------------------------------------------------- 界面 --
+    // 第四版（UI-V4 §5）：顶梁、案头、城池面板与 4 × 4 指令坞、结束本月朱印都由 SG.Shell 搭建
     buildHud() {
-      const hud = this.hud = SG.UI.screen ? SG.UI.screen('sg-strategy-hud') : h('div', 'sg-screen sg-strategy-hud', null, layer('screens'));
-
-      const top = this.topBar = SG.UI.panel(hud, 'sg-topbar');
-      this.topLeft = h('div', 'sg-topbar-left', '', top);
-      this.topCenter = h('div', 'sg-topbar-center', '', top);
-      const row = h('div', 'sg-topbar-actions', null, top);
-      SG.UI.button(row, '势力', () => this.do(() => this.factionInfo()));
-      SG.UI.button(row, '大事', () => this.do(() => this.chronicle()), { title: '天下大事（记录）' });
-      // 指令或月末处理进行中（令牌已用、军粮已扣、尚未交战等）不可记录，避免存下半途的局面
-      this.saveBtn = SG.UI.button(row, '记录', () => {
-        if (this.busy || this.endMonth) return;
-        let ok = false;
-        try { ok = G().save() !== false; } catch (e) { ok = false; }
-        UI().toast(ok ? '✦ 进度已记录' : '记录失败');
-      });
-      SG.UI.button(row, '音乐', () => {
-        SG.Sfx.setMusic(!SG.Sfx.musicOn);
-        UI().toast(SG.Sfx.musicOn ? '音乐 开' : '音乐 关');
-      });
-      this.endBtn = SG.UI.button(row, '结束本月', () => { if (!this.busy) this.do(() => this.confirmEnd()); }, { primary: true });
-
-      const cp = this.cityPanel = SG.UI.panel(hud, 'sg-citypanel');
-      const head = h('div', 'sg-citypanel-head', null, cp);
-      this.cityTitle = h('div', 'sg-citypanel-title', '', head);
-      const close = SG.UI.button(head, '×', () => this.selectCity(-1));
-      close.classList.add('sg-close');
-      close.setAttribute('aria-label', '关闭');
-      const body = h('div', 'sg-citypanel-body', null, cp);
-      this.cityStats = h('div', 'sg-citystats', '', body);
-      this.genList = h('div', 'sg-genlist', null, body);
-      this.cmdGrid = h('div', 'sg-cmdgrid', null, cp);
-      injectStyle();
-      cp.style.display = 'none';
-
-      // 顶栏若因窄屏换行变高，城池面板下移到顶栏之下
-      const syncTop = () => {
-        cp.style.top = '';
-        const tb = top.getBoundingClientRect(), hb = hud.getBoundingClientRect();
-        if (!(tb.height > 0)) return;
-        const need = Math.ceil(tb.bottom - hb.top + 6);
-        const css = parseFloat(getComputedStyle(cp).top) || 0;
-        if (need > css) cp.style.top = need + 'px';
-      };
-      this._syncTop = syncTop;
-      const relayout = () => { syncTop(); this._occDirty = true; this._sizeDirty = true; };
-      if (window.ResizeObserver) new ResizeObserver(relayout).observe(top);
+      const Sh = SG.Shell;
+      const hud = this.hud = Sh.build(this);
+      this.topBar = Sh.el.beam;
+      this.cityPanel = Sh.el.panel;
+      this.cmdGrid = Sh.el.dock;
+      this.endBtn = Sh.el.endBtn;
+      const relayout = () => { this._occDirty = true; this._sizeDirty = true; };
+      if (window.ResizeObserver) { const ro = new ResizeObserver(relayout); ro.observe(Sh.el.beam); ro.observe(Sh.el.agenda); }
       window.addEventListener('resize', relayout);
 
-      // 地图上的城名
+      // 地图上的城名（纸签 + 墨线小柱；选中的城为黛匾，地上一圈灯光，UI-V4 §5.6）
       this._hideBeyond = G().scenario === 'world' ? LABEL_HIDE_BEYOND_WORLD : LABEL_HIDE_BEYOND;
       for (const cv of SG.Game.map.cities.values()) {
         const el = h('div', 'sg-citylabel', SG.esc(cv.city.name), null);
@@ -487,6 +472,10 @@
         handle.alpha = 0;             // 首次避让计算后才显示，避免第一帧城名叠在一起
         this.labels.set(cv.city.id, { el, handle, cv, w: 0, h: 0, fade: -1, on: false, seen: false });
       }
+      // 选中城池脚下的灯光圈
+      const ring = this._ring = h('div', 'sg-cityring', null, null);
+      this._ringHandle = SG.UI.follow(ring, () => { const cv = SG.Game.map.cities.get(this.selected); return cv ? (cv.pos || cv.labelPos) : null; }, { hideBeyond: this._hideBeyond });
+      this._ringHandle.alpha = 0;
       this.startDeclutter();
     }
 
@@ -497,6 +486,7 @@
           if (!on) { l.handle.alpha = 0; l.seen = false; }       // 重新显示时由避让逻辑直接定出透明度
         } else l.el.style.visibility = on ? '' : 'hidden';
       }
+      if (this._ringHandle) this._ringHandle.alpha = on && this.selected >= 0 ? 1 : 0;
       if (on) { this._occDirty = true; this.declutterLabels(performance.now(), true); }
     }
 
@@ -525,9 +515,12 @@
         const b = el.getBoundingClientRect();
         if (!(b.width > 0 && b.height > 0)) return;
         // 顶栏上方的窄缝也算遮挡：标签伸进去只会露出半截
-        occ.push({ l: b.left, t: toTop ? -1e5 : b.top, r: b.right, b: b.bottom });
+        occ.push({ l: b.left, t: toTop ? -1e5 : b.top, r: b.right, b: b.bottom + (toTop ? 10 : 0) });   // 顶梁下的彩画带也算
       };
-      if (this.hud && this.hud.style.display !== 'none') { add(this.topBar, true); add(this.cityPanel, false); }
+      if (this.hud && this.hud.style.display !== 'none') {
+        add(this.topBar, true);
+        for (const el of SG.Shell.occluders()) if (el !== this.topBar) add(el, false);
+      }
       this._occ = occ; this._occAt = now; this._occDirty = false;
     }
 
@@ -553,6 +546,7 @@
 
       const cand = [];
       for (const [id, l] of this.labels) {
+        if (l.hidden) { l.seen = false; l.on = false; if (l.handle) l.handle.alpha = 0; continue; }
         const s = Gfx.worldToScreen(l.cv.labelPos);
         if (!(s && s.visible && s.dist < (this._hideBeyond || LABEL_HIDE_BEYOND) && isFinite(s.x) && isFinite(s.y)) || !(l.w > 0)) {
           // 不在画面内（由 follow 自行隐藏）；再次进入画面时直接取目标透明度，不闪现
@@ -590,104 +584,74 @@
     refreshAll() {
       const g = G();
       if (!this.hud) return;
-      const f = g.playerFaction;
-      this.topLeft.innerHTML = dot(f.color, '■') + SG.esc(g.ruler(g.player).name) + '军';
-      const mine = g.citiesOf(g.player);
-      const gold = sum(mine, c => c.gold), food = sum(mine, c => c.food);
-      const tokens = '●'.repeat(Math.max(0, g.tokens)) + '○'.repeat(Math.max(0, g.tokensFor(g.player) - g.tokens));
-      this.topCenter.innerHTML =
-        `<span class="sg-chip"><b>${g.year}</b><i>年</i><b>${g.month}</b><i>月</i></span>` +
-        `<span class="sg-chip"><i>令牌</i><span class="sg-tokens">${tokens}</span></span>` +
-        `<span class="sg-chip"><i>城</i><b>${g.cityCount(g.player)}</b></span>` +
-        `<span class="sg-chip"><i>金</i><b>${gold}</b></span>` +
-        `<span class="sg-chip"><i>粮</i><b>${food}</b></span>`;
-      this.endBtn.disabled = this.busy;
-      this.saveBtn.disabled = this.busy || this.endMonth;
+      SG.Shell.refresh(g);
+      const sel = this.selected;
       for (const [id, l] of this.labels) {
         this.renderLabel(id, l);
-        l.el.classList.toggle('is-selected', id === this.selected);
+        l.el.classList.toggle('is-selected', id === sel);
       }
       this._sizeDirty = true;         // 兵力数字可能改变标签宽度
       this.refreshCityPanel();
     }
 
-    // 城名标签内容；紧凑模式（矮屏且镜头拉远）字号略小、不显示兵力，减少拥挤
+    // 城名标签（纸签，UI-V4 §5.6）：势力小旗 + 城名（楷书）+ 我方城的兵力；紧凑模式（矮屏且镜头拉远）不显示兵力。
+    // 设置「地图城名」：全部 · 我方与邻近 · 仅选中
     renderLabel(id, l) {
       const g = G();
       const c = g.cities[id];
       const col = c.owner >= 0 ? g.factions[c.owner].color : '#b3b3b3';
-      l.el.innerHTML = dot(col, '●') + SG.esc(c.name) + (c.owner === g.player && !this._compact ? `<small>${g.troopsIn(c)}</small>` : '');
-      l.el.classList.toggle('is-mine', c.owner === g.player);
-      l.el.style.fontSize = this._compact ? '.92rem' : '';
-      l.el.style.padding = this._compact ? '.1rem .5rem .14rem .42rem' : '';
+      const mine = c.owner === g.player;
+      const atWar = c.owner >= 0 && !mine && !g.allied(c.owner, g.player) && c.links.some(i => g.cities[i].owner === g.player);
+      const allied = c.owner >= 0 && !mine && g.allied(c.owner, g.player);
+      const key = col + '|' + c.name + '|' + (mine && !this._compact ? g.troopsIn(c) : '') + '|' + atWar + allied + this._compact;
+      if (l._key !== key) {
+        l._key = key;
+        l.el.innerHTML = '<i class="sg-cl-flag" style="--fc:' + col + '"></i>' + SG.esc(c.name) +
+          (mine && !this._compact ? '<small>' + g.troopsIn(c).toLocaleString('en-US') + '</small>' : '') +
+          (atWar ? '<i class="sg-cl-war" title="交战">⚔</i>' : allied ? '<i class="sg-cl-ally" title="同盟">∞</i>' : '');
+      }
+      l.el.classList.toggle('is-mine', mine);
+      l.el.classList.toggle('is-compact', !!this._compact);
+      const mode = SG.UISettings ? SG.UISettings.get('ui.labels') : 'all';
+      let show = true;
+      if (mode === 'sel') show = id === this.selected;
+      else if (mode === 'near') show = mine || id === this.selected || c.links.some(i => g.cities[i].owner === g.player);
+      l.hidden = !show;
     }
 
     selectCity(id) {
+      const was = this.selected;
       this.selected = id;
       SG.Game.map.select(id);
-      if (id >= 0) click();
-      for (const [cid, l] of this.labels) l.el.classList.toggle('is-selected', cid === id);
+      if (id >= 0 && id !== was) SG.UI.sfx('ui-press-paper', 0.6);
+      for (const [cid, l] of this.labels) { l.el.classList.toggle('is-selected', cid === id); if (l.hidden !== undefined) this.renderLabel(cid, l); }
+      if (this._ringHandle) this._ringHandle.alpha = id >= 0 ? 1 : 0;
       this.refreshCityPanel();
+      this._occDirty = true;
     }
 
     refreshCityPanel() {
       const g = G();
       if (!this.cityPanel) return;
+      const Sh = SG.Shell;
       if (this.selected < 0) {
-        if (this.cityPanel.style.display !== 'none') { this.cityPanel.style.display = 'none'; this._occDirty = true; }
+        if (this.cityPanel.style.display !== 'none') { Sh.closePanel(); this._occDirty = true; }
         return;
       }
-      if (this.cityPanel.style.display === 'none') {
-        this.cityPanel.style.display = '';
-        if (this._syncTop) this._syncTop();
-        this._occDirty = true;
-      }
       const c = g.cities[this.selected];
+      const wasHidden = this.cityPanel.style.display === 'none';
+      Sh.cityPanel(c);
+      if (wasHidden) this._occDirty = true;
       const mine = c.owner === g.player;
-      const owner = c.owner >= 0 ? g.factions[c.owner] : null;
-      this.cityTitle.innerHTML = SG.esc(c.name) + '<small>' +
-        (owner ? `<span style="color:${readable(owner.color)}">${SG.esc(owner.name)}</span>` : '空城') + '</small>';
-      const govGen = c.governor >= 0 ? g.generals[c.governor] : null;
-      const free = g.freeFoundIn(c.id);
-      // 每项一个 .sg-cs（不折断）；.sg-cs-br 在常规屏幕上分成四行，矮屏（横屏手机）上隐去、各项自然流成约三行，
-      // 让武将列表多露出一行（css：@media (max-height: 430px)）
-      const it = html => '<span class="sg-cs">' + html + '</span> ', br = '<br class="sg-cs-br">';
-      this.cityStats.innerHTML =
-        it(`太守 ${govGen ? face(govGen) + '<b>' + SG.esc(govGen.name) + '</b>' : '<b>—</b>'}`) + it(`人口 ${n0(c.population)}`) + br +
-        it(`土地 <b>${c.land}</b>`) + it(`产业 <b>${c.industry}</b>`) + it(`町 <b>${c.town}</b>`) + br +
-        it(`金 <b>${c.gold}</b>`) + it(`粮 <b>${c.food}</b>`) + it(`防御 ${SG.cityDefense(c)}`) + br +
-        it(`兵力 <b>${g.troopsIn(c)}</b>`) + it(`武将 ${g.officersIn(c).length} 人`) +
-        (free.length > 0 && mine ? it(`<span class="sg-good">在野 ${free.length} 人</span>`) : '');
-
-      // 武将列表（君主优先，其次兵力）
-      const scroll = this.genList.scrollTop;
-      this.genList.innerHTML = '';
-      const offs = g.officersIn(c).map((x, i) => ({ x, r: g.isRuler(x) ? 1 : 0, i }))
-        .sort((a, b) => (b.r - a.r) || (b.x.troops - a.x.troops) || (a.i - b.i)).map(o => o.x);
-      for (const gen of offs) {
-        const row = h('div', 'sg-genrow', null, this.genList);
-        // 点按武将行 → 武将详情
-        row.setAttribute('role', 'button');
-        row.tabIndex = 0;
-        row.title = gen.name + ' · 详情';
-        row.addEventListener('click', () => this.showGeneral(gen));
-        row.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.showGeneral(gen); } });
-        if (SG.Portrait) row.appendChild(SG.Portrait.el(gen, { size: SG.UI.facePx ? SG.UI.facePx(SG.UI.FACE_REM.item) : 40 }));
-        const tag = g.isRuler(gen) ? '<span class="sg-tag sg-tag-ruler">君</span>' : gen.id === c.governor ? '<span class="sg-tag sg-tag-gov">守</span>' : '';
-        const lv = lvTag(gen, 'sg-genrow-lv') + (mine && canLearn(gen) ? '<span class="sg-lv-new" title="可习得新招">新</span>' : '');
-        h('div', 'sg-genrow-name', tag + '<b>' + SG.esc(gen.name) + '</b>' + lv + (gen.moved ? '<span class="sg-moved">已行动</span>' : ''), row);
-        h('div', 'sg-genrow-stats', `武${gen.war} 智${gen.intel} 政${gen.pol}\n兵${gen.troops} 训${gen.training} 忠${g.isRuler(gen) ? 100 : gen.loyalty}`, row);
-      }
-      this.genList.scrollTop = scroll;
-
-      this.cmdGrid.innerHTML = '';
       if (!mine) return;
       // 每个指令给出“不能用的原因”（null = 可用）：先看是否忙碌，再看规则（城池、武将），最后看令牌
       const C = SG.Commands;
+      const free = g.freeFoundIn(c.id);
       const busy = this.busy ? (this.endMonth ? '诸侯行动中，请稍候。' : '指令执行中，请稍候。') : null;
       const noTok = g.tokens > 0 ? null : '本月令牌已用完——点「结束本月」进入下个月。';
       const first = (...whys) => { for (const w of whys) if (w) return w; return null; };
       const canAttack = c.links.some(i => g.cities[i].owner !== g.player && !g.allied(g.cities[i].owner, g.player));
+      Sh.beginDock();
       this.addCmd('开发', first(busy, noTok), () => this.do(() => this.cmdDevelop(c)));
       this.addCmd('征兵', first(busy, noTok), () => this.do(() => this.cmdRecruit(c)));
       this.addCmd('训练', first(busy, noTok), () => this.do(() => this.cmdTrain(c)));
@@ -699,24 +663,23 @@
       this.addCmd('出征', first(busy, canAttack ? null : c.name + '周围没有可攻打的城池（只能攻打相邻的敌城或空城，同盟势力除外）。', noTok), () => this.do(() => this.cmdAttack(c)), true);
       this.addCmd('赏赐', busy, () => this.do(() => this.cmdReward(c)));
       this.addCmd('交易', busy, () => this.do(() => this.cmdTrade(c)));
+      // 第四版 ITEMS §6.1 / §6.7：市场（不耗令牌，每月可用，像交易、赏赐）；关掉装备系统时显示为灰并说明
+      if (SG.ShopScreen && SG.Items && SG.Items.enabled && g.items) this.addCmd('市场', busy, () => this.do(() => this.openMarket(c)));
       const rulerHere = g.officersIn(c).some(x => g.isRuler(x));
-      this.addCmd('任命', first(busy, rulerHere ? '君主坐镇此城，无需另设太守。' : null), () => this.do(() => this.cmdAppoint(c)));
+      const titlesOn = !!(SG.TitleUI && SG.Titles && SG.Titles.enabled);
+      this.addCmd('任命', first(busy, rulerHere && !titlesOn ? '君主坐镇此城，无需另设太守。' : null), () => this.do(() => this.cmdAppoint(c)));
+      // ENGAGEMENT 的新指令（营建 · 通商 · 探索）由该模块登记：SG.StrategyScreen.extraCmds.push((ss, c) => [{ name, why, run }])
+      for (const fn of StrategyScreen.extraCmds) {
+        try { for (const x of fn(this, c) || []) this.addCmd(x.name, first(busy, x.why, x.token === false ? null : noTok), () => this.do(() => x.run(c))); } catch (e) { console.error(e); }
+      }
+      Sh.endDock();
     }
 
-    // why：不可用的原因（字符串）——按钮显示为灰色（aria-disabled，见 injectStyle），点按时说明原因而不执行；
-    // null 为可用。按钮带 data-cmd（指令名），灰色时另带 data-why（原因）。
+    // why：不可用的原因（字符串）——指令印显示为灰并带锁印（aria-disabled），点按时抖动并说明原因而不执行；
+    // null 为可用。指令印带 data-cmd（指令名），灰色时另带 data-why（原因）。位置由 SG.Shell 的 4 × 4 指令坞固定。
     addCmd(name, why, action, primary) {
-      const b = SG.UI.button(this.cmdGrid, name, () => { if (b._why) this.explainCmd(b); else action(); }, primary ? { primary: true } : undefined);
-      b.dataset.cmd = name;
-      if (why) {
-        b._why = why;
-        b.dataset.why = why;
-        b.title = why.replace(/<[^>]*>/g, '');
-        b.setAttribute('aria-disabled', 'true');
-      }
-      // 提示闪烁只给可用的按钮（灰色按钮闪金光会让人误以为能用）
-      if (!why && this._hint && this._hint.name === name && performance.now() < this._hint.until) b.classList.add('sg-cmd-hint');
-      return b;
+      SG.Shell.addCmd(name, why, action, { primary: !!primary });
+      return SG.Shell.tile(name);
     }
 
     explainCmd(b) {
@@ -724,16 +687,14 @@
       // 闪烁与抖动同用 animation 属性：先停掉闪烁，抖动才看得见
       b.classList.remove('sg-cmd-hint');
       if (this._hint && this._hint.name === b.dataset.cmd) this._hint = null;
-      SG.UI.pulse(b, 'sg-cmd-deny');
-      // 同一时间只留一条说明，连点不会堆叠
-      if (this._denyToast && this._denyToast.parentNode) this._denyToast.parentNode.removeChild(this._denyToast);
-      this._denyToast = UI().toast(`<span class="sg-cmd-name">${SG.esc(b.dataset.cmd || '')}</span>${b._why}`, 3.4);
+      // 抖动、ui-deny、说明（同一时间只留一条，连点不会堆叠）
+      SG.UI.deny(b, `<span class="sg-cmd-name">${SG.esc(b.dataset.cmd || '')}</span>${b._why}`);
     }
     // 让某个指令按钮闪烁数次以引起注意（提示用）
     hintCmd(name) {
       this._hint = { name, until: performance.now() + 4400 };   // 面板重建时继续闪烁，直到时间到
-      if (!this.cmdGrid) return;
-      for (const b of this.cmdGrid.children) if (b.dataset && b.dataset.cmd === name && !b._why) SG.UI.pulse(b, 'sg-cmd-hint');
+      const b = SG.Shell.tile(name);
+      if (b && !b._why) SG.UI.pulse(b, 'sg-cmd-hint');
     }
 
     // 此刻能用「移动」的己方城（有令牌，且城中有未行动的武将可调往相连的己方城）；没有则 null。
@@ -797,13 +758,26 @@
         try { await this.moveTip(gainedNow); } catch (e) { console.error(e); }
       }
     }
-    useToken() { G().tokens = Math.max(0, G().tokens - 1); }
+    useToken() { G().tokens = Math.max(0, G().tokens - 1); SG.Shell.spendToken(); }
 
+    // 结束本月（UI-V4 §5.7）：还有令牌时询问（列出还有未行动武将的城；「不再询问」= 设置第 26 行）；朱印盖下
     async confirmEnd() {
-      if (G().tokens > 0) {
-        const ok = await UI().confirm('还剩 ' + G().tokens + ' 枚令牌，确定结束本月？', '结束', '继续');
+      const g = G();
+      const ask = !SG.UISettings || SG.UISettings.get('ui.endConfirm') !== 'never';
+      if (g.tokens > 0 && ask) {
+        const idle = g.citiesOf(g.player).filter(c => g.officersIn(c).some(x => !x.moved));
+        const body = (idle.length ? '<div class="sg-endq">尚有武将未行动：' + idle.slice(0, 6).map(c => '<b>' + SG.esc(c.name) + '</b>').join('、') + (idle.length > 6 ? ' 等 ' + idle.length + ' 城' : '') + '</div>' : '') +
+          '<label class="sg-noask"><input type="checkbox" class="sg-noask-cb"> 不再询问（可在 设置 → 游戏 改回）</label>';
+        const pr = UI().confirm('还有 ' + g.tokens + ' 枚令牌未用，确定结束本月？', '结　束', '继续', { body });
+        const ms = document.querySelectorAll('.sg-modals .sg-modal:not(.is-closing)');
+        const cb = ms.length ? ms[ms.length - 1].querySelector('.sg-noask-cb') : null;
+        const ok = await pr;
+        if (cb && cb.checked && SG.Settings && SG.Settings.has('ui.endConfirm')) SG.Settings.set('ui.endConfirm', 'never');
         if (!ok) return;
       }
+      SG.UI.sfx('ui-stamp');
+      const btn = SG.Shell.el.endBtn;
+      if (btn) SG.UI.pulse(btn, 'is-stamped');
       this.endMonth = true;
     }
 
@@ -879,10 +853,13 @@
       }
     }
 
-    async hireResult(target, recruiter, c) {
-      if (SG.Commands.hire(target, recruiter, G().player, c.id)) {
+    async hireResult(target, recruiter, c, promise) {
+      // 第四版：许以官职（TITLES §6.7）——成功时立即授官（礼金照付、小仪式），失败时什么也不付
+      const hired = promise && SG.Titles ? SG.Titles.hireWithPromise(target, recruiter, G().player, c.id) : null;
+      if (hired ? hired.hired : SG.Commands.hire(target, recruiter, G().player, c.id)) {
         sfx('win', 0.5);
         await UI().say(target.name + '：久闻明公大名，愿效犬马之劳！\n（' + target.name + '加入了我军）', target, CINNABAR, { mood: 'win', sub: genSub(target) });
+        if (hired && hired.office && SG.TitleUI) await SG.TitleUI.ceremony(hired.office);
       } else {
         await UI().say(target.name + '：在下另有志向，请回吧。\n' + faces(`（${recruiter.name}登用未成）`), target, GREY_SPEAKER, { mood: 'angry', sub: genSub(target) });
       }
@@ -894,20 +871,54 @@
       if (!target) return;
       const who = await this.pickGeneral('派谁前去？', G().officersIn(c), g => `智力 ${g.intel}　成功率约 ${pct(C.hireChance(target, g, G().player))}`);
       if (!who) return;
+      // 第四版：许以官职（此刻能授给他的最高官职，登用成功率 +5 pp × 品阶）
+      let promise = false;
+      const pr = SG.Titles && SG.Titles.enabled ? SG.Titles.promiseBonus(G().player, target) : null;
+      if (pr) {
+        const k = await UI().choose('许以官职？', [item('不许官职', pct(C.hireChance(target, who, G().player))), item('许以' + SG.esc(pr.name), pct(C.hireChance(target, who, G().player, pr.add)), true, '成功则立即授官（礼金 ' + pr.cost + ' 金）')]);
+        if (k < 0) return;
+        promise = k === 1;
+      }
       this.useToken();
-      await this.hireResult(target, who, c);
+      await this.hireResult(target, who, c, promise);
     }
 
-    async cmdReward(c) {
+    // preset：人物菜单 / 武将行长按时预选的武将
+    async cmdReward(c, preset) {
       const B = SG.Balance;
-      const who = await this.pickGeneral('赏赐谁？（' + B.RewardGold + ' 金）', G().officersIn(c).filter(g => !G().isRuler(g)), g => '忠诚 ' + g.loyalty, g => g.loyalty < 100 && c.gold >= B.RewardGold);
+      // 第四版 ITEMS §6.6：「赐宝物」（每件实物只涨一次忠诚，INTEGRATION §7.1）
+      const Iv = SG.Items;
+      if (SG.ShopScreen && Iv && Iv.enabled && G().items && Iv.armoury(G().player).length) {
+        const k = await UI().choose('赏赐', [item('赏金', B.RewardGold + ' 金'), item('赐宝物', '从府库挑一件')], '每件宝物只涨一次忠诚；收回时扣回同样多。');
+        if (k < 0) return;
+        if (k === 1) {
+          const who = preset || await this.pickGeneral('赐给谁？', G().officersIn(c).filter(g => !G().isRuler(g)), g => '忠诚 ' + g.loyalty);
+          if (who) await SG.ShopScreen.gift(who);
+          return;
+        }
+      }
+      const who = preset && !G().isRuler(preset) ? (preset.loyalty < 100 && c.gold >= B.RewardGold ? preset : null)
+        : await this.pickGeneral('赏赐谁？（' + B.RewardGold + ' 金）', G().officersIn(c).filter(g => !G().isRuler(g)), g => '忠诚 ' + g.loyalty, g => g.loyalty < 100 && c.gold >= B.RewardGold);
+      if (preset && !who) { await UI().say(preset.loyalty >= 100 ? SG.esc(preset.name) + '的忠诚已满。' : '金不足 ' + B.RewardGold + '。'); return; }
       if (!who) return;
       sfx('coin');
       UI().toast(faces(SG.Commands.reward(c, who), { gens: [who] }));
     }
 
+    async openMarket(c) {
+      try { if (SG.Voice) SG.Voice.say('merchant', 'ui.shopOpen', { pri: 1, scene: 'strategy' }); } catch (e) { /* 无人声 */ }
+      await SG.ShopScreen.open({ city: c });
+    }
+
     async cmdAppoint(c) {
       const g = G();
+      // 第四版：任命 → 太守（第三版）/ 官爵（官制，只列本城武将；TITLES §9.1）
+      if (SG.TitleUI && SG.Titles && SG.Titles.enabled) {
+        const rulerHere = g.officersIn(c).some(x => g.isRuler(x));
+        const k = await UI().choose('任命', [item('太守', null, !rulerHere, rulerHere ? '君主坐镇此城，无需另设太守。' : '选一名武将主持本城'), item('官爵', null, true, '授官、晋升、罢免（本城武将）')]);
+        if (k < 0) return;
+        if (k === 1) { await SG.TitleUI.open({ city: c.id }); this.refreshAll(); return; }
+      }
       const who = await this.pickGeneral('任命太守', g.officersIn(c), x => `政${x.pol} 智${x.intel}`);
       if (!who) return;
       if (g.officersIn(c).some(x => g.isRuler(x)) && !g.isRuler(who)) { await this.report(g.ruler(g.player), '此城由我亲自坐镇，不另设太守。', '任命'); return; }
@@ -916,10 +927,22 @@
     }
 
     // 移动：目的地为经由己方城池相连可达的所有己方城（不必相邻），列表注明路程
-    async cmdMove(c) {
+    // preset：人物菜单的「移动」——只调这一名武将（照常 1 枚令牌）
+    async cmdMove(c, preset) {
       const g = G(), C = SG.Commands;
       const blocked = C.moveBlocked(c);
       if (blocked) { await UI().say(blocked); return; }
+      if (preset) {
+        if (preset.moved || preset.city !== c.id) { await UI().say(SG.esc(preset.name) + '本月已行动。'); return; }
+        const rts = C.moveTargets(c);
+        const k = await UI().choose(SG.esc(preset.name) + ' · 移往何处？', rts.map(rt => item(SG.esc(rt.city.name),
+          routeText(rt) + '　武将 ' + g.officersIn(rt.city).length + '　兵 ' + g.troopsIn(rt.city), true, viaText(g, rt))), '经由己方城池相连即可前往（1 枚令牌）');
+        if (k < 0) return;
+        this.useToken();
+        C.move(preset, rts[k].city);
+        UI().toast(face(preset) + SG.esc(preset.name) + '移驻' + SG.esc(rts[k].city.name), 2.4);
+        return;
+      }
       const routes = C.moveTargets(c);
       const r = await UI().choose('移往何处？', routes.map(rt => item(SG.esc(rt.city.name),
         routeText(rt) + '　武将 ' + g.officersIn(rt.city).length + '　兵 ' + g.troopsIn(rt.city), true, viaText(g, rt))),
@@ -1026,7 +1049,7 @@
     }
 
     // ---------------------------------------------------------- 战争 --
-    async cmdAttack(c) {
+    async cmdAttack(c, presetTarget) {
       const g = G(), B = SG.Balance;
       const targets = c.links.map(i => g.cities[i]).filter(x => x.owner !== g.player && !g.allied(x.owner, g.player));
       // 每座目标城列出守将的小头像（至多 5 人，再多显示 +N）
@@ -1035,7 +1058,8 @@
         const n = os.length > 5 ? 4 : os.length;
         return os.length ? '<span class="sg-item-faces">' + os.slice(0, n).map(face).join('') + (os.length > n ? `<span class="sg-muted">+${os.length - n}</span>` : '') + '</span>' : null;
       };
-      const r = await UI().choose('攻打何处？', targets.map(t => item(SG.esc(t.name),
+      const pi = presetTarget ? targets.indexOf(presetTarget) : -1;
+      const r = pi >= 0 ? pi : await UI().choose('攻打何处？', targets.map(t => item(SG.esc(t.name),
         (t.owner >= 0 ? g.factions[t.owner].name : '空城') + '　武将 ' + g.officersIn(t).length + '　兵 ' + g.troopsIn(t) + '　防 ' + SG.cityDefense(t), true, guards(t))));
       if (r < 0) return;
       const target = targets[r];
@@ -1137,6 +1161,7 @@
       if (who) await this.report(who, res, s.target.name + '之战', { mood: playerWon ? 'win' : 'hurt' });
       else await UI().say(res);
       await this.reportCaptives(fates, playerSide === 0 ? s.defender : s.attacker);
+      await this.itemReveals();
       if (s.attackerWon && s.defender >= 0 && !g.factions[s.defender].alive) await UI().say(faces(g.factions[s.defender].name + '势力就此灭亡。'));
       await this.growth(s, playerSide);
     }
@@ -1295,19 +1320,21 @@
           item('登用', isRuler ? '君主不会投降' : '成功率约 ' + pct(C.hireChance(cap, recruiter, g.player)), !isRuler),
           item('释放', '放其归去'),
           item('处斩', '以绝后患'),
-        ], genCard(cap, { sub: sub + (cap.faction >= 0 && !isRuler ? `　忠诚 ${cap.loyalty}` : ''), mood: 'hurt' }));
+        ].concat(SG.Items && SG.Items.enabled && cap.gear && SG.Items.SLOTS.some(sl => cap.gear[sl] != null) ? [item('缴械释放', '收缴其装备后放归（其势力一年内更想报复）')] : []), genCard(cap, { sub: sub + (cap.faction >= 0 && !isRuler ? `　忠诚 ${cap.loyalty}` : ''), mood: 'hurt' }));
         if (r === 0) {
           if (C.hire(cap, recruiter, g.player, holderCity.id)) await UI().say(cap.name + '：败军之将，承蒙不弃，愿降！', cap, CINNABAR, { mood: 'win', sub: genSub(cap) });
           else { await UI().say(cap.name + '：忠臣不事二主！', cap, GREY_SPEAKER, { mood: 'angry', sub }); Cq.release(cap); }
         } else if (r === 2) { Cq.execute(cap); await UI().say(SG.esc(cap.name) + '被处斩了。', cap, GREY_SPEAKER, { mood: 'hurt' }); }
+        else if (r === 3) { const got = SG.Items.disarm(cap, g.player); Cq.release(cap); await UI().say(SG.esc(cap.name) + '被缴了械，放归。府库得到 ' + got.length + ' 件装备。', cap, GREY_SPEAKER, { mood: 'hurt' }); }
         else Cq.release(cap);
       }
     }
 
     // ---------------------------------------------------------- 武将详情 --
     // 大头像、能力、所属与所在、必杀技（SG.Specials.of）；世界武将另有全名 / 原名 / 身份 / 生卒 / 介绍（SG.WorldInfo）
-    showGeneral(gen) {
+    showGeneral(gen, list) {
       if (!gen || UI().anyModal() || this._genInfoOpen) return;
+      if (SG.CharacterScreen && SG.CharacterScreen.open) { SG.CharacterScreen.open(gen, { list: list || null }); return; }
       click();
       this._genInfoOpen = true;
       // 「习得新招」：关闭详情 → 习得对话框 → 重新打开详情（显示新学的招式）
@@ -1465,5 +1492,7 @@
     }
   }
 
+  // 其他模块的城池指令（ENGAGEMENT 的 营建 · 通商 · 探索）：(ss, city) → [{ name, why, run(city), token }]
+  StrategyScreen.extraCmds = [];
   SG.StrategyScreen = StrategyScreen;
 })();

@@ -258,6 +258,12 @@
 
   // 共用材质（LP.material / LP.outlineMaterial 按选项缓存，所有人物共用一个程序）
   function teamMaterial() { return LPX().material({}); }
+  // 墨线外壳永不投影：调用方常把整棵树 traverse 一遍设 castShadow = true（如战场），外壳会在阴影那一遍再画一次、影子也变胖
+  function noOutlineShadow(m) {
+    const o = m && m.userData && m.userData.outline;
+    if (o) Object.defineProperty(o, 'castShadow', { get: () => false, set: () => {}, configurable: true });
+    return m;
+  }
   function setRim(color, strength) {
     const L = LPX(), g = L.globals && L.globals.lpRim;
     if (!g) return;
@@ -487,7 +493,9 @@
   };
   // 名将：三维专属设定（兵器、披风、前垂、饰物）
   const SIG = {
-    '关羽': { weapon: 'guandao', metal: '#D9A441', beardLen: 1.35, hat: 'jinze', cloth: '#3F7F4A', skin: '#B9483A' },
+    // 关羽：试点（获批）的脸——近黑的卧蚕眉压低斜挑、丹凤眼、近黑的发（不提亮）
+    '关羽': { weapon: 'guandao', metal: '#D9A441', beardLen: 1.35, hat: 'jinze', cloth: '#3F7F4A', skin: '#B9483A',
+      face: { brow: '#241C1E', iris: '#2E2224', hair: '#2A2422', eye: 'narrow', browTilt: 18, eyeTilt: 10, browK: 1.45, size: 1.25, spread: 0.42, nose: [1.15, 0.34, 0.22], cheek: 0.9 } },
     '张飞': { weapon: 'snake', tabard: '#2a2a30', cape: '#3a1f1a', metal: '#4a4c56' },
     '吕布': { weapon: 'halberd', cape: '#b02a24', tabard: '#b02a24', metal: '#d8a848', ribbons: '#d03028', pauldron: 'lion' },
     '赵云': { weapon: 'yajiao', cape: '#eef0f4', tabard: '#f4f4f8', metal: '#c8ced8', ribbons: '#e8eef8' },
@@ -681,6 +689,17 @@
     // 毛里：短衣斗篷、标枪与小圆盾、螺旋卷发
     moor: { outfit: 'burnous', hat: { type: 'none' }, archer: { outfit: 'tunic', hat: { type: 'none' } }, skin: '#b07e54', hair: '#141012', hairStyle: 'ringlets' },
   };
+  // 士兵配色（Lanternvale 的读法：势力色只在上衣 / 罩甲布 + 一处点缀，袖子是上衣的深一档，裤子是文化的中性色——
+  // 试点汉军枪兵：绿上衣、铁甲、米色裤、褐绑腿）。trousers：裤 / 袴；sleeve：'team'（同上衣）| 'cloth'（同袍）| 缺省 = 上衣深一档；
+  // robe：袍服类（torso 'robe'）的本色（未染的白麻），势力色退到披风、腰带
+  const SOLDIER_PAL = {
+    han: { trousers: '#EADFC4', sleeve: 'team' }, korea: { trousers: '#E4DCC8', sleeve: 'team' },
+    nanman: { trousers: '#7A5A3E' }, wa: { trousers: '#3E4A6A' }, yi: { trousers: '#3A3236' },
+    steppe: { trousers: '#6A5440' }, seasia: {}, tarim: { trousers: '#8A6E4E', sleeve: '#E0D4B8' }, kushan: { trousers: '#D4C6A4', sleeve: '#D4C6A4' },
+    persia: { trousers: '#4A4466', sleeve: '#4A4466' }, arab: { trousers: '#D8CFBC', robe: '#E6DFCF', sleeve: 'cloth' }, roman: {},
+    celt: { trousers: '#7A6A44' }, german: { trousers: '#6A5A44', sleeve: '#8A7A5E' }, sarmatian: { trousers: '#5E4A38' },
+    india: {}, africa: {}, moor: { trousers: '#D8CDB4', sleeve: '#D8CDB4' },
+  };
   const SOLDIER_WEAPON = {
     spear: { han: 'spear', nanman: 'spear', wa: 'spear', yi: 'spear', korea: 'spear', steppe: 'spear', seasia: 'spear', tarim: 'spear', kushan: 'lance', persia: 'lance', arab: 'spear', roman: 'pilum', celt: 'spear', german: 'spear', sarmatian: 'lance', india: 'spear', africa: 'spear', moor: 'spear' },
     sword: { han: 'dao', nanman: 'dao', wa: 'tachi', yi: 'dao', korea: 'dao', steppe: 'dao', seasia: 'dao', tarim: 'jian', kushan: 'spatha', persia: 'spatha', arab: 'spatha', roman: 'gladius', celt: 'spatha', german: 'handaxe', sarmatian: 'spatha', india: 'khanda', africa: 'spatha', moor: 'spatha' },
@@ -715,6 +734,11 @@
       shield: type === 'sword' ? CULT_SHIELD[culture] : (culture === 'roman' && type === 'spear' ? 'scutum' : null),
       quiver: type === 'archer', lod: opts.lod || 'low',
     };
+    const SP = SOLDIER_PAL[culture] || {};
+    if (SP.trousers) look.C.trousers = SP.trousers;
+    if (SP.robe && L.torso === 'robe' && !L.white) { look.C.cloth = SP.robe; look.C.cloth2 = faction; }
+    // 试点枪兵的势力色袖子靠铁甲背心衬出对比；没有甲的布衣（弓手短衣）袖子用深一档
+    look.C.sleeve = SP.sleeve === 'team' && (L.torso === 'cloth' || L.torso === 'robe') ? 'dark' : (SP.sleeve || 'dark');
     if (L.cape && culture === 'roman') look.C.cape = '#a02a24';
     else if (L.cape) look.C.cape = shade(faction, -0.2);
     // 白麻袍的士兵：袍白、镶边 / 披肩为势力色（势力色仍清楚可辨）
@@ -766,7 +790,7 @@
     mid: { lim: 6, thigh: 6, tor: 8, hq: 9, hs: 10, eye: 1, ears: 1, pan: 2, det: 1, rnd: 6, fist: [5, 2], sph: [5, 2] },
     low: { lim: 5, thigh: 5, tor: 6, hq: 7, hs: 8, eye: 1, ears: 0, pan: 2, det: 0, rnd: 6, fist: [5, 2], sph: [5, 2] },
   };
-  const TRI_BUDGET = { high: 3100, hero: 3600, mid: 1800, low: 900 };
+  const TRI_BUDGET = { high: 3100, hero: 3300, mid: 1800, low: 900 };
   // 超出预算时逐级压缩（细节层次降级，边数减少）
   const SQUEEZE = {
     high: [{ eye: 2, det: 2, pan: 2, rnd: 7 }, { lim: 6, thigh: 6, det: 1, rnd: 7, sph: [6, 3] }, { hq: 9, hs: 10, lim: 6, thigh: 6, det: 1, pan: 2, rnd: 6, sph: [6, 3], fist: [6, 3] }],
@@ -1170,10 +1194,62 @@
       }
       this.hinge(start, bone);
     }
+    // 大腿上的袍裙侧片：髋以上随骨盆，膝以下随小腿（骑马 / 跪坐时下摆顺着小腿垂下，不再像木板一样随大腿平伸）
     hinge(start, bone, dy = 0.0) {
       if (!/^thigh/.test(bone)) return;
       const yH = this.J[bone][1] + dy * this.k, bi = B[bone], bp = B.pelvis;
-      this.M.boneBy(start, p => (p[1] > yH ? bp : bi));
+      const S = bone.slice(-1), yK = this.J['shin' + S][1] + 0.03 * this.k, bs = B['shin' + S];
+      this.M.boneBy(start, p => (p[1] > yH ? bp : p[1] < yK ? bs : bi));
+    }
+    /**
+     * Belly (fat generals: 董卓, 许褚): pushes the front of everything built on the body since vertex `start` (torso, robe
+     * and armour panels, belt, sash, skirt tops) forward and a little outward around belly height, then re-derives the
+     * flat normals of the moved faces — the side profile shows the paunch whatever is worn over it.
+     */
+    bellyDeform(start) {
+      const fat = this.fat;
+      if (!(fat > 0.15)) return;
+      const M = this.M, P = M.P, Bv = M.B, N = M.N, T = M.T, V = this.V, k = this.k;
+      // 肚腩中心在腰带之上；向下收得快（腰带勒在肚下，肚子盖过腰带），向上缓缓并入胸口
+      const yb = 1.06 * k, A = 0.18 * k * Math.sqrt(fat), w = this.waistR * 1.45;
+      // 腰带一圈（含带扣）整体平移、不被拉斜；腰带以下的裙摆再渐渐收回
+      const bTop = this.pelvisY + 0.035 * k, bBot = this.pelvisY - 0.045 * k;
+      const gUp = y => { const u = (y - yb) / ((y < yb ? 0.06 : 0.085) * k); return Math.exp(-u * u); };
+      const gB = Math.max(gUp(bTop), 0.85);        // 腰带（带扣）几乎随肚子一起前移：从正面仍看得到带扣
+      const gOf = y => (y >= yb ? gUp(y) : y >= bTop ? Math.max(gUp(y), gB) : y >= bBot ? gB : gB * Math.exp(-((bBot - y) / (0.12 * k)) * ((bBot - y) / (0.12 * k))));
+      // 胸骨上的不动（胸肌、胸口那一圈不被斜拉成朝天的亮面）：肚子由腰段（spine）、骨盆段、腰带、裙头鼓出
+      const ok = new Set([B.pelvis, B.spine, B.skirtF, B.skirtB, B.thighL, B.thighR]);
+      const nv = P.length / 3, moved = new Uint8Array(nv);
+      for (let i = start; i < nv; i++) {
+        if (!ok.has(Bv[i])) continue;
+        const x = P[i * 3], y = P[i * 3 + 1], z = P[i * 3 + 2], g = gOf(y);
+        if (g < 0.02 || Math.abs(x) > w) continue;
+        // 前凸量只看 x（同一小件——带扣、牌饰——各顶点 x 相近，整体平移不被拉斜）；背面不动
+        const fx = 1 - (x / w) * (x / w), fz = sstep(-0.03 * k, 0.03 * k, z);
+        P[i * 3 + 2] = z + A * g * fx * fx * fz;
+        P[i * 3] = x * (1 + 0.16 * fat * g * fz);
+        moved[i] = 1;
+      }
+      for (let t = 0; t < T.length; t += 3) {
+        const a = T[t], b = T[t + 1], c = T[t + 2];
+        if (!(moved[a] || moved[b] || moved[c])) continue;
+        const pa = [P[a * 3], P[a * 3 + 1], P[a * 3 + 2]], pb = [P[b * 3], P[b * 3 + 1], P[b * 3 + 2]], pc = [P[c * 3], P[c * 3 + 1], P[c * 3 + 2]];
+        let n = V.cross(V.sub(pb, pa), V.sub(pc, pa));
+        if (V.dot(n, n) < 1e-14) continue;
+        n = V.norm(n);
+        const o = [N[a * 3], N[a * 3 + 1], N[a * 3 + 2]];
+        if (V.dot(n, o) < 0) n = V.neg(n);
+        // 新旧法线各半：轮廓出肚子，受光面不至于突然发亮（肚子上沿朝天的面）
+        n = V.norm(V.lerp(o, n, 0.6));
+        for (const i of [a, b, c]) { N[i * 3] = n[0]; N[i * 3 + 1] = n[1]; N[i * 3 + 2] = n[2]; }
+      }
+    }
+    /** Insert a knee row (kept on the thigh) into a skirt profile [[r, y]…] whose hem hangs below the knee, so the part below can follow the shin. */
+    kneeRow(prof) {
+      const yk = this.J.shinL[1] + 0.045 * this.k, n = prof.length, last = prof[n - 1], prev = prof[n - 2];
+      if (last[1] > yk - 0.06 * this.k || prev[1] < yk + 0.03 * this.k) return prof;
+      const t = (prev[1] - yk) / (prev[1] - last[1]);
+      return prof.slice(0, n - 1).concat([[lerp(prev[0], last[0], t), yk], last]);
     }
   }
 
@@ -1202,7 +1278,7 @@
       boots: C3(PALF.boots), sole: C3(PALF.sole),
       gold: C3(PALF.gold), goldDark: C3(PALF.goldDark), goldLight: C3(PALF.goldLight),
       cream: C3(PALF.cream), white: C3(PALF.white), lining: C3(PALF.lining),
-      hair: hairTone(look.hair && look.hair.color ? look.hair.color : '#1c1816'),
+      hair: look.sig && look.sig.face && look.sig.face.hair ? C3(look.sig.face.hair) : hairTone(look.hair && look.hair.color ? look.hair.color : '#1c1816'),
       cape: res(C.cape), tabard: res(C.tabard), plume: res(C.plume || PALF.tassel, 0.3),
     };
     if (!X.cloth2) X.cloth2 = shT(X.cloth, 0.62);
@@ -1229,9 +1305,9 @@
       const S = s > 0 ? 'L' : 'R';
       let thighC, shinC, tk = 1, sk = 1;
       if (lg === 'bare') { thighC = robeSk ? X.inner : X.skin; shinC = X.skin; }
-      else if (lg === 'hakama') { thighC = shinC = X.cloth2; tk = 1.45; sk = 1.6; }
+      else if (lg === 'hakama') { thighC = shinC = !gen && look.C.trousers ? X.trousers : X.cloth2; tk = 1.45; sk = 1.6; }
       else if (wraps) { thighC = shinC = X.cream; }
-      else { thighC = shinC = L.legsReg === 'plaid' ? X.cloth : X.trousers; tk = 1.06; sk = 1.06; }
+      else { thighC = shinC = L.legsReg === 'plaid' && (gen || !look.C.trousers) ? X.cloth : X.trousers; tk = 1.06; sk = 1.06; }
       const foot = bt === 'boot' ? X.boots : bt === 'shoe' ? C3('#3A2E2A') : X.skin;
       const top = bt === 'boot' && !wraps ? (gen ? 0.62 : 0.56) : 0;
       kit.leg(s, thighC, shinC, X.boots, top, bt === 'sandal' ? X.leather : bt === 'bare' ? X.skinDark : null,
@@ -1254,7 +1330,7 @@
         M.band(V.lerp(J['shin' + S], J['foot' + S], 0.35), kit.shinR * 1.1, kit.shinR * 1.08, -0.02 * k, 0.02 * k, D.lim);
       }
       if (lg === 'hakama' && D.det >= 1) {
-        kit.bone('shin' + S); M.color = shT(X.cloth2, 0.8);
+        kit.bone('shin' + S); M.color = shT(!gen && look.C.trousers ? X.trousers : X.cloth2, 0.8);
         M.band(V.lerp(J['foot' + S], J['shin' + S], 0.08), kit.shinR * 1.25, kit.shinR * 1.3, -0.01, 0.03 * k, D.lim);
       }
       if (bt === 'sandal' && D.det >= 1) {
@@ -1404,9 +1480,7 @@
         M.bone = B.chest; M.color = P.shade(X.skin, 0.95);
         for (const s of [1, -1]) M.sphere(kit.torsoPt(s * 25, kit.chestY + 0.07 * k, -0.04 * k), [0.08 * k, 0.055 * k, 0.045 * k], D.sph[0], D.sph[1]);
       }
-      if (kit.fat > 0.3) { M.bone = B.spine; M.color = X.skin; M.sphere([0, kit.spineY - 0.02 * k, kit.waistR * kit.depthK * 0.55], [kit.waistR * 0.9, 0.12 * k, kit.waistR * 0.7], D.sph[0], D.sph[1]); }
-    } else if (t === 'robe' || t === 'cloth') {
-      if (kit.fat > 0.3) { M.bone = B.spine; M.color = X.cloth; M.sphere([0, kit.spineY - 0.02 * k, kit.waistR * kit.depthK * 0.5], [kit.waistR * 0.95, 0.13 * k, kit.waistR * 0.75], D.sph[0], D.sph[1]); }
+      // 肚腩：见 Kit.bellyDeform（整个躯干前凸，不再是藏在衣服里的圆球）
     }
     if (kit.fem && (t === 'bare' || t === 'rattan' || t === 'cloth' || t === 'robe')) {
       // 女性胸型：两团柔和的圆；赤膊类衣装加抹胸
@@ -1526,7 +1600,8 @@
   function armsLP(kit, X) {
     const M = kit.M, look = kit.look, L = look.L, k = kit.k, D = kit.D;
     const sl = L.sleeves || 'cloth', gen = look.kind === 'general', br = L.bracer || 'none';
-    const sleeve = gen ? X.cloth : (L.torso === 'bare' ? X.cloth : X.team);
+    const sl0 = look.C.sleeve;
+    const sleeve = gen ? X.cloth : L.torso === 'bare' || sl0 === 'cloth' ? X.cloth : sl0 === 'dark' ? shT(X.team, 0.74) : sl0 && sl0[0] === '#' ? lift(sl0, 0.2) : X.team;
     const hand = gen && br === 'metal' ? X.leatherDark : X.skin;
     const mus = sl === 'bare' ? 1 + clamp((kit.pr.build - 1) * 2.5, 0, 0.35) : 1;
     // 肩头被护肩 / 短袖 / 锁子袖盖住：低细节层不建肩球
@@ -1561,12 +1636,39 @@
         kit.armFrame(s); kit.bone('upperArm' + S); M.color = X.cloth;
         M.lathe([[kit.armR * 1.75, -kit.upL * 1.0], [kit.armR * 1.45, -kit.upL * 0.45], [kit.armR * 1.25, 0.02 * k]], D.lim, false, false, false);
         kit.bone('foreArm' + S); M.color = X.cloth;
-        // 广袖：自肘起外张、下垂到腕下（暗色衬里，浅色袖口）
+        // 广袖（宽袖）：袖口不比头宽；袖底（前臂背侧 −Z，抬臂时朝下）垂成袖袂，袖口斜裁（下长上短）；
+        // 浅色衬里（微自发光），袖口里看进去不会是一团黑
         M.push().translate(0, -kit.upL, 0).rotate(0, 0, -s * 8);
-        M.lathe([[kit.foreR * 3.2, -kit.foL * 1.06], [kit.foreR * 2.5, -kit.foL * 0.55], [kit.armR * 1.6, 0.0]], D.lim + 1, false, false, false);
-        // 袖里（朝内的衬里）：从袖口看进去是衬里色，不是墨线外壳的内壁（一团黑）
-        kit.innerTube([[kit.foreR * 3.1, -kit.foL * 1.05], [kit.foreR * 2.42, -kit.foL * 0.55], [kit.armR * 1.52, -0.01]], D.lim + 1, shT(X.cloth, 0.62));
-        if (D.det >= 1) { M.color = X.cloth2 && kit.P.luma(X.cloth2) > 0.35 ? X.cloth2 : X.cream; M.band([0, 0, 0], kit.foreR * 3.24, kit.foreR * 3.28, -kit.foL * 1.08, -kit.foL * 0.99, D.lim + 1); }
+        const V = kit.V, ns = D.lim + 1, fo = kit.foL, rE = kit.armR * 1.6, r1 = kit.foreR * 2.15, rc = kit.foreR * 2.1;
+        const ring = (y, r, cz, droop, sag, inset) => {
+          const pts = [];
+          for (let j = 0; j < ns; j++) {
+            const a = (j + 0.5) * TAU / ns, sa = Math.sin(a), back = Math.max(0, -sa), rr = r - (inset || 0);
+            pts.push([Math.cos(a) * rr, y - sag * back, sa * rr * (1 + droop * back) + cz]);
+          }
+          return pts;
+        };
+        const R0 = ring(0, rE, 0, 0, 0), R1 = ring(-fo * 0.55, r1, -0.15 * r1, 0.45, 0.06 * fo), R2 = ring(-fo * 1.04, rc, -0.3 * rc, 1.1, 0.34 * fo);
+        M.loft([R0, R1, R2], false, false);
+        {
+          // 衬里：内缩的环，法线朝内，不描墨线
+          const keepInk = M.ink, keepE = M.emission;
+          M.ink = 0; M.emission = 0.08; M.color = kit.P.luma(X.cloth) > 0.6 ? kit.P.shade(X.cloth, 0.86) : kit.P.mix(X.cloth, [1, 0.96, 0.9], 0.18);
+          const L0 = ring(-0.01, rE, 0, 0, 0, 0.006), L1 = ring(-fo * 0.55, r1, -0.15 * r1, 0.45, 0.06 * fo, 0.006), L2 = ring(-fo * 1.03, rc, -0.3 * rc, 1.1, 0.34 * fo, 0.006);
+          for (const [A, Bq] of [[L0, L1], [L1, L2]]) {
+            const cen = V.mul(V.add(A.reduce((q, p) => V.add(q, p), [0, 0, 0]), Bq.reduce((q, p) => V.add(q, p), [0, 0, 0])), 0.5 / ns);
+            for (let j = 0; j < ns; j++) {
+              const j1 = (j + 1) % ns, mid = V.mul(V.add(V.add(A[j], A[j1]), V.add(Bq[j], Bq[j1])), 0.25);
+              M.quad(A[j], A[j1], Bq[j1], Bq[j], V.sub(cen, mid));
+            }
+          }
+          M.ink = keepInk; M.emission = keepE;
+        }
+        if (D.det >= 1) {
+          // 袖口镶边：沿斜裁的袖口一圈
+          M.color = X.cloth2 && kit.P.luma(X.cloth2) > 0.35 ? X.cloth2 : X.cream;
+          M.loft([ring(-fo * 1.04 + 0.035 * kit.k, rc * 1.03, -0.3 * rc, 1.1, 0.34 * fo), ring(-fo * 1.045, rc * 1.04, -0.3 * rc, 1.1, 0.34 * fo)], false, false);
+        }
         M.pop(); M.pop();
       } else {
         // 布袖（衣色）：袖口一道镶边
@@ -1613,8 +1715,8 @@
         if (tp === 'lion' && D.det >= 1) {
           // 兽面吞肩：金色面盘、深色眼与口
           M.push().translate(s * r * 0.92, -0.01 * k, 0).rotate(0, 0, -s * 90);
-          M.color = X.goldLight; M.cylinder([0, -0.01, 0], r * 0.42, r * 0.36, 0.024, D.rnd);
-          M.color = X.goldDark; M.cylinder([0, 0.012, 0], r * 0.18, r * 0.12, 0.016, Math.max(5, D.rnd - 2));
+          M.color = X.goldLight; M.cylinder([0, -0.01, 0], r * 0.42, r * 0.36, 0.024, Math.max(6, D.rnd - 2));
+          M.color = X.goldDark; M.cylinder([0, 0.012, 0], r * 0.18, r * 0.12, 0.016, 5);
           M.pop();
         }
         M.pop();
@@ -1666,8 +1768,8 @@
     const four = (yb, f, outer, lining, hem, fB) => {
       kit.skirtPanel('skirtF', -30, 30, nt, prof(yb, f), outer, lined ? lining : null, hem, hemH);
       kit.skirtPanel('skirtB', 148, 212, nt, prof(yb, f * (fB || 1.04)), outer, lined ? lining : null, hem, hemH);
-      kit.skirtPanel('thighL', 32, 146, nts, prof(yb, f * 1.02), outer, lined ? lining : null, hem, hemH);
-      kit.skirtPanel('thighR', -146, -32, nts, prof(yb, f * 1.02), outer, lined ? lining : null, hem, hemH);
+      kit.skirtPanel('thighL', 32, 146, nts, kit.kneeRow(prof(yb, f * 1.02)), outer, lined ? lining : null, hem, hemH);
+      kit.skirtPanel('thighR', -146, -32, nts, kit.kneeRow(prof(yb, f * 1.02)), outer, lined ? lining : null, hem, hemH);
     };
     if (sk === 'splitrobe') {
       // 开衩的袍裙到膝下（深色衬里、米色下摆），两侧三排甲裙（随大腿）
@@ -1675,8 +1777,8 @@
       const prof2 = f => [[kit.hipR * 1.14, top], [kit.hipR * 1.32, kit.hipY - 0.2 * k], [kit.hipR * 1.5 * f, hemY]];
       kit.skirtPanel('skirtF', -30, 30, nt, prof2(1), robe, lined ? lin : null, trim, 0.06 * k);
       kit.skirtPanel('skirtB', 148, 212, nt, prof2(1.04), robe, lined ? lin : null, trim, 0.06 * k);
-      kit.skirtPanel('thighL', 32, 146, nts, prof2(1.02), robe, lined ? lin : null, trim, 0.06 * k);
-      kit.skirtPanel('thighR', -146, -32, nts, prof2(1.02), robe, lined ? lin : null, trim, 0.06 * k);
+      kit.skirtPanel('thighL', 32, 146, nts, kit.kneeRow(prof2(1.02)), robe, lined ? lin : null, trim, 0.06 * k);
+      kit.skirtPanel('thighR', -146, -32, nts, kit.kneeRow(prof2(1.02)), robe, lined ? lin : null, trim, 0.06 * k);
       const rows = D.det >= 1 ? 3 : 2;
       for (const s of [1, -1]) {
         const bn = s > 0 ? 'thighL' : 'thighR';
@@ -1881,8 +1983,9 @@
   function faceLP(kit, X) {
     const M = kit.M, look = kit.look, sp = look.spec || {}, D = kit.D, R = kit.R, P = kit.P, V = kit.V;
     const acc = look.acc || [], marks = look.marks || [];
+    const fo = (look.sig && look.sig.face) || null;          // 名将的定妆（如试点关羽）
     // 脸：眉下的颊面略暗（眉弓受光多）
-    kit.headShape(X.skin, 0.92);
+    kit.headShape(X.skin, fo && fo.cheek ? fo.cheek : 0.92);
     if (D.ears) kit.ears(X.skin, acc.includes('bigears') || (sp.ears && sp.ears.size >= 1.3));
     const eyesS = sp.eyes || {}, browsS = sp.brows || {}, expr = sp.expr || look.expr || 'neutral';
     let em = EYE_MAP[eyesS.shape] || (look.kind === 'soldier' ? ['almond', 0, 1.1] : ['almond', 0, 1]);
@@ -1893,10 +1996,12 @@
     const brow = hairTone(browsS.color || (look.hair && look.hair.color) || '#221a18');
     const size = em[2] * clamp(eyesS.size || 1, 0.88, 1.15) * (look.kind === 'soldier' ? 1.1 : 1.15);
     const thick = clamp(browsS.thick || 1, 0.6, 1.5);
-    kit.eyes(iris, brow, em[0], tilt, -0.03 + (eyesS.y || 0) * 2, 0.41 + (eyesS.gap || 0) * 2, size, em[1], bm[1] * (0.75 + 0.3 * thick) * (look.sex === 'f' ? 0.75 : 1),
+    if (fo) kit.eyes(C3(fo.iris || '#2E2224'), C3(fo.brow), fo.eye || em[0], fo.browTilt, -0.03, fo.spread || 0.42, fo.size || size, fo.eyeTilt || 0, fo.browK || 1, { patch: acc.includes('eyepatch') });
+    else kit.eyes(iris, brow, em[0], tilt, -0.03 + (eyesS.y || 0) * 2, 0.41 + (eyesS.gap || 0) * 2, size, em[1], bm[1] * (0.75 + 0.3 * thick) * (look.sex === 'f' ? 0.75 : 1),
       { patch: acc.includes('eyepatch'), browH: look.sex === 'f' ? 0.7 : 1 });
-    const nm = NOSE_MAP[(sp.nose && sp.nose.shape) || 'straight'] || NOSE_MAP.straight;
-    kit.nose(P.shade(X.skin, 0.84), nm[0] * clamp((sp.nose && sp.nose.size) || 1, 0.85, 1.2) * (look.sex === 'f' ? 0.85 : 1), -0.42, nm[1], nm[2] * clamp((sp.nose && sp.nose.w) || 1, 0.85, 1.25));
+    const nm = fo && fo.nose ? [fo.nose[0], fo.nose[1], fo.nose[2]] : NOSE_MAP[(sp.nose && sp.nose.shape) || 'straight'] || NOSE_MAP.straight;
+    const nk = fo && fo.nose ? 1 : 0;
+    kit.nose(P.shade(X.skin, 0.84), nm[0] * (nk ? 1 : clamp((sp.nose && sp.nose.size) || 1, 0.85, 1.2) * (look.sex === 'f' ? 0.85 : 1)), -0.42, nm[1], nm[2] * (nk ? 1 : clamp((sp.nose && sp.nose.w) || 1, 0.85, 1.25)));
     // 嘴：有长须 / 满腮胡时藏在须下
     const bst = (look.beard && look.beard.style) || 'none';
     const mshape = (sp.mouth && sp.mouth.shape) || (expr === 'smile' ? 'smile' : expr === 'fierce' || expr === 'stern' ? 'grim' : 'neutral');
@@ -2152,7 +2257,7 @@
           // 雉翎：两根长尾羽，自冠前两侧先向上再向后外方扫开（S 形），黑白相间的羽节，随盔缨骨摆动
           for (const s of [1, -1]) {
             const p0 = kit.capPoint(s * 25, line(25) - 10, 1.05);
-            const n = D.det >= 2 ? 9 : D.det >= 1 ? 6 : 4, pts = [];
+            const n = D.det >= 2 ? 6 : D.det >= 1 ? 5 : 4, pts = [];
             for (let i = 0; i <= n; i++) {
               const t = i / n, u = 1 - t;
               const c1 = V.add(p0, [s * 0.1 * k, 0.26 * k, 0.02 * k]), c2 = V.add(p0, [s * 0.34 * k, 0.58 * k, -0.2 * k]), e = V.add(p0, [s * 0.52 * k, 0.66 * k, -0.62 * k]);
@@ -2285,7 +2390,10 @@
     // 盖住头顶的冠帽：头发只在帽沿下露一圈（鬓角、耳上、后颈）
     const line = cov.top ? (th => Math.max(cov.top(th) + 4, 60)) : null;
     const hl = th => { const a = Math.abs(th); if (a < 55) return lerp(front, front + 10, a / 55); if (a < 110) return lerp(front + 10, 100, (a - 55) / 55); return lerp(100, back, (a - 110) / 70); };
-    if (line) {
+    if (line && cov.wrapBun) {
+      // 巾帻（试点关羽）下的头发：额前只露一线，鬓角、耳上、后颈到发际；与试点同一条发际线
+      kit.hairCap(hc, 56, 104, 168, 1.08, th => { const a = Math.abs(th); if (a < 55) return lerp(56, 62, a / 55); if (a < 100) return lerp(62, 104, (a - 55) / 45); if (a < 128) return lerp(104, 166, sstep(0, 1, (a - 100) / 28)); return 168; }, th => cov.top(th) - 12, D.det >= 2 ? 3 : D.det >= 1 ? 2 : 1);
+    } else if (line) {
       // 帽下的头发：从帽沿内略上 到 发际线
       const lo = th => Math.max(line(th) - 14, 8);
       const hi = th => Math.max(hl(th), line(th) + 3);
@@ -2404,7 +2512,10 @@
         const u = i / nr, row = [];
         for (let j = 0; j <= nt; j++) {
           const th = lerp(-thM, thM, j / nt), edge = Math.min(j, nt - j) === 0 ? 0.35 : 1;
-          row.push(kit.sidePoint(th, lerp(yTop(th), yBot(th), Math.pow(u, 0.85)), lk * lerp(o.l0, o.l1, u) * (i === 0 ? 1 : edge)));
+          let p = kit.sidePoint(th, lerp(yTop(th), yBot(th), Math.pow(u, 0.85)), lk * lerp(o.l0, o.l1, u) * (i === 0 ? 1 : edge));
+          // 满腮胡的下缘在下巴前收成一个铲形尖（代替原来挂在下巴下的圆球）
+          if (o.spade && i === nr) { const w = sstep(0, 1, 1 - Math.abs(th) / 36); p = V.add(p, [0, -o.spade * kit.Ry * w, 0.3 * o.spade * kit.Rz * w]); }
+          row.push(p);
         }
         rows.push(row);
       }
@@ -2419,6 +2530,8 @@
     const chestFront = kit.chestR * kit.depthK + 0.045 * k;
     // 一绺须：五边的锥形放样，尖端前卷，上三分之一随头、其余随胸
     const lock = (root, tip, w0, seed, curl) => {
+      // 只有美髯（flowing，试点关羽）用上面的浅色；山羊须 / 长须 / 分叉须通体须色（否则像一条浅褐的领带）
+      const thin = w0 < 0.25 * R || st !== 'flowing';
       const ctrl = [(root[0] + tip[0]) / 2, lerp(root[1], tip[1], 0.42), Math.max(root[2], tip[2]) + 0.035 * k];
       const bez = t => { const u = 1 - t; return [u * u * root[0] + 2 * u * t * ctrl[0] + t * t * tip[0], u * u * root[1] + 2 * u * t * ctrl[1] + t * t * tip[1], u * u * root[2] + 2 * u * t * ctrl[2] + t * t * tip[2] + 0.035 * k * t * t * t]; };
       const N = D.det >= 2 ? 4 : 2, rings = [], sides = D.det >= 1 ? 5 : 4;
@@ -2433,7 +2546,7 @@
       const start = M.vertexCount;
       for (let i = 0; i < N; i++) {
         const tone = lerp(1, 0.74, i / Math.max(1, N - 1));
-        M.loft([rings[i], rings[i + 1]], i === 0, i === N - 1, n => P.shade(n[1] > 0.3 || n[2] > 0.75 ? top : bc, tone));
+        M.loft([rings[i], rings[i + 1]], i === 0, false, n => P.shade(!thin && (n[1] > 0.3 || n[2] > 0.75) ? top : bc, tone));
       }
       if (curl && D.det >= 1) { M.color = bc; M.sphere(tip, 0.03 * k, 4, 2); }
       const split = root[1] - (root[1] - tip[1]) / 3;
@@ -2441,12 +2554,10 @@
     };
     if (st === 'stubble') hug({ c: P.mix(X.skin, bc, 0.4), l0: 0.006, l1: 0.012, th: 78, front: -0.78, side: -0.3 });
     else if (st === 'short') hug({ c: bc, l0: 0.03, l1: 0.075, th: 82, front: -0.8, side: -0.12 });
-    else if (st === 'goatee') lock(kit.headAt(0, -0.95, 0.6), kit.headAt(0, -1.35 - 0.15 * len, 0.62), 0.22 * R, 2);
+    else if (st === 'goatee') lock(kit.headAt(0, -0.95, 0.6), kit.headAt(0, -1.2 - 0.1 * len, 0.62), 0.22 * R, 2);
     else if (st === 'full' || st === 'bristle' || st === 'curled' || st === 'braided') {
-      hug({ c: bc, l0: 0.04, l1: 0.15 + 0.04 * len, th: 86, front: -0.8, side: -0.06 });
-      // 下巴前垂下的一团（与壳重叠，不留缝）
+      hug({ c: bc, l0: 0.04, l1: 0.15 + 0.04 * len, th: 86, front: -0.8, side: -0.06, spade: 0.3 + 0.14 * len });
       const chin = kit.facePoint(0, -1.0, 0.1);
-      M.color = bc; M.sphere(V.add(chin, [0, -0.012 * k * len, 0.004 * k]), [0.5 * kit.Rx, (0.2 + 0.16 * len) * kit.Ry, 0.32 * kit.Rzu], D.sph[0], D.sph[1]);
       if (st === 'bristle') {
         // 虬髯（张飞）：自下颌向外下方伸出的尖簇
         const n = D.det >= 2 ? 9 : D.det >= 1 ? 6 : 3;
@@ -2562,7 +2673,7 @@
         K.col(c || PALF.tassel);
         M.push().translate(0, y, 0);
         if (det === 0) M.lathe([[0.012, 0.01], [r, -len * 0.45], [0.006, -len]].reverse(), 4, false, false, true);
-        else M.lathe([[0.012, 0.01], [r * 0.7, -len * 0.18], [r, -len * 0.5], [r * 0.6, -len * 0.88], [0.006, -len]].reverse(), sides, false, true, true);
+        else M.lathe([[r * 0.35, 0], [r * 0.91, -len * 0.35], [r * 0.98, -len * 0.76], [r * 0.48, -len]].reverse(), sides, false, true, true);   // 试点关羽刀上的红缨
         M.pop();
         M.windBy(v0, p => 0.25 * clamp01((y - p[1]) / len));
       },
@@ -2584,7 +2695,6 @@
         K.col(c || '#56A878');
         M.sphere([0, y, 0.01 * s], [0.034 * s, 0.05 * s, 0.045 * s], det >= 1 ? 6 : 4, det >= 1 ? 3 : 2);
         M.segment([0, y + 0.005 * s, 0.035 * s], [0, y + 0.03 * s, 0.09 * s], 0.024 * s, 0.01 * s, 5);
-        if (det >= 2) for (const sg of [1, -1]) M.curve([sg * 0.015 * s, y + 0.03 * s, -0.01 * s], [sg * 0.03 * s, y + 0.07 * s, -0.03 * s], [sg * 0.02 * s, y + 0.11 * s, -0.06 * s], 0.008 * s, 0.002, 2, 4);
       },
       arcBlade(cy, cz, R, a0, a1, wFn, th, c, n) {
         // 弧形刃（月牙 / 斧刃 / 戟枝）：沿圆弧放样，刃口朝外
@@ -2796,13 +2906,19 @@
         // 羽扇：金柄、扇形白羽（羽根略暗）
         K.col('#C8A050'); M.segment([0, -0.08, 0], [0, 0.08, 0], 0.012, 0.012, 5);
         K.col(PALF.gold); M.sphere([0, 0.1, 0], 0.02, 5, 2);
-        const n = det >= 1 ? 9 : 5, r1 = 0.3;
+        // 扇面是 6 mm 厚的闭合薄片（正反两面 + 外缘 + 两侧边）：零厚度的双面扇叶，两面法线在墨线外壳里互相抵消，
+        // 外壳会盖住整片扇叶（背面朝镜头时扇子成一块黑）
+        const n = det >= 1 ? 9 : 5, r1 = 0.3, th = 0.003, A = PI * 0.62;
+        const Pt = (a, sg) => [Math.sin(a) * 0.008 + sg * th, 0.1 + Math.cos(a) * r1, Math.sin(a) * r1], C0 = sg => [sg * th, 0.1, 0];
         for (let i = 0; i < n; i++) {
-          const a0 = (i / n - 0.5) * PI * 0.62, a1 = ((i + 1) / n - 0.5) * PI * 0.62;
-          const c0 = [0, 0.1, 0], p0 = [Math.sin(a0) * 0.008, 0.1 + Math.cos(a0) * r1, Math.sin(a0) * r1], p1 = [Math.sin(a1) * 0.008, 0.1 + Math.cos(a1) * r1, Math.sin(a1) * r1];
+          const a0 = (i / n - 0.5) * A, a1 = ((i + 1) / n - 0.5) * A, am = (a0 + a1) / 2;
           M.color = i % 2 ? C3('#F4F2EE') : C3('#E8E4DC');
-          M.triangleFacing(c0, p0, p1, [1, 0, 0]); M.triangleFacing(c0, p1, p0, [-1, 0, 0]);
+          M.triangleFacing(C0(1), Pt(a0, 1), Pt(a1, 1), [1, 0, 0]);
+          M.triangleFacing(C0(-1), Pt(a1, -1), Pt(a0, -1), [-1, 0, 0]);
+          M.quad(Pt(a0, 1), Pt(a0, -1), Pt(a1, -1), Pt(a1, 1), [0, Math.cos(am), Math.sin(am)]);
         }
+        M.color = C3('#E8E4DC');
+        for (const a of [-A / 2, A / 2]) { const sg = Math.sign(a); M.quad(C0(1), C0(-1), Pt(a, -1), Pt(a, 1), [0, -Math.sin(a) * sg, Math.cos(a) * sg]); }
         info = Object.assign(info, { len: 0.4, tip: [0, 0.38, 0], base: [0, 0.12, 0] });
         break;
       }
@@ -3040,11 +3156,15 @@
     M.windBy(ws, p => 0.35 * clamp01((2.02 - p[1]) / 0.09));
     // 耳后的小红缨（名将：面帘 + 大缨）
     if (opts.general || armor === 'scale' || opts.chamfron) {
-      const pc = opts.metal ? lift(opts.metal, 0.35) : C3(PALF.bronze);
+      // 面帘：窄条青铜（不提亮，不再是一块浅褐纸板），中间一道脊；两侧露出白鼻梁（blaze）
+      const pc = opts.metal ? lift(opts.metal, 0.1) : P.shade(C3(PALF.bronze), 0.72);
       M.color = pc;
-      const a = faceRings[0][Math.round(fs / 2)], b = faceRings[3][Math.round(fs / 2)];
-      strap(V.add(a, [0, 0.03, 0.01]), V.add(b, [0, 0.0, 0.012]), 0.11, 0.07, [0, 0.6, 1], 0.012);
-      if (D.det >= 1) { M.color = gold; M.sphere(V.add(V.lerp(a, b, 0.25), [0, 0.03, 0.03]), 0.022, 5, 2); }
+      // 只盖额头到眼下（鼻梁下段的白鼻梁照样露出）
+      const jm = Math.round(fs / 2), a = faceRings[0][jm], b = V.lerp(faceRings[2][jm], faceRings[3][jm], 0.3);
+      const nA = V.norm(V.sub(a, faceAxis[0])), nB = V.norm(V.sub(b, V.lerp(faceAxis[2], faceAxis[3], 0.3)));
+      strap(V.madd(a, nA, 0.004), V.madd(b, nB, 0.004), 0.08, 0.05, V.add(nA, nB), 0.012);
+      if (D.det >= 1) { M.color = gold; strap(V.madd(a, nA, 0.014), V.madd(b, nB, 0.014), 0.016, 0.01, V.add(nA, nB), 0.008); }
+      if (D.det >= 1) { M.color = gold; M.sphere(V.madd(V.lerp(a, b, 0.25), V.norm(V.add(nA, nB)), 0.016), 0.02, 5, 2); }
     }
     M.color = gold; M.sphere([0, 2.02, 0.84], 0.02, 5, 2, false);
     ws = M.vertexCount;
@@ -3171,7 +3291,8 @@
       }
       bone('body');
     } else if (armor !== 'none') {
-      const cz = D.det >= 1 ? [-0.44, -0.24, -0.04, 0.16, 0.34] : [-0.44, -0.04, 0.34], angs = D.det >= 1 ? [0, 26, 52, 78, 100, 112] : [0, 56, 112];
+      // 低模：两列（马衣势力色到 100°，下面一窄条米色镶边），与中模一样整片是势力色
+      const cz = D.det >= 1 ? [-0.44, -0.24, -0.04, 0.16, 0.34] : [-0.44, -0.04, 0.34], angs = D.det >= 1 ? [0, 26, 52, 78, 100, 112] : [0, 50, 100, 112];
       for (const s of [1, -1]) for (let i = 0; i < cz.length - 1; i++) for (let kk = 0; kk < angs.length - 1; kk++) {
         const hem = kk === angs.length - 2, off = 0.028;
         const a = clothPt(cz[i], s * angs[kk], off), b = clothPt(cz[i], s * angs[kk + 1], off), c = clothPt(cz[i + 1], s * angs[kk + 1], off), d = clothPt(cz[i + 1], s * angs[kk], off);
@@ -3512,7 +3633,11 @@
     const kit = new Kit(look, pr, D, team, seed);
     const X = kit.X = paletteOf(kit);
     const M = kit.M;
-    legsLP(kit, X); torsoLP(kit, X); neckLP(kit, X); armsLP(kit, X); skirtLP(kit, X); beltLP(kit, X); pauldronsLP(kit, X);
+    legsLP(kit, X);
+    const bodyStart = M.vertexCount;
+    torsoLP(kit, X); neckLP(kit, X); armsLP(kit, X); skirtLP(kit, X); beltLP(kit, X);
+    kit.bellyDeform(bodyStart);
+    pauldronsLP(kit, X);
     capeLP(kit, X); ribbonsLP(kit, X); backGearLP(kit, X);
     faceLP(kit, X);
     const cov = headgearLP(kit, X);
@@ -3599,7 +3724,7 @@
       const shadow = opts.shadow !== false;
       // 骨架挂在 root 下（不挂在网格下：外观 setLook 只作用于本体网格与它的墨线，骑在马上的人物不受马的外观影响）
       this.root.add(bones[0]);
-      this.mesh = L.skinnedMesh(tpl.geometry, this.skeleton, { castShadow: shadow, receiveShadow: false });
+      this.mesh = noOutlineShadow(L.skinnedMesh(tpl.geometry, this.skeleton, { castShadow: shadow, receiveShadow: false }));
       this.mesh.name = 'body';
       // 地面压平：LP 材质不做（倒地时布料、缨低于地面的部分被地面挡住）；保留字段以兼容
       this.groundClamp = true;
@@ -3962,8 +4087,15 @@
       bn[B.cape2].rotation.set(lerp(cape * 0.35 + fl * 1.5, -0.12, cf), 0, 0);
       bn[B.cape3].rotation.set(lerp(cape * 0.25 + fl * 2, -0.06, cf), Math.sin(tt * 3.1) * 0.05 * (1 - cf), 0);
       const fwd = Math.min(0, P.tL[0], P.tR[0]) * D2R, back = Math.max(0, P.tL[0], P.tR[0]) * D2R;
-      bn[B.skirtF].rotation.set(fwd * 0.75, 0, 0);
-      bn[B.skirtB].rotation.set(lerp(back * 0.6 + (P.cape || 0) * 0.15, -0.3, cf), 0, 0);
+      // 骑乘：前垂不随大腿前抬（否则成一块向前伸出的木板），夹在两腿之间垂向马肩；后垂搭在马臀上
+      if (this.mounted) {
+        bn[B.skirtF].rotation.set(Math.max(fwd * 0.75, -0.35), 0, 0);
+        bn[B.skirtB].rotation.set(0.25 + (P.cape || 0) * 0.1, 0, 0);
+      } else {
+        // 坐地 / 起身（大腿前抬近 90°）时前垂不再平伸成木板：最多前摆约 35°，垂在两膝之间
+        bn[B.skirtF].rotation.set(Math.max(fwd * 0.75, -0.62), 0, 0);
+        bn[B.skirtB].rotation.set(lerp(back * 0.6 + (P.cape || 0) * 0.15, -0.3, cf), 0, 0);
+      }
       const pl = s.live ? s.plume : s.tgtPlume;
       bn[B.plume1].rotation.set(pl + Math.sin(tt * 4.3) * 0.04, 0, Math.sin(tt * 3.3) * 0.04);
       bn[B.plume2].rotation.set(pl * 0.8 + Math.sin(tt * 6.1) * 0.06, 0, 0);
@@ -4021,12 +4153,12 @@
     _makeWeaponMeshes(geo) {
       const L = LPX(), side = this.style === 'bow' ? 'L' : 'R';
       for (const m of [this.weaponMesh, this.weaponMesh2]) if (m && m.parent) m.parent.remove(m);
-      this.weaponMesh = L.mesh(geo, { castShadow: this._shadow, receiveShadow: false });
+      this.weaponMesh = noOutlineShadow(L.mesh(geo, { castShadow: this._shadow, receiveShadow: false }));
       this.weaponMesh.name = 'weapon';
       this.sockets['grip' + side].add(this.weaponMesh);
       this.weaponMesh2 = null;
       if (this.style === 'dual') {
-        this.weaponMesh2 = L.mesh(geo, { castShadow: this._shadow, receiveShadow: false });
+        this.weaponMesh2 = noOutlineShadow(L.mesh(geo, { castShadow: this._shadow, receiveShadow: false }));
         this.weaponMesh2.name = 'weapon2';
         this.sockets.gripL.add(this.weaponMesh2);
       }
@@ -4173,7 +4305,7 @@
       const L = LPX();
       // 骨架挂在 root 下：马的外观（setTint）不影响骑在鞍座骨上的人物
       this.root.add(bones[0]);
-      this.mesh = L.skinnedMesh(t.geometry, this.skeleton, { castShadow: opts.shadow !== false, receiveShadow: false });
+      this.mesh = noOutlineShadow(L.skinnedMesh(t.geometry, this.skeleton, { castShadow: opts.shadow !== false, receiveShadow: false }));
       this.mesh.name = 'horse';
       this.root.add(this.mesh);
       this.meshes = [this.mesh, this.mesh.userData.outline].filter(Boolean);
@@ -4467,6 +4599,7 @@
       const o = new THREE.InstancedMesh(this.geo, this.outMat, cap);
       o.instanceMatrix = m.instanceMatrix;
       o.count = this.count; o.frustumCulled = false; o.castShadow = false; o.receiveShadow = false; o.name = 'outline';
+      Object.defineProperty(o, 'castShadow', { get: () => false, set: () => {}, configurable: true });
       o.raycast = () => {};
       m.add(o);
       m.userData.outline = o;
@@ -4693,7 +4826,7 @@
     const M = new (FigBuilder())(11);
     const info = buildWeaponLP(M, id, det);
     const g = M.toGeometry();
-    const m = LPX().mesh(g, { castShadow: opts.shadow !== false, receiveShadow: false });
+    const m = noOutlineShadow(LPX().mesh(g, { castShadow: opts.shadow !== false, receiveShadow: false }));
     m.name = 'Weapon:' + info.id;
     m.userData.weapon = { id: info.id, name: info.name, style: info.style, len: info.len, tip: new THREE.Vector3(...info.tip), base: new THREE.Vector3(...info.base), off: info.off ? new THREE.Vector3(...info.off) : null };
     m.userData.tris = g.userData.tris;
@@ -4708,7 +4841,7 @@
     const X = { team: tcol(teamTone(opts.color || '#8a2a24'), 1), trim: C3(PALF.gold) };
     const info = buildShieldLP(M, name || 'round', det, X);
     const g = M.toGeometry();
-    const m = LPX().mesh(g, { castShadow: opts.shadow !== false, receiveShadow: false });
+    const m = noOutlineShadow(LPX().mesh(g, { castShadow: opts.shadow !== false, receiveShadow: false }));
     m.name = 'Shield:' + (name || 'round');
     m.userData.shield = info;
     m.userData.tris = g.userData.tris;

@@ -6,7 +6,7 @@
 
    用法：
      node tools/gen-items.js [js]        校验 items.json，写 js/items-data.js（SG.ItemsData；缺省模式）
-     node tools/gen-items.js check       只校验（tests/items.js §1 的全部目录检查；退出码 = 问题数）
+     node tools/gen-items.js check       只校验（tests/items.js §1 的全部目录检查 + kitWeapon 与当前 figure.js 是否一致；退出码 = 问题数）
      node tools/gen-items.js build       从 design-v4/items/ 的表格重建 design-v4/items.json（先导出剧本数据），再写 js
      node tools/gen-items.js md          重新生成 ITEMS.md 的 GENERATED 表格（gen-md.js + splice-md.js）
      node tools/gen-items.js cs          Unity 的 ItemsData.g.cs —— 第 E 阶段（Unity 移植）再做，现在只打印说明
@@ -112,6 +112,10 @@ function runtimeData(D, kit) {
       av[sid] = b;
     }
     o.availability = av;
+    // giftK 的作用范围（ITEMS §7.2）：「以宝物赏赐 / 外交时价值 ×k」= 持有者送出的任何宝物（holder: true）；「以之赏赐」= 这件本身
+    if (it.ability && it.ability.effects.some(e => e.t === 'giftK')) {
+      o.ability = Object.assign({}, it.ability, { effects: it.ability.effects.map(e => (e.t === 'giftK' ? Object.assign({}, e, { holder: /以宝物/.test(it.ability.desc || '') }) : e)) });
+    }
     return o;
   });
   const out = {
@@ -144,6 +148,25 @@ function writeJs(data) {
   return Buffer.byteLength(src);
 }
 
+// kitWeapon 漂移（ITEMS §8.10）：js/items-data.js 冻结的「武将 → 起始兵器类型」与当前 SG.Figure.lookOf 比较。
+// figure.js 归美术推广，改了某个外观的兵器之后要重跑 node tools/gen-items.js js，否则起始兵器与模型对不上。
+function loadItemsData() {
+  if (!fs.existsSync(OUT_JS)) return null;
+  const ctx = { JSON }; ctx.window = ctx; vm.createContext(ctx);
+  vm.runInContext(fs.readFileSync(OUT_JS, 'utf8'), ctx, { filename: 'items-data.js' });
+  return ctx.SG && ctx.SG.ItemsData;
+}
+function kitDrift(D) {
+  const cur = loadItemsData();
+  if (!cur || !cur.kitWeapon) return { problems: ['js/items-data.js missing or without kitWeapon'], changed: [], src: null };
+  const kit = kitWeapons(D, cur.kitWeaponSource || 'figure');
+  if (kit.src !== (cur.kitWeaponSource || 'figure')) return { problems: [], changed: [], src: kit.src, skipped: 'source ' + kit.src + ' ≠ ' + cur.kitWeaponSource };
+  const changed = [];
+  const names = new Set(Object.keys(cur.kitWeapon).concat(Object.keys(kit.table)));
+  for (const n of names) if (cur.kitWeapon[n] !== kit.table[n]) changed.push(n + ': ' + (cur.kitWeapon[n] || '—') + ' → ' + (kit.table[n] || '—'));
+  return { problems: changed.length ? ['kitWeapon drift (' + changed.length + ' generals; rerun node tools/gen-items.js js): ' + changed.slice(0, 12).join(', ')] : [], changed, src: kit.src, n: names.size };
+}
+
 function check(D) {
   const SG = rulesContext(D);
   if (!SG.Items || typeof SG.Items.checkCatalogue !== 'function') { console.log('  js/items.js not present: only the data checks of SG.Items can run'); return { problems: ['js/items.js missing'], stats: {} }; }
@@ -173,7 +196,13 @@ function main() {
   for (const [k, v] of Object.entries(rep.stats || {})) console.log('  ' + k + ': ' + (typeof v === 'object' ? JSON.stringify(v) : v));
   if (rep.problems.length) console.log('PROBLEMS (' + rep.problems.length + '):\n  ' + rep.problems.slice(0, 80).join('\n  '));
   else console.log('CATALOGUE OK (' + D.items.length + ' items, ' + (Date.now() - t0) + ' ms)');
-  if (MODE === 'check') return rep.problems.length;
+  if (MODE === 'check') {
+    const kd = kitDrift(D);
+    if (kd.skipped) console.log('  kitWeapon drift: skipped (' + kd.skipped + ')');
+    else if (kd.problems.length) console.log('PROBLEM: ' + kd.problems[0]);
+    else console.log('  kitWeapon drift: none (' + kd.n + ' generals vs ' + kd.src + ')');
+    return rep.problems.length + kd.problems.length;
+  }
   if (rep.problems.length && !ARGS.includes('--force')) { console.log('js/items-data.js not written (fix the problems or pass --force)'); return rep.problems.length; }
   const kit = kitWeapons(D, opt('kit-from', 'figure'));
   const data = runtimeData(D, kit);
@@ -181,4 +210,5 @@ function main() {
   console.log(`js/items-data.js written: ${(bytes / 1024).toFixed(0)} KB, hash ${data.hash}, kit weapons ${Object.keys(kit.table).length} (from ${kit.src})`);
   return 0;
 }
-process.exitCode = main();
+if (require.main === module) process.exitCode = main();
+module.exports = { kitWeapons, kitDrift, runtimeData, loadItemsData, JSON_PATH };

@@ -35,7 +35,8 @@
 <script>
 'use strict';
 /* URL 参数
-     only=han,roman,africa:meroe   只画这些条目（「文化:城键」可选特定城，如 africa:meroe = 库施式，sarmatian:panticapaeum）
+     only=han,roman,africa:meroe   只画这些条目（「文化:城键」可选特定城，如 africa:meroe = 库施式，sarmatian:panticapaeum，
+                                   persia:ctesiphon = 泰西封大拱；其余波斯都城为台上伊万宫殿）
      tiers=0,1,2                   档次（0 普通、1 大城、2 都城），缺省全部
      lod=near | far | both         近景 / 远景 / 两排（缺省 both）
      mood=noon | morning | golden | dusk | night   时间氛围（缺省 noon）
@@ -44,6 +45,9 @@
      shot=1                        截图模式（隐藏界面）；nolab=1 不画标签
      scatter=1                     用 SG.CultureArt.scatter 实例化（战略地图的接法：同模型实例化 + 墨线实例化 + 远近景按块切换 + 灯位）
      inkDist=45                    （scatter）墨线距离带：更远的近景不描墨线（0 = 一律描）；noink=1（逐个模型时）不画墨线
+     midDist=45                    （scatter）中景距离：更远的区块用中景模型（去掉垛口、墙缝、灯笼、屋脊饰；缺省 = inkDist，0 = 不用）
+     lod=mid                       （逐个模型时）画中景模型
+     nolamps=1                     不给氛围加灯池（看没分到真灯池的城夜里靠自身的窗光 / 地面灯池是什么样子）
      perf=200                      性能模式：200 座随机文化 / 档次的城排成网格（间距 spacing=5），配合 scatter=1 比较绘制次数与帧时 */
 (function () {
   if (THREE.ColorManagement) THREE.ColorManagement.enabled = false;
@@ -55,7 +59,7 @@
   const size = +qv('size', 1.2), MOOD = qv('mood', 'noon'), LOD = qv('lod', 'both'), COLS = +qv('cols', 3);
   const tiers = qv('tiers', '0,1,2').split(',').map(Number);
   const SCATTER = Q.has('scatter'), PERF = +qv('perf', 0);
-  const allEntries = ['han'].concat(CA.cultures, ['africa:meroe', 'sarmatian:panticapaeum']);
+  const allEntries = ['han'].concat(CA.cultures, ['africa:meroe', 'sarmatian:panticapaeum', 'persia:ctesiphon']);
   const list = Q.has('only') ? Q.get('only').split(',') : allEntries;
   const cv = document.getElementById('cv');
   const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
@@ -115,7 +119,7 @@
         else {
           scene.add(obj);
           obj.updateMatrixWorld(true);
-          SG.LPProps.addLamps(obj, mood);
+          if (!Q.has('nolamps')) SG.LPProps.addLamps(obj, mood);
         }
         objs.push(obj);
         // 旗帜位置（map-view：本地 Unity (0.9s, 0, 0.9s) → three (0.9s, 0, −0.9s)）
@@ -139,12 +143,12 @@
   let SC = null;
   if (SCATTER) {
     const t0 = performance.now();
-    SC = CA.scatter(items, { chunk: +qv('chunk', 30), lodDist: +qv('lodDist', 60), inkDist: +qv('inkDist', 45) });
+    SC = CA.scatter(items, { chunk: +qv('chunk', 30), lodDist: +qv('lodDist', 60), inkDist: +qv('inkDist', 45), midDist: Q.has('midDist') ? +Q.get('midDist') : undefined });
     ms += performance.now() - t0;
     scene.add(SC.group);
-    for (const l of SC.lamps) mood.addLamp(l.pos, l);
+    if (!Q.has('nolamps')) for (const l of SC.lamps) mood.addLamp(l.pos, l);
     if (PERF) tris = SC.scatter.stats.copies;
-  } else if (PERF) for (const obj of objs) { obj.updateMatrixWorld(true); SG.LPProps.addLamps(obj, mood); }
+  } else if (PERF && !Q.has('nolamps')) for (const obj of objs) { obj.updateMatrixWorld(true); SG.LPProps.addLamps(obj, mood); }
   const statEl = document.getElementById('stat');
   const statBase = (PERF ? 'perf ' + PERF + (SCATTER ? ' scatter（实例 ' + tris + '）' : ' objects') + ' · ' : '') + '共 ' + objs.length + ' 座，三角形 ' + tris + '（近景最多 ' + maxTris + '：' + maxName + '；远景最多 ' + farMax + '：' + farName + '）· 建模 ' + ms.toFixed(0) + ' ms · ' + MOOD;
   statEl.textContent = statBase;

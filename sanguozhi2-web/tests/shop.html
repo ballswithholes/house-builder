@@ -85,7 +85,7 @@
     await wait(700);
     // 4 装备给选中的武将
     const eqb = btn('.sg-shop-actions .sg-btn', '装备给');
-    if (eqb) { click(eqb); await wait(300); }
+    if (eqb) { click(eqb); await wait(300); if (q('.sg-confirm')) { click(btn('.sg-confirm .sg-btn', '换上')); await wait(400); } }   // 双手兵器换下盾时先问
     step('equip the purchase', !eqb || qa('.sg-shop-note').some(n => /装备上了|此位|盾|需/.test(n.textContent)), eqb ? eqb.textContent : 'no 装备 button (requirement)');
     // 5 胡商的货（×1.5）
     const merchTile = qa('.sg-shop-tile').find(t => t.textContent.includes('胡商'));
@@ -101,9 +101,10 @@
     const target = g.generalsOf(f).find(x => !g.isRuler(x) && x.city === city.id);
     const u = I.award(f, 'han_yubi', { why: 'test' });
     S.refresh(); await wait(200);
-    const r1 = I.gift(target, u, { roll: 2 });
+    target.loyalty = 60;   // 忠诚已满时赏赐涨不了（loy 是实际涨的数）
+    const r1 = I.gift(target, u, { roll: 2, confirm: true });   // confirm：顶掉更好的宝物时界面会先问（ITEMS §2.6）
     const back = Gr.unequip(target, 'treasure');
-    const r2 = I.gift(target, u, { roll: 4 });
+    const r2 = I.gift(target, u, { roll: 4, confirm: true });
     step('gift once per instance', r1.ok && r1.loy > 0 && r2.ok && r2.loy === 0, 'first +' + r1.loy + ', take-back ' + back.loyaltyDelta + ', again +' + r2.loy);
     const ru = ruler.gear.weapon;
     step('bound ruler-unique cannot move', !Gr.unequip(ruler, 'weapon').ok && !I.sell(f, ru, city).ok);
