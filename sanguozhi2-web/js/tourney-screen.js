@@ -10,13 +10,16 @@
    供测试（SG.UITest.open('tourney', { view })）与 tests/ui-v4.html 检查版式。
 
    SG.TourneyScreen.announce(t) → Promise<'enter'|'later'|'skip'>
-   SG.TourneyScreen.entry(t) → Promise<[{ gen, mode }] | null>          null = 不参加
+   SG.TourneyScreen.entry(t) → Promise<[{ gen, mode }] | null | 'later'>   null = 不参加；'later' = 稍后（案头留签）；
+                                    mode 'play' 亲自 | 'watch' 观战 | 'auto' 自动；「全部自动」时全为 'auto' 且数组带 allAuto = true（TOURNAMENT §4.3）
    SG.TourneyScreen.bracket(t, { round }) → Promise<'play'|'watch'|'result'|null>   下一场的选择（null = 收起）
    SG.TourneyScreen.match(m, t) → Promise<'play'|'watch'|'result'>
    SG.TourneyScreen.podium(t) → Promise                            SG.TourneyScreen.hall() → Promise
    SG.TourneyScreen.preview(view) → Promise    view: 'announce' | 'entry' | 'bracket' | 'mine' | 'match' | 'podium' | 'hall'
    SG.TourneyScreen.model(t) → 画面用的赛事（t = SG.Tourney 的 T；缺省 = 示意赛事）     SG.TourneyScreen.isOpen()
-   t 的字段按 TOURNAMENT §10.2：{ year, n, host, city, entrants[], S, slots[], rounds[], round }；读不到的字段一律从缺省补上。
+   t 的字段按 TOURNAMENT §10.2：{ year, n（参赛人数）, host, city（城 id 或 key）, entrants[], S, slots[], rounds[], round }；
+   届数 = G.tourney.count + 1（或 t.edition）；读不到的字段一律从缺省补上。奖金、声望、门槛等数字读 SG.TourneyData，
+   未载入时读本文件的 FALLBACK（同一份数字只写在那里）。全屏场景（对阵、颁奖）也进 SG.UI 的模态栈：快捷键与「返回」手势不会落到地图上。
    ========================================================================== */
 (function () {
   const SG = (window.SG = window.SG || {});
@@ -36,20 +39,52 @@
     return e;
   }
   const CN = '〇一二三四五六七八九';
+  // 一 · 十五 · 六十四 · 一百 · 一百零五 · 一百一十二 · 一百二十八（届数、人数、冠数）
   function cnNum(n) {
-    n = n | 0;
+    n = Math.max(0, n | 0);
     if (n < 10) return CN[n];
     if (n < 20) return '十' + (n % 10 ? CN[n % 10] : '');
     if (n < 100) return CN[(n / 10) | 0] + '十' + (n % 10 ? CN[n % 10] : '');
+    if (n < 1000) { const r = n % 100; return CN[(n / 100) | 0] + '百' + (r === 0 ? '' : r < 10 ? '零' + CN[r] : r < 20 ? '一' + cnNum(r) : cnNum(r)); }
     return String(n);
   }
-  // 「六十四人」「一百二十八人」
-  const cnCount = n => (n >= 100 ? CN[(n / 100) | 0] + '百' + (n % 100 ? (n % 100 < 10 ? '零' : '') + cnNum(n % 100).replace(/^一十/, '一十') : '') : cnNum(n));
+  const cnCount = cnNum;
   function hash32(...parts) { let x = 2166136261 >>> 0; for (const p of parts) { const s = String(p); for (let i = 0; i < s.length; i++) { x ^= s.charCodeAt(i); x = Math.imul(x, 16777619) >>> 0; } x ^= 0x9e3779b9; } return x >>> 0; }
   function rng(seed) { let s = (seed >>> 0) || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return (s & 0xffffff) / 16777216; }; }
-  const WIN_SCALE = () => (SG.TourneyData && SG.TourneyData.WIN_SCALE) || 6;
+  // 规则模块（SG.TourneyData，TOURNAMENT §10.1）未载入时的缺省——画面用到的数字只写在这里；载入后一律读 SG.TourneyData
+  const FALLBACK = {
+    MAX_PER_FACTION: 5, MIN_WAR: 60, AI_WAR: { classic: 72, world: 75 }, WIN_SCALE: 6,
+    SEED: { level: 0.6, title: 1.5, titleCap: 3, reigning: 10, drillHall: 5 },
+    PRIZES: [
+      { place: 1, gold: 400, prestige: 50, item: 'rare', skillP: 0.25 },
+      { place: 2, gold: 200, prestige: 25, item: 'uncommon', offers: 3, skillP: 0.15 },
+      { place: 3, gold: 100, prestige: 12, item: 'common', offers: 3, skillP: 0 },
+    ],
+    PREDICT: { opensAt: 16 },
+    SPONSOR: [{ id: 'small', gold: 100 }, { id: 'mid', gold: 300 }, { id: 'name', gold: 800 }],
+    ROUND_NAMES: { playIn: '预赛', first: '首轮', 32: '三十二强', 16: '十六强', 8: '八强', 4: '四强', 2: '决赛', third: '季军战' },
+  };
+  const td = k => (SG.TourneyData && SG.TourneyData[k] !== undefined ? SG.TourneyData[k] : FALLBACK[k]);
+  // 只给示意赛事（规则模块未载入）用的名字与件数
+  const DEMO = {
+    count: 3, reignTitles: 2, venueLuoyang: '平乐观', venueOther: '万国擂台', relic: '金刚杵', relicAt: 3,
+    prize1: { name: '越女剑', rarity: 'rare', slot: 'weapon' }, prize2: ['鱼鳞甲', 'uncommon', 'armour'], prize3: ['西凉毡盔', 'common', 'helmet'],
+  };
+  const WIN_SCALE = () => td('WIN_SCALE') || 6;
   const winChance = (a, b) => (SG.Tourney && SG.Tourney.winChance ? SG.Tourney.winChance(a.gen || a, b.gen || b) : 1 / (1 + Math.exp(-((a.war | 0) - (b.war | 0)) / WIN_SCALE())));
-  const ROUND_NAMES = { playIn: '预赛', first: '首轮', 32: '三十二强', 16: '十六强', 8: '八强', 4: '四强', 2: '决赛', third: '季军战' };
+  const RN = () => td('ROUND_NAMES');
+  // 会址：城 id、key（'luoyang'）、名字或城对象 → 城名
+  function cityName(c, g) {
+    if (c === undefined || c === null || c === '') return '';
+    if (typeof c === 'object' && c.name) return c.name;
+    if (g && g.cities) {
+      if (typeof c === 'number') return g.cities[c] ? g.cities[c].name : '';
+      const x = g.cities.find(y => y.key === c || y.name === c);
+      if (x) return x.name;
+    }
+    return String(c);
+  }
+  const venueOf = city => (/洛阳/.test(city) ? DEMO.venueLuoyang : DEMO.venueOther);
 
   // ================================================================ 画面用的赛事 ==
   function duelWar(gen) { try { if (SG.Gear && SG.Items && SG.Items.enabled !== false && G() && G().items) return SG.Gear.duelWar(gen) | 0; } catch (e) { /* 无装备 */ } return gen.war | 0; }
@@ -76,13 +111,23 @@
       mine: !!(g && gen.faction === g.player), mode: e.mode || null, injured: !!(gen.injury && g && gen.injury.until > g.year * 12 + g.month),
     };
   }
+  // 种子分（TOURNAMENT §4.2）：规则模块的 seedScore；未载入时按同一公式（讲武堂一项要 ENGAGEMENT，缺省不计）
+  function seedScore(e) {
+    const g = G();
+    if (SG.Tourney && SG.Tourney.seedScore) { try { return +SG.Tourney.seedScore(g, e.gen) || 0; } catch (err) { /* 退回公式 */ } }
+    const S = td('SEED'), T = g && g.tourney ? g.tourney : null;
+    const titles = T && T.wins ? T.wins[e.name] | 0 : 0;
+    return (e.war | 0) + S.level * (e.level | 0) + S.title * Math.min(S.titleCap, titles) + (T && T.reigning === e.name ? S.reigning : 0);
+  }
+  const bySeed = (a, b) => seedScore(b) - seedScore(a) || ((a.gen.id | 0) - (b.gen.id | 0));
   // 标准签位：order(2) = [1, 2]；order(2n) = 对 order(n) 的每个 x：x, 2n + 1 − x
   function order(S) { let o = [1, 2]; while (o.length < S) { const n2 = o.length * 2; const nx = []; for (const x of o) nx.push(x, n2 + 1 - x); o = nx; } return o; }
   function roundName(S, players, idx, matches) {
-    if (players === 2) return ROUND_NAMES[2];
-    if (idx === 0 && S >= 16 && matches.filter(m => m.a && m.b).length < S / 8) return ROUND_NAMES.playIn;
-    if (ROUND_NAMES[players] && players <= 32) return ROUND_NAMES[players];
-    return ROUND_NAMES.first;
+    const R = RN();
+    if (players === 2) return R[2];
+    if (idx === 0 && S >= 16 && matches.filter(m => m.a && m.b).length < S / 8) return R.playIn;
+    if (R[players] && players <= 32) return R[players];
+    return R.first;
   }
   // 示意赛事（规则模块未载入时）：各势力至多 5 人（我方 ≥ 60，电脑 ≥ 72）；按武力定种子；比到 upto 人那一轮
   function demoModel(upto) {
@@ -148,12 +193,12 @@
     const ru = host && g ? g.ruler(host.id) : null;
     // 奖池按 TOURNAMENT §7.2：没有专属兵器（availability.kind === 'ruler'）、不是绑定物
     const items = SG.Items && SG.Items.all ? SG.Items.all().filter(it => it.rarity === 'rare' && it.slot === 'weapon' && !it.bound && !(it.availability && Object.values(it.availability).some(a => a && a.kind === 'ruler'))) : [];
-    const prize = items.length ? items[(hash32('prize', year) % items.length)] : { name: '越女剑', rarity: 'rare', slot: 'weapon' };
-    const count = g && g.tourney && g.tourney.count ? g.tourney.count : 3;
+    const prize = items.length ? items[(hash32('prize', year) % items.length)] : DEMO.prize1;
+    const count = g && g.tourney && g.tourney.count ? g.tourney.count : DEMO.count;
     return {
-      demo: true, n: count + 1, year, month: 1, city: cityName, venue: /洛阳/.test(cityName) ? '平乐观' : '演武场', hostName: ru ? ru.name : '董卓', hostColor: host ? host.color : '#7a1e2c',
+      demo: true, n: count + 1, year, month: 1, city: cityName, venue: venueOf(cityName), hostName: ru ? ru.name : '董卓', hostColor: host ? host.color : '#7a1e2c',
       N, S, rounds, cur: current, next, log, entrants: pool, mine: pool.filter(e => e.mine), prize: { name: SG.Items && SG.Items.displayName && prize.id ? SG.Items.displayName(prize) : prize.name, rarity: prize.rarity || 'rare', slot: prize.slot || 'weapon', id: prize.id },
-      reigning: pool[0] ? { name: pool[0].name, titles: 2 } : null,
+      reigning: pool[0] ? { name: pool[0].name, titles: DEMO.reignTitles } : null,
     };
   }
   // SG.Tourney 的 T → 画面用的赛事（字段缺失时按示意赛事补）
@@ -178,8 +223,11 @@
     const host = T.host >= 0 && g ? g.factions[T.host] : null;
     const ru = host ? g.ruler(host.id) : null;
     const entrants = (T.entrants || []).map(ent);
-    return { demo: false, n: T.n || (g && g.tourney ? (g.tourney.count | 0) + 1 : 1), year: T.year || (g ? g.year : 191), month: 1, city: T.city && g && g.cities[T.city] ? g.cities[T.city].name : String(T.city || '洛阳'),
-      venue: T.venue || '平乐观', hostName: ru ? ru.name : '', hostColor: host ? host.color : '#7a1e2c', N: entrants.length || T.n, S, rounds, cur, next, log: T.log || [], entrants, mine: entrants.filter(e => e && e.mine),
+    // 届数：G.tourney.count + 1（UI-V4 §12.1；T.n 是参赛人数，不是届数）；会址：城 id 或 key（FIRST_HOST_CITY 用 key）
+    const edition = T.edition || (g && g.tourney ? (g.tourney.count | 0) + 1 : 1);
+    const city = cityName(T.city, g) || (ru && g.cities[ru.city] ? g.cities[ru.city].name : '');
+    return { demo: false, n: edition, year: T.year || (g ? g.year : 191), month: 1, city, venue: T.venue || venueOf(city), hostName: ru ? ru.name : '', hostColor: host ? host.color : '#7a1e2c',
+      N: entrants.length || T.n || 0, S, rounds, cur, next, log: T.log || [], entrants, mine: entrants.filter(e => e && e.mine),
       prize: T.prize || null, reigning: g && g.tourney && g.tourney.reigning ? { name: g.tourney.reigning, titles: (g.tourney.wins || {})[g.tourney.reigning] || 1 } : null };
   }
   function model(t) { return t && t.rounds && !t.demo ? fromT(t) : t && t.demo ? t : demoModel(); }
@@ -233,7 +281,12 @@
   function pennant(color) { return '<i class="sg-flag" style="--fc:' + esc(color) + '"></i>'; }
   function slotHtml(prize, size) { return UI().slot(prize && prize.id ? prize : prize ? { id: prize.id, rarity: prize.rarity, slot: prize.slot } : null, { size: size || 44, slot: (prize && prize.slot) || 'weapon' }); }
   const RAR_TXT = { common: 'common', uncommon: 'uncommon', rare: 'rare', epic: 'epic', legendary: 'legend', legend: 'legend' };
-  function prizeLine() { return '冠军 稀有兵器 / 甲 / 宝物或招式 + 400 金 + 声望 50 · 亚军 精良品 + 200 金 · 季军 凡品 + 100 金'; }
+  // 奖品一行（UI-V4 §12.1）：按 PRIZES 拼——「冠军 稀有兵器 / 甲 / 宝物或招式 + 400 金 + 声望 50 · 亚军 精良品 + 200 金 · 季军 凡品 + 100 金」
+  const ITEM_ZH = { common: '凡品', uncommon: '精良品', rare: '稀有兵器 / 甲 / 宝物', epic: '珍品', legendary: '神品' };
+  function prizeLine() {
+    const PL = ['冠军', '亚军', '季军'];
+    return (td('PRIZES') || []).slice(0, 3).map((p, i) => PL[i] + ' ' + (ITEM_ZH[p.item] || '奖品') + (i === 0 && p.skillP ? '或招式' : '') + ' + ' + p.gold + ' 金' + (i === 0 && p.prestige ? ' + 声望 ' + p.prestige : '')).join(' · ');
+  }
   function header(win, vm, sub) {
     win.title.innerHTML = '第' + cnNum(vm.n) + '届　武林大会';
     win.title.classList.add('sg-goldleaf');
@@ -260,7 +313,7 @@
         const rg = (G() && G().generals.find(x => x.name === vm.reigning.name)) || { name: vm.reigning.name };
         h('div', 'sg-tny-line sg-tny-reign', frame(rg, 34) + '<span>卫冕：<b>' + esc(vm.reigning.name) + '</b>（' + cnNum(vm.reigning.titles) + '届魁首）</span>', body);
       }
-      h('div', 'sg-tny-line sg-muted', icon('lock', 18) + '<span>三冠者得「金刚杵」 · 主办：' + esc(vm.hostName || '—') + ' · 参赛不耗令牌</span>', body);
+      h('div', 'sg-tny-line sg-muted', icon('lock', 18) + '<span>' + cnNum(DEMO.relicAt) + '冠者得「' + DEMO.relic + '」 · 主办：' + esc(vm.hostName || '—') + ' · 参赛不耗令牌</span>', body);
       UI().button(win.foot, '不参加', () => { out = 'skip'; win.close(); }, { kind: 'ghost' });
       h('div', 'sg-spacer', null, win.foot);
       UI().button(win.foot, '稍后', () => { out = 'later'; win.close(); }, { kind: 'paper' });
@@ -270,81 +323,139 @@
     });
   }
 
-  // ================================================================ 选派出战者（§12.2）==
+  // 每人的出战方式记在本机（TOURNAMENT §4.3：sanguozhi2_tourney_modes，读写失败不碍事）
+  const MODES_KEY = 'sanguozhi2_tourney_modes';
+  const MODE_ZH = [['play', '亲自'], ['watch', '观战'], ['auto', '自动']];
+  function readModes() { try { const o = JSON.parse(localStorage.getItem(MODES_KEY) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
+  function writeModes(o) { try { localStorage.setItem(MODES_KEY, JSON.stringify(o)); } catch (e) { /* 不能存就不存 */ } }
+  // 不能出赛的原因（TOURNAMENT §4.1 的说法）：规则模块的 eligible；未载入时按同一条规则
+  function eligWhy(e, g) {
+    if (SG.Tourney && SG.Tourney.eligible) { try { const r = SG.Tourney.eligible(g, e.gen); return r && r.ok ? '' : (r && r.why) || '不合资格'; } catch (err) { /* 退回规则 */ } }
+    const x = e.gen, mi = g ? g.year * 12 + g.month : 0;
+    if ((x.war | 0) < td('MIN_WAR')) return '武力不足 ' + td('MIN_WAR');
+    if (x.injury && x.injury.until > mi) return '负伤未愈';
+    if (SG.Conquest && typeof SG.Conquest.isCaptive === 'function') { try { if (SG.Conquest.isCaptive(x)) return '身陷敌营'; } catch (err) { /* 忽略 */ } }
+    const away = x.away && x.away.until > mi ? x.away.kind : null;
+    if (away === 'caravan') return '率商队在外';
+    if (away === 'exped' || away === 'expedition') return '探索未归';
+    if (away === 'hostage') return '身陷敌营';
+    if (away) return '外出未归';
+    return '';
+  }
+
+  // ================================================================ 选派出战者（§12.2；内容按 TOURNAMENT §4.3）==
+  // 左：本势力武将（按种子分排）；入选者右侧一个三段开关 亲自 · 观战 · 自动（缺省：种子分前两名亲自，其余自动；按人记住）。
+  // 右：五面旗位、预计种子、奖品、上届冠军、不上擂台的参与方式。页脚：一键推荐 · 不参加 · 稍后 · 全部自动 · 报名。
+  // 键盘：↑ ↓ 在名单里移动，Space 选 / 不选，Enter = 报名（UI-V4 §12.2）
   function entry(t) {
     const vm = model(t);
     const g = G();
     return new Promise(resolve => {
       let out = null;
       const ph = short();
+      const MAX = td('MAX_PER_FACTION') || 5;
       const win = UI().window('tourney-entry', { title: '', seal: '武', width: 'calc(100vw - 16px)', height: 'calc(100vh - 16px)', className: 'sg-tourney sg-tny-entry', side: true, sideFirst: ph, foot: true, onClose: () => { cur = null; resolve(out); } });
       cur = win;
       header(win, vm);
-      const mineAll = g ? g.generalsOf(g.player).filter(x => !x.dead).map(x => entryOf({ gen: x }, g)).sort((a, b) => b.war - a.war || (a.name < b.name ? -1 : 1)) : [];
-      const elig = e => {
-        if (SG.Tourney && SG.Tourney.eligible) { try { const r = SG.Tourney.eligible(g, e.gen); return r.ok ? '' : r.why; } catch (err) { /* 规则缺省 */ } }
-        if ((e.gen.war | 0) < 60) return '武力不足 60';
-        if (e.injured) return '负伤未愈';
-        return '';
+      const mineAll = g ? g.generalsOf(g.player).filter(x => !x.dead).map(x => entryOf({ gen: x }, g)).sort(bySeed) : [];
+      const why = new Map(mineAll.map(e => [e, eligWhy(e, g)]));
+      const elig = e => why.get(e) || '';
+      // 预选：规则模块的 defaultPick（= 电脑的选法，门槛 T = MIN_WAR）；未载入时同一条规则
+      const defaultPick = () => {
+        if (SG.Tourney && SG.Tourney.defaultPick && g) { try { const a = SG.Tourney.defaultPick(g, g.player).map(x => mineAll.find(e => e.gen === x)).filter(Boolean); if (a.length) return a.slice(0, MAX); } catch (err) { /* 退回规则 */ } }
+        return mineAll.filter(e => !elig(e) && (e.gen.war | 0) >= td('MIN_WAR')).slice(0, MAX);
       };
-      const picked = vm.mine.length ? vm.mine.map(e => mineAll.find(x => x.name === e.name)).filter(Boolean).slice(0, 5) : mineAll.filter(e => !elig(e)).slice(0, 3);
+      let picked = !vm.demo && vm.mine.length ? vm.mine.map(e => mineAll.find(x => x.name === e.name)).filter(Boolean).slice(0, MAX) : defaultPick();
+      const saved = readModes();
+      const modeOf = e => {
+        if (saved[e.name] && MODE_ZH.some(m => m[0] === saved[e.name])) return saved[e.name];
+        const rank = picked.slice().sort(bySeed).indexOf(e);
+        return rank >= 0 && rank < 2 ? 'play' : 'auto';
+      };
       const stars = e => {
         if (SG.Tourney && SG.Tourney.estimate) { try { return '★'.repeat(SG.Tourney.estimate(g, e.gen, picked.map(p => p.gen)).stars | 0) || '—'; } catch (err) { /* 估计缺省 */ } }
-        const rank = vm.entrants.filter(x => x.war > e.war).length + 1;
+        const rank = vm.entrants.filter(x => !x.mine && seedScore(x) > seedScore(e)).length + picked.filter(x => x !== e && seedScore(x) > seedScore(e)).length + 1;
         return rank <= 8 ? '★★★' : rank <= 16 ? '★★' : rank <= 32 ? '★' : '—';
       };
-      // 左：本势力武将（按单挑武力）
-      h('div', 'sg-tny-h', '选派出战者（至多 5 人）<small>单挑按武力（装备武力计三分之一）；同势力首轮尽量不相遇</small>', win.page);
+      // 左：名单（行一次建好，之后只改状态：焦点不丢）
+      h('div', 'sg-tny-h', '选派出战者（至多 ' + MAX + ' 人）<small>按种子分排序；单挑按武力（装备武力计三分之一）；同势力首轮尽量不相遇</small>', win.page);
       const list = h('div', 'sg-tny-cands', null, win.page);
-      const rows = new Map();
-      const draw = () => {
-        list.innerHTML = '';
-        for (const e of mineAll) {
-          const why = elig(e), on = picked.includes(e);
-          const w = weaponOf(e.gen);
-          const r = h('button', 'sg-tny-cr' + (on ? ' is-on' : '') + (why ? ' is-off' : ''), frame(e.gen, ph ? 34 : 44) +
-            '<span class="sg-tny-cn"><b>' + esc(e.name) + '</b><small>Lv ' + e.level + ' · 忠 ' + (e.gen.loyalty | 0) + (why ? ' · ' + esc(why) : '') + '</small></span>' +
-            '<span class="sg-tny-dw sg-num">' + e.war + '</span><span class="sg-tny-gl">' + esc(glyphsOf(e.gen)) + '</span>' +
-            '<span class="sg-tny-wp' + (w ? ' sg-rar ' + (RAR_TXT[w.rarity] || 'common') : '') + '">' + esc(w ? w.name : '—') + '</span><span class="sg-tny-star">' + esc(why ? '' : stars(e)) + '</span>', list);
-          r.type = 'button';
-          r.setAttribute('aria-pressed', on ? 'true' : 'false');
-          r.addEventListener('click', () => {
-            if (why) { UI().deny(r, esc(e.name + '：' + why)); return; }
-            const i = picked.indexOf(e);
-            if (i >= 0) picked.splice(i, 1); else if (picked.length < 5) picked.push(e); else { UI().deny(r, '至多 5 人。'); return; }
-            sfx('ui-press-paper'); draw(); flags();
-          });
-          rows.set(e.name, r);
-        }
-        if (!mineAll.length) h('div', 'sg-empty', '麾下无人可派', list);
-      };
+      const rows = [];
+      for (const e of mineAll) {
+        const w = weaponOf(e.gen), no = elig(e);
+        const wrap = h('div', 'sg-tny-crw', null, list);
+        const r = h('button', 'sg-tny-cr' + (no ? ' is-off' : ''), frame(e.gen, ph ? 34 : 44) +
+          '<span class="sg-tny-cn"><b>' + esc(e.name) + '</b><small>Lv ' + e.level + ' · 忠 ' + (e.gen.loyalty | 0) + (no ? ' · ' + esc(no) : '') + '</small></span>' +
+          '<span class="sg-tny-dw sg-num">' + e.war + '</span><span class="sg-tny-gl">' + esc(glyphsOf(e.gen)) + '</span>' +
+          '<span class="sg-tny-wp' + (w ? ' sg-rar ' + (RAR_TXT[w.rarity] || 'common') : '') + '">' + esc(w ? w.name : '—') + '</span><span class="sg-tny-star"></span>', wrap);
+        r.type = 'button';
+        r.dataset.name = e.name;
+        r.dataset.enter = 'window';                 // Enter 在名单上也是「报名」；Space 才是选 / 不选
+        r.addEventListener('click', () => {
+          if (no) { UI().deny(r, esc(e.name + '：' + no)); return; }
+          const i = picked.indexOf(e);
+          if (i >= 0) picked.splice(i, 1); else if (picked.length < MAX) picked.push(e); else { UI().deny(r, '至多 ' + MAX + ' 人。'); return; }
+          sfx('ui-press-paper'); paint();
+        });
+        const seg = UI().segmented(wrap, MODE_ZH, modeOf(e), v => { saved[e.name] = v; writeModes(saved); paint(); });
+        seg.classList.add('sg-tny-mode');
+        seg.setAttribute('aria-label', e.name + ' 出战方式');
+        rows.push({ e, r, seg, star: r.querySelector('.sg-tny-star') });
+      }
+      if (!mineAll.length) h('div', 'sg-empty', '麾下无人可派', list);
       // 右：五面势力旗
       const side = win.side;
       h('div', 'sg-tny-h', '我方旗位', side);
       const bn = h('div', 'sg-tny-banners', null, side);
       const info = h('div', 'sg-tny-info', null, side);
       const pf = g ? g.playerFaction : null;
-      const flags = () => {
+      const paint = () => {
+        for (const x of rows) {
+          const on = picked.includes(x.e);
+          x.r.classList.toggle('is-on', on);
+          x.r.setAttribute('aria-pressed', on ? 'true' : 'false');
+          x.seg.classList.toggle('is-idle', !on);
+          if (on) x.seg.set(modeOf(x.e));
+          x.star.textContent = elig(x.e) ? '' : stars(x.e);
+        }
         bn.innerHTML = '';
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < MAX; i++) {
           const e = picked[i];
-          const b = h('button', 'sg-tny-flag' + (e ? '' : ' is-empty'), e ? frame(e.gen, ph ? 30 : 38) + '<span>' + esc(e.name) + '</span>' : '<span class="sg-tny-plus">＋</span>', bn);
+          const md = e ? MODE_ZH.find(m => m[0] === modeOf(e)) : null;
+          const b = h('button', 'sg-tny-flag' + (e ? '' : ' is-empty'), e ? frame(e.gen, ph ? 30 : 38) + '<span>' + esc(e.name) + '</span><em class="sg-tny-fmode">' + esc(md ? md[1] : '') + '</em>' : '<span class="sg-tny-plus">＋</span>', bn);
           b.type = 'button';
           b.style.setProperty('--fc', pf ? pf.color : '#2f9a55');
           b.setAttribute('aria-label', e ? '移出 ' + e.name : '空旗位');
-          b.addEventListener('click', () => { if (e) { picked.splice(i, 1); sfx('ui-press-paper'); draw(); flags(); } else { const nx = mineAll.find(x => !picked.includes(x) && !elig(x)); if (nx) { picked.push(nx); sfx('ui-press-paper'); draw(); flags(); } } });
+          b.addEventListener('click', () => { if (e) { picked.splice(picked.indexOf(e), 1); sfx('ui-press-paper'); paint(); } else { const nx = mineAll.find(x => !picked.includes(x) && !elig(x)); if (nx) { picked.push(nx); sfx('ui-press-paper'); paint(); } } });
         }
-        const seeds = picked.map(e => e.name + ' ' + (vm.entrants.filter(x => x.war > e.war && !x.mine).length + picked.filter(x => x.war > e.war).length + 1) + ' 号');
+        // 预计种子：电脑的出赛者 + 我方当前的选择，按种子分排
+        const field = vm.entrants.filter(x => !x.mine).concat(picked);
+        const seeds = picked.map(e => e.name + ' ' + (field.filter(x => x !== e && seedScore(x) > seedScore(e)).length + 1) + ' 号');
+        const R = RN(), P = td('PREDICT') || {}, SP = td('SPONSOR') || [];
         info.innerHTML = '<p>预计种子：' + (seeds.length ? esc(seeds.join(' · ')) : '—') + '</p><p>奖：' + esc(prizeLine()) + '</p>' +
-          (vm.reigning ? '<p class="sg-muted">上届冠军：' + esc(vm.reigning.name) + '（' + cnNum(vm.reigning.titles) + '冠）· 三冠者得「金刚杵」</p>' : '') +
-          '<p class="sg-muted">亲自出战的比赛不受「单挑速度」设置影响（一律 100 %）。</p>';
+          (vm.reigning ? '<p class="sg-muted">上届冠军：' + esc(vm.reigning.name) + '（' + cnNum(vm.reigning.titles) + '冠）· ' + cnNum(DEMO.relicAt) + '冠者得「' + DEMO.relic + '」</p>' : '') +
+          '<p class="sg-muted">亲自：你来操作 · 观战：电脑出战、播放比赛 · 自动：只看结果。亲自出战不受「单挑速度」设置影响（一律 100 %）。</p>' +
+          '<p class="sg-muted">不上擂台也能参与：竞猜（' + esc(R[P.opensAt] || '十六强') + '时开放）· 赞助 ' + SP.map(x => x.gold).join(' / ') + ' 金</p>';
       };
-      draw(); flags();
+      paint();
       h('div', 'sg-note', '「★」为推荐（预计名次）；不合资格者灰显并写明原因。参赛不耗令牌。', win.foot);
       h('div', 'sg-spacer', null, win.foot);
+      UI().button(win.foot, '一键推荐', () => { picked = defaultPick(); sfx('ui-press-paper'); paint(); }, { kind: 'paper' });
       UI().button(win.foot, '不参加', () => { out = null; win.close(); }, { kind: 'ghost' });
-      UI().button(win.foot, '报　名', () => { if (!picked.length) { UI().toast('请至少选派一人，或点「不参加」。', { seal: '武', seconds: 2 }); return; } out = picked.map((e, i) => ({ gen: e.gen, mode: i < 2 ? 'play' : 'auto' })); sfx('ui-stamp'); win.close(); }, { kind: 'seal' });
-      win.onKey = k => { if (k === 'Enter') { const b = win.foot.querySelector('.k-seal'); if (b) b.click(); return true; } return false; };
+      UI().button(win.foot, '稍后', () => { out = 'later'; win.close(); }, { kind: 'paper' });
+      const need = () => { if (picked.length) return true; UI().toast('请至少选派一人，或点「不参加」。', { seal: '武', seconds: 2 }); return false; };
+      UI().button(win.foot, '全部自动', () => { if (!need()) return; out = picked.map(e => ({ gen: e.gen, mode: 'auto' })); out.allAuto = true; win.close(); }, { kind: 'plaque' });
+      UI().button(win.foot, '报　名', () => { if (!need()) return; out = picked.map(e => ({ gen: e.gen, mode: modeOf(e) })); sfx('ui-stamp'); win.close(); }, { kind: 'seal' });
+      // ↑ ↓：名单里移动焦点（Space 选 / 不选，Enter = 报名，由 SG.UI.window 处理）
+      win.onKey = k => {
+        if (k !== 'ArrowDown' && k !== 'ArrowUp') return false;
+        const rs = rows.map(x => x.r);
+        if (!rs.length) return false;
+        let i = rs.indexOf(document.activeElement);
+        i = i < 0 ? 0 : Math.max(0, Math.min(rs.length - 1, i + (k === 'ArrowDown' ? 1 : -1)));
+        try { rs[i].focus({ preventScroll: true }); rs[i].scrollIntoView({ block: 'nearest' }); } catch (err) { /* 忽略 */ }
+        return true;
+      };
     });
   }
 
@@ -445,7 +556,7 @@
           const bot = h('div', 'sg-tny-final is-below', null, canvas);
           bot.style.top = (fy + B.h + 10) + 'px';
           if (vm.prize) h('div', 'sg-tny-ped', slotHtml(vm.prize, ph ? 34 : 40) + '<div><b class="sg-rar ' + (RAR_TXT[vm.prize.rarity] || 'rare') + '">' + esc(vm.prize.name) + '</b><small>冠军奖品（颁奖时揭晓）</small></div>', bot);
-          h('div', 'sg-tny-fs', '金刚杵 · 三冠者得', bot);
+          h('div', 'sg-tny-fs', DEMO.relic + ' · ' + cnNum(DEMO.relicAt) + '冠者得', bot);
         } else {
           // 早的轮次（签太多）：三列从左往右，可上下滚动；右侧的缩略图标出所在
           const cols = Math.min(ncol, vm.rounds.length - r0);
@@ -538,72 +649,106 @@
     const r1 = h('div', 'sg-tny-row', null, el);
     UI().button(r1, '亲自出战', () => choose('play'), { kind: 'seal', why: mine ? null : '这一场没有我方武将。' });
     const r2 = h('div', 'sg-tny-row', null, el);
-    UI().button(r2, '观战', () => choose('watch'), { kind: 'plaque' });
-    UI().button(r2, '只看结果', () => choose('result'), { kind: 'plaque' });
+    const pref = watchPref();                     // 「单挑观战」设置（第 22 行）的缺省：金框标出
+    UI().button(r2, '观战', () => choose('watch'), { kind: 'plaque', className: pref === 'watch' ? 'is-pref' : '' });
+    UI().button(r2, '只看结果', () => choose('result'), { kind: 'plaque', className: pref === 'result' ? 'is-pref' : '' });
     if (vm.log && vm.log.length && !ph) h('div', 'sg-tny-log', vm.log.map(s => '· ' + esc(s)).join('<br>'), el);
   }
 
   // ================================================================ 全屏场景（对阵、颁奖）==
-  function scene(cls, night) {
-    const host = UI().layer('screens');
-    const el = h('div', 'sg-tny-scene ' + cls, '<canvas class="sg-tny-arena"></canvas>', host);
-    el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true');
+  // 场景也进 SG.UI 的模态栈（openModal，不压暗）：外壳的快捷键（G T P H O、指令坞）与手机「返回」手势不会落到地图上；
+  // Esc / 返回 = 场景自己的 onKey('Escape')
+  function scene(cls, night, label) {
+    const m = UI().openModal('sg-tny-scene ' + cls, { blockerClass: 'sg-tny-scene-modal', dim: false });
+    m.panel.classList.remove('sg-panel', 'sg-dialog');
+    const el = m.panel;
+    el.innerHTML = '<canvas class="sg-tny-arena"></canvas>';
+    if (label) el.setAttribute('aria-label', label);
     const cv = el.querySelector('canvas');
     requestAnimationFrame(() => { try { stadium(cv, { night }); } catch (e) { /* 无画布 */ } });
-    return el;
+    return { el, m };
   }
-  // 对阵（§12.4）：观战的 2 秒自动继续；我方的等待选择
+  // 电脑之间的比赛：按「单挑观战」（设置第 22 行）——只看结果 → 'result'，观看 / 精彩片段 → 'watch'
+  const watchPref = () => { let v = 'highlights'; try { if (SG.UISettings && SG.UISettings.duelWatch) v = SG.UISettings.duelWatch(); } catch (e) { /* 缺省 */ } return v === 'result' ? 'result' : 'watch'; };
+  // 对阵（§12.4）：观战的 2 秒后按「单挑观战」自动继续；我方的等待选择
   function match(m, t) {
     const vm = model(t);
     m = m || vm.next;
     return new Promise(resolve => {
       if (!m) { resolve('result'); return; }
       const mine = m.a.mine || m.b.mine;
-      const el = scene('sg-tny-vsscene');
+      const sc = scene('sg-tny-vsscene', false, m.a.name + ' 对 ' + m.b.name);
+      const el = sc.el;
       const ph = short();
       const rd = vm.rounds[vm.cur];
       const card = e => '<div class="sg-tny-vcard">' + frame(e.gen, ph ? 120 : 210, 'angry') + '<div class="sg-tny-vn">' + esc(e.name) + '</div>' +
         '<div class="sg-tny-vinfo is-paper"><span style="color:' + esc(e.fc) + '" class="sg-tny-vf">' + esc(e.fname) + '</span><span class="sg-num">武 ' + e.war + ' · Lv ' + e.level + '</span><span class="sg-tny-gl">' + esc(glyphsOf(e.gen)) + '</span></div></div>';
       const body = h('div', 'sg-tny-vsbig', card(m.a) + '<div class="sg-tny-mid"><div class="sg-tny-rd">' + esc(rd ? rd.name : '') + ' · 第' + cnNum(1 + Math.max(0, rd ? rd.matches.indexOf(m) : 0)) + '场</div><div class="sg-tny-bigvs">对</div><div class="sg-tny-row sg-tny-ra"></div><div class="sg-tny-row sg-tny-rb"></div></div>' + card(m.b), el);
-      let done = false;
-      const finish = v => { if (done) return; done = true; window.removeEventListener('keydown', key, true); el.classList.add('is-out'); setTimeout(() => el.remove(), 220); cur = null; resolve(v); };
-      const key = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finish('result'); } else if (e.key === 'Enter' && mine) { e.preventDefault(); e.stopPropagation(); finish('play'); } };
-      window.addEventListener('keydown', key, true);
+      let done = false, autoT = 0;
+      const finish = v => { if (done) return; done = true; clearTimeout(autoT); el.classList.add('is-out'); sc.m.close(); cur = null; resolve(v); };
+      // Esc / 返回 = 只看结果；Enter = 亲自出战（我方的比赛、焦点不在别的按钮上时）；Space / Enter 在按钮上 = 按下它（SG.UI）
+      sc.m.onKey = k => {
+        if (k === 'Escape') { finish('result'); return true; }
+        if (k === 'Enter' && mine && !UI().keyFocused(el)) { finish('play'); return true; }
+        return false;
+      };
       const r1 = body.querySelector('.sg-tny-ra'), r2 = body.querySelector('.sg-tny-rb');
+      const pref = watchPref();
       if (mine) UI().button(r1, '亲自出战', () => finish('play'), { kind: 'seal', size: 'big' });
-      UI().button(r2, '观战', () => finish('watch'), { kind: 'plaque' });
-      UI().button(r2, '只看结果', () => finish('result'), { kind: 'plaque' });
+      UI().button(r2, '观战', () => finish('watch'), { kind: 'plaque', className: pref === 'watch' && !mine ? 'is-pref' : '' });
+      UI().button(r2, '只看结果', () => finish('result'), { kind: 'plaque', className: pref === 'result' && !mine ? 'is-pref' : '' });
       cur = { close: () => finish('result') };
       sfx('ui-stamp', 0.6);
       try { if (SG.Voice) { if (m.a.mine) SG.Voice.say(m.a.gen, 'tourney.enter', { pri: 1 }); else SG.Voice.say(m.b.gen, 'duel.accept', { pri: 1 }); } } catch (e) { /* 无人声 */ }
-      if (!mine) setTimeout(() => finish('watch'), 2000);
+      if (!mine) autoT = setTimeout(() => finish(pref), 2000);
     });
   }
-  // 颁奖（§12.6）：2 → 3 → 1 依次升起，然后「天下第一」盖下；点按继续（≥ 2.6 秒）
+  // 颁奖奖品（§12.6）：规则模块的 rewards(T)；示意赛事按 PRIZES 的金与声望 + 示意物品
+  function podiumPrizes(t, vm) {
+    const g = G();
+    let rw = null;
+    try { if (SG.Tourney && SG.Tourney.rewards && t && !t.demo) rw = SG.Tourney.rewards(t); } catch (e) { rw = null; }
+    const itemInfo = id => {
+      try { if (SG.Items && SG.Items.get) { const it = SG.Items.get(id); if (it) return { id: it.id, name: SG.Items.displayName ? SG.Items.displayName(it) : it.name, rarity: it.rarity, slot: it.slot }; } } catch (e) { /* 无装备 */ }
+      return { name: String(id || ''), rarity: 'common', slot: 'treasure' };
+    };
+    const realItem = (name, rarity, slot) => {
+      try { if (SG.Items && SG.Items.all) { const a = SG.Items.all(); const it = a.find(x => x.name === name) || a.find(x => x.rarity === rarity && x.slot === slot && !x.bound); if (it) return { id: it.id, name: SG.Items.displayName ? SG.Items.displayName(it) : it.name, rarity: it.rarity, slot: it.slot }; } } catch (e) { /* 无装备 */ }
+      return { name, rarity, slot };
+    };
+    const P = td('PRIZES') || [];
+    const champs = n => { try { if (SG.Tourney && SG.Tourney.championships) return SG.Tourney.championships(n) | 0; } catch (e) { /* 缺省 */ } return g && g.tourney && g.tourney.wins ? g.tourney.wins[n] | 0 : 0; };
+    const applied = !!(t && !t.demo && g && g.tourney && g.tourney.held === t.year);
+    return [0, 1, 2].map(i => {
+      const r = rw ? rw.find(x => x && x.place === i + 1) : null;
+      const base = P[i] || {};
+      let item = null, label = '';
+      if (r && r.prize) {
+        if (r.prize.kind === 'item') item = itemInfo(r.prize.id);
+        else if (r.prize.kind === 'offers') { item = itemInfo((r.prize.ids || [])[0]); label = (r.prize.ids || []).length + ' 件任选其一'; }
+        else if (r.prize.kind === 'skill') { let nm = ''; try { const sp = SG.Specials && SG.Specials.byId ? SG.Specials.byId(r.prize.id) : null; nm = sp ? sp.name : ''; } catch (e) { nm = ''; } item = { name: '武林秘传' + (nm ? '「' + nm + '」' : ''), rarity: 'rare', slot: 'treasure' }; }
+      } else if (!rw) item = i === 0 ? vm.prize : realItem.apply(null, i === 1 ? DEMO.prize2 : DEMO.prize3);
+      const who = r && r.gen ? (r.gen.name || r.gen) : null;
+      return { item, label, gold: r ? r.gold | 0 : base.gold | 0, prestige: r ? r.prestige | 0 : base.prestige | 0, crown: i === 0 ? (who ? champs(who) + (applied ? 0 : 1) : 1) : 0 };
+    });
+  }
+  // 颁奖（§12.6）：2 → 3 → 1 依次升起，然后「天下第一」盖下；点按继续（≥ 2.6 秒；Esc 随时）
   function podium(t) {
     const vm = model(t);
     return new Promise(resolve => {
-      const el = scene('sg-tny-podscene', true);
-      const ph = short();
       // 前三名：规则模块给出 podium(T)；示意赛事取种子前三
       let top = null;
       try { if (SG.Tourney && SG.Tourney.podium && t && !t.demo) top = SG.Tourney.podium(t).map(e => entryOf(e, G())); } catch (e) { top = null; }
       if (!top) top = vm.entrants.slice(0, 3);
-      if (top.length < 3) { el.remove(); resolve(); return; }
-      // 奖品：规则模块的 rewards(T)；示意赛事取精良的甲、凡品的盔（按名找真物，图标与品级色才对）
-      const realItem = (name, rarity, slot) => {
-        try { if (SG.Items && SG.Items.all) { const a = SG.Items.all(); const it = a.find(x => x.name === name) || a.find(x => x.rarity === rarity && x.slot === slot && !x.bound); if (it) return { id: it.id, name: SG.Items.displayName ? SG.Items.displayName(it) : it.name, rarity: it.rarity, slot: it.slot }; } } catch (e) { /* 无装备 */ }
-        return { name, rarity, slot };
-      };
-      const prizes = [
-        { item: vm.prize, gold: 400, prestige: 50, crown: true },
-        { item: realItem('鱼鳞甲', 'uncommon', 'armour'), gold: 200, prestige: 25 },
-        { item: realItem('西凉毡盔', 'common', 'helmet'), gold: 100, prestige: 12 },
-      ];
+      if (top.length < 3) { resolve(); return; }
+      const sc = scene('sg-tny-podscene', true, '颁奖');
+      const el = sc.el;
+      const ph = short();
+      const prizes = podiumPrizes(t, vm);
       const tier = (i, size, hgt) => {
         const e = top[i], p = prizes[i];
         const d = h('div', 'sg-tny-tier t' + (i + 1), frame(e.gen, size, 'win') + '<div class="sg-tny-tn">' + esc(e.name) + '</div>' +
-          '<div class="sg-tny-prize is-paper">' + slotHtml(p.item, ph ? 34 : 44) + '<div><b class="sg-rar ' + (RAR_TXT[p.item && p.item.rarity] || 'common') + '">' + esc(p.item ? p.item.name : '') + '</b><small class="sg-num">+' + p.gold + ' 金 · 声望 +' + p.prestige + (p.crown ? ' · 冠 ×1' : '') + '</small></div></div>' +
+          '<div class="sg-tny-prize is-paper">' + slotHtml(p.item, ph ? 34 : 44) + '<div><b class="sg-rar ' + (RAR_TXT[p.item && p.item.rarity] || 'common') + '">' + esc(p.item ? p.item.name : '') + (p.label ? '<small>' + esc(p.label) + '</small>' : '') + '</b><small class="sg-num">+' + p.gold + ' 金 · 声望 +' + p.prestige + (p.crown ? ' · 冠 ×' + p.crown : '') + '</small></div></div>' +
           '<div class="sg-tny-blk" style="height:' + hgt + 'px">' + '一二三'[i] + '</div>', null);
         return d;
       };
@@ -618,11 +763,20 @@
         order.forEach((d, i) => { d.style.opacity = '0'; SG.Motion.play(d, [{ opacity: 0, transform: 'translateY(60px)' }, { opacity: 1, transform: 'none' }], { dur: 800, ease: 'spring', delay: i * 500 }); });
         // 朱印在 1.9 秒盖下（动画自带延迟，跳过时可一步到终态）；同时一声印、画面轻震 3 px
         SG.Motion.play(stamp, [{ transform: 'translateX(-50%) rotate(-4deg) scale(1.8)', opacity: 0 }, { transform: 'translateX(-50%) rotate(-4deg) scale(1)', opacity: 1 }], { dur: 160, ease: 'stamp', delay: 1900 });
-        setTimeout(() => { if (done) return; sfx('ui-stamp'); el.classList.add('is-shake'); setTimeout(() => el.classList.remove('is-shake'), 140); }, 1900);
+        // 轻震 ≤ 3 px、0.12 秒（UI-V4 §13.2 第 6 条；设置第 34 行「画面震动」缩放）。用 Web Animations：换 CSS 动画类会把场景的淡入从头再放一遍
+        setTimeout(() => {
+          if (done) return;
+          sfx('ui-stamp');
+          let k = 1; try { if (SG.UISettings && SG.UISettings.shakeK) k = SG.UISettings.shakeK(); } catch (e) { k = 1; }
+          if (k > 0 && el.animate) el.animate([{ transform: 'none' }, { transform: 'translate(' + 3 * k + 'px,' + -2 * k + 'px)' }, { transform: 'translate(' + -3 * k + 'px,' + 2 * k + 'px)' }, { transform: 'translate(' + 2 * k + 'px,' + k + 'px)' }, { transform: 'none' }], { duration: 120 });
+        }, 1900);
       } else sfx('ui-stamp');
-      const finish = () => { if (done || performance.now() - t0 < (reduced() ? 300 : 2600)) return; done = true; window.removeEventListener('keydown', key, true); el.classList.add('is-out'); setTimeout(() => el.remove(), 220); cur = null; resolve(); };
-      const key = e => { if (['Enter', ' ', 'Escape'].indexOf(e.key) >= 0) { e.preventDefault(); e.stopPropagation(); finish(); } };
-      window.addEventListener('keydown', key, true);
+      const finish = () => { if (done || performance.now() - t0 < (reduced() ? 300 : 2600)) return; done = true; el.classList.add('is-out'); sc.m.close(); cur = null; resolve(); };
+      sc.m.onKey = k2 => {
+        if (k2 === 'Escape') { t0 = -1e9; finish(); return true; }
+        if (k2 === 'Enter' || k2 === 'Space') { finish(); return true; }
+        return false;
+      };
       el.addEventListener('click', finish);
       h('div', 'sg-tny-cont', '点按继续', el);
       cur = { close: () => { t0 = -1e9; finish(); } };
@@ -650,16 +804,18 @@
       const nameOf = x => (typeof x === 'string' ? x : x && x.name ? x.name : (g && g.generals[x] ? g.generals[x].name : String(x)));
       const genOf = n => (g && g.generals.find(x => x.name === n)) || { name: n };
       const tb = h('div', 'sg-tny-htable', '<div class="sg-tny-hr is-head"><span>届</span><span>年 · 会址</span><span>冠军</span><span>亚军</span><span>季军</span><span>决赛</span></div>', win.page);
+      // 届数：历史只留最近 40 届（TOURNAMENT §10.4），第一行是第 count − 留下的届数 + 1 届
+      const total = T && T.count >= hist.length ? T.count | 0 : hist.length;
       hist.forEach((r, i) => {
         const p = (r.p || []).map(nameOf);
-        h('div', 'sg-tny-hr', '<span class="sg-num">' + cnNum(i + 1) + '</span><span>' + (r.y || '') + '年 · ' + esc(r.city ? (typeof r.city === 'number' && g ? g.cities[r.city].name : r.city) : '') + '</span>' +
+        h('div', 'sg-tny-hr', '<span class="sg-num">' + cnNum(total - hist.length + i + 1) + '</span><span>' + (r.y || '') + '年 · ' + esc(cityName(r.city, g)) + '</span>' +
           '<span class="sg-tny-champ">' + (p[0] ? frame(genOf(p[0]), 26) + esc(p[0]) : '—') + '</span><span>' + esc(p[1] || '—') + '</span><span>' + esc(p[2] || '—') + '</span><span class="sg-num">' + esc(r.fin || '') + '</span>', tb);
       });
       const wins = {};
       for (const r of hist) { const c = nameOf((r.p || [])[0]); if (c) wins[c] = (wins[c] || 0) + 1; }
       const rec = Object.keys(wins).sort((a, b) => wins[b] - wins[a]);
       h('div', 'sg-tny-h', '冠数', win.page);
-      h('div', 'sg-tny-wins', rec.map(n => '<span class="sg-tny-w">' + frame(genOf(n), 30) + esc(n) + ' <b>冠 ×' + wins[n] + '</b>' + (wins[n] >= 3 ? seal('金刚杵', 'round') : '') + '</span>').join(''), win.page);
+      h('div', 'sg-tny-wins', rec.map(n => '<span class="sg-tny-w">' + frame(genOf(n), 30) + esc(n) + ' <b>冠 ×' + wins[n] + '</b>' + (wins[n] >= DEMO.relicAt ? seal(DEMO.relic, 'round') : '') + '</span>').join(''), win.page);
     });
   }
 
@@ -680,7 +836,8 @@
 
   SG.TourneyScreen = {
     announce, entry, bracket, match, podium, hall, preview, model, stadium,
-    demoModel, order, winChance,
+    demoModel, order, winChance, cnNum, prizeLine, seedScore,
+    FALLBACK, DEMO,
     isOpen() { return !!cur; },
     close: closeCur,
   };

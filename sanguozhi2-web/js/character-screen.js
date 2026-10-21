@@ -10,7 +10,8 @@
    SG.CharacterScreen.open(gen, { list, tab }) → Promise（关闭时兑现）   list = ‹ › 的顺序；tab = 初始页签
    SG.CharacterScreen.tab(id)       切换页签（测试 / 案头「可习得」直达武艺）     SG.CharacterScreen.isOpen()  .current
    SG.CharacterScreen.registerTab(id, { label, icon, build(page, gen, ctx), badge?(gen), readOnly? })   其他模块的页签（关系 = ENGAGEMENT）
-   SG.CharSheet.derive(gen) → { atkK, defK, crit, critK, tacK, duelHp, mob, morale, formation, lines: { atkK: [...], … } }
+   SG.CharSheet.derive(gen) → { atkK, defK, crit, critK, tacK, duelHp, mob, morale, formation（出征）, formationDef（守城）, lines: { atkK: [...], … } }
+   SG.CharSheet.battleFormation(gen, side = 0) · battleFormations(gen) → { atk, def }
    SG.CharStage.create(host, gen, { controls, poses, compact }) → stage { setGen, setPose(p), puff(), dispose(), fallback }
        一个渲染器（DESIGN-V2 §2）：推入一个全屏场景，先照常画地图，再以 scissor 在立绘台的位置画人物，随即 drawImage 到立绘台的 2D 画布
        （DOM 里的画布，叠在纸面上，任何窗口 / 对话框照常盖在它上面）。WebGL 不可用或人物模型未载入时退回 256 px 立绘 + 画出的台子。
@@ -38,16 +39,18 @@
   // ================================================================ SG.CharSheet ==
   // 总览的派生数字：只调用拥有者（与战斗同一公式）；拥有者没载入的部分不计
   const CharSheet = {
-    // 开战时这名武将的阵型：战斗模块支持「惯用阵型」（SG.BattleModel.PREF_FORMATION）且已选定 → gen.formationPref；
-    // 否则与 battle-model.js 开战时一样按 aiFormation（攻方的打分）选——总览的数字因此与战场一致
-    battleFormation(gen) {
+    // 开战时这名武将的阵型：战斗模块支持「惯用阵型」（SG.BattleModel.PREF_FORMATION）且已选定 → gen.formationPref（攻守相同）；
+    // 否则与 battle-model.js 开战时一样按 aiFormation 选：side 0 = 出征（攻方的打分），side 1 = 守城（守方看重防御）
+    battleFormation(gen, side) {
       const F = SG.Defs && SG.Defs.formations, BM = SG.BattleModel;
       if (!F || !F.length || !gen) return 0;
       const ok = i => !!F[i] && (gen.intel | 0) >= (F[i].reqInt | 0) && (gen.war | 0) >= (F[i].reqWar | 0);
       if (BM && BM.PREF_FORMATION && gen.formationPref != null && ok(gen.formationPref)) return gen.formationPref;
-      try { if (BM && BM.prototype && BM.prototype.aiFormation) return BM.prototype.aiFormation.call({ formationAllowed: (u, i) => ok(i) }, { gen, side: 0 }) | 0; } catch (e) { /* 退回方圆 */ }
+      try { if (BM && BM.prototype && BM.prototype.aiFormation) return BM.prototype.aiFormation.call({ formationAllowed: (u, i) => ok(i) }, { gen, side: side === 1 ? 1 : 0 }) | 0; } catch (e) { /* 退回方圆 */ }
       return 0;
     },
+    // { atk: 出征时的阵型序号, def: 守城时的阵型序号 }
+    battleFormations(gen) { return { atk: CharSheet.battleFormation(gen, 0), def: CharSheet.battleFormation(gen, 1) }; },
     prefSupported() { return !!(SG.BattleModel && SG.BattleModel.PREF_FORMATION); },
     derive(gen) {
       const M = SG.Mods, P = SG.Progress, Gr = SG.Gear && SG.Items && SG.Items.enabled !== false ? SG.Gear : null, T = SG.Titles && SG.Titles.enabled !== false ? SG.Titles : null;
@@ -95,6 +98,9 @@
       } else out.lines.mob.push('—');
       const fm = SG.Defs && SG.Defs.formations ? SG.Defs.formations[fIdx] : null;
       if (!out.formation && fm) out.formation = { index: fIdx, name: fm.name, atk: fm.atk, def: fm.def, crit: fm.crit || 0 };
+      // 守城时的阵型（攻守的打分不同，常常不是同一阵；总览的攻防会心按出征时算）
+      const dIdx = CharSheet.battleFormation(gen, 1), dfm = SG.Defs && SG.Defs.formations ? SG.Defs.formations[dIdx] : null;
+      out.formationDef = dfm ? { index: dIdx, name: dfm.name, atk: dfm.atk, def: dfm.def, crit: dfm.crit || 0 } : null;
       if (fm && fm.move) { out.mob += fm.move; out.lines.mob.push(fm.name + ' +' + fm.move); }
       if (!out.lines.duelHp.length) out.lines.duelHp.push('基础 100');
       return out;
@@ -584,7 +590,11 @@
       }
       // 战场与单挑
       const D = CharSheet.derive(x);
-      sec(L, '战场与单挑', D.formation ? '阵型 ' + esc(D.formation.name) : '');
+      // 阵型：出征与守城各按其打分自动布阵（battle-model aiFormation）；下面的攻防会心按出征时的阵型
+      const fmLine = !D.formation ? '' : D.formationDef && D.formationDef.index !== D.formation.index
+        ? '出征 ' + esc(D.formation.name) + ' · 守城 ' + esc(D.formationDef.name) + ' · 数字按出征'
+        : '阵型 ' + esc(D.formation.name) + '（出征、守城相同）';
+      sec(L, '战场与单挑', fmLine);
       const cards = h('div', 'sg-ov-cards', null, L);
       const card = (lb, v, lines) => h('div', 'sg-ov-card', '<small>' + lb + '</small><b class="sg-num">' + v + '</b><span>' + esc(lines.join(' · ') || '—') + '</span>', cards);
       card('攻击', '×' + D.atkK.toFixed(2), D.lines.atkK);
@@ -858,8 +868,8 @@
       // 阵型：开战时的阵型（与战场一致，CharSheet.battleFormation）。战斗模块支持「惯用阵型」时可选定（再点一次 = 回到自动），
       // 否则八阵只作说明：开战时按能力自动布阵，战场上可随时变阵
       const pref = CharSheet.prefSupported();
-      const cur = CharSheet.battleFormation(x);
-      sec(R, pref ? '惯用阵型' : '阵　型', pref ? (x.formationPref != null ? '开战时用此阵 · 再点一次改回自动' : '自动：开战时按能力布阵') : '开战时自动布阵 · 战场上可随时变阵');
+      const curF = CharSheet.battleFormations(x), cur = curF.atk, curD = curF.def;
+      sec(R, pref ? '惯用阵型' : '阵　型', pref ? (x.formationPref != null ? '开战时用此阵 · 再点一次改回自动' : '自动：出征与守城各按能力布阵') : '出征、守城各自动布阵 · 战场上可随时变阵');
       const fg = h('div', 'sg-forms', null, R);
       const F = (SG.Defs && SG.Defs.formations) || [];
       const mine = isMine(x);
@@ -867,11 +877,12 @@
         const lock = (fm.reqInt && x.intel < fm.reqInt) ? '需智 ' + fm.reqInt : (fm.reqWar && x.war < fm.reqWar) ? '需武 ' + fm.reqWar : '';
         const parts = [];
         if (fm.atk !== 1) parts.push('攻 ×' + fm.atk); if (fm.def !== 1) parts.push('防 ×' + fm.def); if (fm.move) parts.push('机动 +' + fm.move);
-        const on = cur === i;
-        const b = h('button', 'sg-form' + (on ? ' is-on' : '') + (lock ? ' is-locked' : '') + (pref ? '' : ' is-info'), formGlyph(i) + '<b>' + esc(fm.name) + (on ? '<em class="sg-form-cur">开战</em>' : '') + '</b><small>' + esc(parts.join(' · ')) + (lock ? '<br>' + esc(lock) : '') + '</small>', fg);
+        const onA = cur === i, onD = curD === i, on = onA || onD;
+        const tagTxt = onA && onD ? '攻守' : onA ? '出征' : onD ? '守城' : '';
+        const b = h('button', 'sg-form' + (on ? ' is-on' : '') + (lock ? ' is-locked' : '') + (pref ? '' : ' is-info'), formGlyph(i) + '<b>' + esc(fm.name) + (on ? '<em class="sg-form-cur">' + tagTxt + '</em>' : '') + '</b><small>' + esc(parts.join(' · ')) + (lock ? '<br>' + esc(lock) : '') + '</small>', fg);
         b.type = 'button';
         b.setAttribute('aria-pressed', on ? 'true' : 'false');
-        UI().tip(b, esc(fm.desc || '') + (on ? '<br><span class="sg-muted">开战时的阵型' + (pref && x.formationPref == null ? '（自动）' : '') + '</span>' : ''));
+        UI().tip(b, esc(fm.desc || '') + (on ? '<br><span class="sg-muted">' + (onA && onD ? '出征与守城' : onA ? '出征' : '守城') + '时开战的阵型' + (pref && x.formationPref == null ? '（自动）' : '') + '</span>' : ''));
         b.addEventListener('click', () => {
           if (!mine) return;
           if (lock) { UI().deny(b, esc(fm.name + '：' + lock)); return; }

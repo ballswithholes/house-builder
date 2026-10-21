@@ -3305,6 +3305,10 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 5px; font: 700 max(v
 .sg-stage-poses { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); z-index: 3; }
 .sg-stage-poses .sg-seg { box-shadow: 0 3px 0 var(--ink), 0 4px 10px rgba(0, 0, 0, .25); }
 .sg-stage-poses .sg-seg-o { min-height: 36px; padding: 0 .7rem; font-size: max(var(--fs-min), .92rem); }
+/* 宽屏（根字号 24 px）时四个姿势签比 300 px 的立绘台宽：签可收窄，不被台边截掉 */
+.sg-stage-poses { left: 6px; right: 6px; transform: none; display: flex; justify-content: center; pointer-events: none; }
+.sg-stage-poses .sg-seg { max-width: 100%; pointer-events: auto; }
+.sg-stage-poses .sg-seg-o { flex: 0 1 auto; min-width: 0; padding: 0 .4rem; }
 .sg-stage.is-puff::after { content: ""; position: absolute; left: 50%; top: 52%; width: 60%; aspect-ratio: 1; transform: translate(-50%, -50%) scale(.4); border-radius: 50%; z-index: 2; pointer-events: none;
   background: radial-gradient(circle, rgba(36, 26, 33, .45), rgba(36, 26, 33, 0) 65%); animation: sg-puff .25s ease-out forwards; }
 @keyframes sg-puff { to { transform: translate(-50%, -50%) scale(1.3); opacity: 0; } }
@@ -3513,6 +3517,9 @@ html.sg-motion-lite .sg-lantern, html.sg-motion-lite .sg-btn.k-tile.is-breath, h
 html.sg-motion-lite .sg-btn.k-endseal.is-suggest .sg-es-disc, html.sg-motion-lite .sg-btn.k-endseal.is-suggest .sg-es-disc::after,
 html.sg-motion-off .sg-btn.k-endseal.is-suggest .sg-es-disc::after, html.sg-reduced .sg-btn.k-endseal.is-suggest .sg-es-disc::after { animation: none !important; }
 html.sg-motion-off .sg-slot.epic::after, html.sg-motion-off .sg-slot.legend::after, html.sg-reduced .sg-slot.epic::after, html.sg-reduced .sg-slot.legend::after { animation: none; }
+/* 有窗口 / 对话 / 全屏场景盖着时（SG.UI 给 html 加 sg-modal-open），外壳与地图标签的环境动画全部暂停（UI-V4 §5.8；§13.4 窗口里另计 ≤ 6） */
+html.sg-modal-open .sg-shell *, html.sg-modal-open .sg-shell *::before, html.sg-modal-open .sg-shell *::after,
+html.sg-modal-open .sg-labels *, html.sg-modal-open .sg-labels *::before, html.sg-modal-open .sg-labels *::after { animation-play-state: paused !important; }
 html.sg-noflash .sg-flash, html.sg-noflash .sg-ink-burst { display: none !important; }
 html.sg-sub-solid .sg-subtitle, html.sg-sub-solid .sg-voice-sub { background: rgba(20, 14, 12, .92) !important; }
 html.sg-touch-big .sg-btn { min-height: 52px; }
@@ -3654,8 +3661,11 @@ html.sg-short .sg-win-foot .sg-note { display: none; }
 html.sg-short .sg-tab { min-height: 44px; min-width: 44px; padding: .25rem .6rem; font-size: max(var(--fs-min), .9rem); justify-content: center; }
 html.sg-short .sg-tab .ico { display: none; }
 /* 菜单 */
-html.sg-short .sg-menu .sg-win-side { width: 150px; }
-html.sg-short .sg-menu-nav .sg-btn.sg-menu-item { min-height: 44px; font-size: 1rem; letter-spacing: .18em; padding: 0 .5rem; }
+/* 矮屏：七个 44 px 的书签放不进侧栏（844 × 390 时 282 px、667 × 375 时 267 px）——侧栏可上下滑动，间距 2 px，「返回标题」总能滑到 */
+html.sg-short .sg-menu .sg-win-side { width: 162px; padding-right: 12px; margin-right: -12px; position: relative; z-index: 1; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+html.sg-short .sg-menu-nav { height: auto; min-height: 100%; gap: 2px; }
+html.sg-short .sg-menu .sg-win-side.can-more { -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 30px), rgba(0, 0, 0, .3)); mask-image: linear-gradient(180deg, #000 calc(100% - 30px), rgba(0, 0, 0, .3)); }
+html.sg-short .sg-menu-nav .sg-btn.sg-menu-item { flex: none; min-height: 44px; font-size: 1rem; letter-spacing: .18em; padding: 0 .5rem; }
 html.sg-short .sg-menu-dossier-note { display: none; }
 html.sg-short .sg-slots { gap: 10px; }
 html.sg-short .sg-slotcard { min-height: 84px; padding: 6px; }
@@ -3761,11 +3771,12 @@ html.sg-short .sg-gens .sg-gens-batch { padding: 4px 2px 2px; }
 .sg-dialog.sg-shop .sg-shop-side .sg-shop-ability { color: var(--ink-2); }
 .sg-dialog.sg-shop .sg-shop-side .sg-shop-gens .sg-btn.is-on, .sg-dialog.sg-shop .sg-shop-tabs .sg-btn.is-on { color: var(--gold-hi); }
 
-/* 顶梁挤不下时（窄桌面、130 % 字号、手机 + 安全区）按 UI-V4 §5.2 / §15.1 的溢出次序逐级收紧（SG.Shell.fitBeam 加 fit-1 … fit-6，
+/* 顶梁挤不下时（窄桌面、130 % 字号、手机 + 安全区）按 UI-V4 §5.2 / §15.1 的溢出次序逐级收紧（SG.Shell.fitBeam 加 fit-1 … fit-9，
    每一级只在上一级仍放不下时才加；什么都不换行）：
    1 势力匾下的说明行藏起；2 年历的「下一件事」只留图标；3 铜钮间距 → 2 px、「城」计数并入金的说明；
-   4 年历只留月份（年份藏起）、各组间距收紧；5 分隔线藏起、匾与计数字号略小；6 势力名过长时省略（悬停看全名）；
-   7 粮并入金的说明；8 势力匾藏起 */
+   4 年历只留月份（年份藏起）、各组间距收紧；5 分隔线藏起、匾与计数字号略小；
+   规格之外（130 % 字号的手机 + 安全区等）：6 金粮改记「万」（脚本改数字，无样式）；7 势力名过长时省略（悬停看全名）；
+   8 粮并入金的说明；9 势力匾藏起 */
 .sg-beam.fit-1 .sg-plaque-sub { display: none; }
 .sg-beam.fit-2 .sg-cal-next > span { display: none; }
 .sg-beam.fit-2 .sg-cal-next { padding-left: 4px; }
@@ -3775,15 +3786,21 @@ html.sg-short .sg-gens .sg-gens-batch { padding: 4px 2px 2px; }
 .sg-beam.fit-4 .sg-beam-center { gap: 8px; }
 .sg-beam.fit-4 .sg-res { gap: 8px; }
 .sg-beam.fit-4 { gap: 8px; }
+/* SG.Shell.fitBeam 量版面时（同步加减 fit-n）不要过渡，否则量到的是旧值 */
+.sg-beam.sg-fitting, .sg-beam.sg-fitting *, .sg-beam.sg-fitting *::before, .sg-beam.sg-fitting *::after { transition: none !important; }
+/* 矮屏上 4、5 两级另有余地：各组间距 8 → 4 px，令箭筒图 30 → 24 px（大字号的手机 + 安全区时，免得粮被并走） */
+html.sg-short .sg-beam.fit-4, html.sg-short .sg-beam.fit-4 .sg-beam-center, html.sg-short .sg-beam.fit-4 .sg-res { gap: 4px; }
+html.sg-short .sg-beam.fit-5 .sg-quiver-svg { height: 24px; }
+html.sg-short .sg-beam.fit-6 { padding-right: 2px; }
 .sg-beam.fit-5 .sg-beam-sep { display: none; }
 .sg-beam.fit-5 .sg-plaquewrap .sg-plaque { font-size: 1.05rem; }
 .sg-beam.fit-5 .sg-res-c { font-size: 1rem; }
 .sg-beam.fit-5 .sg-cal-next { display: none; }
-.sg-beam.fit-6 .sg-plaquewrap { flex: 0 1 auto; max-width: 9rem; }
-.sg-beam.fit-6 .sg-plaquewrap .sg-plaque { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-/* 更窄（667 × 375 等）：7 粮并入金的说明；8 势力匾藏起（君主章与「势力」铜钮仍在） */
-.sg-beam.fit-7 .sg-res-c.is-food { display: none; }
-.sg-beam.fit-8 .sg-plaquewrap { display: none; }
+.sg-beam.fit-7 .sg-plaquewrap { flex: 0 1 auto; max-width: 9rem; }
+.sg-beam.fit-7 .sg-plaquewrap .sg-plaque { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+/* 更窄（667 × 375 等）：8 粮并入金的说明；9 势力匾藏起（君主章与「势力」铜钮仍在） */
+.sg-beam.fit-8 .sg-res-c.is-food { display: none; }
+.sg-beam.fit-9 .sg-plaquewrap { display: none; }
 
 /* ==========================================================================
    武林大会的画面（UI-V4 §12；js/tourney-screen.js）：英雄帖 · 选将 · 签表 · 对阵 · 颁奖 · 英雄榜
@@ -3814,6 +3831,14 @@ html.sg-short .sg-gens .sg-gens-batch { padding: 4px 2px 2px; }
 @media (hover: hover) { .sg-tny-cr:hover:not(.is-off) { background: rgba(255, 244, 222, .95); box-shadow: inset 0 0 0 1px var(--paper-edge), 0 0 14px var(--lamp-glow); } }
 .sg-tny-cr.is-on { background: rgba(220, 245, 220, .85); box-shadow: inset 0 0 0 2px #2f9a55; }
 .sg-tny-cr.is-off { opacity: .6; cursor: help; }
+/* 名单一行 = 选将的签 + 出战方式（亲自 · 观战 · 自动；没选上时占位不显示，列对齐） */
+.sg-tny-crw { display: flex; align-items: center; gap: 8px; }
+.sg-tny-crw > .sg-tny-cr { flex: 1; min-width: 0; }
+.sg-tny-mode { flex: none; box-shadow: 0 2px 0 var(--ink); }
+.sg-tny-mode .sg-seg-o { min-height: 40px; padding: 0 .55rem; font-size: max(var(--fs-min), .9rem); letter-spacing: .04em; }
+.sg-tny-mode.is-idle { visibility: hidden; }
+.sg-tny-fmode { font-style: normal; font-size: max(var(--fs-min), .78rem); color: #fff3e2; text-shadow: 0 1px 0 var(--ink); }
+.sg-btn.is-pref { box-shadow: 0 0 0 2px var(--gold), 0 3px 0 var(--ink); }
 .sg-tny-cr:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .sg-tny-cn { display: flex; flex-direction: column; min-width: 0; }
 .sg-tny-cn b { font-family: var(--f-display); font-weight: 400; font-size: 1.12rem; white-space: nowrap; }
@@ -3902,7 +3927,7 @@ html.sg-short .sg-tny-entry .sg-win-side { order: 0; }
 .sg-tny-vf { font-family: var(--f-display); filter: brightness(.6) saturate(1.3); }
 .sg-tny-mid { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .sg-tny-rd { font-family: var(--f-display); font-size: 1.2rem; color: var(--gold-hi); letter-spacing: .3em; text-shadow: 0 2px 0 var(--ink); padding: 2px 14px; border-radius: 14px; background: rgba(36, 24, 22, .88); border: 2px solid var(--ink); white-space: nowrap; }
-.sg-tny-bigvs { font-family: var(--f-display); font-size: 6rem; line-height: 1; color: var(--zhu); text-shadow: 0 4px 0 var(--ink), 0 0 30px rgba(255, 150, 80, .6); filter: url(#sg-brush-ink); }
+.sg-tny-bigvs { font-family: var(--f-display); font-size: 6rem; line-height: 1; margin-top: .14em; color: var(--zhu); text-shadow: 0 4px 0 var(--ink), 0 0 30px rgba(255, 150, 80, .6); filter: url(#sg-brush-ink); }
 .sg-tny-vsscene .sg-tny-row { justify-content: center; }
 .sg-tny-vsscene .sg-tny-row .sg-btn { flex: none; min-width: 6.5rem; }
 .sg-tny-pod { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); display: flex; align-items: flex-end; gap: 14px; }
@@ -3938,6 +3963,9 @@ html.sg-short .sg-tny-flag > .sg-tny-plus { display: inline; font-size: 1.2rem; 
 html.sg-short .sg-tourney .sg-win-info { display: none; }
 html.sg-short .sg-tny-cr { grid-template-columns: 38px 1fr 40px 1fr 44px; min-height: 48px; padding: 2px 6px 2px 2px; gap: 6px; }
 html.sg-short .sg-tny-wp { display: none; }
+html.sg-short .sg-tny-crw { gap: 4px; }
+html.sg-short .sg-tny-mode .sg-seg-o { min-height: 44px; min-width: 44px; padding: 0 .3rem; }
+html.sg-short .sg-tny-fmode { display: none; }
 html.sg-short .sg-tny-rtabs .sg-tab { min-height: 44px; padding: .2rem .45rem; }
 html.sg-short .sg-tny-m { width: var(--bw, 118px); }
 html.sg-short .sg-tny-mini { display: none; }

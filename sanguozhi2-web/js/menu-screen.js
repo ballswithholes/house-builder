@@ -9,6 +9,7 @@
    SG.MenuScreen.open(page?, opts?) → Promise   page: 'save' | 'load' | 'dossier' | 'help'（缺省 'save'；在标题画面打开时缺省 'load'）
        opts.fromTitle：标题画面（没有进行中的局面：只有 读取 · 设置 · 操作说明）；读取成功时 Promise 兑现为 { loaded: GameState }
    SG.MenuScreen.quickSave() → bool       SG.MenuScreen.keyCard() → Promise（快捷键一览）    SG.MenuScreen.isOpen()
+   SG.MenuScreen.autoSave(g?) → { ok, error }   「自动」档（月初、返回标题前），带地图缩略图     SG.MenuScreen.thumbnail() → dataURL | null
    SG.MenuScreen.help(chapter?) → Promise （操作说明窗口）
    SG.SaveSlots（纯逻辑，tests/saves.js）：
      cards(list?) → [{ slot, label, empty, entry, legacy }]（自动 + 一二三，另有旧版记录时追加）
@@ -127,7 +128,7 @@
       if (!fromTitle && ss && (ss.busy || ss.endMonth) && page !== 'help') { UI().deny(null, '指令或月末处理进行中，请稍候再打开菜单。'); return Promise.resolve(null); }
       let resolveP;
       const promise = new Promise(r => { resolveP = r; });
-      const win = UI().window('menu', { title: '菜　单', seal: '菜', info: fromTitle ? '' : 'Esc 返回游戏', width: 980, height: 600, side: true, foot: true, className: 'sg-menu', onClose: () => { cur = null; resolveP(st.result || null); } });
+      const win = UI().window('menu', { title: '菜　单', seal: '菜', info: fromTitle ? '' : 'Esc 返回游戏', width: 980, height: 600, side: true, foot: true, className: 'sg-menu', onClose: () => { removeEventListener('resize', moreHint); cur = null; resolveP(st.result || null); } });
       const st = cur = { win, page: null, sel: null, result: null, promise, fromTitle };
       const nav = h('nav', 'sg-menu-nav', null, win.side);
       const navBtns = {};
@@ -145,6 +146,11 @@
         UI().button(nav, '返回标题', () => MenuScreen.toTitle(), { kind: 'ghost', icon: 'gate', className: 'sg-menu-item is-exit', sound: 'paper' });
         h('div', 'sg-menu-dossier-note', '卷宗：图鉴 · 功业录 · 天下榜 · 大事记 · 国策 · 营建总览 · 商队探索 · 外交', nav);
       }
+      // 矮屏的侧栏放不下七个书签时可上下滑动：没滑到底时底边淡出（「返回标题」在下面）
+      function moreHint() { const sd = win.side; if (sd) sd.classList.toggle('can-more', sd.scrollHeight - sd.scrollTop - sd.clientHeight > 4); }
+      win.side.addEventListener('scroll', moreHint, { passive: true });
+      addEventListener('resize', moreHint);
+      requestAnimationFrame(moreHint);
       // 页脚：剧本 · 势力 · 年月 · 已游玩
       const g = G();
       if (!fromTitle && g && g.playerFaction) {
@@ -173,7 +179,7 @@
           UI().sfx('ui-tab');
           return true;
         }
-        if (k === 'Enter' && st.primary && !st.primary.disabled) { st.primary.click(); return true; }
+        // Enter：键盘移到的导航签 / 存档卡片上 = 按下它；否则 = 页脚的朱印钮（记录于「一」/ 读取）——由 SG.UI.window 处理
         return false;
       };
       return promise;
@@ -298,9 +304,17 @@
       const ok = await UI().confirm('返回标题？', '返回标题', '取消', { body: '本月进度会先记录于「自动」。' });
       if (!ok) return;
       const g = G();
-      try { if (g && g.save) { if (SG.Shell && SG.Shell.syncPlayMs) SG.Shell.syncPlayMs(); g.save(); } } catch (e) { /* 忽略 */ }
+      try { if (g && g.saveSlot) MenuScreen.autoSave(g); } catch (e) { /* 忽略 */ }
       location.reload();
     },
+    // 「自动」档（月初、返回标题前；UI-V4 §6）：与手动档一样带地图缩略图与游玩时长
+    autoSave(g) {
+      g = g || G();
+      if (!g || !g.saveSlot) return { ok: false, error: '没有可记录的局面。' };
+      if (SG.Shell && SG.Shell.syncPlayMs) SG.Shell.syncPlayMs();
+      return SaveSlots.save(g, 'auto', { thumb: thumbnail(), playMs: g.playMs | 0 });
+    },
+    thumbnail() { return thumbnail(); },
 
     // ---- 卷宗 ----
     _dossier(st) {

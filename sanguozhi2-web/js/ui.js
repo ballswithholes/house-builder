@@ -467,12 +467,13 @@
     // 由指针操作打开时，不把焦点还给 HUD 按钮（见 UI.button）
     if (lastInputPointer && prevFocus && prevFocus.closest && prevFocus.closest(HUD_SEL)) prevFocus = null;
     const rec = {
-      blocker, panel, onKey: null, closed: false,
+      blocker, panel, onKey: null, closed: false, autoFocus: null, kbdFocus: null,
       close() {
         if (rec.closed) return;
         rec.closed = true;
         const i = modalStack.indexOf(rec);
         if (i >= 0) modalStack.splice(i, 1);
+        syncModalClass();
         const hadFocus = blocker.contains(document.activeElement);
         blocker.classList.add('is-closing');
         setTimeout(() => { if (blocker.parentNode) blocker.parentNode.removeChild(blocker); }, 170);
@@ -484,10 +485,16 @@
         }
       },
     };
+    // 焦点的来历：键盘（Tab、方向键）移到的部件记为 kbdFocus；打开时自动聚焦的（autoFocus，如窗口的「收」）与指针点过的不算
+    //   焦点一旦离开自动聚焦的元素，它就不再特殊（之后用 Tab 回到「收」再按 Enter = 关窗）
+    panel.addEventListener('focusin', e => { const t = e.target; if (t !== rec.autoFocus) rec.autoFocus = null; rec.kbdFocus = !lastInputPointer && t !== rec.autoFocus ? t : null; });
     modalStack.push(rec);
+    syncModalClass();
     return rec;
   }
   UI.openModal = function (className, opts) { return openModal(className, opts); };
+  // html.sg-modal-open：有窗口 / 对话 / 全屏场景时外壳的环境动画暂停（UI-V4 §5.8）
+  function syncModalClass() { try { document.documentElement.classList.toggle('sg-modal-open', modalStack.length > 0); } catch (e) { /* 无文档 */ } }
 
   UI.anyModal = function () { return modalStack.length > 0; };
 
@@ -535,17 +542,68 @@
   }
   const NAV = new Set(['Enter', 'Space', 'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown']);
 
+  // 可按的部件：按钮、链接、复选框，或 role 为 button / tab / switch / radio / option … 的元素（Enter / Space 时 click()）
+  const ACT_ROLES = /^(button|tab|switch|radio|checkbox|option|menuitem|menuitemcheckbox|menuitemradio|link)$/;
+  function activatable(a) {
+    if (!a || !a.tagName || a.disabled) return false;
+    const t = a.tagName;
+    if (t === 'BUTTON' || t === 'SUMMARY') return true;
+    if (t === 'A') return a.hasAttribute('href');
+    if (t === 'INPUT') return /^(button|checkbox|radio|submit|reset)$/i.test(a.type || '');
+    const r = a.getAttribute && a.getAttribute('role');
+    return !!(r && ACT_ROLES.test(r));
+  }
+  function isEditable(a) {
+    if (!a || !a.tagName) return false;
+    if (a.isContentEditable || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT') return true;
+    return a.tagName === 'INPUT' && !/^(button|checkbox|radio|range|submit|reset|color|file|image)$/i.test(a.type || 'text');
+  }
+  UI.activatable = activatable;
+  // 模态里获得焦点的可按部件（不含打开时自动聚焦的）；kbdOnly = 只算键盘移到的。没有时返回 null
+  function focusedCtl(rec, kbdOnly) {
+    const a = document.activeElement;
+    if (!rec || !a || a === rec.panel || !rec.panel.contains(a) || !activatable(a) || a === rec.autoFocus) return null;
+    if (kbdOnly && rec.kbdFocus !== a) return null;
+    return a;
+  }
+  // 窗口里键盘移到的可按部件（Tab / 方向键；UI-V4 §15.3：有它时 Enter 按下它，否则 Enter = 窗口的朱印钮）
+  UI.keyFocused = function (panelEl) {
+    const rec = panelEl ? modalStack.find(r => r.panel === panelEl || r.panel === panelEl.el) : modalStack[modalStack.length - 1];
+    return rec ? focusedCtl(rec, true) : null;
+  };
+
   function onKeyDown(e) {
     const top = modalStack[modalStack.length - 1];
     if (!top) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key !== 'Shift') lastInputPointer = false;              // 先记下「键盘」：随后 Tab 移动焦点时 focusin 才算键盘焦点
     if (e.key === 'Tab') { trapTab(e, top.panel); return; }
     const k = normKey(e);
     const isNav = NAV.has(k);
     if ((k === 'Enter' || k === 'Space' || k === 'Escape') && e.repeat) { e.preventDefault(); e.stopPropagation(); return; }
+    const a = document.activeElement;
+    const inside = !!(a && a !== top.panel && top.panel.contains(a));
+    if (inside) {
+      // 1 获得焦点的部件自己的键（页签 / 木牌 / 滑杆的方向键，搜索框的 Esc 清空等）：事件在窗口层的捕获阶段就被截住了，
+      //   由这里转交（元素的 _sgKey；它 preventDefault 即表示已处理）
+      for (let n = a; n && n !== top.panel; n = n.parentElement) {
+        if (typeof n._sgKey === 'function') {
+          try { n._sgKey(e); } catch (err) { console.error(err); }
+          if (e.defaultPrevented) { e.stopPropagation(); return; }
+          break;
+        }
+      }
+      // 文字输入框：空格、方向键、Home / End 照常编辑（不拦默认，只是不让它传到地图与相机）；Enter 仍交给窗口
+      if (isEditable(a) && k !== 'Enter' && k !== 'Escape') { if (isNav) e.stopPropagation(); return; }
+    }
     let handled = false;
     if (top.onKey) {
       try { handled = top.onKey(k, e) === true; } catch (err) { console.error(err); }
+    }
+    // 2 没人处理的 Enter / Space：按下获得焦点的按钮、页签、开关、卡片（捕获阶段拦了浏览器的默认动作，所以手动 click()）
+    if (!handled && (k === 'Enter' || k === 'Space')) {
+      const c = focusedCtl(top, false);
+      if (c) { e.preventDefault(); e.stopPropagation(); c.click(); return; }
     }
     if (handled || isNav) { e.preventDefault(); e.stopPropagation(); }
   }
@@ -1400,11 +1458,14 @@
       if (it.disabled) b.disabled = true;
       b.addEventListener('pointerdown', () => uiSfx('ui-press-paper', 0.6));
       b.addEventListener('click', () => api.set(it.id));
-      b.addEventListener('keydown', e => {
+      // 方向键换页签；在窗口里由 onKeyDown 经 _sgKey 转交（窗口层在捕获阶段截住了事件）
+      const kd = e => {
         const k = e.key;
         if (k === 'ArrowRight' || (opts.vertical && k === 'ArrowDown')) { e.preventDefault(); e.stopPropagation(); api.step(1); }
         else if (k === 'ArrowLeft' || (opts.vertical && k === 'ArrowUp')) { e.preventDefault(); e.stopPropagation(); api.step(-1); }
-      });
+      };
+      b.addEventListener('keydown', kd);
+      b._sgKey = kd;
       if (it.badge) UI.badge(b, it.badge);
       btns.set(it.id, b);
       bar.appendChild(b);
@@ -1433,14 +1494,16 @@
       b.setAttribute('role', 'radio');
       b.addEventListener('pointerdown', () => uiSfx('ui-tab', 0.8));
       b.addEventListener('click', () => { if (cur !== v) set(v); });
-      b.addEventListener('keydown', e => {
+      const kd = e => {
         const i = btns.indexOf(b);
         if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
           e.preventDefault(); e.stopPropagation();
           const nb = btns[(i + (e.key === 'ArrowRight' ? 1 : -1) + btns.length) % btns.length];
           uiSfx('ui-tab', 0.8); set(nb._v); try { nb.focus({ preventScroll: true }); } catch (err) { /* 忽略 */ }
         }
-      });
+      };
+      b.addEventListener('keydown', kd);
+      b._sgKey = kd;
       btns.push(b); w.appendChild(b);
     }
     set(value, true);
@@ -1506,7 +1569,7 @@
     groove.addEventListener('pointermove', e => { if (drag) setV(fromX(e.clientX), false); });
     const end = () => { if (!drag) return; drag = false; if (o.onCommit) o.onCommit(v); if (o.preview) { try { o.preview(v); } catch (e) { /* 忽略 */ } } };
     groove.addEventListener('pointerup', end); groove.addEventListener('pointercancel', end);
-    knob.addEventListener('keydown', e => {
+    const kd = e => {
       const big = (max - min) / 10;
       let d = 0;
       if (e.key === 'ArrowRight' || e.key === 'ArrowUp') d = step;
@@ -1518,7 +1581,9 @@
       if (!d) return;
       e.preventDefault(); e.stopPropagation();
       setV(v + d, true);
-    });
+    };
+    knob.addEventListener('keydown', kd);
+    knob._sgKey = kd;
     draw();
     w.set = nv => { v = M.clamp(nv, min, max); lastTick = -1; draw(); };
     w.get = () => v;
@@ -1530,7 +1595,7 @@
   UI.counter = function (target, o) {
     o = o || {};
     const fmt = o.format || (v => Math.round(v).toLocaleString('en-US'));
-    let shown = o.value || 0, goal = shown, raf = 0, t0 = 0, from = 0, dur = 0, pending = 0, pendT = 0, tagEl = null;
+    let shown = o.value || 0, goal = shown, raf = 0, t0 = 0, from = 0, dur = 0, pending = 0, pendT = 0, tagEl = null, curV = shown;
     const num = el('span', 'sg-counter-n', fmt(shown));
     target.classList.add('sg-counter');
     if (o.icon) target.insertAdjacentHTML('afterbegin', iconHtml(o.icon));
@@ -1540,7 +1605,8 @@
     function frame(now) {
       const k = Math.min(1, (now - t0) / dur);
       const v = from + (goal - from) * ease(k);
-      if (k >= 1 || now - lastWrite > 33) { num.textContent = fmt(k >= 1 ? goal : v); lastWrite = now; }
+      curV = k >= 1 ? goal : v;
+      if (k >= 1 || now - lastWrite > 33) { num.textContent = fmt(curV); lastWrite = now; }
       if (k < 1) raf = requestAnimationFrame(frame); else { raf = 0; shown = goal; num.style.minWidth = String(fmt(goal)).length + 'ch'; }
     }
     function tag(delta) {
@@ -1560,6 +1626,8 @@
     return {
       el: target,
       get value() { return goal; },
+      // 格式改变后（如顶梁的「万」记数）按当前值重写数字与留宽
+      reformat() { num.textContent = fmt(raf ? curV : goal); num.style.minWidth = String(fmt(goal)).length + 'ch'; },
       set(v, opts2) {
         opts2 = opts2 || {};
         v = +v || 0;
@@ -1569,11 +1637,11 @@
           tag(delta);
           if (o.sound !== false) uiSfx(delta > 0 ? (o.sound || 'ui-coins') : (o.soundOut || 'ui-coin-out'), 0.8);
         }
-        from = raf ? +String(num.textContent).replace(/[^\d.-]/g, '') || shown : shown;
+        from = raf ? curV : shown;
         goal = v;
         // 滚动时宽度不跳：先按终值的位数留出宽度（等宽数字，1ch = 一位）
         num.style.minWidth = Math.max(String(fmt(v)).length, String(fmt(from)).length) + 'ch';
-        if (Motion.reduced || Motion.level === 'off' || opts2.instant) { shown = v; num.textContent = fmt(v); if (raf) cancelAnimationFrame(raf); raf = 0; return; }
+        if (Motion.reduced || Motion.level === 'off' || opts2.instant) { shown = curV = v; num.textContent = fmt(v); if (raf) cancelAnimationFrame(raf); raf = 0; return; }
         dur = 1000 * M.clamp(0.35 + 0.12 * Math.log10(Math.abs(delta) + 1), 0.35, 0.9);
         t0 = performance.now();
         if (!raf) raf = requestAnimationFrame(frame);
@@ -1666,6 +1734,8 @@
     const rec = {
       el: m.panel, modal: m, head, title, info, tools, tabs: null, page: null, side: null, foot: null, onKey: null,
       setInfo(h) { info.innerHTML = h || ''; },
+      // 页脚的朱印钮（可见、未禁用的最后一个）：Enter 按它
+      seal() { if (!rec.foot) return null; const a = Array.from(rec.foot.querySelectorAll('.sg-btn.k-seal')).filter(b => !b.disabled && b.offsetParent !== null); return a.length ? a[a.length - 1] : null; },
       close() {
         if (closed) return;
         closed = true;
@@ -1686,9 +1756,16 @@
     rec.page = el('div', 'sg-page' + (o.tabs ? ' has-tabs' : ''));
     pageWrap.appendChild(rec.page);
     if (o.foot) { rec.foot = el('div', 'sg-win-foot'); m.panel.appendChild(rec.foot); }
+    // 窗口的键（UI-V4 §15.3）：键盘移到的按钮 / 页签 / 开关 / 卡片上 Enter、Space = 按下它（data-enter="window" 的元素上 Enter 仍归窗口）；
+    // 然后是窗口自己的 onKey；Esc 关闭；Enter = 页脚的朱印钮；← → 换页签
     m.onKey = (k, e) => {
+      if (k === 'Enter' || k === 'Space') {
+        const c = focusedCtl(m, true);
+        if (c && !(k === 'Enter' && c.closest('[data-enter="window"]'))) { c.click(); return true; }
+      }
       if (rec.onKey) { try { if (rec.onKey(k, e) === true) return true; } catch (err) { console.error(err); } }
       if (k === 'Escape') { rec.close(); return true; }
+      if (k === 'Enter') { const s = rec.seal(); if (s) { s.click(); return true; } }
       if (rec.tabs && (k === 'ArrowLeft' || k === 'ArrowRight')) {
         const a = document.activeElement;
         if (a && (a.tagName === 'INPUT' || (a.closest && a.closest('.sg-seg, .sg-slider, .sg-tabs')))) return false;
@@ -1699,7 +1776,7 @@
     };
     uiSfx('ui-paper-open', 0.8);
     if (!Motion.reduced && Motion.level !== 'off') Motion.play(m.panel, [{ opacity: 0, transform: 'scale(.96) translateY(12px)' }, { opacity: 1, transform: 'none' }], { dur: 260 });
-    try { const c = head.querySelector('.sg-close'); if (c) c.focus({ preventScroll: true }); } catch (e) { /* 忽略 */ }
+    try { const c = head.querySelector('.sg-close'); if (c) { m.autoFocus = c; c.focus({ preventScroll: true }); } } catch (e) { /* 忽略 */ }
     return rec;
   };
 

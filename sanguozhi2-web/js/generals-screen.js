@@ -70,7 +70,10 @@
       const inp = search.querySelector('input');
       inp.value = session.q;
       inp.addEventListener('input', () => { session.q = inp.value.trim(); refresh(); });
-      inp.addEventListener('keydown', e => { if (e.key === 'Escape') { if (inp.value) { inp.value = ''; session.q = ''; refresh(); e.stopPropagation(); } else inp.blur(); } });
+      // Esc：有字时先清空（窗口不关）；在窗口里由 SG.UI 的键盘转交（_sgKey，preventDefault = 已处理）
+      const inpKey = e => { if (e.key === 'Escape' && inp.value) { e.preventDefault(); e.stopPropagation(); inp.value = ''; session.q = ''; refresh(); } };
+      inp.addEventListener('keydown', inpKey);
+      inp._sgKey = inpKey;
       const filt = h('div', 'sg-gens-filters', null, bar);
       const famSeg = UI().segmented(filt, [['all', '全部'], ['war', '武'], ['intel', '谋'], ['pol', '文']], session.fam, v => { session.fam = v; refresh(); });
       famSeg.classList.add('sg-gens-fam');
@@ -128,7 +131,13 @@
         const L = st.list;
         if (!L.length) return false;
         let i = st.sel ? L.indexOf(st.sel) : -1;
-        if (k === 'ArrowDown' || k === 'ArrowUp') { i = Math.max(0, Math.min(L.length - 1, i + (k === 'ArrowDown' ? 1 : -1))); select(L[i], true); return true; }
+        if (k === 'ArrowDown' || k === 'ArrowUp') {
+          i = Math.max(0, Math.min(L.length - 1, i + (k === 'ArrowDown' ? 1 : -1))); select(L[i], true);
+          // 焦点随选中的行走（之后的 Enter 打开这一位，而不是按下先前聚焦的筛选签）
+          const r = st.inner.querySelector('[data-id="' + L[i].id + '"]');
+          if (r) { try { r.focus({ preventScroll: true }); } catch (err) { /* 忽略 */ } }
+          return true;
+        }
         if (k === 'Enter' && st.sel) { openChar(st.sel); return true; }
         if (k === '/' || (e && e.key === 'f' && (e.ctrlKey || e.metaKey))) { inp.focus(); return true; }
         return false;

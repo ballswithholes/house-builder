@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>内政演出 · 测试</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>
+  /* DOMESTIC-FX §13.4：每条指令 × 分级 × 舞台（第二阶段：牌面）× 速度；?auto=1 依次播放并报告；?skip=1 随机时刻跳过；
+     ?icons=1 图标剪影两两差异（24 px）与按钮状态；?render=1 短乐离线渲染；?cb=deut|prot 色觉模拟。结果写在 #out 与 window.__fx */
+  html, body { overflow: auto; height: auto; }
+  body { margin: 0; background: #2b2420; color: #f3e7cc; font-family: var(--f-body, sans-serif); }
+  h1 { font-family: var(--f-display, serif); font-weight: 400; letter-spacing: .14em; margin: 12px 16px 4px; color: #f8dc8e; font-size: 24px; }
+  h2 { font-family: var(--f-display, serif); font-weight: 400; letter-spacing: .14em; margin: 14px 16px 4px; color: #f8dc8e; font-size: 18px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 6px 16px; }
+  .bar label { font-size: 13px; color: #b7a690; }
+  select, .bar button { min-height: 36px; border-radius: 6px; border: 1px solid rgba(243,201,105,.45); background: #23212d; color: #f3e7cc; font: inherit; font-size: 13px; padding: 0 8px; }
+  table.grid { border-collapse: collapse; margin: 4px 16px; font-size: 13px; }
+  table.grid td, table.grid th { border-bottom: 1px solid rgba(255,255,255,.08); padding: 2px 6px; white-space: nowrap; }
+  table.grid th { color: #b7a690; font-weight: normal; text-align: left; }
+  table.grid button { min-height: 30px; min-width: 52px; border-radius: 5px; border: 1px solid rgba(243,201,105,.35); background: #33231f; color: #f3e7cc; cursor: pointer; font-size: 12px; }
+  table.grid button.t-great { background: #7a2419; } table.grid button.t-good { background: #5e3f22; } table.grid button.t-miss { background: #3a3a42; }
+  table.grid button.bad { outline: 2px solid #ff8f73; }
+  .icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; padding: 6px 16px; }
+  .ic { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-radius: 6px; background: #f3e7cc; color: #241a21; font-size: 11px; }
+  .ic .row3 { display: flex; align-items: end; gap: 4px; }
+  .btns { display: flex; flex-wrap: wrap; gap: 10px; padding: 8px 16px; }
+  .btns .sg-btn.k-tile { width: 76px; height: 76px; flex: none; } html.sg-short .btns .sg-btn.k-tile { width: 56px; height: 60px; }
+  .btns .sg-btn.k-tile > .ico { width: 40px; height: 40px; } html.sg-short .btns .sg-btn.k-tile > .ico { width: 28px; height: 28px; }
+  #out { margin: 10px 16px 40px; padding: 10px 12px; white-space: pre-wrap; font: 12px/1.5 monospace; background: #111; border-radius: 6px; max-height: 60vh; overflow: auto; }
+  #out .bad { color: #ff8f73; } #out .ok { color: #8ddc93; }
+  body.cb-deut .icons, body.cb-deut .btns { filter: url(#cb-deut); } body.cb-prot .icons, body.cb-prot .btns { filter: url(#cb-prot); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="cb-deut"><feColorMatrix type="matrix" values="0.625 0.375 0 0 0  0.7 0.3 0 0 0  0 0.3 0.7 0 0  0 0 0 1 0"/></filter>
+  <filter id="cb-prot"><feColorMatrix type="matrix" values="0.567 0.433 0 0 0  0.558 0.442 0 0 0  0 0.242 0.758 0 0  0 0 0 1 0"/></filter>
+</svg>
+<div id="app"></div>
+<div id="ui"></div>
+<h1>内政演出 · 测试（DOMESTIC-FX §13.4）</h1>
+<div class="bar">
+  <label>速度 <select id="form"><option value="full">完整</option><option value="fast">快速</option></select></label>
+  <label>音乐 <select id="music"><option value="off">关</option><option value="on">开（短乐为时钟）</option></select></label>
+  <label>家族 <select id="fam"></select></label>
+  <button id="runAll">依次播放全部</button>
+  <button id="runSkip">跳过测试</button>
+  <button id="runIcons">图标检查</button>
+  <button id="runRender">短乐离线渲染</button>
+</div>
+<table class="grid" id="grid"></table>
+<h2>指令按钮（§7）</h2>
+<div class="btns sg-shell" id="btns"></div>
+<h2>图标（24 · 40 · 160 px）</h2>
+<div class="icons" id="icons"></div>
+<pre id="out"></pre>
+
+<script src="../vendor/three.min.js"></script>
+<script src="../js/core.js"></script>
+<script src="../js/registry.js"></script>
+<script src="../js/world-geo.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/world-data.js"></script>
+<script src="../js/items-data.js"></script>
+<script src="../js/titles-data.js"></script>
+<script src="../js/combo-data.js"></script>
+<script src="../js/econ.js"></script>
+<script src="../js/model.js"></script>
+<script src="../js/items.js"></script>
+<script src="../js/titles.js"></script>
+<script src="../js/combos.js"></script>
+<script src="../js/migrate-v4.js"></script>
+<script src="../js/strategy-ai.js"></script>
+<script src="../js/audio.js"></script>
+<script src="../js/music.js"></script>
+<script src="../js/music-inst.js"></script>
+<script src="../js/music-han.js"></script>
+<script src="../js/music-world.js"></script>
+<script src="../js/music-suites.js"></script>
+<script src="../js/music-suites-gen.js"></script>
+<script src="../js/music-stings.js"></script>
+<script src="../js/settings.js"></script>
+<script src="../js/ui-icons.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../js/ui-art.js"></script>
+<script src="../js/portrait-data.js"></script>
+<script src="../js/portrait.js"></script>
+<script src="../js/specials-data.js"></script>
+<script src="../js/specials.js"></script>
+<script src="../js/domestic-tiers.js"></script>
+<script src="../js/cmd-icons.js"></script>
+<script src="../js/domestic-fx.js"></script>
+<script>
+(function () {
+  'use strict';
+  const Q = new URLSearchParams(location.search);
+  const out = document.getElementById('out');
+  const log = (s, cls) => { const d = document.createElement('div'); if (cls) d.className = cls; d.textContent = s; out.appendChild(d); };
+  const errors = [];
+  window.addEventListener('error', e => errors.push(String(e.message || e)));
+  window.addEventListener('unhandledrejection', e => errors.push('rejection: ' + (e.reason && e.reason.message || e.reason)));
+  const R = window.__fx = { ready: false, done: false, results: [], errors, icons: null, render: null };
+  if (Q.get('cb')) document.body.classList.add('cb-' + Q.get('cb'));
+  SG.UI.init();
+  SG.DomesticFx.auto = false;
+  // 一局游戏，供记录引用真实的城与武将
+  SG.Random.seed(3);
+  const g = SG.G = SG.GameState.newGame('cao', 'classic');
+  const P = g.player, cap = g.cities[g.ruler(P).city];
+  const offs = g.officersIn(cap);
+  const gen = offs.find(x => !g.isRuler(x)) || offs[0];
+  const ef = g.factions.find(f => f.alive && f.id !== P && g.cityCount(f.id) >= 2) || g.factions.find(f => f.alive && f.id !== P);
+  const ecity = g.citiesOf(ef.id)[0];
+  const egen = g.officersIn(ecity).find(x => !g.isRuler(x)) || g.officersIn(ecity)[0];
+  const hidden = g.generals.find(x => x.hidden) || g.generals.find(x => x.faction < 0) || egen;
+  const c2 = cap.links.map(i => g.cities[i]).find(x => x.owner === P) || cap.links.map(i => g.cities[i])[0];
+  const star = g.generals.slice().sort((a, b) => Math.max(b.war, b.intel, b.pol) - Math.max(a.war, a.intel, a.pol))[0];
+  const mid = g.generals.find(x => x !== gen && Math.max(x.war, x.intel, x.pol) < 70) || egen;
+  const good75 = g.generals.find(x => { const m = Math.max(x.war, x.intel, x.pol); return m >= 75 && m < 90; }) || egen;
+  const itemId = (k) => { try { const all = SG.Items.all(); const it = all.find(x => x.rarity === k); return it ? it.id : null; } catch (e) { return null; } };
+  const base = (o) => Object.assign({ city: cap.id, gen: gen.id, month: g.monthIndex, f: P }, o);
+  const S = {
+    'develop.land': { normal: { cmd: 'develop', kind: 'land', roll: 2, before: 312, after: 326, g0: 14, cost: 50, stBefore: 1, stAfter: 1 }, good: { cmd: 'develop', kind: 'land', roll: 4, before: 310, after: 330, g0: 20, cost: 50, mods: { gear: 0.12, title: 0.1 }, stBefore: 1, stAfter: 1 }, great: { cmd: 'develop', kind: 'land', roll: 1, before: 295, after: 306, g0: 11, cost: 50, stBefore: 0, stAfter: 1 } },
+    'develop.industry': { normal: { cmd: 'develop', kind: 'industry', roll: 2, before: 312, after: 326, g0: 14, cost: 50, stBefore: 1, stAfter: 1 }, good: { cmd: 'develop', kind: 'industry', roll: 4, before: 310, after: 330, g0: 20, cost: 50, stBefore: 1, stAfter: 1 }, great: { cmd: 'develop', kind: 'industry', roll: 1, before: 445, after: 457, g0: 12, cost: 50, stBefore: 1, stAfter: 2 } },
+    'develop.town': { normal: { cmd: 'develop', kind: 'town', roll: 2, before: 212, after: 226, g0: 14, cost: 50, stBefore: 0, stAfter: 0 }, good: { cmd: 'develop', kind: 'town', roll: 0, before: 395, after: 405, g0: 10, cost: 50, stBefore: 1, stAfter: 1 }, great: { cmd: 'develop', kind: 'town', roll: 3, before: 292, after: 306, g0: 14, cost: 50, stBefore: 0, stAfter: 1 } },
+    recruit: { normal: { cmd: 'recruit', n: 1000, before: 2000, after: 3000, max: 8000, cityBefore: 5000, cityAfter: 6000, cost: 200, trainingBefore: 60, trainingAfter: 50 }, good: { cmd: 'recruit', n: 2000, before: 2000, after: 4000, max: 8000, cityBefore: 5000, cityAfter: 7000, cost: 400 }, great: { cmd: 'recruit', n: 1500, before: 1000, after: 2500, max: 8000, cityBefore: 9200, cityAfter: 10700, cost: 300 } },
+    train: { normal: { cmd: 'train', roll: 2, before: 50, after: 62, troops: 3000, max: 8000 }, good: { cmd: 'train', roll: 4, before: 70, after: 86, troops: 3000, max: 8000 }, great: { cmd: 'train', roll: 1, before: 90, after: 100, troops: 7600, max: 8000 } },
+    search: { miss: { cmd: 'search', ok: false, outcome: 'none', value: 0 }, normal: { cmd: 'search', outcome: 'gold', value: 120 }, good: { cmd: 'search', outcome: 'food', value: 2100 }, great: { cmd: 'search', outcome: 'talent', found: (star.hidden ? star : hidden).id } },
+    hire: { miss: { cmd: 'hire', ok: false, p: 0.5, target: mid.id }, normal: { cmd: 'hire', ok: true, p: 0.6, target: mid.id }, good: { cmd: 'hire', ok: true, p: 0.6, target: good75.id }, great: { cmd: 'hire', ok: true, p: 0.6, target: star.id } },
+    move: { normal: { cmd: 'move', gens: 1, ids: [gen.id], troops: 3000, hops: 1, to: c2.id }, good: { cmd: 'move', gens: 3, troops: 9000, hops: 1, to: c2.id }, great: { cmd: 'move', gens: 5, troops: 22000, hops: 1, to: c2.id, frontline: true } },
+    transport: { normal: { cmd: 'transport', to: c2.id, gold: 100, food: 1000, destFoodBefore: 5000, destNeed: 100, gen: null }, good: { cmd: 'transport', to: c2.id, gold: 600, food: 2000, destFoodBefore: 5000, destNeed: 100, gen: null }, great: { cmd: 'transport', to: c2.id, gold: 0, food: 800, destFoodBefore: 150, destNeed: 120, gen: null } },
+    ally: { miss: { cmd: 'ally', ok: false, p: 0.5, target: ef.id, gift: 200, targetCities: 1, ourCities: 3 }, normal: { cmd: 'ally', ok: true, p: 0.6, target: ef.id, gift: 100, targetCities: 1, ourCities: 3, months: 12 }, good: { cmd: 'ally', ok: true, p: 0.4, target: ef.id, gift: 200, targetCities: 1, ourCities: 3, months: 12 }, great: { cmd: 'ally', ok: true, p: 0.2, target: ef.id, gift: 300, targetCities: 1, ourCities: 3, months: 12 } },
+    discord: { miss: { cmd: 'discord', ok: false, d: 0, loyaltyAfter: 70, p: 0.4, target: egen.id }, normal: { cmd: 'discord', ok: true, d: 5, loyaltyAfter: 60, target: egen.id }, good: { cmd: 'discord', ok: true, d: 12, loyaltyAfter: 58, target: egen.id }, great: { cmd: 'discord', ok: true, d: 20, loyaltyAfter: 35, target: egen.id } },
+    persuade: { miss: { cmd: 'persuade', ok: false, surrendered: false, target: egen.id, p: 0.2 }, good: { cmd: 'persuade', ok: true, surrendered: false, target: mid.id, p: 0.3, from: ef.id }, great: { cmd: 'persuade', ok: true, surrendered: true, cityId: ecity.id, target: egen.id, p: 0.3, from: ef.id } },
+    attack: { normal: { cmd: 'attack', gens: 2, troops: 8000, food: 600, to: ecity.id, ruler: false }, good: { cmd: 'attack', gens: 3, troops: 13000, food: 1200, to: ecity.id, ruler: false }, great: { cmd: 'attack', gens: 5, troops: 42000, food: 4000, to: ecity.id, ruler: true } },
+    reward: { normal: { cmd: 'reward', roll: 2, before: 70, after: 80, cost: 100, gift: null }, good: { cmd: 'reward', roll: 4, before: 70, after: 82, cost: 100, gift: null }, great: { cmd: 'reward', roll: 4, before: 95, after: 100, cost: 100, gift: null } },
+    trade: { normal: { cmd: 'trade', side: 'buy', price: 12, gold: 300, food: 2500, goldOut: 300, gen: null }, good: { cmd: 'trade', side: 'sell', price: 16, food: 3000, gold: 430, goldOut: 430, gen: null }, great: { cmd: 'trade', side: 'buy', price: 8, gold: 1200, food: 15000, goldOut: 1200, gen: null } },
+    appoint: { normal: { cmd: 'appoint', pol: 60, prevPol: 55 }, good: { cmd: 'appoint', pol: 78, prevPol: 60 }, great: { cmd: 'appoint', pol: 92, prevPol: 70 } },
+    market: { normal: { cmd: 'market', side: 'buy', rarity: 'common', item: itemId('common'), price: 120 }, good: { cmd: 'market', side: 'buy', rarity: 'rare', item: itemId('rare'), price: 800 }, great: { cmd: 'market', side: 'buy', rarity: 'legendary', item: itemId('legendary'), price: 5000 } },
+    title: { normal: { cmd: 'title', titleTier: 1, titleName: '校尉' }, good: { cmd: 'title', titleTier: 3, titleName: '中郎将' }, great: { cmd: 'title', titleTier: 5, titleName: '大将军' } },
+    harvest: { miss: 0.87, normal: 1.0, good: 1.06, great: 1.12 },
+    stageUp: { great: { cmd: 'stageUp', ups: [{ city: cap.id, building: 'farms', from: 1, to: 2 }, { city: cap.id, building: 'houses', from: 0, to: 1 }] } },
+    month: { normal: { cmd: 'month' } },
+    build: { normal: { cmd: 'build', project: 'canal', projectName: '水渠', cost: 300, supervisor: mid.id, done: false, months: 4 }, good: { cmd: 'build', project: 'canal', projectName: '水渠', cost: 500, supervisor: mid.id, done: false, months: 6 }, great: { cmd: 'build', project: 'canal', projectName: '水渠', cost: 300, done: true } },
+    caravan: { miss: { cmd: 'caravan', lost: true, profit: 0, to: c2.id }, normal: { cmd: 'caravan', to: ecity.id, gold: 300 }, good: { cmd: 'caravan', to: ecity.id, profit: 180, items: [] }, great: { cmd: 'caravan', to: ecity.id, profit: 320, items: [] } },
+    explore: { miss: { cmd: 'explore', outcome: 'mishap', site: 1 }, normal: { cmd: 'explore', site: 1 }, good: { cmd: 'explore', outcome: 'exp', prestige: 12, site: 1 }, great: { cmd: 'explore', outcome: 'clue', site: 1 } },
+    gift: { normal: { cmd: 'gift', target: ef.id, gold: 100, dRel: 5 }, good: { cmd: 'gift', target: ef.id, gold: 200, dRel: 12 }, great: { cmd: 'gift', target: ef.id, gold: 400, dRel: 22 } },
+    marriage: { miss: { cmd: 'marriage', ok: false, p: 0.4, target: ef.id }, great: { cmd: 'marriage', ok: true, p: 0.4, target: ef.id, cost: 500 } },
+    tribute: { miss: { cmd: 'tribute', mode: 'demand', ok: false, target: ef.id, targetCities: 3, ourCities: 4 }, normal: { cmd: 'tribute', mode: 'offer', ok: true, target: ef.id, targetCities: 2, ourCities: 2, pay: 200 }, good: { cmd: 'tribute', mode: 'demand', ok: true, target: ef.id, targetCities: 2, ourCities: 6, pay: 150 }, great: { cmd: 'tribute', mode: 'demand', ok: true, target: ef.id, targetCities: 3, ourCities: 6, pay: 300 } },
+    hostage: { normal: { cmd: 'hostage', back: false, target: ef.id }, great: { cmd: 'hostage', back: true, exp: 20, target: ef.id } },
+    truce: { miss: { cmd: 'truce', ok: false, p: 0.5, target: ef.id, targetTroops: 5000, ourTroops: 10000, gold: 200 }, normal: { cmd: 'truce', ok: true, p: 0.6, target: ef.id, targetTroops: 5000, ourTroops: 10000, gold: 200 }, good: { cmd: 'truce', ok: true, p: 0.4, target: ef.id, targetTroops: 5000, ourTroops: 10000, gold: 200 }, great: { cmd: 'truce', ok: true, p: 0.6, target: ef.id, targetTroops: 12000, ourTroops: 10000, gold: 200 } },
+    tradepact: { miss: { cmd: 'tradepact', ok: false, target: ef.id, targetCities: 1, ourCities: 2 }, normal: { cmd: 'tradepact', ok: true, rel: 20, target: ef.id, targetCities: 1, ourCities: 2 }, good: { cmd: 'tradepact', ok: true, rel: 45, target: ef.id, targetCities: 1, ourCities: 2 }, great: { cmd: 'tradepact', ok: true, rel: 10, target: ef.id, targetCities: 5, ourCities: 2 } },
+    submit: { great: { cmd: 'submit', from: ef.id, cities: 2, gens: 5 } },
+    mission: { normal: { cmd: 'mission', id: 'farm', name: '劝课农桑', missionTier: 1, reward: { gold: 200 } }, good: { cmd: 'mission', id: 'farm', name: '劝课农桑', missionTier: 2, reward: { gold: 300, prestige: 20 } }, great: { cmd: 'mission', id: 'farm', name: '劝课农桑', missionTier: 3, reward: { gold: 500, prestige: 40 } } },
+    festival: { normal: { cmd: 'festival', grade: 'modest', family: 'hua', cost: 100 }, great: { cmd: 'festival', grade: 'grand', family: 'hua', cost: 400 } },
+    wenhui: { normal: { cmd: 'wenhui', place: 3 }, good: { cmd: 'wenhui', place: 2 }, great: { cmd: 'wenhui', place: 1 } },
+  };
+  const TIERS = ['miss', 'normal', 'good', 'great'];
+  function record(id, tier) {
+    const s = S[id] && S[id][tier];
+    if (s === undefined) return null;
+    if (id === 'harvest') {
+      const mine = g.citiesOf(P);
+      return { cmd: 'harvest', records: mine.concat(g.cities.filter(c => c.owner !== P).slice(0, 4)).slice(0, 5).map((c, i) => ({ city: c.id, land: tier === 'great' ? 650 : c.land, harvest: Math.round(c.land * 2.2 * s), rollRaw: i === 0 || tier === 'miss' ? s : 1.0, roll: s })) };
+    }
+    if (id === 'stageUp') return base(Object.assign({}, s, { city: cap.id }));
+    return base(JSON.parse(JSON.stringify(s)));
+  }
+  const IDS = Object.keys(S);
+  // ---- grid ----
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '<tr><th>指令</th>' + TIERS.map(t => '<th>' + t + '</th>').join('') + '</tr>';
+  for (const id of IDS) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + id + '　' + (SG.CmdIcons.label(id) || '') + '</td>';
+    for (const t of TIERS) {
+      const td = document.createElement('td');
+      const r = record(id, t);
+      if (r) {
+        const b = document.createElement('button');
+        b.className = 't-' + t;
+        const want = id === 'harvest' ? SG.DomesticFx.harvestTier(r.records).tier : id === 'stageUp' ? 'great' : SG.DomesticTiers.tier(r).tier;
+        b.textContent = want === t ? t : t + '≠' + want;
+        if (want !== t) b.classList.add('bad');
+        b.dataset.id = id; b.dataset.tier = t;
+        b.onclick = () => play(id, t);
+        td.appendChild(b);
+      }
+      tr.appendChild(td);
+    }
+    grid.appendChild(tr);
+  }
+  const fam = document.getElementById('fam');
+  for (const f of SG.MusicStings.FAMILIES) { const o = document.createElement('option'); o.value = f; o.textContent = f; fam.appendChild(o); }
+  const formSel = document.getElementById('form'), musicSel = document.getElementById('music');
+  if (Q.get('form')) formSel.value = Q.get('form');
+  if (Q.get('music')) musicSel.value = Q.get('music');
+  if (Q.get('fam')) fam.value = Q.get('fam');
+  function setMusic() {
+    const on = musicSel.value === 'on';
+    try { SG.Sfx.setMusic(on); if (on) SG.Sfx.unlock(); } catch (e) { /* 无音频 */ }
+  }
+  musicSel.onchange = setMusic; setMusic();
+  // 指令家族：用一位该家族的君主做玩家乐章
+  fam.onchange = () => { try { SG.Sfx.suite = null; } catch (e) { /* 忽略 */ } };
+  function play(id, tier, o) {
+    o = o || {};
+    const r = record(id, tier);
+    if (!r) return Promise.resolve(null);
+    const t0 = performance.now();
+    const p = id === 'harvest' ? SG.DomesticFx.play(r, null, { form: o.form || formSel.value, preview: true }) : SG.DomesticFx.preview(r, null, { form: o.form || formSel.value });
+    return p.then(() => ({ id, tier, ms: performance.now() - t0, stats: Object.assign({}, SG.DomesticFx.stats || {}) }));
+  }
+  // ---- 截图钩子：演到第 at 秒停住（Playwright 截图后再关）----
+  window.__fxShow = (id, tier, at, form) => new Promise(res => { play(id, tier, { form: form || 'full' }); setTimeout(() => res(SG.DomesticFx.stats ? Object.assign({}, SG.DomesticFx.stats) : null), at * 1000); });
+  window.__fxSkip = () => SG.DomesticFx.skip();
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const leftover = () => document.querySelectorAll('.dfx-root').length;
+
+  // ---- 依次播放（§13.4 第一项）----
+  async function runAll(only) {
+    out.textContent = '';
+    const form = formSel.value, music = musicSel.value === 'on';
+    const phone = innerHeight < 520;
+    let bad = 0, n = 0;
+    for (const id of IDS) for (const t of TIERS) {
+      if (!record(id, t)) continue;
+      if (only && only.indexOf(id + ':' + t) < 0 && only.indexOf(id) < 0) continue;
+      const e0 = errors.length;
+      const r = await play(id, t, { form });
+      await sleep(CFGclose() + 80);
+      n++;
+      const st = r.stats;
+      const want = st.T;
+      const total = st.closedAt;
+      const ok = Math.abs(total - want) <= 0.1 + (st.frames ? 0.034 : 0) && st.maxFrameMs <= (phone ? 33 : 16) && leftover() === 0 && errors.length === e0 && (!music || form === 'fast' || st.key);
+      if (!ok) bad++;
+      R.results.push({ id, tier: t, T: want, total, maxFrameMs: +st.maxFrameMs.toFixed(2), jsPerFrame: +(st.jsMs / Math.max(1, st.frames)).toFixed(3), nodes: st.nodes, particles: st.particles, key: st.key, left: leftover(), errs: errors.slice(e0), ok });
+      log(`${ok ? 'ok  ' : 'BAD '} ${id.padEnd(17)} ${t.padEnd(6)} T ${want.toFixed(2)} s  closed ${total.toFixed(2)} s  maxFrame ${st.maxFrameMs.toFixed(1)} ms @${st.maxFrameAt}s  js/frame ${(st.jsMs / Math.max(1, st.frames)).toFixed(2)} ms  nodes ${st.nodes}  particles ${st.particles}${st.key ? '  ' + st.key : ''}${errors.length > e0 ? '  ERR ' + errors.slice(e0).join(' | ') : ''}`, ok ? 'ok' : 'bad');
+    }
+    log(`${n} vignettes, ${bad} bad, page errors ${errors.length}`, bad ? 'bad' : 'ok');
+    R.summary = { n, bad, errors: errors.length };
+    R.done = true;
+  }
+  const CFGclose = () => SG.DomesticFx.CFG.close * 1000;
+  // ---- 跳过（§13.4 第二项）：随机时刻 pointerdown → 100 ms 内到最终画面、0.5 s 内关闭 ----
+  async function runSkip() {
+    out.textContent = '';
+    const rnd = SG.SeededRandom(17);
+    let bad = 0, n = 0;
+    for (const id of IDS) for (const t of TIERS) {
+      if (!record(id, t)) continue;
+      const e0 = errors.length;
+      const pr = play(id, t, { form: 'full' });
+      const at = 0.2 + rnd.nextDouble() * 1.6;
+      await sleep(at * 1000);
+      const root = document.querySelector('.dfx-root');
+      const tSkip = performance.now();
+      if (root) root.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, clientX: 300, clientY: 300 }));
+      const finalMs = performance.now() - tSkip;
+      const r = await pr;
+      await sleep(CFGclose() + 80);
+      const st = r.stats;
+      n++;
+      const closeAfter = st.closedAt - (st.skippedAt === null ? st.closedAt : st.skippedAt);
+      const ok = (st.skippedAt === null || (finalMs <= 100 && (st.finalAt - st.skippedAt) <= 0.1 && closeAfter <= 0.5)) && leftover() === 0 && errors.length === e0;
+      if (!ok) bad++;
+      R.results.push({ id, tier: t, skipAt: +at.toFixed(2), finalMs: +finalMs.toFixed(1), closeAfter: +closeAfter.toFixed(3), skipped: st.skippedAt !== null, left: leftover(), errs: errors.slice(e0), ok });
+      log(`${ok ? 'ok  ' : 'BAD '} ${id.padEnd(17)} ${t.padEnd(6)} skip@${at.toFixed(2)}s  final ${finalMs.toFixed(1)} ms  close +${closeAfter.toFixed(2)} s${st.skippedAt === null ? '  (ended before skip)' : ''}${errors.length > e0 ? '  ERR ' + errors.slice(e0).join(' | ') : ''}`, ok ? 'ok' : 'bad');
+    }
+    log(`${n} skips, ${bad} bad, page errors ${errors.length}`, bad ? 'bad' : 'ok');
+    R.summary = { n, bad, errors: errors.length };
+    R.done = true;
+  }
+  // ---- 图标（§6.1 / §13.4）：37 个剪影 24 px 两两差异 ≥ 18 %（Jaccard：异或 / 并集）----
+  function iconGallery() {
+    const box = document.getElementById('icons');
+    box.innerHTML = '';
+    for (const id of SG.CmdIcons.IDS) {
+      const d = document.createElement('div'); d.className = 'ic';
+      d.innerHTML = '<div class="row3">' + SG.CmdIcons.svg(id, { size: 24, fc: '#3f7f4a' }) + SG.CmdIcons.svg(id, { size: 40, fc: '#3f7f4a' }) + '</div><div>' + id + ' ' + SG.CmdIcons.label(id) + '</div>';
+      box.appendChild(d);
+    }
+    const big = document.createElement('div'); big.className = 'ic'; big.style.gridColumn = 'span 3';
+    big.appendChild(SG.CmdIcons.card('develop.land', { size: 160 }));
+    box.appendChild(big);
+  }
+  function mask(svg) {
+    return new Promise(res => {
+      const img = new Image();
+      img.onload = () => { const c = document.createElement('canvas'); c.width = 24; c.height = 24; const x = c.getContext('2d'); x.drawImage(img, 0, 0, 24, 24); const d = x.getImageData(0, 0, 24, 24).data; const m = new Uint8Array(576); for (let i = 0; i < 576; i++) m[i] = d[i * 4 + 3] > 110 ? 1 : 0; res(m); };
+      img.onerror = () => res(new Uint8Array(576));
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg.replace('<svg ', '<svg xmlns:xlink="http://www.w3.org/1999/xlink" '));
+    });
+  }
+  async function runIcons() {
+    out.textContent = '';
+    const ids = SG.CmdIcons.IDS;
+    const masks = [];
+    for (const id of ids) masks.push(await mask(SG.CmdIcons.silhouette(id)));
+    let worst = 1, worstPair = null, below = [];
+    for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+      let x = 0, u = 0;
+      for (let k = 0; k < 576; k++) { const a = masks[i][k], b = masks[j][k]; if (a !== b) x++; if (a || b) u++; }
+      const dj = u ? x / u : 0, dp = x / 576;
+      if (dj < worst) { worst = dj; worstPair = [ids[i], ids[j], dp]; }
+      if (dj < 0.18) below.push(ids[i] + '/' + ids[j] + ' ' + (dj * 100).toFixed(1) + '%');
+    }
+    const fill = masks.map((m, i) => [ids[i], m.reduce((a, b) => a + b, 0)]);
+    const empty = fill.filter(f => f[1] < 40).map(f => f[0]);
+    const okI = ids.length === 37 && below.length === 0 && empty.length === 0;
+    R.icons = { n: ids.length, worst: +(worst * 100).toFixed(1), worstPair, below, empty, ok: okI };
+    log(`${ids.length} icons; min pairwise silhouette difference ${(worst * 100).toFixed(1)} % (${worstPair && worstPair.slice(0, 2).join(' / ')}); pairs < 18 %: ${below.length}${below.length ? ' — ' + below.join(', ') : ''}; near-empty silhouettes: ${empty.join(', ') || 'none'}`, okI ? 'ok' : 'bad');
+    // 按钮：触控目标 ≥ 44 px
+    const small = Array.from(document.querySelectorAll('#btns .sg-btn')).filter(b => { const r = b.getBoundingClientRect(); return r.width < 44 || r.height < 44; }).length;
+    R.buttons = { n: document.querySelectorAll('#btns .sg-btn').length, small };
+    log(`command buttons ${R.buttons.n}, below 44 px: ${small}`, small ? 'bad' : 'ok');
+    R.done = true;
+  }
+  // ---- 短乐离线渲染（§13.3 的简版：汉地 + 两个家族；NaN、峰值 ≤ 0.98、RMS > −30 dBFS、余音不拖）----
+  async function runRender() {
+    out.textContent = '';
+    const fams = (Q.get('fams') || 'hua,wa,roman').split(',');
+    const ids = Q.get('ids') ? Q.get('ids').split(',') : SG.MusicStings.ids;
+    const rows = [];
+    let bad = 0;
+    for (const f of fams) for (const id of ids) for (const t of Object.keys(SG.MusicStings.forms(id))) {
+      const k = SG.MusicStings.key(id, t, f);
+      const d = SG.Music.duration(k).total;
+      let r;
+      try { r = await SG.Music.renderOffline(k, d + 1.6, { sampleRate: 22050 }); } catch (e) { r = { err: String(e) }; }
+      let tail = null;
+      if (r.buffer) { const ch = r.buffer.getChannelData(0); let last = 0; for (let i = ch.length - 1; i >= 0; i--) if (Math.abs(ch[i]) > 0.003) { last = i; break; } tail = last / r.buffer.sampleRate - d; }
+      const rmsDb = r.rms > 0 ? 20 * Math.log10(r.rms) : -99;
+      const ok = !r.err && !r.nan && r.peak <= 0.98 && rmsDb > -30 && tail !== null && tail <= 1.4;
+      if (!ok) bad++;
+      rows.push({ key: k, d: +d.toFixed(2), peak: r.peak && +r.peak.toFixed(3), rmsDb: +rmsDb.toFixed(1), tail: tail !== null ? +tail.toFixed(2) : null, nan: !!r.nan, ok });
+      if (!ok) log(`BAD ${k} d ${d.toFixed(2)} peak ${r.peak} rms ${rmsDb.toFixed(1)} dB tail ${tail} nan ${r.nan} ${r.err || ''}`, 'bad');
+    }
+    R.render = { n: rows.length, bad, rows };
+    log(`${rows.length} sting renders (${fams.join(', ')}), ${bad} bad; max peak ${Math.max(...rows.map(r => r.peak || 0)).toFixed(3)}, min RMS ${Math.min(...rows.map(r => r.rmsDb)).toFixed(1)} dBFS, max tail ${Math.max(...rows.map(r => r.tail || 0)).toFixed(2)} s`, bad ? 'bad' : 'ok');
+    R.done = true;
+  }
+  // ---- 指令按钮 ----
+  function buttons() {
+    const box = document.getElementById('btns');
+    const add = (id, opts, after) => { const b = SG.CmdIcons.button(box, id, null, () => {}, opts); if (after) after(b); return b; };
+    add('develop', { token: true });
+    add('recruit', { token: true, hotkey: '3' });
+    add('search', { token: true, why: '本城武将本月都已行动。' });
+    add('reward', {});
+    add('attack', { primary: true, token: true });
+    add('build', { token: true }, b => b.echo('great'));
+    add('market', {});
+    add('caravan', { token: true, why: '「通商」随第四版的商队系统开放（尚未载入）。' });
+  }
+  document.getElementById('runAll').onclick = () => runAll();
+  document.getElementById('runSkip').onclick = runSkip;
+  document.getElementById('runIcons').onclick = runIcons;
+  document.getElementById('runRender').onclick = runRender;
+  buttons();
+  iconGallery();
+  R.ready = true;
+  R.ids = IDS;
+  R.record = record;
+  // 音效的 PCM 在载入 1.5 秒后的空闲时间预热（domestic-fx.js）：自动测试等它做完
+  if (Q.get('auto')) setTimeout(() => runAll(Q.get('only') ? Q.get('only').split(',') : null), 3500);
+  else if (Q.get('skip')) setTimeout(runSkip, 300);
+  else if (Q.get('icons')) setTimeout(runIcons, 300);
+  else if (Q.get('render')) setTimeout(runRender, 300);
+})();
+</script>
+</body>
+</html>

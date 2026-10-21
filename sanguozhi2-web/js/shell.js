@@ -18,7 +18,7 @@
    SG.Shell.setNight(v)              --night（0 … 1）
    SG.Shell.occluders() → [元素]     城名避让的遮挡物（顶梁、案头、城池面板、结束本月）
    SG.Shell.playMs()                 本局已游玩的毫秒数（随存档：G.playMs）
-   SG.Shell.fitBeam()                顶梁的溢出次序 fit-1 … fit-8（UI-V4 §5.2 / §15.1；窗口尺寸、字号、内容变化时自动重量）
+   SG.Shell.fitBeam()                顶梁的溢出次序 fit-1 … fit-9（UI-V4 §5.2 / §15.1；窗口尺寸、字号、内容变化时自动重量）
    SG.Shell.toggleMute() · muted     M：音乐、音效、人声与朗读一并静音
    SG.UITest.open(screen, opts) · closeAll() · layoutReport()   版式测试钩子（tests/ui-layout.html；?uitest=1 时记录页面错误）
    类名：.sg-beam .sg-medallion .sg-plaquewrap .sg-cal .sg-quiver .sg-res .sg-beam-acts(.sg-topbar-actions) .sg-lantern .sg-agenda .sg-slip
@@ -32,6 +32,8 @@
   const esc = s => SG.esc(String(s === undefined || s === null ? '' : s));
   const icon = (id, size, opts) => (SG.UIIcons ? SG.UIIcons.svg(id, size, opts) : '');
   const n0 = v => Math.round(v).toLocaleString('en-US');
+  // 「万」记数：63,000 → 6.3万，120,000 → 12万；一万以下照常（顶梁的 fit-6）
+  const nWan = v => { v = Math.round(v); const a = Math.abs(v); return a >= 10000 ? (v / 10000).toFixed(a >= 100000 ? 0 : 1) + '万' : n0(v); };
   function h(tag, cls, html, parent) {
     const e = document.createElement(tag);
     if (cls) e.className = cls;
@@ -99,8 +101,9 @@
       E.cal = h('div', 'sg-cal', null, center);
       E.quiver = h('div', 'sg-quiver', null, center);
       const res = E.res = h('div', 'sg-res', null, center);
-      this.counters.gold = SG.UI.counter(h('span', 'sg-res-c is-gold', null, res), { icon: 'gold', value: 0, sound: 'ui-coins' });
-      this.counters.food = SG.UI.counter(h('span', 'sg-res-c is-food', null, res), { icon: 'food', value: 0, sound: 'ui-grain', soundOut: 'ui-grain' });
+      const resFmt = v => (this._compact ? nWan(v) : n0(v));      // 顶梁挤不下时（fit-6）金粮按「万」记
+      this.counters.gold = SG.UI.counter(h('span', 'sg-res-c is-gold', null, res), { icon: 'gold', value: 0, sound: 'ui-coins', format: resFmt });
+      this.counters.food = SG.UI.counter(h('span', 'sg-res-c is-food', null, res), { icon: 'food', value: 0, sound: 'ui-grain', soundOut: 'ui-grain', format: resFmt });
       this.counters.city = SG.UI.counter(h('span', 'sg-res-c is-city', null, res), { icon: 'city', value: 0, sound: false });
       E.missions = h('div', 'sg-missions sg-hidden', null, center);
       const acts = E.acts = h('div', 'sg-beam-acts sg-topbar-actions', null, beam);
@@ -166,16 +169,30 @@
       try { if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => this.fitBeam()); } catch (e) { /* 忽略 */ }
       return hud;
     },
-    // 顶梁的溢出次序（UI-V4 §5.2 / §15.1）：内容比梁宽时逐级加 fit-1 … fit-6（任何宽度、任何字号都量；窗口尺寸与「界面字号」改变时重量）
-    FIT: ['fit-1', 'fit-2', 'fit-3', 'fit-4', 'fit-5', 'fit-6', 'fit-7', 'fit-8'],
+    // 顶梁的溢出次序（UI-V4 §5.2 / §15.1）：内容比梁宽时逐级加 fit-1 … fit-9（任何宽度、任何字号都量；窗口尺寸与「界面字号」改变时重量）。
+    // 1–5 为规格的次序；之后（130 % 字号的手机 + 安全区、667 宽）先把金粮改记「万」（6），再省略过长的势力名（7），
+    // 最后才把粮并入金的说明（8）、藏起势力匾（9）
+    FIT: ['fit-1', 'fit-2', 'fit-3', 'fit-4', 'fit-5', 'fit-6', 'fit-7', 'fit-8', 'fit-9'],
     fitBeam() {
       const E = this.el, b = E.beam;
       if (!b || !b.isConnected) return;
+      // 横向挤不下；或势力匾（匾 + 说明行）比梁高（宽屏根字号 24 px 时说明行压到梁下的彩画带上）
       const over = () => b.scrollWidth > b.clientWidth + 1 || (E.center && E.center.scrollWidth > E.center.clientWidth + 1) ||
-        (E.acts && E.acts.getBoundingClientRect().right > b.getBoundingClientRect().right - 2);
+        (E.acts && E.acts.getBoundingClientRect().right > b.getBoundingClientRect().right - 2) ||
+        (E.plaque && E.plaque.offsetHeight > b.clientHeight + 1);
+      // 量的时候关掉过渡：减少动态时 #ui * 的过渡是 0.01 ms（transition-property 缺省 all），getComputedStyle 在下一帧前仍给旧值，
+      // 间距、字号的收紧就量不出来（会一路收到藏粮、藏匾）
+      b.classList.add('sg-fitting');
       b.classList.remove(...this.FIT);
-      for (const k of this.FIT) { if (!over()) break; b.classList.add(k); }
+      this._setCompact(false);
+      for (const k of this.FIT) { if (!over()) break; b.classList.add(k); if (k === 'fit-6') this._setCompact(true); }
       b.dataset.fit = (b.className.match(/fit-\d/g) || []).length;
+      b.classList.remove('sg-fitting');
+    },
+    _setCompact(on) {
+      if (!!this._compact === on) return;
+      this._compact = on;
+      for (const c of [this.counters.gold, this.counters.food]) if (c && c.reformat) c.reformat();
     },
     _fitSoon() {
       if (this._fitRaf) return;
@@ -277,7 +294,7 @@
       try { for (const c of mine) inc += SG.Econ && SG.Econ.cityGold ? SG.Econ.cityGold(c).gold : 0; } catch (e) { inc = 0; }
       const rows = mine.slice(0, 8).map(c => esc(c.name) + ' ' + n0(c.gold)).join('　');
       const b = this.el.beam;
-      const folded = b && b.classList.contains('fit-7') ? '<br><b>粮 ' + n0(mine.reduce((s, c) => s + c.food, 0)) + '</b>' : '';
+      const folded = b && b.classList.contains('fit-8') ? '<br><b>粮 ' + n0(mine.reduce((s, c) => s + c.food, 0)) + '</b>' : '';
       const cityLine = b && b.classList.contains('fit-3') ? '　城 ' + mine.length : '';
       return '<b>金 ' + n0(mine.reduce((s, c) => s + c.gold, 0)) + '</b>' + (inc ? '　<span class="sg-good">每月约 +' + n0(inc) + '</span>' : '') + cityLine + folded + '<br>' + rows + (mine.length > 8 ? ' …' : '');
     },
@@ -738,8 +755,7 @@
         const t = e.target;
         if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
         const k = e.key;
-        // M：任何画面（含战斗、单挑、窗口）都可静音 / 取消（UI-V4 §15.3）
-        if ((k === 'm' || k === 'M') && !e.ctrlKey && !e.metaKey && !e.altKey && !e.repeat) { this.toggleMute(); return; }
+        if (k === 'm' || k === 'M') return;                                     // M 静音：载入时装的全局键（见文件末尾）
         if (!this.hud || this.hud.style.display === 'none' || !this.ss) return;
         if (SG.Gfx && SG.Gfx.topScreen && SG.Gfx.topScreen()) return;            // 单挑、攻击画面等全屏场景
         // Ctrl / ⌘ + S：快速记录（任何时候都拦住浏览器的「保存网页」）
@@ -798,13 +814,20 @@
 
   // 武林大会、文会等由各自的模块登记案头来源：SG.Shell.agendaSources.push(g => ({ id, pri, cls, icon, title, line, go, open }))
   SG.Shell = Shell;
+  // M：任何画面（标题、载入、战略、战斗、单挑、窗口）都可静音 / 取消（UI-V4 §15.3）——载入脚本时就装上，不等开局搭外壳
+  window.addEventListener('keydown', e => {
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    if ((e.key === 'm' || e.key === 'M') && !e.ctrlKey && !e.metaKey && !e.altKey && !e.repeat) Shell.toggleMute();
+  });
 
   // ================================================================ 测试钩子（UI-V4 §17.3、§19.1；tests/ui-layout.html）==
   // SG.UITest.open(screen, opts) → Promise   打开一个画面（见 SCREENS）；opts：{ page, tab, view, gen, wait, noTokens }
   // SG.UITest.closeAll() → Promise             逐层按 Esc 关掉所有窗口与对话
-  // SG.UITest.layoutReport(opts?) → { w, h, short, insets, fit, problems: [文字], boxes, small, tiny, clipped, errors }
+  // SG.UITest.layoutReport(opts?) → { w, h, short, insets, fit, problems: [文字], boxes, small, cut, tiny, clipped, errors }
   //   problems：顶梁 / 案头 / 城池面板 / 结束本月互相覆盖或出安全视口；横向滚动；最上层窗口出安全视口；
-  //   可点部件小于 44 × 44（矮屏）/ 32 × 32（桌面）；字小于 13 px（矮屏）/ 12.5 px（桌面）；单行标签被截断；页面错误
+  //   可点部件小于 44 × 44（矮屏）/ 32 × 32（桌面）；可点部件被视口或不能滚动的祖先截掉（够不着，cut）；全屏场景的内容出安全视口；
+  //   字小于 13 px（矮屏）/ 12.5 px（桌面）；单行标签被截断；页面错误
   // ?uitest=1 时从载入起记下 pageerror / unhandledrejection / console.error（SG.UITest.errors）
   const UITest = SG.UITest = {
     errors: [],
@@ -874,15 +897,18 @@
         if (el.offsetParent === null && st.position !== 'fixed') return false;
         return true;
       };
-      // 祖先的裁剪框（overflow 不是 visible 的）与视口求交：滚出视野的部件不算
+      // 祖先的裁剪框（overflow 不是 visible 的）与视口求交；scroll = 有能滚动的裁剪祖先（滚出视野的部件还能滚回来）
       const clipRect = el => {
-        let r = el.getBoundingClientRect(); let x0 = r.left, y0 = r.top, x1 = r.right, y1 = r.bottom;
+        let r = el.getBoundingClientRect(); let x0 = r.left, y0 = r.top, x1 = r.right, y1 = r.bottom, scroll = false;
         for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
           const st = getComputedStyle(p);
-          if (st.overflowX !== 'visible' || st.overflowY !== 'visible') { const q = p.getBoundingClientRect(); x0 = Math.max(x0, q.left); y0 = Math.max(y0, q.top); x1 = Math.min(x1, q.right); y1 = Math.min(y1, q.bottom); }
+          if (st.overflowX !== 'visible' || st.overflowY !== 'visible') {
+            const q = p.getBoundingClientRect(); x0 = Math.max(x0, q.left); y0 = Math.max(y0, q.top); x1 = Math.min(x1, q.right); y1 = Math.min(y1, q.bottom);
+            if ((/(auto|scroll)/.test(st.overflowY) && p.scrollHeight > p.clientHeight + 1) || (/(auto|scroll)/.test(st.overflowX) && p.scrollWidth > p.clientWidth + 1)) scroll = true;
+          }
         }
         x0 = Math.max(x0, 0); y0 = Math.max(y0, 0); x1 = Math.min(x1, W); y1 = Math.min(y1, H);
-        return { w: Math.max(0, x1 - x0), h: Math.max(0, y1 - y0), full: r };
+        return { w: Math.max(0, x1 - x0), h: Math.max(0, y1 - y0), full: r, scroll };
       };
       // 最上层：窗口 / 对话；没有时看全屏场景（武林大会的对阵、颁奖：.sg-tny-scene）
       const modal = SG.UI.anyModal() ? SG.UI.topModal() : Array.from(document.querySelectorAll('.sg-tny-scene:not(.is-out)')).pop() || null;
@@ -906,23 +932,35 @@
       if (modal) {
         const r = modal.getBoundingClientRect();
         boxes.window = [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)];
-        if (r.left < insL - 1 || r.right > W - insR + 1 || r.top < -1 || r.bottom > H + 1) problems.push('window outside the safe viewport ' + JSON.stringify(boxes.window));
+        // 全屏场景（武林大会的对阵、颁奖）的背景铺满整屏（含刘海两侧）；量它的内容：按钮、立绘卡、奖台、朱印不出安全视口
+        if (modal.classList.contains('sg-tny-scene')) {
+          for (const c of modal.querySelectorAll('.sg-btn, .sg-tny-vcard, .sg-tny-tier, .sg-tny-tianxia, .sg-tny-cont')) {
+            if (!visible(c)) continue;
+            const q = c.getBoundingClientRect();
+            if (q.left < insL - 1 || q.right > W - insR + 1 || q.top < -1 || q.bottom > H + 1) problems.push('scene content outside the safe viewport: ' + (c.textContent || c.className).trim().slice(0, 10) + ' ' + JSON.stringify([Math.round(q.left), Math.round(q.top), Math.round(q.width), Math.round(q.height)]));
+          }
+        } else if (r.left < insL - 1 || r.right > W - insR + 1 || r.top < -1 || r.bottom > H + 1) problems.push('window outside the safe viewport ' + JSON.stringify(boxes.window));
       }
       const scrollW = (document.scrollingElement || de).scrollWidth;
       if (scrollW > W + 1) problems.push('horizontal page scroll: ' + scrollW + ' > ' + W);
       // 2 可点部件的大小
       const minT = short ? 44 : 32;
-      const small = [];
+      const small = [], cut = [];
       const SEL = 'button, [role="button"], [role="tab"], [role="switch"], [role="radio"], a[href], input:not([type="hidden"]), select, .sg-slider';
       for (const b of root.querySelectorAll(SEL)) {
         if (!visible(b) || b.closest('.sg-slider') && !b.classList.contains('sg-slider')) continue;
         if (b.closest('[aria-hidden="true"]') || b.closest('.sg-tip')) continue;
         if (b.tagName === 'INPUT' && b.closest('.sg-search')) continue;              // 搜索框量外面的纸签
         const c = clipRect(b);
-        if (c.w * c.h < 0.5 * c.full.width * c.full.height || c.w < 2 || c.h < 2) continue;   // 滚出视野
+        const lbl = () => ((b.getAttribute('aria-label') || b.dataset.cmd || b.dataset.tab || b.textContent || b.className || '').trim().replace(/\s+/g, ' ').slice(0, 10));
+        // 被视口或不能滚动的祖先截掉一部分：够不着（能滚动的祖先里滚出视野的不算）
+        const visK = c.w * c.h / Math.max(1, c.full.width * c.full.height);
+        if ((c.full.width - c.w > 2 || c.full.height - c.h > 2) && !c.scroll) cut.push(lbl() + ' ' + Math.round(visK * 100) + '%');
+        if (visK < 0.5 || c.w < 2 || c.h < 2) continue;   // 滚出视野（或截掉大半，已记为 cut）
         const w = c.full.width, h = c.full.height;
-        if (w < minT - 0.5 || h < minT - 0.5) small.push(((b.getAttribute('aria-label') || b.dataset.cmd || b.dataset.tab || b.textContent || b.className || '').trim().replace(/\s+/g, ' ').slice(0, 10)) + ' ' + Math.round(w) + '×' + Math.round(h));
+        if (w < minT - 0.5 || h < minT - 0.5) small.push(lbl() + ' ' + Math.round(w) + '×' + Math.round(h));
       }
+      if (cut.length) problems.push(cut.length + ' targets cut off (no scrollable ancestor): ' + cut.slice(0, 8).join(', '));
       if (short) { const t = document.querySelector('.sg-dock .sg-btn.k-tile'); if (!modal && visible(t)) { const r = t.getBoundingClientRect(); if (r.width < 56 - 0.5 || r.height < 56 - 0.5) small.push('dock tile ' + Math.round(r.width) + '×' + Math.round(r.height) + ' < 56×56'); } }
       if (small.length) problems.push(small.length + ' targets < ' + minT + ' px: ' + small.slice(0, 12).join(', '));
       // 3 字号
@@ -955,7 +993,7 @@
       // 5 页面错误
       if (UITest.errors.length) problems.push(UITest.errors.length + ' page errors: ' + UITest.errors.slice(0, 3).join(' | '));
       const fit = E.beam ? (E.beam.className.match(/fit-\d/g) || []).join(' ') : '';
-      return { w: W, h: H, short, insets: [insL, insR], fit, window: modal ? (modal.dataset.win || modal.className.split(' ').slice(0, 3).join(' ')) : null, problems, boxes, small, tiny, clipped, errors: UITest.errors.slice() };
+      return { w: W, h: H, short, insets: [insL, insR], fit, window: modal ? (modal.dataset.win || modal.className.split(' ').slice(0, 3).join(' ')) : null, problems, boxes, small, cut, tiny, clipped, errors: UITest.errors.slice() };
     },
   };
   // ?uitest=1：从载入起记下页面错误

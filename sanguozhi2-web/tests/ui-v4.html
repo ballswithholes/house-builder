@@ -157,6 +157,43 @@
   const lockBtn = Array.from(document.querySelectorAll('.sg-btn')).find(b => b.textContent.indexOf('锁住的') >= 0);
   ok(lockBtn && lockBtn.getAttribute('aria-disabled') === 'true' && !lockBtn.disabled, 'locked button: aria-disabled, still focusable / clickable for the reason');
 
+  // ---- 检查 8：窗口里的键盘（UI-V4 §15.3）：键盘移到的开关 / 页签 / 木牌上 Space、Enter = 按下它；没有时 Enter = 朱印钮；
+  //      自动聚焦的「收」上 Enter 也是朱印钮；文字框里的空格照常输入；Esc 关窗；开窗时 html.sg-modal-open ----
+  {
+    const key = (k, el) => { const e = new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }); (el || document.activeElement || document.body).dispatchEvent(e); return e; };
+    let seals = 0, tabNow = 'a';
+    const w = UI.window('kbdtest', { title: '键盘', foot: true, tabs: [{ id: 'a', label: '甲' }, { id: 'b', label: '乙' }], onTab: id => { tabNow = id; } });
+    ok(document.documentElement.classList.contains('sg-modal-open'), 'window open → html.sg-modal-open (shell ambient loops pause, UI-V4 §5.8)');
+    const tg = UI.toggle(w.page, true, null, { label: '测试开关' });
+    const sg = UI.segmented(w.page, [['x', '一'], ['y', '二'], ['z', '三']], 'x');
+    const inp = document.createElement('input'); inp.type = 'search'; w.page.appendChild(inp);
+    UI.button(w.foot, '完成', () => { seals++; }, { kind: 'seal' });
+    const closeBtn = w.el.querySelector('.sg-close');
+    ok(document.activeElement === closeBtn, 'window opens with the close button focused');
+    key('Enter');
+    ok(seals === 1 && !w.closed, 'Enter with only the auto-focused close button → the seal (' + seals + '), window stays open');
+    tg.focus(); key(' ');
+    ok(tg.getAttribute('aria-checked') === 'false', 'Space on a keyboard-focused toggle flips it (aria-checked ' + tg.getAttribute('aria-checked') + ')');
+    key('Enter');
+    ok(tg.getAttribute('aria-checked') === 'true' && seals === 1, 'Enter on a keyboard-focused toggle flips it back, not the seal');
+    const tabB = w.el.querySelector('.sg-tab[data-tab="b"]'); tabB.focus(); key('Enter');
+    ok(tabNow === 'b' && tabB.getAttribute('aria-selected') === 'true', 'Enter on a focused tab selects it (' + tabNow + ')');
+    const so = sg.querySelector('.sg-seg-o.is-on'); so.focus(); key('ArrowRight');
+    ok(sg.get() === 'y', 'ArrowRight on a focused segmented option moves the choice (' + sg.get() + ')');
+    inp.focus(); const sp = key(' ');
+    ok(!sp.defaultPrevented, 'Space inside a text field is not swallowed (typing still works)');
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    key('Enter', document.body);
+    ok(seals === 2, 'Enter with nothing focused → the window seal (' + seals + ')');
+    closeBtn.focus(); key('Enter');
+    ok(w.closed && seals === 2, 'Enter on the close button reached with the keyboard (after focus moved away) closes the window');
+    const w2 = UI.window('kbdtest2', { title: '键盘 2' });
+    key('Escape', document.body);
+    ok(w2.closed, 'Esc closes the window');
+    await new Promise(r => setTimeout(r, 200));
+    ok(!document.documentElement.classList.contains('sg-modal-open'), 'last window closed → html.sg-modal-open removed');
+  }
+
   out.unshift((R.fails ? '<span class="bad">' + R.fails + ' FAILED</span>' : '<span class="ok">ALL OK</span>') + ' — ' + R.checks + ' checks');
   document.getElementById('r').innerHTML = out.join('\n');
   window.RESULT = { fails: R.fails, checks: R.checks, minIcon: min, minPair: minp, lines: out.map(s => s.replace(/<[^>]+>/g, '')) };

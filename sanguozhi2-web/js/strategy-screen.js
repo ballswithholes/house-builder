@@ -356,7 +356,8 @@
         // 月初自动记录（设置第 25 行；UI-V4 §6：「自动」档）
         if (!SG.UISettings || SG.UISettings.get('ui.autoSave') !== false) {
           SG.Shell.syncPlayMs();
-          try { G().save(); } catch (e) { console.warn(e); }
+          // 带地图缩略图（菜单的「自动」卡片与手动档一样显示缩略图）；菜单模块未载入时退回 v3 的 save()
+          try { if (SG.MenuScreen && SG.MenuScreen.autoSave) { const r = SG.MenuScreen.autoSave(G()); if (r && !r.ok) console.warn(r.error); } else G().save(); } catch (e) { console.warn(e); }
         }
         try { if (SG.Voice && G().month % 3 === 1) SG.Voice.say(G().ruler(G().player), 'ui.monthStart', { pri: 1, scene: 'strategy' }); } catch (e) { /* 无人声 */ }
         // 上月取得新城时「移动」还不能用（武将都已行动 / 令牌用完）：月初补弹提示
