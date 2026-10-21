@@ -65,7 +65,7 @@
   const hashN = (i, j, s) => LP.hash01([i * 1.37 + 0.11, j * 2.91 + 0.37, s * 0.53], 41) * 2 - 1;   // −1 … 1
   /** A builder seeded per recipe name and variant bucket (LV PropKit.Builder). */
   function builder(o, salt, jitter = 0.06, ao = 0.3, aoH = 1, seed) {
-    const M = new LP.MeshBuilder(seed != null ? seed : (strHash(o.name + (salt || '')) + o.bucket * 7919) | 0);
+    const M = new LP.MeshBuilder(seed != null ? seed : (strHash((o.recipe || o.name) + (salt || '')) + o.bucket * 7919) | 0);
     M.jitter = jitter; M.aoStrength = ao; M.aoHeight = aoH;
     return M;
   }
@@ -85,13 +85,26 @@
     o.bucket = ((o.seed % n) + n) % n;
     o.lod = o.lod === 'far' && def.lod ? 'far' : 'near';
     o.far = o.lod === 'far';
-    o.name = def.name;
+    // o.recipe = the recipe's name (builder seeds); o.name stays the caller's option when the recipe has one (the gate
+    // tower's plaque text) — it used to be overwritten with the recipe name, so plaques read "gate_tower"
+    o.recipe = def.name;
+    if (def.keys.indexOf('name') < 0) o.name = def.name;
     return o;
   }
-  function keyOf(def, o) {
+  function keyOf(def, o, skip) {
     const parts = [def.name, o.bucket, o.lod];
-    for (const k of def.keys) { const v = o[k]; parts.push(k + '=' + (v == null ? '' : typeof v === 'object' ? JSON.stringify(v) : v)); }
+    for (const k of def.keys) {
+      if (skip && skip.indexOf(k) >= 0) continue;
+      const v = o[k]; parts.push(k + '=' + (v == null ? '' : typeof v === 'object' ? JSON.stringify(v) : v));
+    }
     return parts.join('|');
+  }
+  // recipes whose def.textKeys only change painted name boards (decals tagged { src: key, fallback }) build their mesh once
+  // per remaining key and share it: a plaque per city costs a decal, not another copy of a 3k-triangle gate tower
+  const MESH = new Map();
+  function withTexts(base, o, key) {
+    const decals = base.decals.map(d => (d.src ? Object.assign({}, d, { text: o[d.src] != null && o[d.src] !== '' ? String(o[d.src]) : d.fallback }) : d));
+    return Object.assign({}, base, { key, decals });
   }
   Props.geometry = function (name, opts) {
     const def = R[name];
@@ -100,6 +113,8 @@
     const key = keyOf(def, o);
     let res = CACHE.get(key);
     if (res) return res;
+    const meshKey = def.textKeys ? keyOf(def, o, def.textKeys) : null;
+    if (meshKey && MESH.has(meshKey)) { res = withTexts(MESH.get(meshKey), o, key); CACHE.set(key, res); return res; }
     let out = def.build(o);
     if (out instanceof LP.MeshBuilder) out = { ink: out };
     const ink = out.ink && !out.ink.isEmpty ? out.ink.toGeometry() : null;
@@ -114,12 +129,17 @@
       castShadow: def.castShadow !== false, plainShadow: !!def.plainShadow,
     };
     CACHE.set(key, res);
+    if (meshKey) MESH.set(meshKey, res);
     return res;
   };
   Props.names = group => Object.keys(R).filter(n => !group || R[n].group === group);
   Props.info = name => { const d = R[name]; return d ? { group: d.group, label: d.label, lod: !!d.lod, keys: d.keys.slice(), defaults: Object.assign({}, d.defaults || {}), seeds: d.seeds || 4 } : null; };
   Props.has = name => !!R[name];
-  Props.clearCache = () => { for (const r of CACHE.values()) { if (r.ink) r.ink.dispose(); if (r.plain) r.plain.dispose(); } CACHE.clear(); };
+  Props.clearCache = () => {
+    const seen = new Set();
+    for (const r of CACHE.values()) for (const g of [r.ink, r.plain]) if (g && !seen.has(g)) { seen.add(g); g.dispose(); }
+    CACHE.clear(); MESH.clear();
+  };
 
   function decalMesh(d) {
     const tex = LP.boardTexture(d.text, { w: 448, h: Math.round(448 * d.h / d.w), board: d.board, ink: d.ink, vertical: d.vertical, line: d.line });
@@ -2839,7 +2859,7 @@
       const py = 4.37, pz = zs(py) + 0.06;
       M.color = C.gold; M.box([0, py, pz], [1.46, 0.42, 0.06], null, 'tfrl');
       M.color = H('#3A2A24'); M.box([0, py, pz + 0.035], [1.28, 0.3, 0.03], null, 'tf');
-      decals.push({ text: o.name || '荆州', board: '#3A2A24', ink: '#F2C45C', w: 1.26, h: 0.28, at: [0, py, pz + 0.054], tilt: 0 });
+      decals.push({ text: o.name || '荆州', src: 'name', fallback: '荆州', board: '#3A2A24', ink: '#F2C45C', w: 1.26, h: 0.28, at: [0, py, pz + 0.054], tilt: 0 });
     }
     mark('plaque');
     // a stone cornice under the parapet
@@ -2925,7 +2945,7 @@
       M.color = C.gold; M.box([0, 0, 0], [1.34, 0.5, 0.06], null, 'tfrl');
       M.color = H('#2E4466'); M.box([0, 0, 0.035], [1.16, 0.36, 0.03], null, 'tf');
       M.pop();
-      decals.push({ text: o.hallName || '宾阳楼', board: '#2E4466', ink: '#F2C45C', w: 1.14, h: 0.34, at: pc, local: [0, 0, 0.054], tilt });
+      decals.push({ text: o.hallName || '宾阳楼', src: 'hallName', fallback: '宾阳楼', board: '#2E4466', ink: '#F2C45C', w: 1.14, h: 0.34, at: pc, local: [0, 0, 0.054], tilt });
     }
     mark('hallplaque');
     // ---- roof: hip-and-gable (歇山), Lanternvale's CourseRoof in Han dress. Every slope is a gently concave surface laid
@@ -3280,7 +3300,7 @@
   // 城门楼 (the pilot's approved gate tower): a battered rammed-earth gate base, a studded vermilion arch gate, merlons, a
   // timber hall under a slate 歇山 roof with tile ribs, ridge curls and a gold bird, ribbed lanterns (lit by night), banners.
   recipe('gate_tower', {
-    group: 'building', label: '城门楼', keys: ['lit', 'color', 'name', 'hallName'], defaults: { lit: 'night', color: '#2f7d4a', name: '荆州', hallName: '宾阳楼' },
+    group: 'building', label: '城门楼', keys: ['lit', 'color', 'name', 'hallName'], textKeys: ['name', 'hallName'], defaults: { lit: 'night', color: '#2f7d4a', name: '荆州', hallName: '宾阳楼' },
     build(o) {
       const r = buildGateTower(Object.assign({}, o, { flagColor: o.color }));
       return { ink: r.M, lamps: r.lamps.map(p => ({ pos: p, color: '#ffb46c', intensity: 1.0, range: 4.6, haloSize: 1.5 })), decals: r.decals, anchors: { parts: r.parts } };

@@ -1,0 +1,645 @@
+# Voice QA report
+
+ASR: whisper-base · targets (AUDIO-V4 §3.3): A languages ≤ 0.5, zh ≤ 0.35 with whisper-small or a human listen · a lingua FAILS (ships no pack) when > ½ of its clips hard-fail, or Whisper is reliable for it and its median > 0.75
+
+| lingua | grade | clips | hard fails | flagged | ASR median (n) | reliable | result |
+|---|---|---|---|---|---|---|---|
+| zh | A | 314 | 0 | 149 | 0.31 (314) | yes | needs review (zh: whisper-base only; §3.3 wants whisper-small ≤ 0.35 or a human listen) |
+| ja | A | 98 | 0 | 8 | 0.2 (98) | yes | ok |
+| ko | A | 48 | 0 | 21 | 0.475 (48) | yes | ok |
+| vi | A | 46 | 0 | 21 | 0.415 (46) | no | ok |
+| ms | A | 47 | 0 | 0 | 0.07 (47) | yes | ok |
+| mn | A | 48 | 1 | 48 | 1.0 (48) | no | needs review (ASR median 1.0 > 0.5; Whisper unreliable here) |
+| kk | A | 48 | 0 | 30 | 0.67 (48) | yes | needs review (ASR median 0.67 > 0.5) |
+| pra | B | 44 | 1 | 0 | — (0) | no | specialist review (grade B; no ASR) |
+| sa | B | 21 | 0 | 21 | 1.0 (21) | no | specialist review (grade B; ASR median 1.0) |
+| txb | C | 9 | 0 | 0 | — (0) | no | specialist review (grade C; no ASR) |
+| xbc | C | 8 | 0 | 0 | — (0) | no | specialist review (grade C; no ASR) |
+| ta | A | 95 | 0 | 58 | 0.56 (95) | no | needs review (ASR median 0.56 > 0.5; Whisper unreliable here) |
+| si | A | 46 | 0 | 46 | 1.125 (46) | no | needs review (ASR median 1.125 > 0.5; Whisper unreliable here) |
+| fa | A | 51 | 0 | 26 | 0.52 (51) | yes | needs review (ASR median 0.52 > 0.5) |
+| syc | B | 21 | 0 | 0 | — (0) | no | specialist review (grade B; no ASR) |
+| ka | A | 47 | 0 | 47 | 1.0 (47) | no | needs review (ASR median 1.0 > 0.5; Whisper unreliable here) |
+| ar | A | 49 | 0 | 4 | 0.23 (49) | yes | ok |
+| gez | B | 21 | 0 | 21 | 1.29 (21) | no | specialist review (grade B; ASR median 1.29) |
+| xmr | C | 10 | 0 | 0 | — (0) | no | specialist review (grade C; no ASR) |
+| ber | C | 11 | 2 | 0 | — (0) | no | specialist review (grade C; no ASR) |
+| la | B | 45 | 0 | 17 | 0.46 (45) | yes | specialist review (grade B; ASR median 0.46) |
+| grc | B | 42 | 0 | 0 | — (0) | no | specialist review (grade B; no ASR) |
+| os | C | 11 | 1 | 0 | — (0) | no | specialist review (grade C; no ASR) |
+| got | B | 29 | 0 | 0 | — (0) | no | specialist review (grade B; no ASR) |
+| cy | A | 93 | 0 | 60 | 0.57 (93) | no | needs review (ASR median 0.57 > 0.5; Whisper unreliable here) |
+| ga | A | 92 | 0 | 0 | — (0) | no | specialist review (A grade, no ASR) |
+
+5 of 26 linguas meet the §3.3 target outright; the rest ship but are listed for a listen above.
+
+## Licences (§B7.2 iv)
+
+Built with `--allow-nc`: **yes**. These packs are a DEV build: a release build (without `--allow-nc`) fails the licence gate for 10 of 17 models (528 clips). Korean (KSS) is non-commercial; the 'see URL' / 'see model card' voices must be checked before any distribution (AUDIO-V4 §4 Q1).
+
+| model | licence | kind | packs | clips |
+|---|---|---|---|---|
+| `kokoro-multi-lang-v1_0` | Apache-2.0 | ok | ja-f, ja-m, zh-f, zh-m | 412 |
+| `vits-mimic3-ko_KO-kss_low` | KSS dataset CC BY-NC-SA 4.0 | **nc** | ko-f | 48 |
+| `vits-piper-ar_JO-kareem-medium` | see URL | **unknown** | ar-m, ber-m, gez-m, syc-m | 102 |
+| `vits-piper-cy_GB-bu_tts-medium` | CC-BY | ok | cy-f, cy-m, ga-f, ga-m | 185 |
+| `vits-piper-de_DE-thorsten_emotional-medium` | CC0 | ok | got-m, got-mBattle | 29 |
+| `vits-piper-fa_IR-amir-medium` | CC0 | ok | fa-m, pra-saka | 72 |
+| `vits-piper-fa_IR-reza_ibrahim-medium` | CC0 | ok | xbc-m | 8 |
+| `vits-piper-id_ID-news_tts-medium` | see URL | **unknown** | ms-f | 47 |
+| `vits-piper-it_IT-paola-medium` | see URL | **unknown** | grc-f, la-f | 43 |
+| `vits-piper-it_IT-riccardo-x_low` | see URL | **unknown** | grc-m, la-m | 44 |
+| `vits-piper-ka_GE-natia-medium` | see LICENSE file | **unknown** | ka-f | 47 |
+| `vits-piper-kk_KZ-issai-high` | CC-BY-4.0 | ok | kk-m, mn-m, os-m, txb-m | 116 |
+| `vits-piper-ml_IN-arjun-medium` | see URL | **unknown** | si-m, ta-m | 94 |
+| `vits-piper-ml_IN-meera-medium` | see URL | **unknown** | ta-f | 47 |
+| `vits-piper-sw_CD-lanfrica-medium` | see URL | **unknown** | xmr-m | 10 |
+| `vits-piper-ur_PK-fasih-medium` | MIT | ok | pra-m, sa-m | 44 |
+| `vits-piper-vi_VN-vais1000-medium` | see model card | **unknown** | vi-f | 46 |
+
+## Hard fails (dropped from the packs)
+
+- `mn-m/work#0` Одоо хийнэ! — too long 3.0 s (expected 1.07)
+- `pra-saka/miss#0` खमीअदु… — too long 2.289 s (expected 0.89)
+- `ber-m/work#0` Ih! — too short 0.209 s
+- `ber-m/allyYes#0` Azul. — too short 0.244 s
+- `os-m/allyNo#0` Нæ! — too short 0.151 s
+
+## Flagged for a human listen
+
+- `zh-m/ack#0` 遵命！ — ASR 0.5 (syllable): 明
+- `zh-m/ack#1` 末将领命！ — ASR 0.75 (syllable): 將面。
+- `zh-m/recruit#0` 招募义勇！ — ASR 0.5 (syllable): 少母一
+- `zh-m/train#0` 操练！ — ASR 1.0 (syllable): 
+- `zh-m/train#1` 列阵！ — ASR 0.5 (syllable): 列政
+- `zh-m/search#0` 出城寻访。 — ASR 0.5 (syllable): 出城
+- `zh-m/move#0` 出发！ — ASR 0.5 (syllable): 發
+- `zh-m/attack#1` 出征！ — ASR 0.5 (syllable): 出
+- `zh-m/miss#0` 惭愧…… — ASR 1.0 (syllable): 三倍
+- `zh-m/charge#0` 冲啊！ — ASR 0.5 (syllable): 中啊
+- `zh-m/charge#1` 杀！ — ASR 1.0 (syllable): DOP
+- `zh-m/charge#2` 随我冲锋！ — ASR 0.75 (syllable): 水我分
+- `zh-m/retreat#0` 撤退！ — ASR 0.5 (syllable): 出退
+- `zh-m/crit#1` 着！ — ASR 1.0 (syllable): :
+- `zh-m/special#0` 接我绝技！ — ASR 0.5 (syllable): 請我決定。
+- `zh-m/victory#1` 胜了！ — ASR 0.5 (syllable): 了
+- `zh-m/defeat#0` 可恶…… — ASR 1.0 (syllable): go
+- `zh-m/thanks#0` 谢主公隆恩！ — ASR 0.4 (syllable): 谢主公
+- `zh-m/cmd.industry.start#0` 起炉鼓铸！ — ASR 0.75 (syllable): 起
+- `zh-m/cmd.industry.great#0` 百炼成钢！ — ASR 0.5 (syllable): 百成
+- `zh-m/cmd.town.start#0` 修缮闾里！ — ASR 1.0 (syllable): 女女
+- `zh-m/cmd.town.great#0` 市井繁华！ — ASR 0.75 (syllable): 應華
+- `zh-m/cmd.recruit.start#0` 招募义勇！ — ASR 0.5 (syllable): 少母一
+- `zh-m/cmd.train.start#0` 操练！ — ASR 1.0 (syllable): 
+- `zh-m/cmd.train.great#0` 百战之师！ — ASR 0.5 (syllable): 百戰局
+- `zh-m/cmd.search.start#0` 出城寻访。 — ASR 0.5 (syllable): 出城
+- `zh-m/cmd.search.talent#0` 何人扰我清梦？ — ASR 0.5 (syllable): 何人我
+- `zh-m/cmd.move.start#0` 移驻！ — ASR 0.5 (syllable): 住
+- `zh-m/cmd.attack.start#0` 出征！ — ASR 0.5 (syllable): 出
+- `zh-m/cmd.trade.start#0` 买卖公道！ — ASR 0.5 (syllable): 公道
+- `zh-m/cmd.market.buy#0` 好兵器！ — ASR 0.67 (syllable): 好
+- `zh-m/ui.generalOpen#1` 末将在！ — ASR 1.0 (syllable): 
+- `zh-m/title.grant#0` 封赏于你！ — ASR 0.5 (syllable): 商你
+- `zh-m/title.accept#0` 谢主公隆恩！ — ASR 0.4 (syllable): 谢主公
+- `zh-m/title.promote#0` 更上一层楼！ — ASR 0.4 (syllable): 更上一
+- `zh-m/title.revoke#0` 臣……遵命。 — ASR 0.67 (syllable): 李命
+- `zh-m/title.passedOver#0` 哼…… — ASR 1.0 (syllable): Pin
+- `zh-m/bat.attack#0` 攻击！ — ASR 1.0 (syllable): 空氣
+- `zh-m/bat.tactic#0` 看我妙计！ — ASR 0.5 (syllable): 看我
+- `zh-m/bat.fire#0` 火攻！ — ASR 0.5 (syllable): 活動
+- `zh-m/bat.reinforce#0` 援军到了！ — ASR 0.5 (syllable): 到了
+- `zh-m/bat.hurt#0` 呃！ — ASR 1.0 (syllable): 喂
+- `zh-m/clash.crit#0` 看招！ — ASR 0.5 (syllable): 看着
+- `zh-m/duel.refuse#0` 不与匹夫斗！ — ASR 0.4 (syllable): 不與皮道
+- `zh-m/duel.guardcrush#0` 破！ — ASR 1.0 (syllable): 言
+- `zh-m/duel.crit#0` 着！ — ASR 1.0 (syllable): :
+- `zh-m/tourney.open#0` 群雄毕至，比武开始！ — ASR 0.5 (syllable): 制 舞开始
+- `zh-m/ui.generalsOpen#0` 众将何在？ — ASR 0.5 (syllable): 中江
+- `zh-m/ui.generalsOpen#1` 诸君听令！ — ASR 0.75 (syllable): 初金停
+- `zh-m/ui.shopOpen#1` 新到的好货！ — ASR 0.4 (syllable): 行到的好話
+- `zh-m/debate.stance.yinjing#0` 子曰—— — ASR 1.0 (syllable): 四
+- `zh-m/debate.stance.sheyu#0` 譬如—— — ASR 0.5 (syllable): 如
+- `zh-m/marriage.accept#0` 结秦晋之好！ — ASR 0.4 (syllable): 接之號
+- `zh-m/submit.offer#0` 愿举州相让。 — ASR 0.4 (syllable): 周相让
+- `zh-m/victory.wangdao#0` 王道荡荡，天下归心！ — ASR 0.5 (syllable): 王当大,天下行
+- `zh-m/cmd.explore.start#0` 探访名胜去！ — ASR 0.4 (syllable): 明勝去
+- `zh-m/cmd.gift.start#0` 奉上薄礼。 — ASR 0.5 (syllable): 上里
+- `zh-m/truce.accept#0` 暂且罢兵。 — ASR 0.5 (syllable): 三且病
+- `zh-m/cmd.tradepact.start#0` 互通有无。 — ASR 0.5 (syllable): 通有
+- `zh-m/mission.done#0` 国策已成！ — ASR 0.75 (syllable): 國常
+- `zh-f/ack#0` 遵命！ — ASR 1.0 (syllable): 
+- `zh-f/ack#1` 末将领命！ — ASR 0.5 (syllable): 江命
+- `zh-f/recruit#0` 招募义勇！ — ASR 0.75 (syllable): 目
+- `zh-f/train#0` 操练！ — ASR 0.5 (syllable): 練
+- `zh-f/train#1` 列阵！ — ASR 0.5 (syllable): 列
+- `zh-f/search#0` 出城寻访。 — ASR 0.5 (syllable): 出城
+- `zh-f/move#0` 出发！ — ASR 0.5 (syllable): 发
+- `zh-f/move#1` 开拔！ — ASR 0.5 (syllable): 開
+- `zh-f/attack#1` 出征！ — ASR 0.5 (syllable): 出
+- `zh-f/miss#0` 惭愧…… — ASR 1.0 (syllable): 三會
+- `zh-f/charge#0` 冲啊！ — ASR 1.0 (syllable): 出門
+- `zh-f/charge#1` 杀！ — ASR 1.0 (syllable): ()
+- `zh-f/charge#2` 随我冲锋！ — ASR 0.75 (syllable): 我
+- `zh-f/retreat#0` 撤退！ — ASR 0.5 (syllable): 出推
+- `zh-f/crit#0` 看招！ — ASR 0.5 (syllable): 看
+- `zh-f/crit#1` 着！ — ASR 1.0 (syllable): 
+- `zh-f/victory#0` 我军大胜！ — ASR 0.5 (syllable): 我大
+- `zh-f/victory#1` 胜了！ — ASR 1.0 (syllable): 什么
+- `zh-f/defeat#0` 可恶…… — ASR 1.0 (syllable): ( 聲音 )
+- `zh-f/allyYes#0` 愿结盟好。 — ASR 0.5 (syllable): 院結
+- `zh-f/allyNo#0` 休想！ — ASR 0.5 (syllable): 向
+- `zh-f/grant#0` 封赏于你！ — ASR 0.75 (syllable): 风
+- `zh-f/thanks#0` 谢主公隆恩！ — ASR 0.4 (syllable): 谢主公
+- `zh-f/cmd.develop.great#0` 五谷丰登！ — ASR 0.5 (syllable): 無故送
+- `zh-f/cmd.industry.start#0` 起炉鼓铸！ — ASR 0.5 (syllable): 氣古
+- `zh-f/cmd.industry.great#0` 百炼成钢！ — ASR 0.75 (syllable): 成
+- `zh-f/cmd.town.start#0` 修缮闾里！ — ASR 0.75 (syllable): 女力
+- `zh-f/cmd.town.great#0` 市井繁华！ — ASR 0.75 (syllable): 華
+- `zh-f/cmd.recruit.start#0` 招募义勇！ — ASR 1.0 (syllable): 
+- `zh-f/cmd.train.start#0` 操练！ — ASR 1.0 (syllable): 
+- `zh-f/cmd.search.start#0` 出城寻访。 — ASR 0.5 (syllable): 出城
+- `zh-f/cmd.search.talent#0` 何人扰我清梦？ — ASR 0.5 (syllable): 何人我亲吗
+- `zh-f/cmd.hire.yes#0` 愿效犬马之劳！ — ASR 0.5 (syllable): 便校全買支。
+- `zh-f/cmd.move.start#0` 移驻！ — ASR 0.5 (syllable): 助
+- `zh-f/cmd.transport.start#0` 押运粮草！ — ASR 0.75 (syllable): 亞
+- `zh-f/cmd.ally.no#0` 休想！ — ASR 0.5 (syllable): 向
+- `zh-f/cmd.persuade.yes#0` 愿效犬马之劳！ — ASR 0.5 (syllable): 便校全買支。
+- `zh-f/cmd.attack.start#0` 出征！ — ASR 0.5 (syllable): 出
+- `zh-f/cmd.trade.start#0` 买卖公道！ — ASR 1.0 (syllable): 媽媽說
+- `zh-f/cmd.appoint.yes#0` 定不负所托！ — ASR 0.8 (syllable): 不
+- `zh-f/cmd.market.buy#0` 好兵器！ — ASR 0.67 (syllable): 好
+- `zh-f/ui.generalOpen#1` 末将在！ — ASR 1.0 (syllable): 
+- `zh-f/news.succession#0` 先主之志，吾当继之！ — ASR 0.38 (syllable): 先主之之,不當持
+- `zh-f/title.accept#0` 谢主公隆恩！ — ASR 0.4 (syllable): 谢主公安
+- `zh-f/title.promote#0` 更上一层楼！ — ASR 0.4 (syllable): 更上一
+- `zh-f/title.revoke#0` 臣……遵命。 — ASR 0.67 (syllable): 神怎命
+- `zh-f/title.passedOver#0` 哼…… — ASR 1.0 (syllable): (
+- `zh-f/title.rankUp#0` 威加四海！ — ASR 0.5 (syllable): 微海
+- `zh-f/bat.select#0` 在！ — ASR 1.0 (syllable): 3
+- `zh-f/bat.select#1` 何事？ — ASR 0.5 (syllable): 何
+- `zh-f/bat.attack#0` 攻击！ — ASR 0.5 (syllable): 公子
+- `zh-f/bat.tactic#0` 看我妙计！ — ASR 0.5 (syllable): 看我
+- `zh-f/bat.fire#0` 火攻！ — ASR 0.5 (syllable): 活動
+- `zh-f/bat.reinforce#0` 援军到了！ — ASR 0.5 (syllable): 邊境到了
+- `zh-f/bat.rout#0` 我军败了…… — ASR 0.5 (syllable): 我了
+- `zh-f/bat.hurt#0` 呃！ — ASR 1.0 (syllable): ()
+- `zh-f/clash.crit#0` 看招！ — ASR 0.5 (syllable): 看著
+- `zh-f/duel.refuse#0` 不与匹夫斗！ — ASR 1.0 (syllable): 体的
+- `zh-f/duel.parry#0` 看破！ — ASR 0.5 (syllable): 破
+- `zh-f/duel.guardcrush#0` 破！ — ASR 1.0 (syllable): Pu
+- `zh-f/duel.finisher#0` 到此为止！ — ASR 0.5 (syllable): 包自為之
+- `zh-f/duel.crit#0` 着！ — ASR 1.0 (syllable): (
+- `zh-f/tourney.open#0` 群雄毕至，比武开始！ — ASR 0.5 (syllable): 志 舞开始
+- `zh-f/ui.generalsOpen#1` 诸君听令！ — ASR 0.75 (syllable): 挺亮
+- `zh-f/ui.monthStart#0` 新的一月，诸事待理。 — ASR 0.5 (syllable): 行底月 世代立
+- `zh-f/evt.choice.good#0` 此事办妥了！ — ASR 0.6 (syllable): 死是了
+- `zh-f/debate.stance.yinjing#0` 子曰—— — ASR 1.0 (syllable): 
+- `zh-f/debate.stance.sheyu#0` 譬如—— — ASR 1.0 (syllable): 
+- `zh-f/debate.stance.bonan#0` 此言差矣！ — ASR 0.75 (syllable): 4元差1
+- `zh-f/marriage.accept#0` 结秦晋之好！ — ASR 0.6 (syllable): 情之號
+- `zh-f/victory.wangdao#0` 王道荡荡，天下归心！ — ASR 0.62 (syllable): 王,天下行
+- `zh-f/cmd.build.start#0` 动工！ — ASR 3.0 (syllable): 公公公公公公公
+- `zh-f/caravan.return#0` 满载而归！ — ASR 0.5 (syllable): 慢在
+- `zh-f/cmd.explore.start#0` 探访名胜去！ — ASR 0.6 (syllable): 民勝去
+- `zh-f/cmd.marriage.start#0` 愿结姻亲。 — ASR 0.75 (syllable): 因情
+- `zh-f/cmd.truce.start#0` 愿息干戈。 — ASR 0.5 (syllable): 原西
+- `zh-f/truce.accept#0` 暂且罢兵。 — ASR 1.0 (syllable): 三起
+- `ja-m/move#0` 出立！ — ASR 0.86 (phoneme): スタズル
+- `ja-m/defeat#0` 無念…… — ASR 0.8 (phoneme): モント
+- `ja-m/cmd.move.start#0` 移駐せよ！ — ASR 0.88 (phoneme): 1つさよ
+- `ja-m/cmd.attack.start#0` 出陣！ — ASR 0.57 (phoneme): 数字
+- `ja-m/tourney.open#0` 群雄集えり、試合を始めよ！ — ASR 0.52 (phoneme): 公共所に下をはじめよう。
+- `ja-f/defeat#0` 無念…… — ASR 0.6 (phoneme): うまね
+- `ja-f/cmd.industry.start#0` 炉に火を入れよ！ — ASR 0.67 (phoneme): ロニ日を入れ上
+- `ja-f/cmd.attack.start#0` 出陣！ — ASR 1.0 (phoneme): せ
+- `ko-f/train#0` 훈련하라! — ASR 1.0 (char): 이 누야
+- `ko-f/move#0` 출발하라! — ASR 1.0 (char): 
+- `ko-f/miss#0` 면목이 없습니다…… — ASR 0.57 (char): 여교습니다.
+- `ko-f/charge#0` 돌격하라! — ASR 0.75 (char): 돌다
+- `ko-f/retreat#0` 후퇴하라! — ASR 1.0 (char): 끝에 알아
+- `ko-f/crit#0` 받아라! — ASR 1.0 (char): 다
+- `ko-f/special#0` 나의 비기를 보아라! — ASR 0.88 (char): 나의 fik이를 포하
+- `ko-f/victory#0` 우리가 이겼다! — ASR 0.67 (char): 뿌가 되겠다
+- `ko-f/duel#0` 누가 나와 겨루겠느냐! — ASR 0.89 (char): 두가지 다 오케어 은
+- `ko-f/grant#0` 그대에게 벼슬을 내리노라! — ASR 0.73 (char): 그게 를 내.
+- `ko-f/cmd.develop.start#0` 새 밭을 일구어라! — ASR 0.86 (char): 세을 이거
+- `ko-f/cmd.develop.great#0` 오곡이 풍성하옵니다! — ASR 0.67 (char): 고기 성합니다.
+- `ko-f/cmd.industry.start#0` 화로에 불을 지펴라! — ASR 0.75 (char): 하루에 부 지.
+- `ko-f/cmd.industry.great#0` 백 번 단련한 강철이다! — ASR 0.89 (char): 100원 달 강조입니다.
+- `ko-f/cmd.town.start#0` 마을을 정비하라! — ASR 0.57 (char): 말을 정기하.
+- `ko-f/cmd.move.start#0` 이동하라! — ASR 0.75 (char): 이아
+- `ko-f/cmd.transport.start#0` 군량을 호송하라! — ASR 1.0 (char): 그아 너가 손아
+- `ko-f/cmd.attack.start#0` 출정하라! — ASR 1.0 (char): 
+- `ko-f/cmd.caravan.start#0` 상단, 출발하라! — ASR 0.67 (char): 상당히 하.
+- `ko-f/cmd.gift.start#0` 약소한 예물을 바칩니다. — ASR 0.6 (char): 약사님을 받습니다.
+- `vi-f/ack#0` Tuân lệnh! — ASR 0.62 (char): Tổ lên
+- `vi-f/train#0` Luyện binh! — ASR 0.67 (char): Người bình
+- `vi-f/search#0` Thần đi tìm hiền tài. — ASR 0.69 (char): Kênh Dị Tim Hình Tại
+- `vi-f/move#0` Xuất phát! — ASR 0.75 (char): Sự phạc
+- `vi-f/attack#0` Toàn quân xuất kích! — ASR 0.81 (char): Tân Cô Lô Sát
+- `vi-f/retreat#0` Rút lui! — ASR 1.0 (char): Chết ạ
+- `vi-f/special#0` Hãy xem tuyệt kỹ của ta! — ASR 0.72 (char): Hãy sạch được tính cô ta.
+- `vi-f/victory#0` Ta thắng rồi! — ASR 0.9 (char): Cái tham sóy
+- `vi-f/allyNo#0` Đừng hòng! — ASR 0.62 (char): đơn khầm
+- `vi-f/cmd.develop.start#0` Khai khẩn ruộng mới! — ASR 0.69 (char): 2 cắn dộm mới
+- `vi-f/cmd.develop.great#0` Ngũ cốc được mùa! — ASR 0.85 (char): Mù cấp lịch m
+- `vi-f/cmd.industry.start#0` Đốt lò lên! — ASR 0.75 (char): Đ BOOK L
+- `vi-f/cmd.town.great#0` Phố chợ phồn thịnh! — ASR 0.53 (char): phố chạc phông t
+- `vi-f/cmd.attack.start#0` Xuất chinh! — ASR 0.56 (char): sốt chi
+- `vi-f/cmd.build.start#0` Khởi công! — ASR 0.88 (char): Tời tâm
+- `vi-f/exped.find#0` Có phát hiện rồi! — ASR 0.62 (char): Phải tiệt zoi
+- `vi-f/cmd.gift.start#0` Xin dâng lễ mọn. — ASR 0.67 (char): xí sống lạc mang
+- `vi-f/cmd.marriage.start#0` Xin kết thông gia. — ASR 0.79 (char): xí thích tuần ra
+- `vi-f/cmd.truce.start#0` Xin tạm ngưng binh đao. — ASR 0.56 (char): xí tạm gương bì
+- `vi-f/cmd.tradepact.start#0` Cùng nhau giao thương. — ASR 0.72 (char): Phùng yếu sạch thừa
+- `vi-f/tourney.win#0` Thiên hạ đệ nhất! — ASR 0.54 (char): Chỉnh hạ đình tr
+- `mn-m/ack#0` Зарлигаар! — ASR 1.0 (char): Zaboka
+- `mn-m/recruit#0` Цэрэг дайчил! — ASR 1.0 (char): 3, 2, 1, 4
+- `mn-m/train#0` Бэлтгэл хий! — ASR 1.3 (char): but all are free
+- `mn-m/search#0` Хүн олохоор явъя. — ASR 1.0 (char): ความ ความ ความ
+- `mn-m/move#0` Мордъё! — ASR 1.0 (char): Vada
+- `mn-m/attack#0` Бүх цэрэг, довтол! — ASR 1.0 (char): atagā bhūhta
+- `mn-m/great#0` Амжилттай! — ASR 1.0 (char): Amratti
+- `mn-m/miss#0` Уучлаарай… — ASR 1.0 (char): 》"""""""""
+- `mn-m/charge#0` Хурай! — ASR 1.0 (char): COVID
+- `mn-m/charge#1` Довтол! — ASR 1.0 (char): Dovta
+- `mn-m/retreat#0` Ухар! — ASR 1.25 (char): (cough)
+- `mn-m/crit#0` Энийг ав! — ASR 1.0 (char): 1,2,1
+- `mn-m/special#0` Миний ур чадварыг хар! — ASR 1.0 (char): 邊邊, 邊邊,
+- `mn-m/victory#0` Бид яллаа! — ASR 1.12 (char): むうううううううう
+- `mn-m/defeat#0` Харамсалтай… — ASR 1.0 (char): ข้าสัตตย
+- `mn-m/duel#0` Хэн надтай тулалдана! — ASR 1.0 (char): カンタイトウダナ
+- `mn-m/allyYes#0` Холбоотон болъё. — ASR 1.0 (char): Water bucket
+- `mn-m/allyNo#0` Үгүй! — ASR 1.25 (char): Rukki
+- `mn-m/grant#0` Чамд цол олгоё! — ASR 1.0 (char): シャンン ソーケグ
+- `mn-m/thanks#0` Баярлалаа, хаан минь! — ASR 1.0 (char): ə ə ə
+- `mn-m/cmd.develop.start#0` Шинэ тариалан эхлүүл! — ASR 1.0 (char): 春頭 恩化
+- `mn-m/cmd.develop.great#0` Таван тариа арвин! — ASR 1.0 (char): 7, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+- `mn-m/cmd.industry.start#0` Зуухаа асаа! — ASR 1.0 (char): スウ ア ア ア ア
+- `mn-m/cmd.industry.great#0` Зуун удаа хатуужсан ган! — ASR 1.0 (char): ิริน
+- `mn-m/cmd.town.start#0` Хотоо засварла! — ASR 1.0 (char): Kato Zsara
+- `mn-m/cmd.town.great#0` Зах худалдаа цэцэглэж байна! — ASR 1.0 (char): Zakhutahakze baayna
+- `mn-m/cmd.recruit.great#0` Түмэн олон нэгдэв! — ASR 1.0 (char): รรมน์ โอ้น
+- `mn-m/cmd.train.great#0` Зуун тулааны цэрэг! — ASR 1.0 (char): soon an sa
+- `mn-m/cmd.search.start#0` Хүн олохоор явъя. — ASR 2.43 (char): ho ho ye ye ye ye ye ye ye ye ye ye ye y
+- `mn-m/cmd.move.start#0` Нүүлгэ! — ASR 1.0 (char): 9
+- `mn-m/cmd.transport.start#0` Хүнс тээвэрлэ! — ASR 1.0 (char): 15.
+- `mn-m/cmd.attack.start#0` Аян дайнд мордъё! — ASR 1.0 (char): Water
+- `mn-m/cmd.build.start#0` Барилга эхлүүл! — ASR 1.0 (char): come on
+- `mn-m/build.done#0` Барилга дууслаа! — ASR 1.0 (char): Ba ra Ba ra dux
+- `mn-m/cmd.caravan.start#0` Жингийн цуваа мордлоо! — ASR 1.0 (char): 《《《《《《《《《《《《《《《《《《《
+- `mn-m/caravan.return#0` Дүүрэн ачаатай ирлээ! — ASR 1.0 (char): 12.8.10.
+- `mn-m/cmd.explore.start#0` Газар судлахаар явъя! — ASR 1.0 (char): カ
+- `mn-m/exped.find#0` Нэг юм оллоо! — ASR 1.0 (char): not in all of
+- `mn-m/cmd.gift.start#0` Өчүүхэн бэлэг өргөе. — ASR 1.0 (char): sva kundak
+- `mn-m/cmd.marriage.start#0` Ураг барилдъя. — ASR 1.0 (char): ウェ ウェ ウェ ウ
+- `mn-m/cmd.truce.start#0` Зэвсгээ хураая. — ASR 1.0 (char): ジズカ
+- `mn-m/cmd.tradepact.start#0` Харилцан худалдаа хийе. — ASR 1.0 (char): Kha Ho Ts, ah, kui.
+- `mn-m/mission.done#0` Төрийн бодлого биеллээ! — ASR 1.0 (char): 
+- `mn-m/tourney.open#0` Баатрууд цугларлаа, тэмцээн эхэлье! — ASR 1.37 (char): Water is bigger than the temperature of 
+- `mn-m/tourney.award#0` Тэнгэр доорх нэгдүгээр, үнэхээр зохистой! — ASR 1.0 (char): 》""""""""""""""""""""
+- `mn-m/tourney.win#0` Тэнгэр доорх нэгдүгээр! — ASR 1.0 (char): 》"""""""""""
+- `kk-m/ack#0` Құп болады! — ASR 0.56 (char): Коппулада
+- `kk-m/search#0` Дарын іздеп барамын. — ASR 0.88 (char): р р
+- `kk-m/move#0` Аттан! — ASR 0.8 (char): қан қан қ
+- `kk-m/great#0` Ұлы жеңіс! — ASR 1.0 (char): 
+- `kk-m/miss#0` Кешіріңіз… — ASR 0.56 (char): қешереніс
+- `kk-m/charge#0` Алға! — ASR 1.25 (char): қалды қал
+- `kk-m/charge#1` Шабуыл! — ASR 1.0 (char): қм
+- `kk-m/retreat#0` Шегін! — ASR 1.0 (char): қр
+- `kk-m/crit#0` Мә, ал! — ASR 1.0 (char): 
+- `kk-m/special#0` Менің өнерімді көр! — ASR 0.75 (char): қнен дыр
+- `kk-m/victory#0` Жеңдік! — ASR 1.0 (char): 
+- `kk-m/defeat#0` Қап… — ASR 0.67 (char): қр қ
+- `kk-m/allyYes#0` Одақ құрайық. — ASR 0.82 (char): да к
+- `kk-m/allyNo#0` Жоқ! — ASR 1.0 (char): р
+- `kk-m/grant#0` Саған атақ беремін! — ASR 0.75 (char): ан қан қан
+- `kk-m/thanks#0` Рақмет, тақсыр! — ASR 0.58 (char): қрқмет т
+- `kk-m/cmd.industry.start#0` Пешті жағыңдар! — ASR 0.69 (char): қичті жарін қ
+- `kk-m/cmd.industry.great#0` Жүз рет шыңдалған болат! — ASR 0.8 (char): зрет
+- `kk-m/cmd.town.start#0` Қаланы жөндеңдер! — ASR 0.6 (char): қаланыр ж
+- `kk-m/cmd.town.great#0` Базар гүлденді! — ASR 0.85 (char): қлды
+- `kk-m/cmd.recruit.great#0` Мың сан халық жиналды! — ASR 0.67 (char): алы алді
+- `kk-m/cmd.train.great#0` Жүз шайқастың әскері! — ASR 0.72 (char): Жшерасы
+- `kk-m/cmd.search.start#0` Дарын іздеп барамын. — ASR 0.88 (char): қрі қ
+- `kk-m/cmd.move.start#0` Көшіріңдер! — ASR 0.9 (char): қуйо жірін
+- `kk-m/cmd.transport.start#0` Азықты жеткізіңдер! — ASR 0.76 (char): қз қті ж
+- `kk-m/build.done#0` Құрылыс аяқталды! — ASR 0.67 (char): қрсай қ
+- `kk-m/cmd.explore.start#0` Жер шолуға барамыз! — ASR 0.88 (char): ір ір
+- `kk-m/cmd.gift.start#0` Шағын сыйлық ұсынамыз. — ASR 0.79 (char): қрін силу ос
+- `kk-m/cmd.tradepact.start#0` Өзара сауда жасайық. — ASR 0.53 (char): зерас удас
+- `sa-m/ack#0` यथाज्ञापयति देवः! — ASR 1.0 (char): ھای تایہ پیچھ
+- `sa-m/work#0` इदानीमेव करोमि! — ASR 1.08 (char): Edali mere crumi
+- `sa-m/recruit#0` सैन्यं संगृह्णीत! — ASR 1.07 (char): Sainin Sanvirehni
+- `sa-m/train#0` अभ्यसत! — ASR 1.0 (char): ۔۔۔۔۔۔
+- `sa-m/search#0` गुणिनमन्विष्यामि। — ASR 1.0 (char): Gure numenosiyani
+- `sa-m/move#0` प्रस्थीयताम्! — ASR 1.0 (char): Tresitaam
+- `sa-m/attack#0` सर्वसेने, आक्रमत! — ASR 1.0 (char): So seni akrmar
+- `sa-m/great#0` सिद्धम्! — ASR 1.0 (char): siddham
+- `sa-m/miss#0` क्षम्यताम्… — ASR 1.0 (char): kimiya taan
+- `sa-m/charge#0` जय! — ASR 1.5 (char): Jay
+- `sa-m/charge#1` आक्रमत! — ASR 1.0 (char): Akrema
+- `sa-m/retreat#0` अपसरत! — ASR 1.2 (char): atāsār
+- `sa-m/crit#0` गृहाण! — ASR 0.6 (char): े हा
+- `sa-m/special#0` पश्य मे कौशलम्! — ASR 1.17 (char): ۔Pashimikosilam
+- `sa-m/victory#0` विजयोऽस्माकम्! — ASR 1.0 (char): ھوچیا ھا
+- `sa-m/defeat#0` हा धिक्… — ASR 1.0 (char): ھا دکھ۔
+- `sa-m/duel#0` को मया सह योत्स्यते! — ASR 1.0 (char): уме ас
+- `sa-m/allyYes#0` सन्धिं कुर्मः। — ASR 1.0 (char): Sambhikurma
+- `sa-m/allyNo#0` न कदापि! — ASR 1.33 (char): Nakadapa
+- `sa-m/grant#0` पदं ते ददामि! — ASR 1.0 (char): ھھھ
+- `sa-m/thanks#0` अनुगृहीतोऽस्मि! — ASR 1.0 (char): Anubertosmi
+- `ta-m/ack#0` உத்தரவு, அரசே! — ASR 1.0 (char): اُتہ وہ آسے
+- `ta-m/train#0` பயிற்சி செய்! — ASR 0.91 (char): ப いい ๆ ๆ
+- `ta-m/search#0` அறிஞரைத் தேடிச் செல்கிறேன். — ASR 0.67 (char): அருங்களைத் தேடித்தி
+- `ta-m/miss#0` மன்னியுங்கள்… — ASR 0.58 (char): மணியங்
+- `ta-m/charge#1` தாக்கு! — ASR 0.83 (char): ταபு
+- `ta-m/retreat#0` பின்வாங்கு! — ASR 0.6 (char): பின்னு அங
+- `ta-m/crit#0` வாங்கிக்கொள்! — ASR 1.0 (char): 1 gith call
+- `ta-m/duel#0` என்னுடன் போரிட யார் துணிவார்! — ASR 0.6 (char): எந்தன் போடா ால் த
+- `ta-m/cmd.develop.start#0` புதிய நிலத்தை உழுங்கள்! — ASR 0.65 (char): புடியன் அல்லாக்
+- `ta-m/cmd.town.start#0` ஊரைச் சீரமையுங்கள்! — ASR 0.82 (char): ாய் தியாமேயங
+- `ta-m/cmd.train.great#0` நூறு போர் கண்ட படை! — ASR 0.6 (char): نورو پورு கண்ட படி
+- `ta-m/cmd.search.start#0` அறிஞரைத் தேடிச் செல்கிறேன். — ASR 0.62 (char): அருங்கள் தெடித்தில்க
+- `ta-m/cmd.transport.start#0` உணவைக் காவலுடன் கொண்டு செல்லுங்கள்! — ASR 0.55 (char): உம வைக் காவலுவ்வடன் கொண்
+- `ta-m/cmd.attack.start#0` போருக்குப் புறப்படு! — ASR 0.56 (char): போய்கப் பொரு
+- `ta-m/caravan.return#0` நிறைந்த சுமையுடன் திரும்பினோம்! — ASR 0.54 (char): நிரைந்தா சுமையிடான்
+- `ta-m/cmd.explore.start#0` ஆராயச் செல்கிறோம்! — ASR 0.69 (char): آئی τெலگرோம்.
+- `ta-m/cmd.gift.start#0` சிறு காணிக்கை அளிக்கிறோம். — ASR 0.52 (char): சிரக்கானிக்கை அல்லி
+- `ta-m/cmd.marriage.start#0` மண உறவால் இணைவோம். — ASR 0.53 (char): மணہ ஒருவாள் இனைவும
+- `ta-m/cmd.truce.start#0` ஆயுதங்களை வைப்போம். — ASR 1.06 (char): I don't know why I'm born.
+- `ta-m/cmd.tradepact.start#0` ஒருவருக்கொருவர் வணிகம் செய்வோம். — ASR 0.66 (char): வகோ வானிக்ம சேவோம்.
+- `ta-m/tourney.win#0` உலகில் முதல்வன்! — ASR 0.64 (char): உளக்குள் முத
+- `ta-f/ack#0` உத்தரவு, அரசே! — ASR 0.73 (char): உட்டாகும் அ
+- `ta-f/work#0` உடனே செய்கிறேன்! — ASR 0.64 (char): குடனே சேகி
+- `ta-f/train#0` பயிற்சி செய்! — ASR 0.55 (char): பائற்றிச
+- `ta-f/search#0` அறிஞரைத் தேடிச் செல்கிறேன். — ASR 0.71 (char): அறு நேவை தேடித்
+- `ta-f/move#0` புறப்படு! — ASR 0.62 (char): புடு பள
+- `ta-f/great#0` பெருவெற்றி! — ASR 0.7 (char): பேல விதி
+- `ta-f/charge#0` முன்னேறு! — ASR 0.75 (char): முண
+- `ta-f/charge#1` தாக்கு! — ASR 1.0 (char): ۔
+- `ta-f/special#0` என் கலையைப் பார்! — ASR 0.79 (char): கலیயே پر
+- `ta-f/victory#0` நாம் வென்றோம்! — ASR 0.75 (char): நாமேலு
+- `ta-f/defeat#0` ஐயோ… — ASR 2.0 (char): 'Are you?'
+- `ta-f/duel#0` என்னுடன் போரிட யார் துணிவார்! — ASR 0.68 (char): என்னத்தன் போல்
+- `ta-f/allyYes#0` நட்புக் கொள்வோம். — ASR 0.6 (char): நாட்போக் க
+- `ta-f/allyNo#0` ஒருபோதும் இல்லை! — ASR 1.0 (char): orpourdum illaï
+- `ta-f/grant#0` உனக்குப் பட்டம் தருகிறேன்! — ASR 0.52 (char): உனக்குப் பாட்
+- `ta-f/thanks#0` நன்றி, அரசே! — ASR 0.56 (char): நண்டி ஆசை
+- `ta-f/cmd.develop.start#0` புதிய நிலத்தை உழுங்கள்! — ASR 0.65 (char): புடியன் நில் த
+- `ta-f/cmd.town.start#0` ஊரைச் சீரமையுங்கள்! — ASR 0.65 (char): ய் தீரமையிர
+- `ta-f/cmd.recruit.great#0` மக்கள் திரண்டு வந்தனர்! — ASR 0.6 (char): மக்கல் தயான் த
+- `ta-f/cmd.train.great#0` நூறு போர் கண்ட படை! — ASR 0.53 (char): نுள் போர்கண்
+- `ta-f/cmd.search.start#0` அறிஞரைத் தேடிச் செல்கிறேன். — ASR 0.71 (char): அறை நலை தெடித்த
+- `ta-f/cmd.transport.start#0` உணவைக் காவலுடன் கொண்டு செல்லுங்கள்! — ASR 0.84 (char): உன avai kawaladen kond seldங்கள
+- `ta-f/cmd.attack.start#0` போருக்குப் புறப்படு! — ASR 0.61 (char): பாள் புரப்ப
+- `ta-f/cmd.build.start#0` கட்டத் தொடங்குங்கள்! — ASR 0.61 (char): கட்டாக் தொட
+- `ta-f/build.done#0` கட்டடம் நிறைவுற்றது! — ASR 0.72 (char): தாட்டட்டாம்
+- `ta-f/cmd.caravan.start#0` வணிகக் குழு புறப்பட்டது! — ASR 0.62 (char): வாணிகக்குள் நி
+- `ta-f/caravan.return#0` நிறைந்த சுமையுடன் திரும்பினோம்! — ASR 0.54 (char): நிறைந்த சுமையிட
+- `ta-f/cmd.explore.start#0` ஆராயச் செல்கிறோம்! — ASR 1.0 (char): a-a-a-a-a
+- `ta-f/exped.find#0` ஒன்று கண்டுபிடித்தோம்! — ASR 0.6 (char): 10 கண்டு பிறி
+- `ta-f/cmd.gift.start#0` சிறு காணிக்கை அளிக்கிறோம். — ASR 0.57 (char): சிருக்கானிக்க
+- `ta-f/cmd.marriage.start#0` மண உறவால் இணைவோம். — ASR 0.53 (char): மணہ اورவால் இனைவு
+- `ta-f/cmd.truce.start#0` ஆயுதங்களை வைப்போம். — ASR 1.0 (char): آ آ 5-6
+- `ta-f/cmd.tradepact.start#0` ஒருவருக்கொருவர் வணிகம் செய்வோம். — ASR 0.72 (char): அவர் கொள்ளவால் வனி
+- `ta-f/tourney.open#0` வீரர்கள் கூடினர், போட்டி தொடங்கட்டும்! — ASR 0.73 (char): வீவருக்கல் கூடினால
+- `ta-f/tourney.award#0` உலகில் முதல்வன், தகுதியானவன்! — ASR 0.52 (char): உளகில முதலவன தாள் தி
+- `ta-f/tourney.win#0` உலகில் முதல்வன்! — ASR 0.64 (char): உளகி மூடவே
+- `si-m/ack#0` එසේය, දේවයන් වහන්ස! — ASR 1.13 (char): isēya dēle-mahansar.
+- `si-m/work#0` දැන්ම කරනවා! — ASR 1.0 (char): 電馬卡
+- `si-m/recruit#0` හමුදාව රැස් කරනු! — ASR 1.0 (char): アムタオ アスカレノ
+- `si-m/train#0` පුහුණු වෙනු! — ASR 1.0 (char): 。
+- `si-m/search#0` දක්ෂයන් සොයා යමි. — ASR 1.07 (char): dacrjen suya yemi.
+- `si-m/move#0` පිටත් වෙමු! — ASR 1.33 (char): Pidata Ravemo
+- `si-m/attack#0` මුළු හමුදාවම, පහර දෙනු! — ASR 1.17 (char): Murlū Hamudāvama Pākhād
+- `si-m/great#0` ජයග්‍රහණයයි! — ASR 1.09 (char): Jaiakwahanae
+- `si-m/miss#0` සමාවෙන්න… — ASR 1.12 (char): Samamanna
+- `si-m/charge#0` ඉදිරියට! — ASR 1.0 (char): ə ə
+- `si-m/retreat#0` පසු බසිනු! — ASR 1.38 (char): Passo bacinu.
+- `si-m/crit#0` මෙන්න! — ASR 1.0 (char): Menna
+- `si-m/special#0` මගේ හැකියාව බලනු! — ASR 1.0 (char): əməgə həqqia
+- `si-m/victory#0` අපි දිනුවා! — ASR 1.0 (char): アピデワ
+- `si-m/defeat#0` අහෝ… — ASR 1.67 (char): Adolf
+- `si-m/duel#0` මා සමඟ සටනට කවුද එන්නේ! — ASR 1.61 (char): Maa Samagat Sadhanadakavudha Lne
+- `si-m/allyYes#0` මිත්‍ර වෙමු. — ASR 1.1 (char): Meida Wa Wemu
+- `si-m/allyNo#0` කිසිදා නැත! — ASR 1.22 (char): kisida anata
+- `si-m/grant#0` ඔබට පදවියක් දෙමි! — ASR 1.21 (char): bada pada viak dhemi.
+- `si-m/thanks#0` ජය වේවා! — ASR 1.33 (char): Jaya Viva
+- `si-m/cmd.develop.start#0` අලුත් කුඹුරු සාරනු! — ASR 1.0 (char): Alida kubo sarnu.
+- `si-m/cmd.develop.great#0` අස්වැන්න සරුයි! — ASR 1.0 (char): Asuna Soi
+- `si-m/cmd.industry.start#0` උදුන දල්වනු! — ASR 1.4 (char): Uttunad dellanu.
+- `si-m/cmd.industry.great#0` සිය වරක් තැළූ වානේ! — ASR 1.33 (char): See ya para ketaluv wani.
+- `si-m/cmd.town.start#0` නගරය අලුත්වැඩියා කරනු! — ASR 1.21 (char): Nagaaya Alitvadiya Karanu.
+- `si-m/cmd.town.great#0` වෙළඳපොළ සමෘද්ධයි! — ASR 1.13 (char): vela ta pula samuthi.
+- `si-m/cmd.recruit.great#0` දහස් ගණන් ජනයා එක්වූහ! — ASR 1.33 (char): Dhahas Ganan Janaya Ekkovan
+- `si-m/cmd.train.great#0` සිය සටන් ජයගත් හමුදාව! — ASR 1.33 (char): siyasadang jagadha hamudau.
+- `si-m/cmd.search.start#0` දක්ෂයන් සොයා යමි. — ASR 1.14 (char): dacchain suya je mi.
+- `si-m/cmd.move.start#0` ස්ථාන මාරු කරනු! — ASR 1.08 (char): Stana Mau Karanu
+- `si-m/cmd.transport.start#0` ආහාර ආරක්ෂාවෙන් ගෙනයනු! — ASR 1.0 (char): aaha aachaman kenae nu.
+- `si-m/cmd.attack.start#0` යුද්ධයට පිටත් වෙමු! — ASR 1.19 (char): Uthea dha-pidadha-vimu.
+- `si-m/cmd.build.start#0` ඉදිකිරීම අරඹනු! — ASR 1.31 (char): eedi kii ma arabhanu.
+- `si-m/build.done#0` ඉදිකිරීම නිම විය! — ASR 1.21 (char): irekki manema viyah
+- `si-m/cmd.caravan.start#0` වෙළඳ කණ්ඩායම පිටත් විය! — ASR 1.26 (char): Vela da kandaa mappitath via.
+- `si-m/caravan.return#0` පිරුණු බඩු සමඟ ආපසු ආවෙමු! — ASR 1.1 (char): pirmu vidisamaga apasav rm.
+- `si-m/cmd.explore.start#0` ගවේෂණයට යමු! — ASR 1.6 (char): Gavationeada Yumu.
+- `si-m/exped.find#0` යමක් සොයාගත්තා! — ASR 1.0 (char): ยəmək suyagata.
+- `si-m/cmd.gift.start#0` කුඩා තෑග්ගක් පිළිගන්වමු. — ASR 1.0 (char): ھ ھ ھ ھ ھ ھ ھ ھ
+- `si-m/cmd.marriage.start#0` විවාහයෙන් එක්වෙමු. — ASR 1.06 (char): Vila hien hien kue mu.
+- `si-m/cmd.truce.start#0` ආයුධ බිම තබමු. — ASR 1.36 (char): Aida Bimattabamu.
+- `si-m/cmd.tradepact.start#0` එකිනෙකා සමඟ වෙළඳාම් කරමු. — ASR 1.1 (char): ھیکنے کا SAMAGA VALADAM KAM
+- `si-m/mission.done#0` රාජ්‍ය ප්‍රතිපත්තිය සාර්ථකයි! — ASR 1.0 (char): Wadj Yep atipatiya Sarthakai
+- `si-m/tourney.open#0` වීරයෝ රැස් වූහ, තරඟය අරඹමු! — ASR 1.24 (char): Viyel wasvuha daragaya arabam.
+- `si-m/tourney.award#0` ලොව පළමුවැන්නා, සුදුසුමයි! — ASR 1.0 (char): lo pala mo one su du sumi.
+- `si-m/tourney.win#0` ලොව පළමුවැන්නා! — ASR 1.0 (char): ลو بลامون
+- `fa-m/move#0` برویم! — ASR 0.6 (char): درسی
+- `fa-m/attack#0` همه، یورش! — ASR 0.57 (char): اره ایرش
+- `fa-m/miss#0` ببخشید… — ASR 0.67 (char): پراشی
+- `fa-m/crit#0` بگیر! — ASR 0.75 (char): بریحة
+- `fa-m/special#0` هنر مرا ببین! — ASR 0.7 (char): قونا نمار بیی
+- `fa-m/victory#0` پیروز شدیم! — ASR 0.56 (char): که رو شو دی؟
+- `fa-m/duel#0` کیست که با من نبرد کند؟ — ASR 0.59 (char): کسی بما نا را ک
+- `fa-m/allyYes#0` پیمان ببندیم. — ASR 0.73 (char): های ما بیلان
+- `fa-m/allyNo#0` هرگز! — ASR 0.75 (char): پر جزد
+- `fa-m/thanks#0` سپاس، شاهنشاه! — ASR 0.55 (char): سه بات شاہا نشه
+- `fa-m/cmd.industry.start#0` کوره‌ها را بیفروزید! — ASR 0.53 (char): حرها رو بی افرو
+- `fa-m/cmd.town.start#0` کوی‌ها را آباد کنید! — ASR 0.62 (char): حر آبت کنیت
+- `fa-m/cmd.search.start#0` به جستجوی کاردانان می‌روم. — ASR 0.55 (char): و سوشه یکارداناً براً
+- `fa-m/cmd.move.start#0` جابه‌جا شوید! — ASR 1.27 (char): از از از از از از از از
+- `fa-m/cmd.transport.start#0` آذوقه را بدرقه کنید! — ASR 0.69 (char): پازلر بعد را بکوند
+- `fa-m/cmd.build.start#0` ساختن را آغاز کنید! — ASR 0.53 (char): ساختام ارس کنی تط
+- `fa-m/cmd.caravan.start#0` کاروان به راه افتاد! — ASR 0.69 (char): قروا مرعفت اطبه
+- `fa-m/caravan.return#0` با بار پر بازگشتیم! — ASR 0.53 (char): وارتور باز گاشتين
+- `fa-m/cmd.explore.start#0` به کاوش می‌رویم! — ASR 0.62 (char): قبوش میرابی
+- `fa-m/exped.find#0` چیزی یافتیم! — ASR 0.6 (char): شیفتی
+- `fa-m/cmd.gift.start#0` پیشکشی ناچیز تقدیم می‌کنیم. — ASR 0.65 (char): بیش که شی نا چسته ار
+- `fa-m/cmd.marriage.start#0` با پیوند زناشویی یکی شویم. — ASR 0.67 (char): فخایبان دزانا شوی
+- `fa-m/tourney.award#0` نخستینِ جهان، به‌راستی سزاوار! — ASR 0.52 (char): نا خوصين جا هون برسی سزا وط
+- `fa-m/tourney.win#0` نخستینِ جهان! — ASR 0.64 (char): نخسن جا هنفا
+- `fa-m/rtag.attack#0` شاهنشاه! به پیش! — ASR 0.58 (char): شا حالشا تکیش
+- `fa-m/rtag.victory#0` پیروز! — ASR 0.8 (char): درست
+- `ka-f/ack#0` დიახ, ბატონო! — ASR 1.0 (char): těch padonu
+- `ka-f/work#0` ახლავე! — ASR 1.17 (char): Ajo-labe
+- `ka-f/recruit#0` შეკრიბეთ ლაშქარი! — ASR 1.0 (char): še kribet laşkari.
+- `ka-f/train#0` ივარჯიშეთ! — ASR 1.0 (char): ivertiset
+- `ka-f/search#0` წავალ და მოვძებნი. — ASR 1.0 (char): əpni əpni
+- `ka-f/move#0` წავედით! — ASR 1.0 (char): Davidit
+- `ka-f/attack#0` ყველამ, შეუტიეთ! — ASR 1.0 (char): _____ _____ _____ _____
+- `ka-f/great#0` საუცხოოა! — ASR 1.0 (char): Salt
+- `ka-f/miss#0` მაპატიეთ… — ASR 1.0 (char): Mapa Diet
+- `ka-f/charge#0` წინ! — ASR 1.0 (char): 10
+- `ka-f/charge#1` გაუმარჯოს! — ASR 1.11 (char): Cau marcios
+- `ka-f/retreat#0` უკან დაიხიეთ! — ASR 1.0 (char): Ukanteigiet
+- `ka-f/crit#0` აჰა! — ASR 1.0 (char): Aha!
+- `ka-f/special#0` იხილეთ ჩემი ხელოვნება! — ASR 1.0 (char): 
+- `ka-f/victory#0` გავიმარჯვეთ! — ASR 1.0 (char): Kavi Marchet
+- `ka-f/defeat#0` ვაიმე… — ASR 1.0 (char): 5.
+- `ka-f/duel#0` ვინ შემებრძოლება? — ASR 1.0 (char): 》》》》》》》》》》
+- `ka-f/allyYes#0` მოკავშირეები ვიყოთ. — ASR 1.0 (char): əməkə ər
+- `ka-f/allyNo#0` არასოდეს! — ASR 1.0 (char): arasotes
+- `ka-f/grant#0` წოდებას გიბოძებ! — ASR 1.0 (char): 
+- `ka-f/thanks#0` მადლობა, ბატონო! — ASR 1.0 (char): Madhubabadono
+- `ka-f/cmd.develop.start#0` ახალი ყანა მოხნეთ! — ASR 1.0 (char): aaaa
+- `ka-f/cmd.develop.great#0` უხვი მოსავალი! — ASR 1.0 (char): 
+- `ka-f/cmd.industry.start#0` ქურა აანთეთ! — ASR 1.0 (char): Pura antit.
+- `ka-f/cmd.industry.great#0` ასჯერ წრთობილი ფოლადი! — ASR 1.0 (char): Aztirze tobili poladi.
+- `ka-f/cmd.town.start#0` ქალაქი მოაწესრიგეთ! — ASR 1.0 (char): Kala kimoz esrigat.
+- `ka-f/cmd.town.great#0` ბაზარი ჰყვავის! — ASR 1.0 (char): Basaritwavis
+- `ka-f/cmd.recruit.great#0` ათასობით ხალხი შემოგვიერთდა! — ASR 1.0 (char): Ata sobit halki se mogu irt da.
+- `ka-f/cmd.train.great#0` ასი ბრძოლის ლაშქარი! — ASR 1.0 (char): 
+- `ka-f/cmd.search.start#0` წავალ და ნიჭიერებს მოვძებნი. — ASR 1.08 (char): Savoltenici yereps mordzebni.
+- `ka-f/cmd.move.start#0` გადაადგილდით! — ASR 1.0 (char): qadat qd
+- `ka-f/cmd.transport.start#0` სურსათი გააცილეთ! — ASR 1.0 (char): ササティガーィルト
+- `ka-f/cmd.attack.start#0` ლაშქრობაში! — ASR 1.0 (char): ลاش кОбАШИ
+- `ka-f/cmd.build.start#0` მშენებლობა დაიწყეთ! — ASR 1.0 (char): e ne blubata e
+- `ka-f/build.done#0` მშენებლობა დასრულდა! — ASR 1.0 (char): ən eblubata svūdā
+- `ka-f/cmd.caravan.start#0` ქარავანი გაემგზავრა! — ASR 1.0 (char): Karava'a'a'a'a'a
+- `ka-f/caravan.return#0` სავსე ტვირთით დავბრუნდით! — ASR 1.0 (char): Substituted/dowbrunded
+- `ka-f/cmd.explore.start#0` დასაზვერად მივდივართ! — ASR 1.05 (char): Tassaswarat Mewdi Bart
+- `ka-f/exped.find#0` რაღაც ვიპოვეთ! — ASR 1.25 (char): Rakhatswi bogaid.
+- `ka-f/cmd.gift.start#0` მცირე ძღვენს მოგართმევთ. — ASR 1.0 (char): Side trance mo gardemelt.
+- `ka-f/cmd.marriage.start#0` ქორწინებით დავუკავშირდეთ. — ASR 1.0 (char): Hortsine bitta ukaf şrdeit.
+- `ka-f/cmd.truce.start#0` იარაღი დავყაროთ. — ASR 1.0 (char): Yara Gita-Vralot
+- `ka-f/cmd.tradepact.start#0` ერთმანეთთან ვივაჭროთ. — ASR 1.0 (char): irtmanet tan vi va jrat.
+- `ka-f/mission.done#0` სახელმწიფო საქმე აღსრულდა! — ASR 1.04 (char): Sahram si posak miyachsulda.
+- `ka-f/tourney.open#0` გმირები შეიკრიბნენ, დაიწყოს შეჯიბრი! — ASR 1.0 (char): əkrib nən, əkrib nən
+- `ka-f/tourney.award#0` ქვეყნად პირველი, ღირსეულად! — ASR 1.0 (char): Pernat Birveli, Piffse Ulet
+- `ka-f/tourney.win#0` ქვეყნად პირველი! — ASR 1.0 (char): Kratnat pirmeli.
+- `ar-m/miss#0` عفواً… — ASR 1.0 (char): أساول
+- `ar-m/crit#0` خذها! — ASR 1.0 (char): قد يهب
+- `ar-m/allyNo#0` أبداً! — ASR 0.8 (char): تبادم
+- `ar-m/cmd.industry.great#0` فولاذ سُقي مئة مرة! — ASR 0.53 (char): فأولاد سبقين مي أتمرّة
+- `gez-m/ack#0` እወ፡ እግዚእየ! — ASR 1.14 (char): او افزئيا
+- `gez-m/work#0` ይእዜ እገብር! — ASR 1.29 (char): یا زائف کنو
+- `gez-m/recruit#0` አስተጋብኡ ሐራ! — ASR 1.0 (char): אתק האוהר
+- `gez-m/train#0` ተመሀሩ! — ASR 1.5 (char): தامaha
+- `gez-m/search#0` አሐውር ወአኀሥሥ። — ASR 1.0 (char): הور و آهس
+- `gez-m/move#0` ንሑር! — ASR 1.33 (char): نهور
+- `gez-m/attack#0` ኵልክሙ፡ ተቃተሉ! — ASR 1.62 (char): כول قمو تقائط رو
+- `gez-m/great#0` ሠናይ! — ASR 1.67 (char): சَنَّ
+- `gez-m/miss#0` ስረይ ሊተ… — ASR 1.4 (char): ساولی تا
+- `gez-m/charge#0` ሞዐ! — ASR 1.0 (char): מה?
+- `gez-m/retreat#0` ተመየጡ! — ASR 1.0 (char): דمیت
+- `gez-m/crit#0` ንሣእ! — ASR 1.0 (char): نسى
+- `gez-m/special#0` ርኢ ጥበብየ! — ASR 1.5 (char): وَا إِ تَعِ
+- `gez-m/victory#0` ሞዕነ! — ASR 2.0 (char): مَنْهَ
+- `gez-m/defeat#0` አሌ ሊተ… — ASR 1.25 (char): הלரית
+- `gez-m/duel#0` መኑ ይትቃተለኒ? — ASR 1.62 (char): میں וیت کا תلینی
+- `gez-m/allyYes#0` ንግበር ኪዳነ። — ASR 1.29 (char): نحو خیدانا
+- `gez-m/allyNo#0` አልቦ! — ASR 1.67 (char): תالوا
+- `gez-m/grant#0` እሁበከ ክብረ! — ASR 1.29 (char): احوک قیورة
+- `gez-m/thanks#0` ብሩክ፡ ንጉሥ! — ASR 1.5 (char): بروکناکος
+- `la-m/ack#0` Ita, domine! — ASR 1.0 (char): イタ ドミ
+- `la-m/ack#1` Fiat! — ASR 1.0 (char): Sì
+- `la-m/train#0` Exercemini! — ASR 0.8 (char): Hatsake mi
+- `la-m/charge#1` Feri! — ASR 1.0 (char): 3.
+- `la-m/crit#0` Hoc habe! — ASR 0.71 (char): Oh, cradi!
+- `la-m/special#0` Ecce artem meam! — ASR 0.62 (char): Rikke Ardemen
+- `la-m/victory#0` Vicimus! — ASR 0.57 (char): piki no s
+- `la-m/defeat#0` Vae mihi… — ASR 0.86 (char): Why me?
+- `la-m/allyYes#0` Foedus faciamus. — ASR 0.57 (char): Toli dos fatiano.
+- `la-m/allyNo#0` Numquam! — ASR 0.57 (char): Numpon
+- `la-f/ack#0` Ita, domine! — ASR 0.67 (char): I tathba minna
+- `la-f/charge#1` Feri! — ASR 1.25 (char): Teri. Teri.
+- `la-f/retreat#0` Receptui canite! — ASR 0.64 (char): Agapycanida
+- `la-f/crit#0` Hoc habe! — ASR 0.71 (char): parcaba
+- `la-f/special#0` Ecce artem meam! — ASR 0.54 (char): a ke a te mel
+- `la-f/victory#0` Vicimus! — ASR 0.71 (char): Prítimos!
+- `la-f/defeat#0` Vae mihi… — ASR 0.86 (char): Why me?
+- `cy-m/ack#0` Ie, arglwydd! — ASR 1.0 (char): Y eich arduis.
+- `cy-m/work#0` Ar unwaith! — ASR 0.67 (char): Aynwys.
+- `cy-m/recruit#0` Casglwch y llu! — ASR 0.75 (char): Chas cof i?
+- `cy-m/move#0` Ymaith! — ASR 1.0 (char): i'r mwy'r
+- `cy-m/great#0` Campus! — ASR 0.67 (char): Tantes.
+- `cy-m/miss#0` Mae'n ddrwg gen i… — ASR 0.69 (char): Wain zirwch cynni.
+- `cy-m/retreat#0` Encilio! — ASR 1.0 (char): i'r teulu.
+- `cy-m/special#0` Gwelwch fy nawn! — ASR 0.54 (char): Gwyllfa Noun.
+- `cy-m/victory#0` Buddugoliaeth! — ASR 0.77 (char): Itheg o deaill.
+- `cy-m/duel#0` Pwy a ymladd â mi? — ASR 0.54 (char): Pwy a'n oes am i.
+- `cy-m/allyYes#0` Byddwn gyfeillion. — ASR 0.56 (char): Ys un gwyllio.
+- `cy-m/allyNo#0` Byth! — ASR 1.25 (char): dweud
+- `cy-m/grant#0` Rhoddaf it urddas! — ASR 0.6 (char): Chol ddavig ddyddiad
+- `cy-m/thanks#0` Diolch, arglwydd! — ASR 0.64 (char): tiwch ar tuis.
+- `cy-m/cmd.develop.great#0` Cynhaeaf toreithiog! — ASR 0.61 (char): Pyn ni a'r Tholi Sioc?
+- `cy-m/cmd.industry.start#0` Cyneuwch y ffwrneisi! — ASR 0.67 (char): Chyn ni yw ddafor mis
+- `cy-m/cmd.industry.great#0` Dur a dymherwyd ganwaith! — ASR 0.57 (char): i'r at ymheruit gymwys.
+- `cy-m/cmd.town.start#0` Trwsiwch y strydoedd! — ASR 0.61 (char): Chwch chiwch ystod dei
+- `cy-m/cmd.town.great#0` Mae'r farchnad yn ffynnu! — ASR 0.6 (char): waidd arna din soni.
+- `cy-m/cmd.recruit.great#0` Daeth miloedd atom! — ASR 0.62 (char): Ddeithniw i ddach yn
+- `cy-m/cmd.train.great#0` Byddin can brwydr! — ASR 0.6 (char): Bwth i'n cynnbw
+- `cy-m/cmd.search.start#0` Af i chwilio am ddoniau. — ASR 0.53 (char): a fithw i rhi o'n dd
+- `cy-m/cmd.move.start#0` Symudwch! — ASR 1.12 (char): Chanithor
+- `cy-m/cmd.transport.start#0` Hebryngwch y cyflenwadau! — ASR 0.64 (char): Hed brân o'r y teblen o'
+- `cy-m/cmd.attack.start#0` I ryfel! — ASR 1.0 (char): Ilaesau.
+- `cy-m/cmd.build.start#0` Dechreuwch adeiladu! — ASR 1.0 (char): 'Ti ff ff ff ff
+- `cy-m/caravan.return#0` Yn ôl â llwythi llawn! — ASR 0.76 (char): i'n ola sy'n si sound.
+- `cy-m/cmd.gift.start#0` Cyflwynwn rodd fechan. — ASR 0.79 (char): Gwylu'n rwy'n rwy'
+- `cy-m/cmd.marriage.start#0` Unwn trwy briodas. — ASR 0.53 (char): i nūt sr i'otas.
+- `cy-m/cmd.truce.start#0` Rhown yr arfau i lawr. — ASR 0.88 (char): Fwm efo fel oeddwn.
+- `cy-m/cmd.tradepact.start#0` Masnachwn â'n gilydd. — ASR 0.53 (char): Ma' snafren andg i leith
+- `cy-m/mission.done#0` Cyflawnwyd polisi'r deyrnas! — ASR 0.67 (char): Chw ddawnw i ddw i ddair
+- `cy-f/recruit#0` Casglwch y llu! — ASR 0.75 (char): A'r scurrhyw.
+- `cy-f/search#0` Af i chwilio. — ASR 0.6 (char): a fydd hwn i'w
+- `cy-f/attack#0` Pawb, ymosodwch! — ASR 0.54 (char): Pawe a m'n sordor
+- `cy-f/great#0` Campus! — ASR 0.67 (char): gan pez
+- `cy-f/charge#0` I'r gad! — ASR 0.6 (char): Yr cyd.
+- `cy-f/retreat#0` Encilio! — ASR 0.57 (char): i'r cedio.
+- `cy-f/crit#0` Cymer hwn! — ASR 0.62 (char): Cymac'r
+- `cy-f/special#0` Gwelwch fy nawn! — ASR 0.62 (char): Gwr ddynau
+- `cy-f/defeat#0` Gwae fi… — ASR 0.67 (char): Gua'i v
+- `cy-f/duel#0` Pwy a ymladd â mi? — ASR 0.54 (char): Pw i'n mwagami.
+- `cy-f/allyYes#0` Byddwn gyfeillion. — ASR 0.56 (char): a fwn gyd i chi an.
+- `cy-f/allyNo#0` Byth! — ASR 0.75 (char): Bess!
+- `cy-f/grant#0` Rhoddaf it urddas! — ASR 0.73 (char): Hau'r vae dderwfas
+- `cy-f/cmd.develop.great#0` Cynhaeaf toreithiog! — ASR 0.78 (char): Gdy'r i'n ffordd o'
+- `cy-f/cmd.industry.start#0` Cyneuwch y ffwrneisi! — ASR 0.56 (char): Chyn ni eu rhafon i si.
+- `cy-f/cmd.industry.great#0` Dur a dymherwyd ganwaith! — ASR 0.62 (char): Tiwr a te mae'r wyjdgeganw
+- `cy-f/cmd.town.start#0` Trwsiwch y strydoedd! — ASR 0.56 (char): Lww siwrst y ddaiw
+- `cy-f/cmd.recruit.great#0` Daeth miloedd atom! — ASR 0.62 (char): Ddeith ni wedi ddatgan
+- `cy-f/cmd.move.start#0` Symudwch! — ASR 1.0 (char): Chynru'r o'r
+- `cy-f/cmd.attack.start#0` I ryfel! — ASR 0.83 (char): Gifafan
+- `cy-f/caravan.return#0` Yn ôl â llwythi llawn! — ASR 0.88 (char): a nw'r asw i si chi chiau
+- `cy-f/cmd.explore.start#0` Awn i archwilio! — ASR 0.69 (char): a'u dea hwy a
+- `cy-f/cmd.gift.start#0` Cyflwynwn rodd fechan. — ASR 0.79 (char): dwi'n yw'n rwy'r r
+- `cy-f/cmd.truce.start#0` Rhown yr arfau i lawr. — ASR 0.53 (char): Rwy'n rar ffair ar y
+- `cy-f/cmd.tradepact.start#0` Masnachwn â'n gilydd. — ASR 0.53 (char): masau hun angheleur.
+- `cy-f/tourney.award#0` Cyntaf dan y nef, a haeddiannol! — ASR 0.6 (char): Chynchaf John ynaeth, a hefyd i amlon.
+- `cy-f/tourney.win#0` Cyntaf dan y nef! — ASR 0.77 (char): yng Nghydd a'r y nir
+- `zh-m/sig#董卓` 顺我者昌，逆我者亡！ — ASR 0.5 (syllable): 水者唱 者王
+- `zh-m/sig#曹操` 周公吐哺，天下归心！ — ASR 0.5 (syllable): 周公 天下行
+- `zh-m/sig#刘备` 汉室可兴！ — ASR 0.75 (syllable): 很可信
+- `zh-m/sig#公孙瓒` 白马义从，随我冲锋！ — ASR 0.62 (syllable): 白馬一 水火分
+- `zh-m/sig#刘焉` 益州，天府之国。 — ASR 0.5 (syllable): 天之國
+- `zh-m/sig#马腾` 西凉铁骑，所向披靡！ — ASR 0.5 (syllable): 西良器,向
+- `zh-m/sig#陶谦` 徐州百姓，托付于君。 — ASR 0.75 (syllable): 百 於
+- `zh-m/sig#张鲁` 五斗米道，济世安民。 — ASR 1.0 (syllable): 5-0-0
+- `zh-m/sig#张杨` 并州儿郎，随我来！ — ASR 0.43 (syllable): 而冷 隨我來
+- `zh-m/sig#刘繇` 扬州之地，岂容外人！ — ASR 0.5 (syllable): 州指,外人
+- `zh-m/sig#刘璋` 益州之民，休养生息。 — ASR 0.38 (syllable): 以周知名 生息
+- `zh-m/sig#士燮` 交趾四十年太平。 — ASR 0.43 (syllable): 消止40年太平
+- `ko-f/sig#首露王` 구지봉에 하늘의 뜻이 내렸노라! — ASR 0.69 (char): 고지 일에 이 내
+- `mn-m/sig#魁头` Мордъё! — ASR 1.0 (char): ・ ・ ・
+- `kk-m/sig#於夫罗` Тәңірі жар болсын! — ASR 0.8 (char): рі рі
+- `ta-m/sig#迦梨迦罗` காவிரி எம் உயிர்! — ASR 0.71 (char): காவیامுகிறத
+- `gez-m/sig#加达拉特` ንጉሠ አክሱም! — ASR 1.29 (char): نا کس اقسون
+- `cy-m/sig#阿根托科克斯` Ni ddaw Rhufain i'r mynyddoedd! — ASR 0.6 (char): ni'n zau syddai ni'r minna

@@ -105,6 +105,7 @@
 .sg-shop-ability { font-size: .88rem; line-height: 1.45; color: #e9dcc0; margin-top: .25rem; }
 .sg-shop-ability b { color: var(--rc, #f3c969); }
 .sg-shop-lore { font-size: .82rem; color: var(--sg-muted, #ada392); margin-top: .3rem; line-height: 1.4; }
+.sg-shop-pending { font-size: .84rem; line-height: 1.4; margin-top: .3rem; padding-left: .45rem; border-left: 3px solid currentColor; color: var(--sg-bad, #ff9a7a); }
 .sg-shop-req { font-size: .88rem; margin-top: .25rem; }
 .sg-shop-delta { font-size: .88rem; margin-top: .3rem; line-height: 1.5; }
 .sg-shop-delta .up { color: var(--sg-good, #73d98c); } .sg-shop-delta .down { color: var(--sg-bad, #ff7361); }
@@ -187,7 +188,8 @@
       if (k === 'gift' && v === 1) { parts.push('宜作礼物'); continue; }   // 馈赠倍率 ×1：珍玩本身就是礼物（价值按原价算）
       const u = !sk ? '' : sk.unit === '%' ? '%' : sk.unit === 's' ? ' 秒' : sk.unit === 'm' ? ' 米' : '';
       const val = sk && sk.unit === 'x' ? '×' + v : (v > 0 ? '+' : '') + v;
-      parts.push((sk ? sk.name : k) + ' ' + val + u);
+      // 脱身要等战后俘虏的规则接上 SG.Items.captureP 才起作用（SG.Items.captureWired）；之前标明，免得玩家为它掏钱
+      parts.push((sk ? sk.name : k) + ' ' + val + u + (k === 'escape' && !I().captureWired ? '（暂未生效）' : ''));
     }
     return parts.join(opts && opts.sep ? opts.sep : ' · ') || '—';
   }
@@ -216,6 +218,8 @@
     const rq = reqText(opts.gen, it); if (rq) h += '<div class="sg-shop-req">' + rq + '</div>';
     if (opts.gen && opts.compare !== false) h += compareHtml(opts.gen, it);
     if (it.ability) h += '<div class="sg-shop-ability"><b>「' + esc(it.ability.name) + '」</b>' + esc(it.ability.desc) + '</div>';
+    const pend = I().pendingEffects ? I().pendingEffects(it) : [];
+    if (pend.length) h += '<div class="sg-shop-pending">注：' + esc(pend.join('、')) + (pend.length > 1 ? '这几项' : '一项') + '本版尚未接入，暂不生效。</div>';
     if (it.source) h += '<div class="sg-shop-lore">' + (SRC[it.source.kind] ? '【' + SRC[it.source.kind] + '】' : '') + esc(it.source.note || '') + (it.source.refs && it.source.refs.length ? '（' + esc(it.source.refs.slice(0, 2).join('；')) + '）' : '') + '</div>';
     if (opts.extra) h += opts.extra;
     h += '</div>';
@@ -573,7 +577,7 @@
     root.className = 'sg-shop-reveal';
     root.style.setProperty('--rc', R.color);
     root.innerHTML = icon(it.id, 150) + '<div class="sg-shop-rname">' + esc(I().displayName(it)) + '</div>' +
-      '<div class="sg-shop-rline">' + esc(it.ability ? '「' + it.ability.name + '」' + it.ability.desc : statsText(it)) + '</div>' +
+      '<div class="sg-shop-rline">' + esc(it.ability ? '「' + it.ability.name + '」' + it.ability.desc : statsText(it)) + (I().pendingEffects && I().pendingEffects(it).length ? '<span class="sg-muted">（部分暂未生效）</span>' : '') + '</div>' +
       (rv.from ? '<div class="sg-shop-rline sg-muted">' + esc(rv.from) + (rv.how === 'hidden' ? '寻得' : rv.how === 'executed' || rv.how === 'slain' ? '处得来' : '') + '</div>' : '') +
       '<div class="sg-shop-rstamp">' + esc(R.alias) + '</div>';
     const host = (SG.UI && SG.UI.layer && SG.UI.layer('modals')) || document.body;

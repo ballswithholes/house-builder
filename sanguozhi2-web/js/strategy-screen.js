@@ -225,8 +225,11 @@
   let tipShownMem = false;
   function tipShown() {
     if (tipShownMem) return true;
+    // 设置「提示与引导」关（UI-V4 §7 第 27 行）：当作已经提示过（「重置提示」会清掉本机的记号）
+    try { if (SG.UISettings && SG.UISettings.get('ui.tips') === false) return true; } catch (e) { /* 忽略 */ }
     try { return !!(window.localStorage && window.localStorage.getItem(TIP_KEY)); } catch (e) { return false; }
   }
+  SG.onTipsReset = () => { tipShownMem = false; };
   function markTipShown() {
     tipShownMem = true;
     try { if (window.localStorage) window.localStorage.setItem(TIP_KEY, '1'); } catch (e) { /* 忽略 */ }
@@ -311,6 +314,11 @@
       game.rig.focusMap(p.x, p.y, 48, true);
       this.selectCity(cap.id);
       try { if (SG.Clock) { SG.Clock.monthStart(G(), G().tokensFor(G().player)); SG.Clock.setPhase('day'); } } catch (e) { /* 无时钟 */ }
+      // 一天一个时钟（UI-V4 §3.8、INTEGRATION §10.7）：地图的光照跟随 SG.Clock（月初 07:00 → 用完令牌 20:00，电脑回合入夜）；
+      // 设置「昼夜光影」关时地图停在缺省的午后
+      const followClock = on => { try { const mv = game.map; if (!mv) return; if (on && mv.followClock) mv.followClock(true); else if (!on && mv.setMood) mv.setMood(null); } catch (e) { /* 地图无氛围 */ } };
+      followClock(!SG.UISettings || SG.UISettings.get('ui.daynight') !== false);
+      if (!this._dayHooked && SG.Settings && SG.Settings.on) { this._dayHooked = true; SG.Settings.on('ui.daynight', v => { if (this.hud) followClock(v !== false); }); }
       UI().banner(G().year + '年 ' + G().month + '月', G().playerFaction.name === G().ruler(G().player).name ? G().playerFaction.name + '军' : G().playerFaction.name);
       this.growthReminder();
       for (;;) {
@@ -650,7 +658,9 @@
       const busy = this.busy ? (this.endMonth ? '诸侯行动中，请稍候。' : '指令执行中，请稍候。') : null;
       const noTok = g.tokens > 0 ? null : '本月令牌已用完——点「结束本月」进入下个月。';
       const first = (...whys) => { for (const w of whys) if (w) return w; return null; };
-      const canAttack = c.links.some(i => g.cities[i].owner !== g.player && !g.allied(g.cities[i].owner, g.player));
+      // 第四版：出征目标与电脑同一套条件（SG.Conquest.attackBlocked：己方城、同盟、武林大会东道主停战 cityProtected）
+      const blockedWhy = t => (SG.Conquest.attackBlocked ? SG.Conquest.attackBlocked(g.player, t) : (t.owner === g.player || g.allied(t.owner, g.player) ? '×' : null));
+      const canAttack = c.links.some(i => !blockedWhy(g.cities[i]));
       Sh.beginDock();
       this.addCmd('开发', first(busy, noTok), () => this.do(() => this.cmdDevelop(c)));
       this.addCmd('征兵', first(busy, noTok), () => this.do(() => this.cmdRecruit(c)));
@@ -846,10 +856,21 @@
       const found = C.searchFound;
       await this.report(who, msg, '搜索', { mood: found ? 'win' : undefined });
       if (found) {
-        const ok = await UI().confirm(`登用${SG.esc(found.name)}？`, '登用', '暂且作罢', {
-          body: genCard(found, { sub: '在野人才　成功率约 <b>' + pct(C.hireChance(found, who, G().player)) + '</b>' }),
-        });
-        if (ok) await this.hireResult(found, who, c);
+        // 第四版：许以官职（TITLES §6.7：登用、搜索所得、俘虏三处都可许官）
+        const pr = SG.Titles && SG.Titles.enabled ? SG.Titles.promiseBonus(G().player, found) : null;
+        if (pr) {
+          const k = await UI().choose(`登用${SG.esc(found.name)}？`, [
+            item('登用', pct(C.hireChance(found, who, G().player))),
+            item('许以' + SG.esc(pr.name), pct(C.hireChance(found, who, G().player, pr.add)), true, '成功则立即授官（礼金 ' + pr.cost + ' 金）'),
+            item('暂且作罢'),
+          ], genCard(found, { sub: '在野人才' }));
+          if (k === 0 || k === 1) await this.hireResult(found, who, c, k === 1);
+        } else {
+          const ok = await UI().confirm(`登用${SG.esc(found.name)}？`, '登用', '暂且作罢', {
+            body: genCard(found, { sub: '在野人才　成功率约 <b>' + pct(C.hireChance(found, who, G().player)) + '</b>' }),
+          });
+          if (ok) await this.hireResult(found, who, c);
+        }
       }
     }
 
@@ -1020,10 +1041,20 @@
         const fi = await p;
         const ff = fi >= 0 ? grp.pick(fi) : null;
         if (!ff) return;
-        const gift = await UI().pickNumber('赠送礼金', 0, c.gold, 50, Math.min(c.gold, B.AllianceGift), v => '成功率约 ' + pct(C.allyChance(g.player, ff.id, v)));
+        // 第四版：使者（TITLES §7.1 同盟加成、ITEMS §3.4 装备外交；君主本人出使 = 不另派使者）
+        let envoy = null;
+        const envoys = this.available(c).filter(x => !g.isRuler(x));
+        if (envoys.length && (SG.Titles || SG.Items)) {
+          const base = C.allyChance(g.player, ff.id, B.AllianceGift);
+          const list = [g.ruler(g.player)].concat(envoys);
+          const pick = await this.pickGeneral('派谁出使？', list, x => (g.isRuler(x) ? '君主亲书' : '使者') + '　成功率约 ' + pct(g.isRuler(x) ? base : C.allyChance(g.player, ff.id, B.AllianceGift, x)));
+          if (!pick) return;
+          envoy = g.isRuler(pick) ? null : pick;
+        }
+        const gift = await UI().pickNumber('赠送礼金', 0, c.gold, 50, Math.min(c.gold, B.AllianceGift), v => '成功率约 ' + pct(C.allyChance(g.player, ff.id, v, envoy)));
         if (gift < 0) return;
         this.useToken();
-        const res = C.ally(c, g.player, ff.id, gift);
+        const res = C.ally(c, g.player, ff.id, gift, envoy);
         const ok = g.allied(ff.id, g.player);
         const ru = g.ruler(ff.id);
         await UI().say((ok ? '……愿与贵方结为同盟，共图大业。' : '……此事不必再提。') + '\n' + SG.esc(res), ru, null, { mood: ok ? 'win' : 'angry', sub: genSub(ru) });
@@ -1051,7 +1082,11 @@
     // ---------------------------------------------------------- 战争 --
     async cmdAttack(c, presetTarget) {
       const g = G(), B = SG.Balance;
-      const targets = c.links.map(i => g.cities[i]).filter(x => x.owner !== g.player && !g.allied(x.owner, g.player));
+      const blockedWhy = t => (SG.Conquest.attackBlocked ? SG.Conquest.attackBlocked(g.player, t) : (t.owner === g.player || g.allied(t.owner, g.player) ? '×' : null));
+      const targets = c.links.map(i => g.cities[i]).filter(x => !blockedWhy(x));
+      // 东道主停战等：相邻的敌城不能打时说明原因（不在列表里）
+      const truce = c.links.map(i => g.cities[i]).filter(x => x.owner !== g.player && !g.allied(x.owner, g.player) && blockedWhy(x));
+      if (!targets.length && truce.length) { await UI().say(blockedWhy(truce[0])); return; }
       // 每座目标城列出守将的小头像（至多 5 人，再多显示 +N）
       const guards = t => {
         const os = g.officersIn(t).slice().sort((a, b) => (g.isRuler(b) - g.isRuler(a)) || (b.troops - a.troops));
@@ -1316,12 +1351,21 @@
         const isRuler = info.wasRuler;
         const lostF = cap.faction < 0 && info.faction >= 0 ? g.factions[info.faction] : null;
         const sub = lostF ? `<span class="sg-muted">原属</span><span style="color:${lifted(lostF.color)}">${SG.esc(lostF.name)}</span>${isRuler ? '·<wbr>君主' : ''}<span class="sg-muted">（已灭）</span>` : genSub(cap);
-        const r = await UI().choose('俘虏：' + SG.esc(cap.name) + (isRuler ? '（君主）' : ''), [
+        const choices = [
           item('登用', isRuler ? '君主不会投降' : '成功率约 ' + pct(C.hireChance(cap, recruiter, g.player)), !isRuler),
           item('释放', '放其归去'),
           item('处斩', '以绝后患'),
-        ].concat(SG.Items && SG.Items.enabled && cap.gear && SG.Items.SLOTS.some(sl => cap.gear[sl] != null) ? [item('缴械释放', '收缴其装备后放归（其势力一年内更想报复）')] : []), genCard(cap, { sub: sub + (cap.faction >= 0 && !isRuler ? `　忠诚 ${cap.loyalty}` : ''), mood: 'hurt' }));
-        if (r === 0) {
+        ].concat(SG.Items && SG.Items.enabled && cap.gear && SG.Items.SLOTS.some(sl => cap.gear[sl] != null) ? [item('缴械释放', '收缴其装备后放归（其势力一年内更想报复）')] : []);
+        // 第四版：许以官职登用（TITLES §6.7；成功即授官，失败不付礼金）
+        const pr = !isRuler && SG.Titles && SG.Titles.enabled ? SG.Titles.promiseBonus(g.player, cap) : null;
+        const iPromise = pr ? choices.length : -1;
+        if (pr) choices.push(item('许以' + SG.esc(pr.name) + '登用', '成功率约 ' + pct(C.hireChance(cap, recruiter, g.player, pr.add)) + '（礼金 ' + pr.cost + ' 金）'));
+        const r = await UI().choose('俘虏：' + SG.esc(cap.name) + (isRuler ? '（君主）' : ''), choices, genCard(cap, { sub: sub + (cap.faction >= 0 && !isRuler ? `　忠诚 ${cap.loyalty}` : ''), mood: 'hurt' }));
+        if (r === iPromise && r >= 0) {
+          const h = SG.Titles.hireWithPromise(cap, recruiter, g.player, holderCity.id);
+          if (h.hired) { await UI().say(cap.name + '：败军之将，承蒙不弃，愿降！', cap, CINNABAR, { mood: 'win', sub: genSub(cap) }); if (h.office && SG.TitleUI) await SG.TitleUI.ceremony(h.office); }
+          else { await UI().say(cap.name + '：忠臣不事二主！', cap, GREY_SPEAKER, { mood: 'angry', sub }); Cq.release(cap); }
+        } else if (r === 0) {
           if (C.hire(cap, recruiter, g.player, holderCity.id)) await UI().say(cap.name + '：败军之将，承蒙不弃，愿降！', cap, CINNABAR, { mood: 'win', sub: genSub(cap) });
           else { await UI().say(cap.name + '：忠臣不事二主！', cap, GREY_SPEAKER, { mood: 'angry', sub }); Cq.release(cap); }
         } else if (r === 2) { Cq.execute(cap); await UI().say(SG.esc(cap.name) + '被处斩了。', cap, GREY_SPEAKER, { mood: 'hurt' }); }

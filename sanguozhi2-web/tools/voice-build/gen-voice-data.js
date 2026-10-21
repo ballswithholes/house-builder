@@ -61,6 +61,11 @@ const RULES = {
   bubbleExtra: 0.8,      // §B10.5 bubble lifetime = clip + 0.8 s
   fanfareGap: 3,         // enemy-phase fanfare at most once every 3 enemy phases (§A3)
   monthStartEvery: 3,    // ui.monthStart at most every 3rd month (UI-V4 §14.3)
+  // §B10.6 download budget, in RAW pack bytes as the spec's own estimates count them (the base64 scripts are 4/3 of that; which one
+  // the budget means is open — DESIGN-V4 §20): the player's lingua (both base voices) + up to sessionForeignPacks foreign packs
+  sessionBytes: 1.5 * 1024 * 1024, sessionForeignPacks: 4,
+  foreignPackBytes: 0.32 * 1024 * 1024,   // §B10.6 per foreign pack (§B7.1's "≤ 150 KB each" is listed, not gated: the spec disagrees)
+  foreignPackSoftBytes: 150 * 1024,
 };
 
 // ------------------------------------------------------------ assemble --

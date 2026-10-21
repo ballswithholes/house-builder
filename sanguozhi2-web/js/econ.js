@@ -362,10 +362,13 @@
         if (!AIB.canSpend(c, amount, kind)) { AIB.stats.refused[kind] = (AIB.stats.refused[kind] || 0) + 1; return false; }
         AIB.spend(c, amount, kind); return true;
       },
-      // the richest own city (gold above its reserve) that can pay
+      // the richest own city (gold above its reserve) that can pay. The spare gold is computed once per city (W2: the
+      // comparator used to rebuild reserve(c) — an officersIn scan — twice per comparison); same order as before
+      // (Array.prototype.sort is stable, ties keep the citiesOf order).
       payer(f, amount, kind) {
-        const cs = G().citiesOf(f).slice().sort((a, b) => (b.gold - AIB.reserve(b).gold) - (a.gold - AIB.reserve(a).gold));
-        for (const c of cs) if (AIB.canSpend(c, amount, kind)) return c;
+        const cs = G().citiesOf(f).map(c => ({ c, spare: c.gold - AIB.reserve(c).gold }));
+        cs.sort((a, b) => b.spare - a.spare);
+        for (const x of cs) if (AIB.canSpend(x.c, amount, kind)) return x.c;
         return null;
       },
     };

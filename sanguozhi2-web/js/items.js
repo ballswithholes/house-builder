@@ -12,7 +12,8 @@
    ---- 存档（ITEMS §15）----
    G.items = { next, inst: { uid: { id, loc: 'gen'|'arm'|'city', owner, gifted, giftLoy, bound, since, kind? } },
                hiddenFound: [id], singletonsGiven: [id], tourneyAwarded: [id], cooldown: { cityId: { id: monthIndex } },
-               seen: { id: 1 }, owned: { id: 1 }, clues: { cityKey: 1 }, aggro: { 'f>t': untilMonth } }
+               seen: { id: 1 }, owned: { id: 1 }, clues: { cityKey: 1 }, aggro: { 'f>t': untilMonth },
+               aiGear: { factionId: { c: 电脑买装额度, mi: 记账月 } } }
    gen.gear = { weapon, offhand, armour, helmet, mount, treasure }（实例编号或 null）    faction.armoury = [uid]
    city.shop = { stock: [{ id, qty, price, age, foreign? }], merchant: { until, stock } | null }    city.vault = [uid]（镇城之宝等）
 
@@ -109,7 +110,15 @@
     confiscate: { aggroK: 1.1, months: 12, loyalty: 5, aiP: 0.5 },
     // §13 电脑
     ai: { buysPerMonth: 2, rareCost: 2, minDelta: 2, rareCities: 3, rareGold: 1500, epicCities: 8, equipGain: 1.05, armouryMax: 30, topGens: 12,
-      treasureK: 1.10 },
+      treasureK: 1.10,
+      // §13.3 / §17.4 买装额度（ITEMS 自己的「买什么」规则，在 SG.AIBudget 的钱袋之内，INTEGRATION §5.1）：钱袋每月记
+      // share × 总收入（share = Decisions.aiPurseShare 或 AIBudget.ShareByDifficulty，DESIGN-V4 §20 问题 2），其中 gearOfPurse
+      // 这一份同时记作装备的额度（至多 gearCapMonths 个月）；买装同时要钱袋与这份额度。钱袋其余的留给官爵礼金（≈ 2 %）、
+      // 营建（≈ 5.8 %）与节庆（≈ 0.6 %）：设计原型里营建在买装之前花钱袋，量得买装 11.2–11.4 %（世界 8.5 %）；
+      // 实际的次序是 title → gear → project → festival（INTEGRATION §5.1），不设额度时买装吃掉整个钱袋（经典 48 × 25 年 15.0 %）。
+      // 0.59 × 0.22 = 0.13：经典 12 × 25 年 11.8 %、世界 6 × 15 年 9.3 %；钱袋份额改了（难度、玩家决定）额度按比例跟着变。
+      // gearShare：数字时直接当作「总收入的份额」（测试与对照用；null = gearOfPurse × 钱袋份额）
+      gearOfPurse: 0.59, gearShare: null, gearCapMonths: 24 },
     // §14.2 图鉴与庙会
     collection: { famePerPage: 1, fameMax: 5 },
     festival: { month: 3, slots: 2, priceK: 0.9 },
@@ -240,10 +249,10 @@
   const S = () => { const g = G(); return g && g.items; };
   const emptyGear = () => ({ weapon: null, offhand: null, armour: null, helmet: null, mount: null, treasure: null });
   function ensure(g) {
-    if (!g.items) g.items = { next: 1, inst: {}, hiddenFound: [], singletonsGiven: [], tourneyAwarded: [], cooldown: {}, seen: {}, owned: {}, clues: {}, aggro: {} };
+    if (!g.items) g.items = { next: 1, inst: {}, hiddenFound: [], singletonsGiven: [], tourneyAwarded: [], cooldown: {}, seen: {}, owned: {}, clues: {}, aggro: {}, aiGear: {} };
     const s = g.items;
     for (const k of ['hiddenFound', 'singletonsGiven', 'tourneyAwarded']) if (!Array.isArray(s[k])) s[k] = [];
-    for (const k of ['inst', 'cooldown', 'seen', 'owned', 'clues', 'aggro']) if (!s[k] || typeof s[k] !== 'object') s[k] = {};
+    for (const k of ['inst', 'cooldown', 'seen', 'owned', 'clues', 'aggro', 'aiGear']) if (!s[k] || typeof s[k] !== 'object') s[k] = {};
     if (!(s.next > 0)) s.next = 1;
     for (const x of g.generals) if (!x.gear || typeof x.gear !== 'object') x.gear = emptyGear();
     for (const f of g.factions) if (!Array.isArray(f.armoury)) f.armoury = [];
@@ -658,9 +667,18 @@
   // ================================================================ 商店（§6）==
   const shopRow = (c, sid) => { const T = D && D.shops[sid || sidOf(G())]; return T ? T[c.key] || null : null; };
   function cityK(c) { return Math.round(clamp(1.2 - ((c.industry | 0) + (c.town | 0)) / 2500, 0.85, 1.15) * 100) / 100; }
+  // Econ.shopTier 只看 产业 + 城镇 与城名（INTEGRATION §12 的 SHOP.sum 门槛、HUBS 名单）：按 (城, 产业 + 城镇) 记住，每月补货不必重查名单
+  const tierMemo = new WeakMap();
   function shopTier(c) {
     const E = SG.Econ;
-    if (E && typeof E.shopTier === 'function' && SG.Balance && SG.Balance.CityLevel) return E.shopTier(c);
+    if (E && typeof E.shopTier === 'function' && SG.Balance && SG.Balance.CityLevel) {
+      const v = c.industry + c.town, CL = SG.Balance.CityLevel;
+      const m = tierMemo.get(c);
+      if (m && m.v === v && m.cl === CL && m.name === c.name) return m.t;
+      const t = E.shopTier(c);
+      tierMemo.set(c, { v, cl: CL, name: c.name, t });
+      return t;
+    }
     const row = shopRow(c); return row ? row.tier : 1;
   }
   // 庙会（§14.2）：每年 3 月，有主之城的市场 +2 个货位、本势力买价 −10 %。month 缺省 = 当月（买价、货位显示）；
@@ -680,9 +698,9 @@
   function listPrice(it, c, origin) { return round10(basePrice(it) * cityK(c) * (CFG.originK[origin] || 1)); }
   // 在 c 的市场里，势力 f 买 entry 的价格（§4.3：城价 × 来源 × 同盟 × (1 − 商才折扣) × 庙会）
   // 本城的商才折扣与持有者商店折扣（entryPrice 用；dc 可由调用者缓存）
-  function cityDiscount(c) {
+  function cityDiscount(c, offs) {
     const out = { disc: 0, shop: [] };
-    for (const x of G().officersIn(c)) {
+    for (const x of offs || G().officersIn(c)) {
       out.disc = Math.max(out.disc, (raw(x, 'trade') + cmdK(x, 'trade')) / CFG.discDiv);
       for (const ab of abil(x, 'shopDiscount')) out.shop.push(ab);
     }
@@ -748,20 +766,32 @@
       else if (t === 2 && e.age >= R.rareMaxAge) st.splice(i, 1);
     }
     const s = S(), cd = s.cooldown[c.id] || {};
-    const have = new Set(st.map(e => e.id));
+    const have = [];   // 一城至多十几件：数组比 Set 便宜
+    for (const e of st) have.push(e.id);
     for (const id of row.epic || []) {
       const it = ITEM.get(id);
-      if (it && count(id) === 0 && !have.has(id) && !(cd[id] > g.monthIndex)) { const e = { id, qty: 1, price: listPrice(it, c, originOf(it, c, sid)), age: 0 }; st.push(e); added.push(e); have.add(id); }
+      if (it && count(id) === 0 && !have.includes(id) && !(cd[id] > g.monthIndex)) { const e = { id, qty: 1, price: listPrice(it, c, originOf(it, c, sid)), age: 0 }; st.push(e); added.push(e); have.push(id); }
     }
     const tier = shopTier(c), slots = CFG.slotsByTier[clamp(tier, 1, 4)] + (fest ? CFG.festival.slots : 0);
     // 庙会收摊：多出来的货位上最新的凡品 / 良品撤下（珍品、神品留着；不取随机数）
     for (let i = st.length - 1; i >= 0 && st.length > slots; i--) if (TIER[(ITEM.get(st[i].id) || {}).rarity] <= 1) st.splice(i, 1);
     let guard = 0;
     let rares = null;
+    // 抽中已有的货就再抽（至多 40 次）。哪一池都没有新货时再抽也加不了什么：提前停（这些抽签只用本城本月的种子，
+    // 抽完即弃，提前停与抽满 40 次结果相同；§17.4 补货 ≤ 1 ms）
+    let misses = 0, canAdd = null;
+    const fresh = list => { if (list) for (const x of list) if (!have.includes(x)) return true; return false; };
     while (st.length < slots && guard++ < 40) {
+      if (misses >= 2) {
+        if (canAdd === null) {
+          if (!rares) rares = (row.rare || []).filter(x => !have.includes(x) && !(cd[x] > g.monthIndex));
+          canAdd = (tier >= 2 && (rares.length > 0 || fresh(row.uncommon))) || fresh(row.common) || fresh(row.commonForeign);
+        }
+        if (!canAdd) break;
+      }
       const r = k.nextDouble();
       let id = null, foreign = false;
-      if (!rares) rares = (row.rare || []).filter(x => !have.has(x) && !(cd[x] > g.monthIndex));
+      if (!rares) rares = (row.rare || []).filter(x => !have.includes(x) && !(cd[x] > g.monthIndex));
       if (tier >= 2 && rares.length && r < R.pRare) id = rares[Math.floor(k.nextDouble() * rares.length)];
       else if (tier >= 2 && (row.uncommon || []).length && r < R.pUncommon) id = row.uncommon[Math.floor(k.nextDouble() * row.uncommon.length)];
       else {
@@ -769,9 +799,9 @@
         const pool = useF ? row.commonForeign : row.common;
         if (pool && pool.length) { id = pool[Math.floor(k.nextDouble() * pool.length)]; foreign = useF; }
       }
-      if (!id || have.has(id)) continue;
+      if (!id || have.includes(id)) { misses++; continue; }
       const it = ITEM.get(id);
-      have.add(id);
+      have.push(id); misses = 0; canAdd = null;
       if (it.rarity === 'rare') rares = null;
       const origin = foreign ? 'foreign' : originOf(it, c, sid);
       const e = { id, qty: TIER[it.rarity] === 0 ? 1 + Math.floor(k.nextDouble() * R.commonQtyMax) : 1, price: listPrice(it, c, origin), age: 0 };
@@ -1276,17 +1306,11 @@
     ruler: { fame: 4, virtue: 3, dip: 2, hire: 1 },
   };
   const SCOPE_BY_ROLE = { war: ['battle', 'duel'], intel: ['tactic'], pol: ['domestic'], ruler: ['world'] };
-  const roleCache = new WeakMap();
+  // 太守（政治 ≥ 70）算 'pol'。只有政治 ≥ 70 而不高于智力的人才要查是不是太守（其余的角色不受太守影响），每次照查：
+  // 以前按月缓存，太守在月中换了（电脑的回合、战后）缓存就过时，结果取决于本月第一次问的时刻（读档后的一局会走岔）
   function role(x) {
     if ((x.war >= x.intel && x.war >= x.pol) || x.war >= 70) return 'war';
-    const g = G();
-    if (x.pol >= 70 && g) {
-      const rc = roleCache.get(x);
-      if (rc && rc.mi === g.monthIndex && rc.g === g) return rc.r;
-      const r = g.cities.some(c => c.governor === x.id) ? 'pol' : x.pol > x.intel ? 'pol' : 'intel';
-      roleCache.set(x, { mi: g.monthIndex, g, r });
-      return r;
-    }
+    if (x.pol >= 70 && x.pol <= x.intel) { const g = G(); if (g && g.cities.some(c => c.governor === x.id)) return 'pol'; }
     return x.pol > x.intel ? 'pol' : 'intel';
   }
   const scopeCache = new Map();
@@ -1304,15 +1328,10 @@
     }
     return s;
   }
-  function score(x, id) {
-    if (!id) return 0;
-    const it = ITEM.get(id); if (!it) return 0;
-    const req = it.req || {};
-    for (const k of ['war', 'intel', 'pol']) if (req[k] && (x[k] | 0) < req[k] && req.below !== 'half') return -1e9;
-    if (isShield(it) && calc(x).style !== 'one') return -1e9;
-    const half = ['war', 'intel', 'pol'].some(k => req[k] && (x[k] | 0) < req[k]) ? 0.5 : 1;
-    const rl = role(x), w = W[rl], ruler = isRuler(x);
-    if (req.ruler && !ruler) return 3 * ((it.stats || {}).pol || 0) * (rl === 'pol' ? 1 : 0.3);
+  // 每件物品按 (角色, 是否君主) 预先算好 Σ W × 属性 + 能力分（与逐件现算同样的加法次序，结果逐位相同；§13.7 的成本）
+  const preScore = new Map();
+  function scoreSum(it, rl, ruler) {
+    const w = W[rl];
     let s = 0;
     for (const [k, v] of Object.entries(it.stats || {})) {
       if (typeof v !== 'number') continue;
@@ -1323,7 +1342,33 @@
       const sc = abilityScope(it);
       s += 6 * TIER[it.rarity] + (SCOPE_BY_ROLE[rl].some(q => sc.has(q)) || (ruler && sc.has('world')) ? 4 : 0);
     }
-    return s * half;
+    return s;
+  }
+  function scorePre(it) {
+    let p = preScore.get(it.id);
+    if (p) return p;
+    const req = it.req || {};
+    p = { rw: req.war || 0, ri: req.intel || 0, rp: req.pol || 0, below: req.below === 'half', shield: isShield(it), ruler: !!req.ruler, pol: (it.stats || {}).pol || 0, v: {} };
+    for (const rl of ['war', 'intel', 'pol']) p.v[rl] = [scoreSum(it, rl, false), scoreSum(it, rl, true)];
+    // 上界：任何武将对这件的估值都不超过它（半效时负数变大，故两者取大；专属君主物给非君主时 3 × 政治 × (1 | 0.3)）
+    let ub = -Infinity;
+    for (const rl of ['war', 'intel', 'pol']) for (const v of p.v[rl]) ub = Math.max(ub, v, p.below ? v * 0.5 : v);
+    if (p.ruler) ub = Math.max(ub, 3 * p.pol, 3 * p.pol * 0.3);
+    p.ub = ub;
+    preScore.set(it.id, p);
+    return p;
+  }
+  function score(x, id) {
+    if (!id) return 0;
+    const it = ITEM.get(id); if (!it) return 0;
+    const p = scorePre(it);
+    const lw = p.rw && (x.war | 0) < p.rw, li = p.ri && (x.intel | 0) < p.ri, lp = p.rp && (x.pol | 0) < p.rp;
+    if ((lw || li || lp) && !p.below) return -1e9;
+    if (p.shield && calc(x).style !== 'one') return -1e9;
+    const half = lw || li || lp ? 0.5 : 1;
+    const rl = role(x), ruler = isRuler(x);
+    if (p.ruler && !ruler) return 3 * p.pol * (rl === 'pol' ? 1 : 0.3);
+    return p.v[rl][ruler ? 1 : 0] * half;
   }
   // 估值缓存（§13.7：按 (武将, 物品) 缓存，武将的属性 / 君主 / 角色 / 兵器类型变了才重算）
   const scoreCache = new WeakMap();
@@ -1358,8 +1403,9 @@
         if (!P.length) continue;
         const cur = x.gear[sl];
         if (cur != null && instRec(cur).bound) continue;
-        let best = -1, bs = curScore(x, sl) * CFG.ai.equipGain + 0.01;
-        for (let i = 0; i < P.length; i++) { const v = scoreC(x, instRec(P[i]).id); if (v > bs) { bs = v; best = i; } }
+        const m = scoreMap(x);   // 换装会改兵器类型（单手 / 双手），每个部位取一次
+        let best = -1, bs = (cur != null ? scoreIn(m, x, instRec(cur).id) : 0) * CFG.ai.equipGain + 0.01;
+        for (let i = 0; i < P.length; i++) { const v = scoreIn(m, x, instRec(P[i]).id); if (v > bs) { bs = v; best = i; } }
         if (best < 0) continue;
         const u = P[best];
         const r = Gear.equip(x, u, { free: true });
@@ -1398,56 +1444,134 @@
     }
     return n;
   }
-  // §13.3：每月至多 2 件（珍品算 2 件），经 SG.AIBudget（gear）；买估值提升 / 价格最高的一件，Δ > 2
+  // 买装额度：每个电脑势力每月记一次 gearShare() × 本月总收入（SG.AIBudget.income，第 7 相 accrue 记下的），
+  // 至多 gearCapMonths 个月；存在 G.items.aiGear[f] = { c: 额度, mi: 记账的月 }（随存档）。玩家不受限。
+  // gearShare() = CFG.ai.gearOfPurse × 钱袋份额（SG.AIBudget.share：Decisions.aiPurseShare / ShareByDifficulty）
+  function gearShare() {
+    const A = CFG.ai;
+    if (typeof A.gearShare === 'number') return A.gearShare;
+    const AIB = SG.AIBudget, D = SG.Balance && SG.Balance.Decisions;
+    const share = AIB && +AIB.share > 0 ? +AIB.share : D && +D.aiPurseShare > 0 ? +D.aiPurseShare : 0.22;
+    return A.gearOfPurse * share;
+  }
+  function gearCredit(f) {
+    const g = G(), s = S(), AIB = SG.AIBudget;
+    if (!s.aiGear || typeof s.aiGear !== 'object') s.aiGear = {};
+    let r = s.aiGear[f];
+    if (!r || typeof r !== 'object') r = s.aiGear[f] = { c: 0, mi: -1 };
+    if (r.mi !== g.monthIndex) {
+      const inc = AIB && AIB.income && typeof AIB.income.get === 'function' ? +AIB.income.get(f) || 0 : 0;
+      const k = gearShare();
+      r.c = Math.min((+r.c || 0) + k * inc, CFG.ai.gearCapMonths * k * Math.max(1, inc));
+      r.mi = g.monthIndex;
+    }
+    return r;
+  }
+  // 本势力各城的在城武将：与 g.officersIn(c) 同一判据（同势力、未死、不在外、不在伤病外出），同一次序（g.generals 的次序）
+  function officersByCity(f, gensList) {
+    const g = G(), out = new Map();
+    for (const x of gensList || g.generals) {
+      if (x.faction !== f || x.dead || (g.absent && g.absent(x))) continue;
+      let a = out.get(x.city); if (!a) out.set(x.city, a = []); a.push(x);
+    }
+    return out;
+  }
+  // SG.AIBudget.reserve(c).gold 的同一算式（INTEGRATION §5.1：150 + 8 × 在城武将；数取 Balance.AIBudget），只作预检；
+  // 真正的把关仍是 AIBudget.trySpend（tests/items.js §2k 核对两者相等）
+  function reserveGold(c, offsBy) {
+    const A = (SG.Balance && SG.Balance.AIBudget) || {};
+    if (!(A.ReserveBase >= 0) || !(A.ReservePerOfficer >= 0)) return SG.AIBudget.reserve(c).gold;
+    return A.ReserveBase + A.ReservePerOfficer * ((offsBy.get(c.id) || []).length);
+  }
+  // §13.3：每月至多 2 件（珍品算 2 件），经 SG.AIBudget（gear）与买装额度；买估值提升 / 价格最高的一件，Δ > 2
   function aiShop(f, gensList) {
     const g = G(), AIB = SG.AIBudget;
     if (!on() || !AIB || f < 0 || !g.factions[f].alive || f === g.player) return 0;
     const cities = [];
     for (const c of g.cities) if (c.owner === f) cities.push(c);
     const ncity = cities.length;
-    if (!ncity || (AIB.purseOf && AIB.purseOf(f) < 40)) return 0;
-    const gens = genOrder(f, gensList).slice(0, CFG.ai.topGens);
-    if (!gens.length) return 0;
+    const credit = gearCredit(f);   // 买装额度（gearShare() = gearOfPurse × 钱袋份额，每月记一次；钱袋空的月份也记）
+    const R = ST.shopRuns;
+    R.calls++;
+    if (!ncity || credit.c < 40 || (AIB.purseOf && AIB.purseOf(f) < 40)) { R.noMoney++; return 0; }
     let slots = CFG.ai.buysPerMonth, bought = 0;
     const reserves = new Map();
-    let purse = AIB.purseOf ? AIB.purseOf(f) : Infinity;
+    let purse = Math.min(AIB.purseOf ? AIB.purseOf(f) : Infinity, credit.c);
+    // 本势力各城货架上最便宜的一件也买不起：不必排武将、估值（§13.7 的成本；结果与照算相同）
+    let cheapest = Infinity;
+    for (const c of cities) {
+      for (const e of c.shop.stock) if (e.qty > 0 && e.price < cheapest) cheapest = e.price;
+      if (c.shop.merchant && c.shop.merchant.until > g.monthIndex) for (const e of c.shop.merchant.stock) if (e.qty > 0 && e.price < cheapest) cheapest = e.price;
+    }
+    if (purse < cheapest * (1 - CFG.discCap)) { R.tooCheap++; return 0; }
+    // 各城的在城武将（= g.officersIn(c)，由本势力的武将表数，免得每城扫一遍全部武将）
+    const offsBy = officersByCity(f, gensList);
+    let gens = null;
     for (let pass = 0; pass < CFG.ai.buysPerMonth && slots > 0; pass++) {
+      // 先按钱筛（钱袋与额度、城的保留金、珍品 / 神品的门槛；最后仍由 SG.AIBudget.trySpend 把关）：买不起的货不必估值
+      const cand = [];
+      const scan = (c, list, merch) => {
+        for (let i = 0; i < list.length; i++) {
+          const e = list[i];
+          if (!(e.qty > 0)) continue;
+          const lo = e.price * (1 - CFG.discCap);
+          if (purse < lo) continue;
+          const it = ITEM.get(e.id);
+          if (!it) continue;
+          const t = TIER[it.rarity];
+          if (t >= 2 && slots < CFG.ai.rareCost) continue;
+          if (t === 2 && !(ncity >= CFG.ai.rareCities || c.gold >= CFG.ai.rareGold)) continue;
+          if (t >= 3 && ncity < CFG.ai.epicCities) continue;
+          let res = reserves.get(c.id);
+          if (res === undefined) { res = reserveGold(c, offsBy); reserves.set(c.id, res); }
+          if (c.gold - lo < res) continue;
+          cand.push({ c, list, i, e, it, merch });
+        }
+      };
+      for (const c of cities) {
+        scan(c, c.shop.stock, false);
+        if (c.shop.merchant && c.shop.merchant.until > g.monthIndex) scan(c, c.shop.merchant.stock, true);
+      }
+      R.cand += cand.length;
+      if (!cand.length) { R.noCand++; break; }
+      if (!gens) { gens = genOrder(f, gensList).slice(0, CFG.ai.topGens); if (!gens.length) return 0; }
       // 每位武将每个部位的现有估值，与每种货的最大提升（同一种货在几座城只算一次）
-      const cur = gens.map(x => { const o = {}; for (const sl of SLOTS) o[sl] = curScore(x, sl); return o; });
       const maps = gens.map(scoreMap);
+      // 每位武将某部位的现有估值（用到的部位才算）与其最小值：上界 − 最小值 ≤ minDelta 的货谁也用不上，不必逐人估值
+      const curBy = {}, minCur = {};
+      const curOf = sl => {
+        let a = curBy[sl];
+        if (a) return a;
+        a = curBy[sl] = new Array(gens.length);
+        let m = Infinity;
+        for (let j = 0; j < gens.length; j++) { const x = gens[j], u = x.gear ? x.gear[sl] : null; const v = u != null ? scoreIn(maps[j], x, instRec(u).id) : 0; a[j] = v; if (v < m) m = v; }
+        minCur[sl] = m;
+        return a;
+      };
       const gain = new Map();
       const deltaOf = it => {
         let d = gain.get(it.id);
         if (d !== undefined) return d;
         d = 0;
-        for (let j = 0; j < gens.length; j++) { const dd = scoreIn(maps[j], gens[j], it.id) - cur[j][it.slot]; if (dd > d) d = dd; }
+        const cur = curOf(it.slot);
+        for (let j = 0; j < gens.length; j++) { const dd = scoreIn(maps[j], gens[j], it.id) - cur[j]; if (dd > d) d = dd; }
         gain.set(it.id, d);
         return d;
       };
       let best = null, bv = 0;
-      for (const c of cities) {
-        const lists = c.shop.merchant && c.shop.merchant.until > g.monthIndex ? [[c.shop.stock, false], [c.shop.merchant.stock, true]] : [[c.shop.stock, false]];
-        for (const [list, merch] of lists) for (let i = 0; i < list.length; i++) {
-          const e = list[i], it = ITEM.get(e.id);
-          if (!it || !(e.qty > 0)) continue;
-          const t = TIER[it.rarity];
-          if (t >= 2 && slots < CFG.ai.rareCost) continue;
-          if (t === 2 && !(ncity >= CFG.ai.rareCities || c.gold >= CFG.ai.rareGold)) continue;
-          if (t >= 3 && ncity < CFG.ai.epicCities) continue;
-          const d = deltaOf(it);
-          if (d <= CFG.ai.minDelta || d / e.price <= bv) continue;   // 以上架价排序（买价 = 上架价 × 本城折扣，至多 −12.5 %）
-          // 便宜的预检（城的保留金与钱袋；最后仍由 SG.AIBudget.trySpend 把关）
-          let res = reserves.get(c.id);
-          if (res === undefined) { res = AIB.reserve(c).gold; reserves.set(c.id, res); }
-          if (c.gold - e.price * (1 - CFG.discCap) < res || purse < e.price * (1 - CFG.discCap)) continue;
-          bv = d / e.price; best = { c, list, i, e, it, merch };
-        }
+      for (const k of cand) {
+        curOf(k.it.slot);
+        if (scorePre(k.it).ub - minCur[k.it.slot] <= CFG.ai.minDelta) continue;
+        const d = deltaOf(k.it);
+        if (d <= CFG.ai.minDelta || d / k.e.price <= bv) continue;   // 以上架价排序（买价 = 上架价 × 本城折扣，至多 −12.5 %）
+        bv = d / k.e.price; best = k;
       }
       if (!best) break;
       const { c, list, i, e, it } = best;
-      const price = best.merch ? e.price : entryPrice(c, e, f, cityDiscount(c));
-      if (!AIB.trySpend(c, price, 'gear')) break;
-      reserves.delete(c.id); purse = AIB.purseOf ? AIB.purseOf(f) : Infinity;
+      const price = best.merch ? e.price : entryPrice(c, e, f, cityDiscount(c, offsBy.get(c.id) || []));
+      if (price > credit.c || !AIB.trySpend(c, price, 'gear')) break;
+      credit.c -= price;
+      reserves.delete(c.id); purse = Math.min(AIB.purseOf ? AIB.purseOf(f) : Infinity, credit.c);
       mkInst(it.id, 'arm', f);
       if (--e.qty <= 0) list.splice(i, 1);
       if (TIER[it.rarity] >= 2) { const s = S(); (s.cooldown[c.id] = s.cooldown[c.id] || {})[it.id] = g.monthIndex + (TIER[it.rarity] >= 3 ? CFG.restock.epicCooldown : CFG.restock.cooldown); }
@@ -1863,7 +1987,8 @@
   }
 
   // ================================================================ 月末与事件 ==
-  const ST = { spend: 0, playerSpend: 0, buys: {}, sold: 0, grants: {}, hiddenFound: 0, equipChanges: 0, aiBuys: 0, slain: 0, restockMs: 0, aiMs: 0, aiShopMs: 0 };
+  const ST = { spend: 0, playerSpend: 0, buys: {}, sold: 0, grants: {}, hiddenFound: 0, equipChanges: 0, aiBuys: 0, slain: 0, restockMs: 0, aiMs: 0, aiShopMs: 0,
+    shopRuns: { calls: 0, noMoney: 0, tooCheap: 0, noCand: 0, cand: 0 } };
   function monthItems(ctx) {
     const g = G();
     if (!on()) return;
@@ -1903,28 +2028,15 @@
     }
     return (gensBy.map.get(f) || []).filter(x => x.faction === f && !x.dead);
   }
-  // 换装与卖货只看府库、武将与其装备：与上次一样（指纹相同）就不必再算（结果相同，§13.7 的缓存）
-  const lastFp = new Map();
-  function fingerprint(f, gens) {   // 32 位整数指纹（不拼字符串）
-    const g = G();
-    let h = 0x811c9dc5;
-    const mix = v => { h = Math.imul(h ^ (v | 0), 0x01000193) >>> 0; };
-    mix(g.factions[f].ruler);
-    for (const u of g.factions[f].armoury || []) mix(u);
-    for (const c of g.cities) if (c.owner === f && c.vault) { mix(-c.id - 7); for (const u of c.vault) mix(u); }
-    for (const x of gens) { mix(x.id + 100000); mix(x.war); mix(x.intel); mix(x.pol); for (const sl of SLOTS) mix(x.gear[sl] == null ? -1 : x.gear[sl]); }
-    return h;
-  }
+  // 卖 → 换装 → 买：每个电脑势力每月照跑一遍（不缓存）。估值按物品预算（scorePre）之后这两步很便宜（府库空时立即返回），
+  // 以前的「指纹相同就跳过」比这两步本身还贵，而且跳过与照跑不等价（换装之后才多出来的凡品要再跑一遍才卖），读档后的一局会走岔
   function spendGear(f) {
     if (!on()) return;
     const ta = now();
-    const g = G();
     const gens = gensOfFaction(f);
-    const fp = fingerprint(f, gens);
-    const key = f + '@' + (g.seed | 0);
-    if (lastFp.get(key) !== fp) { aiSell(f, gens); aiEquip(f, gens); lastFp.set(key, fingerprint(f, gens)); }
+    aiSell(f, gens); aiEquip(f, gens);
     const tb = now();
-    if (aiShop(f, gens) > 0) lastFp.set(key, fingerprint(f, gens));
+    aiShop(f, gens);
     const tc = now();
     ST.aiMs += tc - ta; ST.aiShopMs += tc - tb;
   }
@@ -2183,8 +2295,10 @@
     // 外交礼物（§6.6）：一件宝物折合的金 = 价值 × giftK（givers = [君主, 使者]，「以宝物赏赐 / 外交」的持有者倍数取最大）
     giftValue(x, givers) { const id = typeof x === 'number' || /^\d+$/.test(String(x)) ? (instRec(x) || {}).id : x; return id ? Math.round(valueOf(id) * giftK(id, givers)) : 0; },
     // 电脑
-    score, role, aiEquip, aiShop, aiSell, aiHiddenSearch, monthItems, loyAuraSpecial, spendGear, stats: ST,
-    resetStats() { for (const k of Object.keys(ST)) ST[k] = typeof ST[k] === 'object' ? {} : 0; },
+    score, role, aiEquip, aiShop, aiSell, aiHiddenSearch, monthItems, loyAuraSpecial, spendGear, gearCredit, gearShare, stats: ST,
+    // 测试用：电脑买装预检所用的保留金（应与 SG.AIBudget.reserve(c).gold 相等）
+    reserveGold: c => reserveGold(c, officersByCity(c.owner)),
+    resetStats() { for (const k of Object.keys(ST)) ST[k] = typeof ST[k] === 'object' ? {} : 0; ST.shopRuns = { calls: 0, noMoney: 0, tooCheap: 0, noCand: 0, cand: 0 }; },
     // 图鉴
     markSeen, markOwned, collection,
     // 校验
@@ -2199,6 +2313,27 @@
     defendCity: c => (on() ? defendCityK(c) : 0),                                // 坐镇守城：守方防御 × (1 + k)
     captureP, rescueAt,                                                          // Conquest.apply 的俘虏几率；battle-model 主将溃散时记救主
     critTaken: (p, t) => (on() && t ? Gear.battle.critTaken(p, t) : p),
+    // 接线标记：调用方接上之后（INTEGRATION 请求）在自己的文件里设 true；没接上时商店 / 人物卡把这些效果标作「暂未生效」，
+    // 不让玩家为不起作用的数值掏钱（pendingEffects）
+    captureWired: false,   // js/strategy-ai.js 的 Conquest.apply 用 SG.Items.captureP 判被俘：脱身（escape / escapeK / decoy）、救主、擒将
+    freeWired: false,      // 指令代码用 freeUses / useFree：传国玉玺每月免令牌外交
+    relFloorWired: false,  // 外交 / 好感代码用 relFloor：径路刀的同盟好感下限
+    scoutWired: false,     // 情报 / 地图用 scouted：浑天仪、地理学查看敌城
+    pendingEffects(x) {
+      const it = itemOf(x); if (!it) return [];
+      const out = [], add = t => { if (out.indexOf(t) < 0) out.push(t); };
+      const cap = !Items.captureWired;
+      if (cap && it.stats && it.stats.escape) add('溃散时脱身');
+      for (const e of it.ability ? it.ability.effects : []) {
+        if (cap && (e.t === 'escapeK' || e.t === 'decoy')) add('溃散时脱身');
+        else if (cap && e.t === 'rescue') add('救主');
+        else if (cap && e.t === 'capture') add('擒将');
+        else if (!Items.freeWired && e.t === 'free') add('免令牌' + ({ diplomacy: '外交' }[e.cmd] || '指令'));
+        else if (!Items.relFloorWired && e.t === 'dipPlus' && e.relFloor) add('同盟好感下限');
+        else if (!Items.scoutWired && e.t === 'scout') add('查看敌城');
+      }
+      return out;
+    },
     installHooks, providers: PROVIDERS,
   });
   SG.Items = Items;

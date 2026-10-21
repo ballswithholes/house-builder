@@ -3405,14 +3405,27 @@
     return Math.min(3, 2 + (t - mv.startup - mv.active) / mv.recovery);
   }
   // 第四版的出招状态在画面上借用已有片段（COMBAT-V4 §13.1 的临时映射，新片段落地前；见报告的片段清单）：
-  //   连段步 / 单出 L M（'str'）按 mv.clip —— L 步 light2、M 步与单出 M light3、单出 L 与 L 起手 light1、H 步 heavy；终结技 轻 light3、中 / 重 heavy；
+  //   连段步按招式谱的动作变体（variantClip：l_cut / l_jab light1、l_rise / l_pommel light2、m_* light3、h_* heavy、f_* heavy）；
+  //   单出 L M（没有招式谱数据时的连段步）按 mv.clip —— L 步 light2、M 步与单出 M light3、单出 L 与 L 起手 light1、H 步 heavy；
   //   ↓J / ↓K light1、↓L light2（下半身取落地的蹲姿）；跃劈 heavy（起手按实际秒数，举刀停一顿）；重击 heavy（随蓄力）。
   //   迟滞的重步：规则时钟停走，画面自然停在举刀处。返回 { clip, mv, hold, low } 或 null（非出招状态）
   const LOW_POSE = { lower: 'jump', lowerT: 0.72 };
+  // 招式谱每一式的动作变体（SG.Combos：steps[i].variant / finisher.variant）→ 新片段落地前借用的片段（§13.1 的替代表；
+  // 终结技 f_* = 「绝技的前 0.6 秒」，即绝技开头的举刀重劈 heavy）。变体本身有片段（FIG_SWING 里有）时直接用
+  const VARIANT_STANDIN = { l_cut: 'light1', l_rise: 'light2', l_jab: 'light1', l_pommel: 'light2', m_diag: 'light3', m_spin: 'light3', m_thrust: 'light3', m_bash: 'light3',
+    h_over: 'heavy', h_rise: 'heavy', h_sweep: 'heavy', h_lunge: 'heavy' };
+  function variantClip(f) {
+    const ce = f.combo8, i = f.strIdx;
+    if (!ce || !f.strOn || !(i >= 0 && i <= 7)) return '';
+    const vr = i === 7 ? ce.finisher && ce.finisher.variant : ce.steps && ce.steps[i] && ce.steps[i].variant;
+    if (!vr) return '';
+    if (vr in FIG_SWING) return vr;
+    return VARIANT_STANDIN[vr] || (vr.charAt(0) === 'f' ? 'heavy' : '');
+  }
   function viewMove(f) {
     const st = f.state;
     if (st === 'str' && f.mv) {
-      let clip = f.mv.clip;
+      let clip = variantClip(f) || f.mv.clip;
       if (clip === 'special' || !(clip in FIG_SWING)) clip = f.mv.type === 'L' ? 'light3' : 'heavy';
       return { clip, mv: f.mv, hold: 0, low: false };
     }
@@ -4175,6 +4188,7 @@
       if (st === 'hitstun' && f.t < 0.12) jx += Math.sin(f.t * 120) * 0.03 * (1 - f.t / 0.12);
       if (st === 'guardstun' && f.t < 0.1) jx += Math.sin(f.t * 110) * 0.02 * (1 - f.t / 0.1);
       if (st === 'parried') { const k = Math.max(0, 1 - f.t / Math.max(0.1, f.stun)); jx += Math.sin(f.t * 9) * 0.025 * k; bn.foreArmR.rotation.z += Math.sin(f.t * 70) * 0.05 * k; }
+      if (st === 'ovh') jy += 0.25 * Math.sin(Math.PI * M.clamp01(f.t / Math.max(0.05, suOf(f) + MOVES.ovh.active)));   // 跃劈：0.25 米的小跳（只是画面，§13.1）
       fig.update(frozen ? 0 : dt);
       this.hangCape(st, dt);
       // 前冲：只冲到刃口刚好碰到对手的身体（对手更近时少冲或不冲；够不着时最多冲到判定距离处）
@@ -5279,7 +5293,7 @@
         case 'castle': {
           // 试点的城门楼与夯土城墙（墙正面约在 z = −11.3），城头火把，墙前铺石
           const z = -12.5, wz = z - 0.2, objs = [];
-          const gate = lpMakeNamed('gate_tower', { color: '#' + C(colB).getHexString(), hallName: '宾阳楼' }, { gate_tower: '城门' });
+          const gate = lpMakeNamed('gate_tower', { color: '#' + C(colB).getHexString(), name: '城门', hallName: '宾阳楼' }, { gate_tower: '城门' });
           gate.position.set(0, this.height(0, z) - 0.05, wz + 0.4);
           objs.push(gate);
           for (const s of [-1, 1]) for (let i = 0; i < 3; i++) {
@@ -5753,6 +5767,8 @@
 .sgd-dmg.lbl.parry{font-size:calc(3.4*var(--u));color:#fff2c8;letter-spacing:.14em;text-shadow:0 .06em 0 #6a1a0a,0 0 .35em rgba(255,150,40,.75),0 .1em .3em rgba(0,0,0,.85),0 0 1px #000;}
 .sgd-edge{position:fixed;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,rgba(255,230,160,0) 55%,rgba(255,214,120,.55) 85%,rgba(255,250,230,.9) 100%);}
 .sgd-dmg.lbl.ctr{font-size:calc(2.1*var(--u));color:#ffd860;text-shadow:0 2px 0 #4a1a00,0 0 .45em rgba(255,170,40,.9);}
+.sgd-dmg.lbl.crit{font-size:calc(2.3*var(--u));color:#ffd24d;letter-spacing:.12em;-webkit-text-stroke:1px #3a2008;paint-order:stroke fill;text-shadow:0 .06em 0 #3a2008,0 0 .4em rgba(255,190,60,.8);}
+.sgd-dmg.crit{color:#ffe27a;-webkit-text-stroke:1px #3a2008;paint-order:stroke fill;}
 .sgd-dmg.lbl.miss{color:#c8c0d8;font-size:calc(1.25*var(--u));}
 .sgd-skip{position:absolute;right:calc(var(--sar) + 1.2*var(--u));top:calc(var(--sat) + 7.6*var(--u));pointer-events:auto;cursor:pointer;
   font:700 calc(1.05*var(--u))/1 ${SANS};color:#fff4dc;background:rgba(12,10,16,.65);border:1px solid rgba(243,201,105,.6);border-radius:2em;padding:.6em 1.1em;min-height:44px;display:flex;align-items:center;gap:.4em;}
@@ -5822,6 +5838,52 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
   .sgd-vs .p .sgd-port{width:calc(7.6*var(--u));height:calc(7.6*var(--u));}
   .sgd-vs .x{font-size:calc(4.4*var(--u));margin-bottom:calc(2.4*var(--u));}
 }
+/* ---- 第四版 HUD（COMBAT-V4 §8.8 连击 k/8、招式谱条、§8.7 终结技名与「八式·成」、§12.3 招式提示）：纸面、墨线、暖色 ---- */
+.sgd-combo em{font:700 calc(1.05*var(--u))/1 ${SANS};font-style:normal;color:#f3e2b8;letter-spacing:.08em;margin-top:.35em;text-shadow:0 1px 0 #000,0 0 4px rgba(0,0,0,.7);}
+.sgd-combo em:empty{display:none;}
+#ui .sgd-combo b{color:transparent;}
+.sgd-seal8{position:absolute;top:calc(28% + .6*var(--u));font:700 calc(1.15*var(--u))/1 ${KAI};color:#fff4e0;background:#b8321e;border:2px solid #7a1a0c;border-radius:.25em;
+  padding:.32em .5em;letter-spacing:.12em;box-shadow:0 .15em .4em rgba(0,0,0,.5),inset 0 0 0 1px rgba(255,220,180,.35);opacity:0;pointer-events:none;}
+.sgd-seal8.a{left:calc(var(--sal) + 8.4*var(--u));}
+.sgd-seal8.b{right:calc(var(--sar) + 8.4*var(--u));}
+.sgd-seal8.on{animation:sgd-stamp8 2.6s cubic-bezier(.2,.8,.2,1) both;}
+.sgd-fin{position:absolute;top:44%;display:flex;flex-direction:column;gap:.25em;pointer-events:none;animation:sgd-finl .9s cubic-bezier(.2,.8,.2,1) both;}
+.sgd-fin.a{left:calc(var(--sal) + 5.5*var(--u));align-items:flex-start;}
+.sgd-fin.b{right:calc(var(--sar) + 5.5*var(--u));align-items:flex-end;animation-name:sgd-finr;}
+.sgd-fin em{font:700 max(11px,calc(1*var(--u)))/1 ${SANS};font-style:normal;letter-spacing:.3em;color:#f3c969;text-shadow:0 1px 2px #000;}
+.sgd-fin strong{font:900 calc(3.4*var(--u))/1 ${KAI};letter-spacing:.12em;color:#fff2c8;white-space:nowrap;-webkit-text-stroke:1px #2a1408;paint-order:stroke fill;
+  text-shadow:0 .06em 0 #3a1a08,0 0 .35em rgba(255,190,90,.6),0 .1em .3em rgba(0,0,0,.8);}
+.sgd-rib{position:absolute;left:50%;bottom:calc(var(--sab) + 3.6*var(--u));transform:translateX(-50%);display:flex;align-items:center;gap:4px;padding:5px 9px 13px;border-radius:6px;
+  background:linear-gradient(180deg,rgba(246,234,208,.34),rgba(214,192,150,.26));box-shadow:0 3px 10px rgba(0,0,0,.35),inset 0 0 0 1px rgba(255,244,220,.28);pointer-events:none;transition:opacity .3s ease;}
+.sgd-rib.idle{opacity:.72;}
+.sgd-rib.off{opacity:0;}
+.sgd-rib i{position:relative;flex:none;width:26px;height:26px;display:grid;place-items:center;font:700 15px/1 ${KAI};font-style:normal;color:var(--gc);border-radius:50%;
+  background:rgba(250,242,224,.9);border:1.5px solid rgba(46,28,14,.75);box-shadow:0 1px 2px rgba(0,0,0,.35);}
+.sgd-rib i.skip{opacity:.32;}
+.sgd-rib i.ink{background:var(--gc);color:#fff8e6;border-color:#2a1a0c;}
+.sgd-rib i.blk{background:linear-gradient(180deg,rgba(250,242,224,.9) 50%,var(--gc) 50%);}
+.sgd-rib i.next{animation:sgd-ribp .2s ease-in-out infinite alternate;}
+.sgd-rib i.miss{color:rgba(60,40,30,.32);}
+.sgd-rib i.miss::before,.sgd-rib i.brk::before{content:"✕";position:absolute;inset:0;display:grid;place-items:center;font:900 20px/1 ${SANS};font-style:normal;}
+.sgd-rib i.miss::before{color:#c8281c;}
+.sgd-rib i.brk::before{color:#1a0e08;font-size:24px;text-shadow:0 0 2px #fff4dc;}
+.sgd-rib i[data-m]::after{content:attr(data-m);position:absolute;left:50%;top:100%;transform:translate(-50%,1px);font:700 10px/1 ${SANS};font-style:normal;white-space:nowrap;text-shadow:0 1px 1px #000;}
+.sgd-rib i.m-on::after{color:#ffd24d;}
+.sgd-rib i.m-late::after{color:#c8c0b4;}
+.sgd-rib i.fin{width:auto;min-width:26px;padding:0 6px 0 4px;border-radius:4px;display:flex;gap:3px;border:2px solid #8a2a18;box-shadow:0 0 0 1px rgba(255,230,190,.4),0 1px 2px rgba(0,0,0,.35);}
+.sgd-rib i.fin em{font-style:normal;}
+.sgd-rib i.fin span{font:700 12px/1 ${KAI};color:#5a1a0c;letter-spacing:.04em;white-space:nowrap;}
+.sgd-rib i.fin.ink span{color:#fff4dc;}
+.sgd-rib .sep{flex:none;width:4px;height:4px;border-radius:50%;background:rgba(46,28,14,.6);}
+.sgd.sgd-compact .sgd-rib{bottom:calc(var(--sab) + 3*var(--u));}
+.sgd.sgd-touch .sgd-rib{bottom:calc(var(--sab) + 2.3*var(--u));}
+.sgd-hint{position:absolute;left:0;top:0;width:30px;height:30px;opacity:0;pointer-events:none;will-change:transform,opacity;}
+.sgd-hint span{display:grid;place-items:center;width:100%;height:100%;font:700 18px/1 ${KAI};color:var(--gc);border-radius:50%;background:rgba(250,242,224,.92);
+  border:2px solid var(--gc);box-shadow:0 0 .55em var(--gc),0 2px 4px rgba(0,0,0,.5);animation:sgd-ribp .16s ease-in-out infinite alternate;}
+@keyframes sgd-ribp{from{transform:scale(1);filter:brightness(1)}to{transform:scale(1.16);filter:brightness(1.25)}}
+@keyframes sgd-stamp8{0%{opacity:0;transform:scale(2.4) rotate(-6deg)}12%{opacity:1;transform:scale(1) rotate(-6deg)}85%{opacity:1;transform:scale(1) rotate(-6deg)}100%{opacity:0;transform:scale(1) rotate(-6deg)}}
+@keyframes sgd-finl{0%{opacity:0;transform:translateX(-2.5em)}20%{opacity:1;transform:none}78%{opacity:1;transform:translateX(.3em)}100%{opacity:0;transform:translateX(.8em)}}
+@keyframes sgd-finr{0%{opacity:0;transform:translateX(2.5em)}20%{opacity:1;transform:none}78%{opacity:1;transform:translateX(-.3em)}100%{opacity:0;transform:translateX(-.8em)}}
 @keyframes sgd-paflash{0%{transform:scale(1.25);box-shadow:0 0 1.6em rgba(160,220,255,1)}100%{transform:scale(1);box-shadow:none}}
 @keyframes sgd-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
 @keyframes sgd-low{from{filter:brightness(1)}to{filter:brightness(1.35)}}
@@ -5891,6 +5953,13 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
   // 优先用 SG.Sfx 的现成音效；挥击风声与重击闷响用 WebAudio 即时合成
   let noiseBuf = null;
   function sfx(name, vol) { try { if (SG.Sfx && SG.Sfx.play) SG.Sfx.play(name, vol); } catch (e) { /* 无音频 */ } }
+  // 第四版音效名（COMBAT-V4 §13.3，配方在 audio.js）：没有这个名字时用规格表里的替代声。
+  // 人声（crit / finisher / parry / guardcrush）由 voice.js 挂在 Sim.emit 上（duel.* 台词），这里不再重复调用
+  let SFX_NAMES = null;
+  function sfxOr(name, vol, fallback) {
+    try { if (!SFX_NAMES && SG.Sfx && typeof SG.Sfx.sfxNames === 'function') SFX_NAMES = new Set(SG.Sfx.sfxNames()); } catch (e) { SFX_NAMES = null; }
+    if (SFX_NAMES && SFX_NAMES.has(name)) sfx(name, vol); else if (fallback) fallback();
+  }
   function synth(kind, vol) {
     try {
       const S = SG.Sfx;
@@ -6326,12 +6395,16 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       top.insertBefore(tm, this.hud[1].s);
       this.timerEl = tm;
       this.timerB = tm.querySelector('b');
-      this.combo = [h('sgd-combo a', '<b>2</b><span>连击</span>'), h('sgd-combo b', '<b>2</b><span>连击</span>')];
+      // 连击数；第四版：自己的连段里加「k/8」（§8.8），旁边是首次打完整串的「八式·成」朱印
+      this.combo = [h('sgd-combo a', '<b>2</b><span>连击</span><em></em>'), h('sgd-combo b', '<b>2</b><span>连击</span><em></em>')];
+      this.seal8 = [h('sgd-seal8 a', '八式·成'), h('sgd-seal8 b', '八式·成')];
+      this.sealDone = [false, false];
       this.ann = h('sgd-ann');
       this.dmgLayer = h(null);
       this.dmgLayer.style.cssText = 'position:absolute;inset:0;pointer-events:none;';
       this.flashEl = h('sgd-flash');
       this.edgeEl = h('sgd-edge');
+      this.buildRibbon(h);
       if (this.player !== null && (!SG.isTouch || this.hybrid)) {
         const KL = keyLabels(this.settings);
         this.legend = h('sgd-legend', '<span><b class="sgd-k">←</b><b class="sgd-k">→</b>移动·背向格挡</span><span><b class="sgd-k">↑</b>跳</span><span><b class="sgd-k">↓</b>蹲</span>' +
@@ -6361,6 +6434,82 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       if (this.legend) this.legend.style.opacity = v;
       if (this.touch) for (const el of [this.touch.pad, this.touch.btns]) { el.style.opacity = v; el.style.visibility = on ? 'visible' : 'hidden'; }
       if (this.touchHint) this.touchHint.style.opacity = on ? '1' : '0';
+      if (this.rib) { this.rib.el.classList.toggle('off', !on); if (on) this.rib.el.classList.add('idle'); }
+    }
+
+    // ---- 第四版：招式谱条（§8.8：玩家一方，底部居中、图例之上；设置「招式谱条」自动 = 前 5 场）与招式提示（§12.3，设置「招式提示」）----
+    ribbonOn() {
+      const st = this.settings || {}, r = this.opts.ribbon || st.ribbon;     // opts.ribbon：测试页 / 演武场强制 'on' | 'off'
+      if (this.player === null) return false;
+      return r === 'on' || (r !== 'off' && (st.duels | 0) < 5);
+    }
+    buildRibbon(h) {
+      this.rib = null; this.hint = null; this.finCine = false;
+      if (this.player === null) return;
+      if (this.opts.hints !== undefined ? this.opts.hints !== false : (this.settings || {}).hints !== false) {
+        const el = h('sgd-hint', '<span></span>');
+        this.hint = { el, b: el.firstChild, who: -1, at: 0, until: 0, on: false };
+      }
+      if (!this.ribbonOn()) return;
+      const f = this.sim.f[this.player], seq = f.seqStr || DEFAULT_SEQ;
+      const el = h('sgd-rib off');
+      const slots = [];
+      for (let i = 0; i < 8; i++) {
+        if (i === 7) { const d = document.createElement('span'); d.className = 'sep'; el.appendChild(d); }
+        const s = document.createElement('i'), t = seq[i];
+        s.style.setProperty('--gc', GLYPH_COLOR[t]);
+        if (i === 7) { s.className = 'fin'; s.innerHTML = '<em>' + GLYPH[t] + '</em>' + (f.finName ? '<span>' + SG.esc(f.finName) + '</span>' : ''); }
+        else s.textContent = GLYPH[t];
+        el.appendChild(s); slots.push(s);
+      }
+      this.rib = { el, slots, next: -1, dirty: false, idleAt: 0, placed: false };
+    }
+    // 谱条放在图例之上（图例在窄屏会折成两行）：按图例的实际高度定位；没有图例（触摸）时用样式表的位置
+    placeRibbon() {
+      const R = this.rib;
+      if (!R || !this.legend || !this.root.getBoundingClientRect) return;
+      const lr = this.legend.getBoundingClientRect(), rr = this.root.getBoundingClientRect();
+      if (lr.height > 0) R.el.style.bottom = Math.round(rr.bottom - lr.top + 6) + 'px';
+    }
+    ribReset() {
+      const R = this.rib; if (!R) return;
+      for (const s of R.slots) { s.classList.remove('ink', 'blk', 'next', 'miss', 'brk', 'skip', 'm-on', 'm-late'); s.removeAttribute('data-m'); }
+      R.next = -1; R.dirty = false;
+    }
+    // 第 i 式（0 起）：cls 填墨 / 半格 / 叉 / 跳过；m 节拍标记 准 · 迟 · 早（'' 清掉）
+    ribMark(i, cls, m) {
+      const R = this.rib; if (!R || !(i >= 0 && i <= 7)) return;
+      const s = R.slots[i];
+      if (cls) s.classList.add(cls);
+      if (m !== undefined) {
+        s.classList.remove('m-on', 'm-late');
+        if (m) { s.setAttribute('data-m', m); s.classList.add(m === '准' ? 'm-on' : 'm-late'); } else s.removeAttribute('data-m');
+      }
+      R.dirty = true; R.idleAt = this.realT + 1.4;
+      R.el.classList.remove('idle');
+    }
+    // 玩家认得对手招式谱的哪几式：存档里的见识（SG.Combos.known）+ 本场已经出过的步
+    knownMask(f) {
+      let m = f.seenMask | 0;
+      try { if (SG.Combos && typeof SG.Combos.known === 'function' && f.gen && f.gen.name) m |= SG.Combos.known(SG.G, f.gen.name); } catch (e) { /* 无存档 */ }
+      return m;
+    }
+    // 终结技名：毛笔字从出招一方滑入（0.9 秒，不挡操作，§8.7）
+    finBanner(idx, name, full) {
+      const el = document.createElement('div');
+      el.className = 'sgd-fin ' + (idx === 0 ? 'a' : 'b');
+      el.innerHTML = '<em>' + (full ? '八式 · 终结技' : '终结技') + '</em><strong>' + SG.esc(name) + '</strong>';
+      this.root.appendChild(el);
+      setTimeout(() => el.remove(), 1000);
+    }
+    // 墨点（普通混合的尘埃粒子池；暗色在加色火花里看不见）
+    inkSpray(x, y, n, dir) {
+      const r = this.fxR;
+      for (let i = 0; i < n; i++) {
+        const a = (r.nextDouble() - 0.5) * 1.8, v = 2.2 + r.nextDouble() * 3.2;
+        this.dust.add({ x, y, z: 0.25, vx: (dir || 1) * Math.cos(a) * v, vy: Math.sin(a) * v + 1.2, vz: (r.nextDouble() - 0.5) * 1.4,
+          r: 0.12, g: 0.08, b: 0.06, a: 0.85, size: 0.05 + r.nextDouble() * 0.07, grow: 0.3, life: 0.35 + r.nextDouble() * 0.3, drag: 3, grav: 7, ac: 1.5 });
+      }
     }
     announce(text, cls, sub, sec) {
       const d = document.createElement('div');
@@ -6398,6 +6547,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
 
     resize(w, h) {
       this.rootRect = null; this.hudBot = null;
+      if (this.rib) this.rib.placed = false;
       this.compact = h < 540 || w < 700;
       if (this.root) this.root.classList.toggle('sgd-compact', this.compact);
       if (this.camera) { this.camera.aspect = Math.max(0.2, w / Math.max(1, h)); this.camera.updateProjectionMatrix(); }
@@ -6463,7 +6613,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
             else {
               sfx('hit', Math.min(1, 0.55 + e.dmg * 0.03));
               if (e.big) synth('thud', 0.5);
-              this.floatDmg(e.x, e.y + 0.3, String(e.dmg), e.big ? 'big' : '');
+              this.floatDmg(e.x, e.y + 0.3, String(e.dmg), e.crit ? 'big crit' : e.big ? 'big' : '');
               if (e.counter) this.floatDmg(e.x, e.y + 0.75, '破绽', 'lbl');
               if (e.riposte) {
                 // 反击得手：金色爆散 + 闪白 + 重击闷响
@@ -6474,7 +6624,17 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
                 synth('thud', 0.9);
               }
             }
-            if (e.breaks) { this.floatDmg(def.x, 2.4, '破防', 'lbl'); sfx('rock', 0.6); }
+            if (e.breaks) { this.floatDmg(def.x, 2.4, e.crush ? '压制破防' : '破防', 'lbl'); if (!e.crush) sfx('rock', 0.6); }
+            // 第四版 §3 / §13.2：会心——金白闪光、墨点四溅、金色「会心」；低段命中——脚下扬尘、低沉的震动
+            if (e.crit && !e.guarded) {
+              this.floatDmg(e.x, e.y + 0.95, '会心', 'lbl crit');
+              this.burst(e.x, e.y, 0.2, '#fff1c0', 26, 7, { dir: att.face, size: 0.12, life: 0.4 });
+              this.inkSpray(e.x, e.y, 12, att.face);
+              this.star(e.x, e.y, '#ffd860', 3.2);
+              this.screenFlash(0.22);
+              sfxOr('crit', 0.9, () => sfx('duel', 0.6));
+            }
+            if (e.line === 'low' && !e.guarded) { this.puff(def.x, 8, 0.9, att.face); this.shake = Math.max(this.shake, 0.08); sfxOr('lowHit', 0.7); }
             if (e.big && !e.guarded) { this.ring(def.x, col, 3.2, 0.45); this.puff(def.x, 6, 0.8, att.face); }
             if (sp && e.finisher) { this.screenFlash(0.5); this.ring(def.x, spc, 6, 0.7); }
             const H = this.hud[def.idx];
@@ -6483,8 +6643,20 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
             if (e.combo >= 2) {
               const cb = this.combo[att.idx];
               cb.querySelector('b').textContent = e.combo;
+              cb.querySelector('em').textContent = e.step > 0 ? e.step + '/8' : '';   // 自己的连段里：第 k 式 / 8（§8.8）
               cb.classList.add('on'); cb.classList.remove('pop'); void cb.offsetWidth; cb.classList.add('pop');
               cb.hideAt = this.realT + 1.3;
+            }
+            // 招式谱条：落下的一式填墨（被挡填半格），木鱼轻响（§8.8、§13.3 comboTick）
+            if (this.rib && att.idx === this.player && e.step > 0) { this.ribMark(e.step - 1, e.guarded ? 'blk' : 'ink'); sfxOr('comboTick', 0.15); }
+            // 招式提示（§12.3）：敌方连段第 k 式打到（或被挡）0.1 秒后，若认得第 k+1 式，在他头上亮出那一式的字形
+            if (this.hint) {
+              if (this.hint.who === att.idx) this.hint.until = 0;
+              if (def.idx === this.player && att.idx !== this.player && e.step > 0 && e.step < 8 && (this.knownMask(att) & (1 << e.step))) {
+                const t = att.seqStr[e.step], Hn = this.hint;
+                Hn.who = att.idx; Hn.at = sim.clock + 0.1; Hn.until = Hn.at + 0.5;
+                Hn.b.textContent = GLYPH[t]; Hn.el.style.setProperty('--gc', GLYPH_COLOR[t]);
+              }
             }
             if (this.player === def.idx && !e.guarded) { try { if (navigator.vibrate) navigator.vibrate(e.big ? 30 : 12); } catch (err) { /* 忽略 */ } }
             break;
@@ -6573,6 +6745,62 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
             break;
           }
           case 'timeup': this.announce('时间到', 'small', null, 1.4); sfx('horn', 0.5); break;
+          // ---- 第四版事件（COMBAT-V4 §8.7 终结技与压制破防、§9.4 看破、§6.4 跃劈预兆、§8.3 迟滞、§8.8 招式谱条）----
+          case 'finisher': {
+            const att = sim.f[e.who], def = sim.f[e.def];
+            if (e.name) this.finBanner(att.idx, e.name, e.full);
+            this.ring(def.x, '#f0c050', 5.5, 0.7);
+            this.burst(def.x, 1.3, 0.2, '#ffe6a0', 30, 5, { dir: att.face, life: 0.55 });
+            this.inkSpray(def.x, 1.3, 14, att.face);
+            sfxOr('finisher', 0.8, () => sfx('win', 0.35));
+            // 0.35 秒的特写：打击停顿（规则里 0.15 秒）之后放慢到 0.35 倍 0.2 秒，镜头推近 8%、侧倾 2°（KO 时让给 KO 的慢镜）
+            if (!sim.result) { this.finCine = true; this.zoom = { who: att.idx, until: this.realT + 0.55, fin: true }; }
+            if (e.full && !this.sealDone[att.idx]) {
+              this.sealDone[att.idx] = true;
+              const s = this.seal8[att.idx]; s.classList.remove('on'); void s.offsetWidth; s.classList.add('on');
+            }
+            break;
+          }
+          case 'guardcrush': {
+            // 压制破防：守势上的裂墨、纸裂般的脆响（「压制破防」字样随 hit 事件出）
+            const def = sim.f[e.def];
+            this.inkSpray(def.x, 1.35, 16, -def.face);
+            this.shake = Math.max(this.shake, 0.14);
+            this.war[def.idx].flashHit('#ffb090', 0.7);
+            sfxOr('guardCrush', 0.8, () => sfx('hit', 0.8));
+            break;
+          }
+          case 'breakParry': {
+            // 看破连段：格开的火花照旧（parry 事件），另加「看破！」与清脆一声；玩家的招式谱条上这一式打墨叉
+            const def = sim.f[e.def];
+            this.floatDmg(def.x, def.y + 2.9, '看破！', 'lbl ctr');
+            sfxOr('breakParry', 0.8, () => synth('parry', 0.6));
+            if (this.rib && e.att === this.player) this.ribMark(e.step - 1, 'brk');
+            break;
+          }
+          case 'ovhGo': {
+            // 跃劈起手：刃口高处一点亮光（看得及的预兆，§13.2）
+            const w = this.war[e.who];
+            this.star(w.tipW[0].x, w.tipW[0].y + 0.2, '#fff4c8', 1.6);
+            sfxOr('ovhGlint', 0.7, () => synth('shing', 0.7));
+            break;
+          }
+          case 'delayGo': {
+            // 迟滞的重步：刃口暖光（第三版重击预兆的样子）
+            const w = this.war[e.who];
+            this.star(w.tipW[0].x, w.tipW[0].y, '#ffb070', 1.3);
+            synth('shing', 0.4);
+            break;
+          }
+          case 'strStep': {
+            if (!this.rib || e.who !== this.player) break;
+            if (e.entry) { this.ribReset(); for (let j = 0; j < e.step; j++) this.ribMark(j, 'skip'); }
+            if (e.beat) this.ribMark(e.step, null, e.beat === 'on' ? '准' : '迟');
+            else this.ribMark(e.step, null, '');
+            break;
+          }
+          case 'strMiss': if (this.rib && e.who === this.player) this.ribMark(e.step, 'miss'); break;
+          case 'strEarly': if (this.rib && e.who === this.player) this.ribMark(e.step, null, '早'); break;
           default: break;
         }
       }
@@ -6622,6 +6850,8 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
         if (this.zoom) this.zoom.until += dt;
         for (let i = 0; i < 2; i++) if (this.trailOn[i] > this.realT - dt) this.trailOn[i] += dt;
       } else if (this.slowT > 0) { this.slowT -= dt; if (this.slowT <= 0) this.slow = 1; }
+      // 终结技特写（§8.7）：打击停顿结束后放慢到 0.35 倍、0.2 秒
+      if (this.finCine && sim.hitstop <= 0) { this.finCine = false; if (!sim.result) { this.slow = Math.min(this.slow, 0.35); this.slowT = Math.max(this.slowT, 0.2); } }
       const ts = hold ? 0 : DuelGame.speed * this.slow;
       this.acc += dt * ts;
       let n = 0;
@@ -6740,6 +6970,11 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
           mid = M.lerp(mid, f.x, 0.55);
           dist *= 0.84; hc += 0.1;
           ground = (this.touch ? 0.48 : 0.5) + Math.min(0.28, 0.14 * Math.max(0, f.y));
+        } else if (z.fin) {
+          // 终结技：推近 8%（§8.7），随后拉回
+          const k = M.clamp01((z.until - this.realT) / 0.55);
+          mid = M.lerp(mid, f.x, 0.15);
+          dist *= 1 - 0.08 * Math.sin(Math.min(1, k * 1.6) * Math.PI * 0.5);
         } else { mid = M.lerp(mid, f.x, 0.75); dist *= 0.62; hc -= 0.1; ground = 0.38; }
       } else this.zoom = null;
       // 开场：从侧后方推近
@@ -6764,6 +6999,7 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       cam.lookAt(this.camLook.x + (r.nextDouble() - 0.5) * s, this.camLook.y + (r.nextDouble() - 0.5) * s, 0);
       // 格开得手：约 3° 的镜头侧倾，0.35 秒内回正
       if (z && z.parry && this.realT < z.until) { const u = M.clamp01(1 - (z.until - this.realT) / 0.6); if (u < 0.6) cam.rotateZ(0.055 * Math.sin(u / 0.6 * Math.PI) * (sim.f[z.who].face || 1)); }
+      if (z && z.fin && this.realT < z.until) { const u = M.clamp01(1 - (z.until - this.realT) / 0.55); cam.rotateZ(0.035 * Math.sin(u * Math.PI) * (sim.f[z.who].face || 1)); }   // 终结技侧倾 2°
       // 阴影与光照跟随镜头
       const L = this.lights;
       L.key.target.position.set(this.camPos.x, 0, 0);
@@ -6813,9 +7049,34 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
       }
       const left = Math.max(0, Math.ceil(sim.limit - sim.time));
       if (left !== this.lastLeft) { this.lastLeft = left; this.timerB.textContent = String(left); this.timerEl.classList.toggle('low', left <= 10); }
-      // 伤害飘字
       const W = SG.Gfx.width || 1, Hh = SG.Gfx.height || 1;
       const v = TMP.v3 || (TMP.v3 = new THREE.Vector3());
+      // 招式谱条：下一式的按键窗口开着时那一格跳动；连段结束 1.4 秒后清空
+      const R = this.rib;
+      if (R) {
+        if (!R.placed) { R.placed = true; this.placeRibbon(); }
+        const f = sim.f[this.player];
+        const inStr = f.state === 'str' && f.strOn;
+        const nx = inStr && !f.strEnded && !f.lockType && f.strIdx >= 0 && f.strIdx < 7 && f.t >= f.winOpen && f.t <= f.winClose ? f.strIdx + 1 : -1;
+        if (nx !== R.next) { if (R.next >= 0) R.slots[R.next].classList.remove('next'); if (nx >= 0) R.slots[nx].classList.add('next'); R.next = nx; }
+        if (inStr) R.idleAt = this.realT + 1.4;
+        else if (R.dirty && this.realT > R.idleAt) { this.ribReset(); R.el.classList.add('idle'); }
+      }
+      // 招式提示：出招者头顶
+      const Hn = this.hint;
+      if (Hn) {
+        const f = Hn.who >= 0 ? sim.f[Hn.who] : null;
+        const vis = !!f && sim.clock >= Hn.at && sim.clock <= Hn.until && f.state === 'str' && f.strOn && !f.strEnded && !sim.result;
+        if (vis) {
+          v.set(f.x, f.y + 2.55, 0.3).project(this.camera);
+          const rr = this.root.getBoundingClientRect ? this.rootRect || (this.rootRect = this.root.getBoundingClientRect()) : { left: 0, top: 0 };
+          const x = (v.x * 0.5 + 0.5) * W, y = Math.max(this.hudBot || 0, (-v.y * 0.5 + 0.5) * Hh);
+          Hn.el.style.transform = 'translate(' + (x - rr.left).toFixed(1) + 'px,' + (y - rr.top).toFixed(1) + 'px) translate(-50%,-50%)';
+        }
+        if (vis !== Hn.on) { Hn.on = vis; Hn.el.style.opacity = vis ? '1' : '0'; }
+        if (!vis && f && sim.clock > Hn.until) Hn.who = -1;
+      }
+      // 伤害飘字
       for (let i = this.dmgs.length - 1; i >= 0; i--) {
         const d = this.dmgs[i];
         d.t += dt;
@@ -7055,6 +7316,8 @@ html.sgd-on .sg-screens>:not(.sgd){visibility:hidden!important;}
           this.root.style.pointerEvents = 'auto';
         }
         await this.until(() => this.skipped || !!this.sim.result);
+        // 亲自打过的场数（招式谱条「自动」= 前 5 场显示，§5.3）
+        if (this.player !== null && !DuelGame.auto && !this.scripted) { try { saveSettings({ duels: (loadSettings().duels | 0) + 1 }); } catch (e) { /* 忽略 */ } }
         if (this._skipKey) { window.removeEventListener('keydown', this._skipKey, true); this.root.style.pointerEvents = ''; }
         this.showControls(false);
         await this.outro();

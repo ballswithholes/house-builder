@@ -19,7 +19,7 @@
          music(kind[, culture | { suite, culture }]) setMusic(on) musicOn musicKind
          setCulture(culture) culture  setMusicVolume(v)  stinger(kind[, { speed, force, suite, crit }])
          第四版：setSuite(ruler | null) suite fanfare(ruler, { duck }) → 秒 | 0   cmdSting(id, tier, { family, answerFamily, fast, headMotif })
-                 previewRuler(ruler)（选君主画面：号令 → 停留 1.2 秒后试听地图曲与名句）  stopPreview()
+                 previewRuler(ruler)（选君主画面：号令 → 停留 1.2 秒后试听地图曲与名句）  stopPreview([restore])
                  voiceBus() → { ctx, input, hall }  duckForVoice(sec)  setVoiceVolume(v)  setMasterVolume(v)  setSfxVolume(v)
                  settings（AUDIO-V4 §B10.4 各行的当前值）  defineSfx(name, recipe)  sfxNames()
    曲目 kind：title map battle battle-defend duel victory defeat ending council clash fanfare
@@ -736,6 +736,7 @@
   }
   // 选君主画面（§A3）：悬停 / 点按 → 号令；停留 1.2 秒 → 他的地图曲（0.8 秒交叉）与名句
   let previewTimer = 0;
+  let previewPrev = null;         // 第一次试听之前在放的曲目 { kind, culture }（stopPreview(true) 时放回）
   function previewRulerImpl(who) {
     const name = typeof who === 'string' ? who : who && who.name;
     if (previewTimer) { clearTimeout(previewTimer); previewTimer = 0; }
@@ -745,6 +746,7 @@
       fanfareImpl(name, { duck: 0.35 });
       previewTimer = setTimeout(() => {
         previewTimer = 0;
+        if (!previewPrev || !previewSuite) previewPrev = { kind: Sfx.musicKind, culture: Sfx.culture };
         musicImpl('map', { suite: name });
         try { if (SG.Voice) SG.Voice.say(name, 'sig', { force: true, scene: 'strategy' }); } catch (e) { /* 忽略 */ }
       }, 1200);
@@ -909,7 +911,18 @@
     fanfare(who, opts) { try { return fanfareImpl(who, opts); } catch (e) { return 0; } },
     cmdSting(id, tier, opts) { try { return cmdStingImpl(id, tier, opts); } catch (e) { return null; } },
     previewRuler(who) { try { previewRulerImpl(who); } catch (e) { /* 忽略 */ } },
-    stopPreview() { if (previewTimer) { clearTimeout(previewTimer); previewTimer = 0; } previewSuite = null; },
+    // stopPreview(restore)：取消尚未奏出的试听；restore 为真（玩家退出选君主画面，未开局）时放回试听之前的曲目（标题曲）
+    stopPreview(restore) {
+      try {
+        if (previewTimer) { clearTimeout(previewTimer); previewTimer = 0; }
+        const prev = previewPrev, owned = !!previewSuite && Sfx.musicKind === 'map';
+        previewPrev = null; previewSuite = null;
+        if (restore && prev && owned) {
+          if (prev.culture) Sfx.culture = prev.culture;
+          musicImpl(prev.kind || 'title');
+        }
+      } catch (e) { /* 忽略 */ }
+    },
     voiceBus() { if (!ctx) ensureContext(); return ctx && voiceIn ? { ctx, input: voiceIn, hall: hallIn } : null; },
     duckForVoice(sec) { try { duckForVoiceImpl(+sec || 0.5); } catch (e) { /* 忽略 */ } },
     setVoiceVolume(v) { setSetting('voice', Math.round(Math.max(0, Math.min(1, +v || 0)) * 100)); },

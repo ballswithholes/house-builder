@@ -1662,10 +1662,19 @@ uniform vec4 sgXfN;
 uniform vec4 sgXfC;
 uniform vec4 sgXfO;
 uniform vec4 sgInner;
-uniform vec4 sgFacetXf;    // x0, z0, 格距, 0
+uniform vec4 sgFacetXf;    // 面纹理原点 x, z（地图坐标）, 三角格边长, 0
 uniform vec4 sgFacetSz;    // 1 / 宽, 1 / 高, 面化强度, 逐面抖动
 uniform vec4 sgPaintK;     // x 草叶笔画近景距离, y 远, z 野花密度, w 斑块强度
 varying vec3 vSgW;
+#define SG_SNOW_FACET 0.65
+// 分支里的取样（隐式导数在非一致的控制流里无定义）：显式 LOD
+#if __VERSION__ >= 300
+#define SG_TEX0( t, uv ) textureLod( t, uv, 0.0 )
+#define SG_TEXL( t, uv, l ) textureLod( t, uv, l )
+#else
+#define SG_TEX0( t, uv ) texture2D( t, uv )
+#define SG_TEXL( t, uv, l ) texture2D( t, uv )
+#endif
 float sgHash( vec2 p ) { vec3 p3 = fract( vec3( p.xyx ) * 0.1031 ); p3 += dot( p3, p3.yzx + 33.33 ); return fract( ( p3.x + p3.y ) * p3.z ); }
 vec3 sgCropLV( float id ) {
   vec3 c = vec3( 0.60, 0.71, 0.36 );                          // 青苗
@@ -1714,10 +1723,14 @@ vec3 sgCropLV( float id ) {
 			sgNearW = 1.0 - sgWI + sgX.b;
 		}
 	}
-	// 固定三角格上的面法线（交替对角线；与 LOD 网格无关）与面编号。
+	// 固定三角格上的面法线（与 LOD 网格无关）与面编号。
+	// 第四轮：等边三角格，边长 sgFacetXf.z，两条基向量与地图 x 轴成 15° / 75°：三组格线（15°、75°、135°）都不与
+	// 屏幕的横竖方向平行（原来的方格与 x / z 轴对齐，镜头不转时陡坡上是竖直 / 水平的硬边方块与竖条纹）。
+	// sgFp = 格坐标（原点在面纹理的第一格；构建见 map-view.js terrain.facets）；每格沿 (1,0)–(0,1) 对角线分成两个三角形。
 	// sgFk：一格在屏幕上小于约 3 像素时淡出面化（远看的三角格只剩条纹状的闪烁）；导数在分支外求
-	vec2 sgFp = ( sgP - sgFacetXf.xy ) / sgFacetXf.z;
-	float sgFk = 1.0 - smoothstep( 0.12, 0.34, length( fwidth( sgFp ) ) );
+	vec2 sgFp = mat2( 1.11536, -0.29886, -0.29886, 1.11536 ) * ( sgP - sgFacetXf.xy ) / sgFacetXf.z;
+	float sgFpW = length( fwidth( sgFp ) );
+	float sgFk = 1.0 - smoothstep( 0.12, 0.34, sgFpW );
 	vec3 sgNf = sgNs;
 	float sgFid = 0.5;
 	// 平地（平滑坡度很小、不在高山）不取面法线：面化只落在岩坡与高山上
@@ -1725,8 +1738,7 @@ vec3 sgCropLV( float id ) {
 		vec2 fp = sgFp;
 		vec2 cell = floor( fp ), f = fp - cell;
 		vec4 fn = texture2D( sgFacet, ( cell + 0.5 ) * sgFacetSz.xy );
-		float odd = mod( cell.x + cell.y, 2.0 );
-		float triB = odd < 0.5 ? step( f.y, f.x ) : step( 1.0, f.x + f.y );
+		float triB = step( 1.0, f.x + f.y );
 		vec2 nxz = mix( fn.rg, fn.ba, triB ) * 2.0 - 1.0;
 		vec3 nf = vec3( nxz.x, sqrt( max( 0.0, 1.0 - dot( nxz, nxz ) ) ), nxz.y );
 		sgNf = normalize( mix( sgNs, nf, sgWI * sgFk ) );
@@ -1738,8 +1750,22 @@ vec3 sgCropLV( float id ) {
 	// 绘制：大 / 中两级水彩斑块 + 笔触
 	vec4 sgPL = texture2D( sgPaint, sgP * 0.031 + vec2( 0.17, 0.53 ) );
 	vec4 sgPM = texture2D( sgPaint, sgP * 0.113 + vec2( 0.61, 0.29 ) );
-	// 雪：雪线以上朝上的面（先算权重：雪地上不面化——Lanternvale 的雪地是平滑的，面化只属于岩石道具）
-	float sgSnowW = smoothstep( 0.3, 0.6, sgMat.b + ( sgPM.r - 0.5 ) * 0.4 + ( sgPL.g - 0.5 ) * 0.25 - sgSlopeF * 0.55 );
+	// 雪：雪线以上朝上的面（先算权重：雪地上不用岩坡的细三角格，改用下面的大三角面）
+	// （第三轮：雪的边界按平滑坡度，不再沿三角格切出白 / 灰相间的面；第四轮：边界收紧，半雪处不透出草的黄绿）
+	float sgSnowW = smoothstep( 0.3, 0.5, sgMat.b + ( sgPM.r - 0.5 ) * 0.4 + ( sgPL.g - 0.5 ) * 0.25 - sgSlopeS * 0.55 );
+	// 第四轮：雪的面——两倍大的三角格，每个三角形取重心处的平滑法线：几块干净的大平面（试点与 Lanternvale 的低多边形面），
+	// 不是没有起伏的一团白雾；不按面抖动亮度（不回到白 / 淡紫交替的皱纸）
+	vec3 sgNc = sgNs;
+	float sgFkC = 1.0 - smoothstep( 0.12, 0.34, sgFpW * 0.5 );
+	if ( sgSnowW > 0.01 && sgWI > 0.0 && sgFkC > 0.001 ) {
+		vec2 cp = sgFp * 0.5, cc = floor( cp ), cf = cp - cc;
+		vec2 cen = cc + mix( vec2( 0.33333 ), vec2( 0.66667 ), step( 1.0, cf.x + cf.y ) );
+		vec2 wp = sgFacetXf.xy + sgFacetXf.z * 2.0 * ( mat2( 0.96593, 0.25882, 0.25882, 0.96593 ) * cen );
+		vec4 tc = SG_TEX0( sgMapN, wp * sgXfN.zw + sgXfN.xy );
+		vec3 nc = vec3( tc.r * 2.0 - 1.0, 0.0, tc.g * 2.0 - 1.0 );
+		nc.y = sqrt( max( 0.0, 1.0 - dot( nc.xz, nc.xz ) ) );
+		sgNc = normalize( mix( sgNs, nc, sgWI * sgFkC ) );
+	}
 	// 岩石：陡坡与高山（按面取石色：低多边形的手切岩面）
 	// （岩区的边界按平滑坡度与面坡度各半：不切成三角形的斑块）
 	// 平滑坡度已近岩坡、或已到高山时才让面坡度参与（草坡上全用平滑坡度：泥土 / 岩石的边界不显出格线）
@@ -1749,8 +1775,9 @@ vec3 sgCropLV( float id ) {
 	// 面化只在岩坡、高山（Lanternvale 的地面是平滑的绘制草地；草坡上的三角格会把人工削出的坡折显成长直线）；
 	// 河岸、水下与海边的低地不面化
 	// （只在岩色已明显的地方：草色的山顶上若隐若现的格线很难看）
-	float sgFacetW = sgFacetSz.z * smoothstep( 0.2, 0.6, sgRockW ) * smoothstep( 0.05, 0.55, sgH ) * ( 1.0 - 0.7 * sgSnowW ) * ( 1.0 - sgX.a );
-	vec3 sgN = normalize( mix( sgNs, sgNf, sgFacetW ) );
+	// （第四轮：雪上改用大三角格的面，强度 SG_SNOW_FACET）
+	float sgFacetW = sgFacetSz.z * smoothstep( 0.05, 0.55, sgH ) * ( 1.0 - sgX.a ) * mix( smoothstep( 0.2, 0.6, sgRockW ), SG_SNOW_FACET, sgSnowW );
+	vec3 sgN = normalize( mix( sgNs, normalize( mix( sgNf, sgNc, sgSnowW ) ), sgFacetW ) );
 	float sgNear = 1.0 - smoothstep( sgPaintK.x, sgPaintK.y, sgCamD );
 	float sgBl = ( ( sgPL.r - 0.5 ) * 1.0 + ( sgPM.r - 0.5 ) * 0.55 ) * sgPaintK.w * ( 1.0 - sgSteep );
 	vec3 sgCol = sgTint * ( 1.0 + sgBl * 0.3 );
@@ -1807,8 +1834,29 @@ vec3 sgCropLV( float id ) {
 		sgStone *= 0.9 + 0.2 * mix( texture2D( sgDetB, vSgW.xz * 0.19 ).r, 0.5, sgSteep * 0.7 );
 		sgCol = mix( sgCol, sgStone, sgRockW );
 	}
-	// 雪（权重见上）：背阴处只偏一点淡青灰（不再是白 / 淡紫交替的皱纸）
-	vec3 sgSnow = mix( vec3( 0.95, 0.95, 0.96 ), vec3( 0.86, 0.88, 0.93 ), clamp( sgFid * 0.35 + smoothstep( 0.04, 0.32, sgSlopeF ) * 0.75, 0.0, 1.0 ) );
+	// 雪（权重见上）：平滑的冷白，坡上偏淡青灰（不按面抖动：不再是白 / 淡紫交替的皱纸）；
+	// 底色略冷，午后的暖光下仍是白里带青（Lanternvale skyreach 的雪地），不是桃色
+	// （第四轮：坡上的淡青灰按大三角面的坡度取——每个面一个颜色，不再是柔边的青灰大斑）
+	float sgSlopeSn = mix( sgSlopeS, 1.0 - sgNc.y, 0.8 );
+	vec3 sgSnow = mix( vec3( 0.92, 0.94, 0.98 ), vec3( 0.79, 0.84, 0.93 ), clamp( smoothstep( 0.04, 0.32, sgSlopeSn ) * 0.75 + ( sgPM.g - 0.5 ) * 0.12, 0.0, 1.0 ) );
+	// 第四轮：雪上稀疏的深色石点（风吹露出的岩石，坡上、脊上多些；Lanternvale skyreach 雪地上的小石子）
+	// （绘制纹理的野花点层：只在有雪处取样，LOD 按屏幕上的格距显式给出。两级：策略视角用约 14 单位一张（点半径 0.07–0.13），
+	// 近景换成三倍细的一级（点在屏幕上大致同样大小：近看是小石子，不是一块块牛斑）；远到点不足两像素时淡出）
+	if ( sgSnowW > 0.01 ) {
+		float upx = sgFpW * sgFacetXf.z * 0.85;                   // 每像素约多少世界单位
+		float kNear = smoothstep( 0.02, 0.013, upx ), kFar = smoothstep( 0.16, 0.1, upx );
+		float sgSpk = 0.0;
+		if ( kNear < 0.999 && kFar > 0.001 ) {
+			vec4 sp = SG_TEXL( sgPaint, sgP * 0.07 + vec2( 0.31, 0.77 ), log2( max( upx * 0.07 * 512.0, 1.0 ) ) );
+			sgSpk += smoothstep( 0.55, 0.8, sp.b ) * ( 1.0 - kNear ) * kFar;
+		}
+		if ( kNear > 0.001 ) {
+			vec4 sp = SG_TEXL( sgPaint, sgP * 0.21 + vec2( 0.67, 0.23 ), log2( max( upx * 0.21 * 512.0, 1.0 ) ) );
+			sgSpk += smoothstep( 0.55, 0.8, sp.b ) * kNear;
+		}
+		sgSpk *= ( 0.3 + 0.7 * smoothstep( 0.06, 0.28, sgSlopeS ) ) * step( 0.45, sgPL.r );
+		sgSnow = mix( sgSnow, vec3( 0.50, 0.53, 0.60 ), 0.5 * sgSpk );
+	}
 	sgCol = mix( sgCol, sgSnow, sgSnowW );
 	// 水下的沙底
 	sgCol = mix( sgCol, vec3( 0.8, 0.76, 0.58 ) * ( 0.88 + 0.16 * sgPM.r ), smoothstep( -0.05, -0.7, sgH ) * 0.8 );
@@ -1825,7 +1873,7 @@ vec3 sgCropLV( float id ) {
 		sgCol = mix( sgCol, fc, fw );
 	}
 	// 面的亮度抖动（坡地才有：平地上看不出三角拼块）、向阳的脊亮 / 沟里暗
-	sgCol *= 1.0 + ( sgFid - 0.5 ) * sgFacetSz.w * smoothstep( 0.02, 0.18, sgSlopeF ) * smoothstep( 0.2, 0.6, sgRockW ) * smoothstep( 0.05, 0.55, sgH ) * ( 1.0 - 0.7 * sgSnowW );
+	sgCol *= 1.0 + ( sgFid - 0.5 ) * sgFacetSz.w * smoothstep( 0.02, 0.18, sgSlopeF ) * smoothstep( 0.2, 0.6, sgRockW ) * smoothstep( 0.05, 0.55, sgH ) * ( 1.0 - sgSnowW );
 	sgCol *= 0.86 + 0.28 * clamp( sgAO, 0.0, 1.0 );
 	vec3 n = normalize( ( viewMatrix * vec4( sgN, 0.0 ) ).xyz );
 `;
@@ -1849,6 +1897,10 @@ vec3 sgCropLV( float id ) {
     // 地形不加边缘光（Lanternvale/Terrain 的 rim = 0）
     const rimLine = fs.match(/float rim = pow\([^;]*;/);
     if (rimLine) fs = fs.replace(rimLine[0], 'float rim = 0.0;');
+    // 第三轮：夜色调下的雪原（全图最亮的面）不要变成鲜艳的长春花蓝——按夜色强度把雪的饱和度收掉大半
+    // （Lanternvale 夜里的浅色面是灰青）。第四轮：雪与其他很亮的地面（沙滩、盐碱）都收、改偏灰青；
+    // 放在雾之后（远景的夜雾是深蓝）；夜色调强度 lpGrade.x 在深夜只有约 0.38，按 ×2.6 归一（原来直接乘它，最多只收掉三成）。锚点不在时照旧
+    fs = rep(fs, 'col = mix( col, lpLin( uFlash.rgb ), clamp( uFlash.a, 0.0, 1.0 ) );', 'col = mix( col, lpLin( uFlash.rgb ), clamp( uFlash.a, 0.0, 1.0 ) );\n  if ( lpGrade.x > 0.0 ) col = mix( col, vec3( dot( col, LV_LUMA ) * 1.2 ) * vec3( 0.88, 0.96, 1.04 ), clamp( lpGrade.x * 2.6, 0.0, 1.0 ) * 0.78 * max( sgSnowW, smoothstep( 0.55, 0.75, dot( albedo, LV_LUMA ) ) ) );') || fs;
     _lptSrc = { vs, fs };
     return _lptSrc;
   }

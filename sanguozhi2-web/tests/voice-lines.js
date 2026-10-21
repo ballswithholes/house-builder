@@ -79,7 +79,7 @@ for (const [cul, lg] of Object.entries(VD.CULTURE_LINGUA)) ok(VD.LINGUA[lg], 'cu
 for (const [r, s] of Object.entries(VD.SIGNATURE)) { ok(VD.LINGUA[s.lingua], 'signature lingua unknown ' + r); if (s.lingua !== 'zh') ok(s.zh, 'foreign signature line without Chinese meaning: ' + r); }
 ok(Object.keys(VD.SIGNATURE).length === 42, 'signature lines: ' + Object.keys(VD.SIGNATURE).length + ' (want 42)');
 // 5. packs
-let packStats = '(no voice/manifest.js yet: run the tools/voice-build pipeline)';
+let packStats = '(no voice/manifest.js yet: run the tools/voice-build pipeline)', sessionStats = '';
 if (MF) {
   const failed = MF.failed || [];
   let clips = 0, opus = 0, missingVar = 0;
@@ -120,13 +120,56 @@ if (MF) {
       }
     }
   }
-  // per-session budget (§B10.6): zh pack (player) + up to 4 foreign packs ≤ 1.5 MB raw
-  const zh = (MF.packs['zh-m'] || {}).bytes || 0;
-  const foreign = Object.entries(MF.packs).filter(([k]) => !/^zh-/.test(k)).map(([, e]) => e.bytes).sort((a, b) => b - a).slice(0, 4).reduce((s, x) => s + x, 0);
-  ok(zh + foreign <= 1.5 * 1048576, `per-session download ${(zh + foreign) / 1048576} MB > 1.5 MB`);
+  // per-session budget (§B10.6), with the packs the runtime really loads: SG.Voice preloads / says with each SPEAKER's pack
+  // (_packsFor = what preload() and say() pick), so the player's lingua costs the packs its generals use (zh: both base voices),
+  // plus up to RULES.sessionForeignPacks foreign packs; raw pack bytes as the spec's estimates count them, the base64 script
+  // bytes (what the browser downloads) reported beside them
+  const R = VD.RULES;
+  const roster = [];
+  { const seen = new Set(); for (const sc of ['classic', 'world']) for (const l of SG.Scenarios[sc].Generals) { const n = l.split('|')[0]; if (!seen.has(n)) { seen.add(n); roster.push(n); } } }
+  const used = {};          // lingua → Set of packs its speakers use
+  for (const n of roster) {
+    const lg = SG.Voice.usableLingua(SG.Voice.profile(n).lingua) || SG.Voice.profile(n).lingua;
+    for (const p of SG.Voice._packsFor(n, true)) (used[lg] = used[lg] || new Set()).add(p);
+  }
+  const raw = p => (MF.packs[p] || {}).bytes || 0, js = p => (MF.packs[p] || {}).jsBytes || Math.ceil(raw(p) * 4 / 3);
+  const own = [...(used.zh || [])];
+  ok(own.includes('zh-m') && own.includes('zh-f'), 'the zh speakers use ' + own.join(' ') + ' (want both base voices)');
+  // the speaker preload loads ONE pack per speaker (a lingua id still loads all of them)
+  ok(SG.Voice._packsFor('曹操').join(' ') === 'zh-m', '_packsFor(曹操) = ' + SG.Voice._packsFor('曹操').join(' ') + ' (want zh-m only)');
+  ok(SG.Voice._packsFor('zh').length === 2, '_packsFor(\'zh\') = ' + SG.Voice._packsFor('zh').join(' '));
+  const foreignPacks = [...new Set(Object.entries(used).filter(([lg]) => lg !== 'zh').flatMap(([, ps]) => [...ps]))].sort((a, b) => raw(b) - raw(a));
+  const worst = foreignPacks.slice(0, R.sessionForeignPacks || 4);
+  const sesRaw = own.concat(worst).reduce((s, p) => s + raw(p), 0), sesJs = own.concat(worst).reduce((s, p) => s + js(p), 0);
+  ok(sesRaw <= (R.sessionBytes || 1.5 * 1048576), `per-session download ${(sesRaw / 1048576).toFixed(2)} MB raw (${own.concat(worst).join(' + ')}) > ${((R.sessionBytes || 1.5 * 1048576) / 1048576).toFixed(2)} MB`);
+  for (const p of foreignPacks) ok(raw(p) <= (R.foreignPackBytes || 0.32 * 1048576), `${p}: ${(raw(p) / 1024).toFixed(0)} KB > the §B10.6 ${((R.foreignPackBytes || 0.32 * 1048576) / 1024).toFixed(0)} KB per foreign pack`);
+  const soft = foreignPacks.filter(p => raw(p) > (R.foreignPackSoftBytes || 150 * 1024));
+  // the heavier reading: four foreign LINGUAS met with both voices each (e.g. a world game against 卑弥呼's Wa and its men)
+  const perLg = Object.entries(used).filter(([lg]) => lg !== 'zh').map(([lg, ps]) => [lg, [...ps].reduce((s, p) => s + raw(p), 0)]).sort((a, b) => b[1] - a[1]).slice(0, 4);
+  const lgRaw = own.reduce((s, p) => s + raw(p), 0) + perLg.reduce((s, x) => s + x[1], 0);
+  sessionStats = `session (runtime packs): ${own.join(' + ')} + ${worst.join(' + ')} = ${(sesRaw / 1048576).toFixed(2)} MB raw / ${(sesJs / 1048576).toFixed(2)} MB as base64 scripts (budget ${((R.sessionBytes) / 1048576).toFixed(2)} MB raw); ` +
+    `4 foreign linguas with both voices (${perLg.map(x => x[0]).join(' ')}) ${(lgRaw / 1048576).toFixed(2)} MB raw (info); foreign packs over §B7.1's 150 KB (listed, not gated): ${soft.map(p => p + ' ' + (raw(p) / 1024).toFixed(0) + ' KB').join(', ') || 'none'}`;
   ok(opus <= 16 * 1048576, 'voice packs over the 16 MB ceiling');
   packStats = `packs ${Object.keys(MF.packs).length}, clips ${clips} (QA dropped ${(MF.dropped || []).length}, core variants missing ${missingVar}), ${MF.totals ? MF.totals.minutes + ' min, ' : ''}Opus ${(opus / 1048576).toFixed(2)} MB raw` +
-    (MF.totals && MF.totals.mp3Bytes ? `, MP3 fallback ${(MF.totals.mp3Bytes / 1048576).toFixed(2)} MB` : '') + `; worst session zh + 4 foreign ${((zh + foreign) / 1048576).toFixed(2)} MB; failed linguas: ${failed.join(' ') || 'none'}`;
+    (MF.totals && MF.totals.mp3Bytes ? `, MP3 fallback ${(MF.totals.mp3Bytes / 1048576).toFixed(2)} MB` : '') + `; failed linguas: ${failed.join(' ') || 'none'}`;
+}
+// 5b. the shipped QA report (voice/QA.md, written by qa.py): records the licence override and labels every lingua against the
+// §3.3 targets — no lingua whose ASR median misses its target (A ≤ 0.5; zh only with whisper-small ≤ 0.35 or a human listen) says 'ok'
+{
+  const qf = path.join(ROOT, 'voice', 'QA.md');
+  if (MF && ok(fs.existsSync(qf), 'voice/QA.md missing')) {
+    const q = fs.readFileSync(qf, 'utf8');
+    ok(/^## Licences/m.test(q) && /Built with `--allow-nc`: \*\*(yes|no)\*\*/.test(q), 'voice/QA.md has no licence section / --allow-nc line');
+    let rows = 0;
+    for (const m of q.matchAll(/^\| (\w+) \| (\w) \| \d+ \| \d+ \| \d+ \| ([\d.]+|—) \(\d+\) \| (yes|no) \| ([^|]+) \|$/gm)) {
+      rows++;
+      const [, lg, grade, med, , result] = m;
+      if (result.trim() !== 'ok') continue;
+      ok(lg !== 'zh' || /whisper-small/.test(q.split('\n').find(l => l.startsWith('ASR:')) || ''), 'QA.md: zh says ok without whisper-small');
+      ok(grade === 'A' && med !== '—' && +med <= 0.5, `QA.md: ${lg} (grade ${grade}, ASR median ${med}) says ok`);
+    }
+    ok(rows === Object.keys(VD.LINGUA).length, `QA.md lists ${rows} linguas (want ${Object.keys(VD.LINGUA).length})`);
+  }
 }
 // 6. registry
 SG.Voice.init();
@@ -134,5 +177,6 @@ ok(SG.Reg.voiceCues.size() === Object.keys(VD.CUES).length, 'SG.Reg.voiceCues ha
 
 console.log(`cues: ${Object.keys(VD.CUES).length} (${VD.CORE.length} core, ${VD.EXT_IDS.length} start / great in every A lingua); linguas ${Object.keys(VD.LINGUA).length}; spec references ${nRefs}`);
 console.log(packStats);
+if (sessionStats) console.log(sessionStats);
 console.log(fails.length ? 'FAIL\n  ' + fails.slice(0, 40).join('\n  ') + (fails.length > 40 ? `\n  … ${fails.length - 40} more` : '') : 'ALL OK');
 process.exitCode = fails.length ? 1 : 0;

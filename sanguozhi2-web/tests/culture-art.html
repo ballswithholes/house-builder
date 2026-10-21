@@ -46,6 +46,7 @@
      scatter=1                     用 SG.CultureArt.scatter 实例化（战略地图的接法：同模型实例化 + 墨线实例化 + 远近景按块切换 + 灯位）
      inkDist=45                    （scatter）墨线距离带：更远的近景不描墨线（0 = 一律描）；noink=1（逐个模型时）不画墨线
      midDist=45                    （scatter）中景距离：更远的区块用中景模型（去掉垛口、墙缝、灯笼、屋脊饰；缺省 = inkDist，0 = 不用）
+     nocull=1                      （scatter）关掉逐城视锥剔除（缺省开：近景 / 中景区块只画画面里的城；对比三角形数用）
      lod=mid                       （逐个模型时）画中景模型
      nolamps=1                     不给氛围加灯池（看没分到真灯池的城夜里靠自身的窗光 / 地面灯池是什么样子）
      perf=200                      性能模式：200 座随机文化 / 档次的城排成网格（间距 spacing=5），配合 scatter=1 比较绘制次数与帧时 */
@@ -143,7 +144,7 @@
   let SC = null;
   if (SCATTER) {
     const t0 = performance.now();
-    SC = CA.scatter(items, { chunk: +qv('chunk', 30), lodDist: +qv('lodDist', 60), inkDist: +qv('inkDist', 45), midDist: Q.has('midDist') ? +Q.get('midDist') : undefined });
+    SC = CA.scatter(items, { chunk: +qv('chunk', 30), lodDist: +qv('lodDist', 60), inkDist: +qv('inkDist', 45), midDist: Q.has('midDist') ? +Q.get('midDist') : undefined, cull: !Q.has('nocull') });
     ms += performance.now() - t0;
     scene.add(SC.group);
     if (!Q.has('nolamps')) for (const l of SC.lamps) mood.addLamp(l.pos, l);

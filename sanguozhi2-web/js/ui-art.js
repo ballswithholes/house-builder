@@ -137,22 +137,52 @@
     return `<span class="sg-sealmark${opts.round ? ' round' : ''}${opts.yin ? ' yin' : ''}"${opts.size ? ` style="font-size:${opts.size}"` : ''}>${esc(text)}</span>`;
   }
 
+  // ------------------------------------------------------------------ 最小字号（UI-V4 §3.5）--
+  // 采用本套界面的模块（市场 shop-screen.js、官制 title-ui.js）运行时注入自己的 <style>：其中小于 1 rem / em 的字号
+  // 在注入时改成 max(var(--fs-min), …)（手机 13 px、桌面 12.5 px；css/style.css 自己的规则已在源码里这样写）。
+  // 只改这里列出的样式表（单挑、战场、攻击画面的 HUD 不动）；不改它们的源文件。
+  const FLOOR_IDS = ['sg-shop-style', 'sg-office-style'];
+  function floorSheet(el) {
+    if (!el || el._sgFloored || !el.sheet) return 0;
+    el._sgFloored = true;
+    let n = 0;
+    const walk = rules => {
+      for (const r of Array.from(rules || [])) {
+        if (r.cssRules && !r.style) { walk(r.cssRules); continue; }
+        if (!r.style) continue;
+        const v = r.style.getPropertyValue('font-size').trim();
+        const m = /^(\d*\.?\d+)(rem|em)$/.exec(v);
+        if (m && +m[1] < 1) { r.style.setProperty('font-size', 'max(var(--fs-min), ' + v + ')', r.style.getPropertyPriority('font-size')); n++; }
+      }
+    };
+    try { walk(el.sheet.cssRules); } catch (e) { /* 跨源样式表读不到 */ }
+    return n;
+  }
+  function floorInjected() {
+    if (typeof document === 'undefined' || floorInjected._on) return;
+    floorInjected._on = true;
+    const scan = () => { for (const id of FLOOR_IDS) { const el = document.getElementById(id); if (el) UIArt.floored += floorSheet(el); } };
+    scan();
+    try { new MutationObserver(scan).observe(document.head, { childList: true }); } catch (e) { /* 旧浏览器 */ }
+  }
+
   // ------------------------------------------------------------------ 初始化（空闲分片）--
   let promise = null;
   const UIArt = {
     ready: false,
     stats: { ms: 0, slices: 0, bytes: 0, maxSlice: 0, list: [] },
-    rng, lantern, quiver, seal, svgUrl,
+    rng, lantern, quiver, seal, svgUrl, floored: 0, FLOOR_IDS,
     init() {
       if (promise) return promise;
       if (typeof document === 'undefined') { promise = Promise.resolve(false); return promise; }
+      floorInjected();
       const root = document.documentElement.style;
       // 不需要画的小件立即写入
       root.setProperty('--cap-tl', cap(0)); root.setProperty('--cap-tr', cap(90)); root.setProperty('--cap-br', cap(180)); root.setProperty('--cap-bl', cap(270));
       root.setProperty('--brush-line', BRUSH_LINE); root.setProperty('--brush-line-light', BRUSH_LINE_LIGHT); root.setProperty('--brush-under', BRUSH_UNDER);
       root.setProperty('--brush-mask', BRUSH_MASK); root.setProperty('--lock-ico', LOCK_ICO); root.setProperty('--cont-ico', CONT_ICO);
       try { filters(); } catch (e) { /* 无 DOM */ }
-      // 纹理：生成器分片画（每片 ≤ 6 ms），编码用 toBlob（在主线程之外压缩 PNG），blob: 地址写进 CSS 变量
+      // 纹理：生成器分片画（每片画到 4 ms 就停，≤ 8 ms），编码用 toBlob（在主线程之外压缩 PNG），blob: 地址写进 CSS 变量
       const jobs = [['--tx-paper', 256, 256, paperGen], ['--tx-lacquer', 256, 256, lacquerGen], ['--tx-silk', 64, 64, silkGen], ['--tx-patina', 64, 64, patinaGen]];
       const idle = typeof requestIdleCallback === 'function' ? fn => requestIdleCallback(fn, { timeout: 400 }) : fn => setTimeout(fn, 16);
       promise = new Promise(resolve => {
@@ -179,7 +209,7 @@
                 cur = { name: j[0], c, it: j[3](g, j[1], j[2]) };
               }
               if (cur.it.next().done) { encode(cur.name, cur.c); cur = null; }
-              if (now() - t0 > 6) break;
+              if (now() - t0 > 4) break;   // 4 ms 停：最重的一段生成也落在 8 ms 的预算之内
             }
           } catch (e) { cur = null; }
           const dt = now() - t0;

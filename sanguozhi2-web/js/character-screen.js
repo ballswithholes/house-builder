@@ -38,11 +38,23 @@
   // ================================================================ SG.CharSheet ==
   // 总览的派生数字：只调用拥有者（与战斗同一公式）；拥有者没载入的部分不计
   const CharSheet = {
+    // 开战时这名武将的阵型：战斗模块支持「惯用阵型」（SG.BattleModel.PREF_FORMATION）且已选定 → gen.formationPref；
+    // 否则与 battle-model.js 开战时一样按 aiFormation（攻方的打分）选——总览的数字因此与战场一致
+    battleFormation(gen) {
+      const F = SG.Defs && SG.Defs.formations, BM = SG.BattleModel;
+      if (!F || !F.length || !gen) return 0;
+      const ok = i => !!F[i] && (gen.intel | 0) >= (F[i].reqInt | 0) && (gen.war | 0) >= (F[i].reqWar | 0);
+      if (BM && BM.PREF_FORMATION && gen.formationPref != null && ok(gen.formationPref)) return gen.formationPref;
+      try { if (BM && BM.prototype && BM.prototype.aiFormation) return BM.prototype.aiFormation.call({ formationAllowed: (u, i) => ok(i) }, { gen, side: 0 }) | 0; } catch (e) { /* 退回方圆 */ }
+      return 0;
+    },
+    prefSupported() { return !!(SG.BattleModel && SG.BattleModel.PREF_FORMATION); },
     derive(gen) {
       const M = SG.Mods, P = SG.Progress, Gr = SG.Gear && SG.Items && SG.Items.enabled !== false ? SG.Gear : null, T = SG.Titles && SG.Titles.enabled !== false ? SG.Titles : null;
       const out = { atkK: 1, defK: 1, crit: 0.02, critK: 1.5, tacK: 1, duelHp: 100, mob: 0, morale: 0, formation: null, vetK: 1, lines: { atkK: [], defK: [], crit: [], tacK: [], duelHp: [], mob: [] } };
       let pv = null;
-      try { pv = M && M.unitPreview ? M.unitPreview(gen) : null; } catch (e) { pv = null; }
+      const fIdx = CharSheet.battleFormation(gen);
+      try { pv = M && M.unitPreview ? M.unitPreview(gen, { formation: fIdx }) : null; } catch (e) { pv = null; }
       const vk = pv ? pv.vetK : P && P.vetK ? P.vetK(gen) : 1;
       out.vetK = vk;
       if (pv) {
@@ -72,14 +84,17 @@
       if (Gr) {
         try {
           const s = Gr.summary(gen);
-          out.duelHp = 100 + Math.round(s.duel.hp || 0);
-          if (s.duel.hp) out.lines.duelHp.push('装备 +' + Math.round(s.duel.hp));
+          // SG.Gear.summary().duel.hp 已是单挑的总体力（100 + 装备体力，预算截断之后；items.js duelMods）
+          const hp = s.duel && s.duel.hp > 0 ? Math.round(s.duel.hp) : 100;
+          out.duelHp = hp;
+          if (hp !== 100) out.lines.duelHp.push('基础 100', '装备 ' + (hp > 100 ? '+' : '−') + Math.abs(hp - 100));
           out.mob = s.army.mob || 0;
           const mnt = Gr.item(gen, 'mount');
           out.lines.mob.push(mnt ? '骑 ' + (SG.Items.displayName ? SG.Items.displayName(mnt) : mnt.name) : '无马');
         } catch (e) { /* 装备未就绪 */ }
       } else out.lines.mob.push('—');
-      const fm = SG.Defs && SG.Defs.formations ? SG.Defs.formations[gen.formation | 0] : null;
+      const fm = SG.Defs && SG.Defs.formations ? SG.Defs.formations[fIdx] : null;
+      if (!out.formation && fm) out.formation = { index: fIdx, name: fm.name, atk: fm.atk, def: fm.def, crit: fm.crit || 0 };
       if (fm && fm.move) { out.mob += fm.move; out.lines.mob.push(fm.name + ' +' + fm.move); }
       if (!out.lines.duelHp.length) out.lines.duelHp.push('基础 100');
       return out;
@@ -513,6 +528,8 @@
       }
       st.renderTab = renderTab;
       st.renderHead = renderHead;
+      // 第四版 TITLES：官爵页里晋升 / 改任 / 换名号 / 罢免之后，头部的官名随之重绘（title-ui.js 的官爵页发出冒泡的 'sg-office-change'）
+      win.el.addEventListener('sg-office-change', () => { if (!st.win.closed) renderHead(); });
       st.show(gen, null);
       return promise;
     },
@@ -838,8 +855,11 @@
         UI().button(row, '征兵（' + esc(c.name) + '）', () => st.run(() => ss.cmdRecruit(c)), { kind: 'plaque', icon: 'recruit', why: busy });
         UI().button(row, '训练（' + esc(c.name) + '）', () => st.run(() => ss.cmdTrain(c)), { kind: 'plaque', icon: 'train', why: busy });
       }
-      // 惯用阵型（开战时的缺省阵型：gen.formation）
-      sec(R, '惯用阵型', '开战时的缺省阵型');
+      // 阵型：开战时的阵型（与战场一致，CharSheet.battleFormation）。战斗模块支持「惯用阵型」时可选定（再点一次 = 回到自动），
+      // 否则八阵只作说明：开战时按能力自动布阵，战场上可随时变阵
+      const pref = CharSheet.prefSupported();
+      const cur = CharSheet.battleFormation(x);
+      sec(R, pref ? '惯用阵型' : '阵　型', pref ? (x.formationPref != null ? '开战时用此阵 · 再点一次改回自动' : '自动：开战时按能力布阵') : '开战时自动布阵 · 战场上可随时变阵');
       const fg = h('div', 'sg-forms', null, R);
       const F = (SG.Defs && SG.Defs.formations) || [];
       const mine = isMine(x);
@@ -847,13 +867,16 @@
         const lock = (fm.reqInt && x.intel < fm.reqInt) ? '需智 ' + fm.reqInt : (fm.reqWar && x.war < fm.reqWar) ? '需武 ' + fm.reqWar : '';
         const parts = [];
         if (fm.atk !== 1) parts.push('攻 ×' + fm.atk); if (fm.def !== 1) parts.push('防 ×' + fm.def); if (fm.move) parts.push('机动 +' + fm.move);
-        const b = h('button', 'sg-form' + ((x.formation | 0) === i ? ' is-on' : '') + (lock ? ' is-locked' : ''), formGlyph(i) + '<b>' + esc(fm.name) + '</b><small>' + esc(parts.join(' · ')) + (lock ? '<br>' + esc(lock) : '') + '</small>', fg);
+        const on = cur === i;
+        const b = h('button', 'sg-form' + (on ? ' is-on' : '') + (lock ? ' is-locked' : '') + (pref ? '' : ' is-info'), formGlyph(i) + '<b>' + esc(fm.name) + (on ? '<em class="sg-form-cur">开战</em>' : '') + '</b><small>' + esc(parts.join(' · ')) + (lock ? '<br>' + esc(lock) : '') + '</small>', fg);
         b.type = 'button';
-        UI().tip(b, esc(fm.desc || ''));
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+        UI().tip(b, esc(fm.desc || '') + (on ? '<br><span class="sg-muted">开战时的阵型' + (pref && x.formationPref == null ? '（自动）' : '') + '</span>' : ''));
         b.addEventListener('click', () => {
           if (!mine) return;
           if (lock) { UI().deny(b, esc(fm.name + '：' + lock)); return; }
-          x.formation = i; UI().sfx('ui-press-paper');
+          if (!pref) { UI().toast(esc(fm.name) + '：开战时按武将的能力自动布阵，战场上可随时变阵。', { seconds: 2.4, seal: '阵' }); return; }
+          x.formationPref = x.formationPref === i ? null : i; UI().sfx('ui-press-paper');
           st.renderTab();
         });
       });

@@ -192,5 +192,17 @@ section('6 export / import identity, reset(tab), subscriptions, apply', () => {
   ok(typeof R.def('ui.tips').action.run === 'function' && typeof R.def('ui.keymap').action.run === 'function', 'button actions present');
 });
 
+section('7 one-line accessors for the owner modules (shake, AI speed, duel speed, watching, ceremony, flash)', () => {
+  const SG = boot(fakeStorage(), { owners: true });
+  const U = SG.UISettings, R = SG.Settings;
+  eq(U.shakeK(), 1, 'shake: normal → 1'); R.set('cam.shake', 'low'); eq(U.shakeK(), 0.5, 'shake: 减弱 → 0.5'); R.set('cam.shake', 'off'); eq(U.shakeK(), 0, 'shake: 关 → 0');
+  eq(U.aiSpeedK(), 1, 'AI speed: default 快 = the current speed'); R.set('ui.aiSpeed', 'normal'); eq(U.aiSpeedK(), 0.75, '正常 → 0.75'); R.set('ui.aiSpeed', 'vfast'); eq(U.aiSpeedK(), 1.5, '极快 → 1.5');
+  eq(U.duelTimeK(), 1, 'duel speed: 100 %'); R.set('ui.duelSpeed', '85'); eq(U.duelTimeK(), 0.85, '85 %'); R.set('ui.duelSpeed', '70'); eq(U.duelTimeK(), 0.7, '70 %');
+  eq(U.duelTimeK({ tourneyPlayer: true }), 1, 'a tournament match the player fights always runs at 100 % (UI-V4 §7 row 48)');
+  eq(U.duelWatch(), 'highlights', 'duel watching default 精彩片段');
+  eq(U.ceremonyShort(), false, 'ceremony default 完整'); R.set('ui.ceremony', 'short'); eq(U.ceremonyShort(), true, 'ceremony 简');
+  eq(U.noFlash(), false, 'flash default 正常'); R.set('ui.flash', 'none'); eq(U.noFlash(), true, '无闪光');
+});
+
 console.log((fails ? 'FAILED ' + fails : 'ALL OK') + ' — ' + checks + ' checks');
 process.exitCode = fails;

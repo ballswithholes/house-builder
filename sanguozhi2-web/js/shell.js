@@ -18,6 +18,9 @@
    SG.Shell.setNight(v)              --night（0 … 1）
    SG.Shell.occluders() → [元素]     城名避让的遮挡物（顶梁、案头、城池面板、结束本月）
    SG.Shell.playMs()                 本局已游玩的毫秒数（随存档：G.playMs）
+   SG.Shell.fitBeam()                顶梁的溢出次序 fit-1 … fit-8（UI-V4 §5.2 / §15.1；窗口尺寸、字号、内容变化时自动重量）
+   SG.Shell.toggleMute() · muted     M：音乐、音效、人声与朗读一并静音
+   SG.UITest.open(screen, opts) · closeAll() · layoutReport()   版式测试钩子（tests/ui-layout.html；?uitest=1 时记录页面错误）
    类名：.sg-beam .sg-medallion .sg-plaquewrap .sg-cal .sg-quiver .sg-res .sg-beam-acts(.sg-topbar-actions) .sg-lantern .sg-agenda .sg-slip
          .sg-citypanel(.sg-cp-head .sg-cp-ledger .sg-dock(.sg-cmdgrid) .sg-tile) .sg-genrow .sg-endseal .sg-monthfx .sg-aiscroll .sg-dusk
    ========================================================================== */
@@ -137,6 +140,11 @@
       E.endBtn.addEventListener('click', e => { if (this.ss.busy || this.ss.endMonth) { SG.UI.deny(E.endBtn, this.ss.busy ? '指令执行中，请稍候。' : null); return; } if (e.detail > 0) E.endBtn.blur(); this.ss.do(() => this.ss.confirmEnd()); });
       // 让城名避让知道这些遮挡物
       this._installKeys();
+      // 手机「返回」：关掉最上层的窗口；空地图上打开菜单（UI-V4 §6）
+      if (SG.isTouch && SG.UI.installBackGuard) SG.UI.installBackGuard(() => {
+        if (!this.hud || this.hud.style.display === 'none' || (SG.Gfx && SG.Gfx.topScreen && SG.Gfx.topScreen()) || this.ss.busy) return;
+        if (this._city >= 0) this.ss.selectCity(-1); else this.openMenu();
+      });
       this._t0 = performance.now();
       const g = G();
       this._playMs0 = g && g.playMs ? g.playMs : 0;
@@ -147,18 +155,31 @@
       }
       this._built = true;
       this.refresh(g, true);
-      if (!this._fitHooked) { this._fitHooked = true; addEventListener('resize', () => { clearTimeout(this._fitT); this._fitT = setTimeout(() => this.fitBeam(), 120); }); }
+      if (!this._fitHooked) {
+        this._fitHooked = true;
+        const later = () => { clearTimeout(this._fitT); this._fitT = setTimeout(() => { this.fitBeam(); }, 120); };
+        addEventListener('resize', later);
+        // 「界面字号」（设置第 43 行）改变根字号 → 重量顶梁
+        try { if (SG.Settings && SG.Settings.on) SG.Settings.on('ui.textScale', later); } catch (e) { /* 忽略 */ }
+      }
       setTimeout(() => this.fitBeam(), 0);
+      try { if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => this.fitBeam()); } catch (e) { /* 忽略 */ }
       return hud;
     },
-    // 顶梁的溢出次序（UI-V4 §15.1）：内容比梁宽时逐级加 fit-1 … fit-3（只在矮屏或窄屏时量）
+    // 顶梁的溢出次序（UI-V4 §5.2 / §15.1）：内容比梁宽时逐级加 fit-1 … fit-6（任何宽度、任何字号都量；窗口尺寸与「界面字号」改变时重量）
+    FIT: ['fit-1', 'fit-2', 'fit-3', 'fit-4', 'fit-5', 'fit-6', 'fit-7', 'fit-8'],
     fitBeam() {
       const E = this.el, b = E.beam;
-      if (!b) return;
-      const over = () => b.scrollWidth > b.clientWidth + 1 || (E.center && E.center.scrollWidth > E.center.clientWidth + 1);
-      b.classList.remove('fit-1', 'fit-2', 'fit-3');
-      if (innerWidth >= 1100 && !this._short()) return;
-      for (const k of ['fit-1', 'fit-2', 'fit-3']) { if (!over()) break; b.classList.add(k); }
+      if (!b || !b.isConnected) return;
+      const over = () => b.scrollWidth > b.clientWidth + 1 || (E.center && E.center.scrollWidth > E.center.clientWidth + 1) ||
+        (E.acts && E.acts.getBoundingClientRect().right > b.getBoundingClientRect().right - 2);
+      b.classList.remove(...this.FIT);
+      for (const k of this.FIT) { if (!over()) break; b.classList.add(k); }
+      b.dataset.fit = (b.className.match(/fit-\d/g) || []).length;
+    },
+    _fitSoon() {
+      if (this._fitRaf) return;
+      this._fitRaf = requestAnimationFrame(() => { this._fitRaf = 0; this.fitBeam(); });
     },
     occluders() {
       const E = this.el;
@@ -238,7 +259,9 @@
       // ---- 昼夜、案头 ----
       this._applyClock();
       this.agenda(g);
-      if (first || (this._fitKey !== innerWidth + '|' + f.name)) { this._fitKey = innerWidth + '|' + f.name; this.fitBeam(); }
+      // 顶梁内容（计数器位数、年历、令箭数）变了也重量一次（合并到下一帧，量一次版面）
+      const fk = innerWidth + '|' + f.name + '|' + E.cal._key + '|' + qKey + '|' + String(gold).length + String(food).length + '|' + document.documentElement.style.getPropertyValue('--sg-text-k');
+      if (first || this._fitKey !== fk) { this._fitKey = fk; if (first) this.fitBeam(); else this._fitSoon(); }
       this.syncPlayMs();
     },
     _short() { return window.innerHeight < 560; },
@@ -253,7 +276,10 @@
       let inc = 0;
       try { for (const c of mine) inc += SG.Econ && SG.Econ.cityGold ? SG.Econ.cityGold(c).gold : 0; } catch (e) { inc = 0; }
       const rows = mine.slice(0, 8).map(c => esc(c.name) + ' ' + n0(c.gold)).join('　');
-      return '<b>金 ' + n0(mine.reduce((s, c) => s + c.gold, 0)) + '</b>' + (inc ? '　<span class="sg-good">每月约 +' + n0(inc) + '</span>' : '') + '<br>' + rows + (mine.length > 8 ? ' …' : '');
+      const b = this.el.beam;
+      const folded = b && b.classList.contains('fit-7') ? '<br><b>粮 ' + n0(mine.reduce((s, c) => s + c.food, 0)) + '</b>' : '';
+      const cityLine = b && b.classList.contains('fit-3') ? '　城 ' + mine.length : '';
+      return '<b>金 ' + n0(mine.reduce((s, c) => s + c.gold, 0)) + '</b>' + (inc ? '　<span class="sg-good">每月约 +' + n0(inc) + '</span>' : '') + cityLine + folded + '<br>' + rows + (mine.length > 8 ? ' …' : '');
     },
     _foodTip() {
       const g = G();
@@ -473,8 +499,11 @@
         '<span class="sg-chip-i" data-tip="兵">' + icon('troops') + '<b class="sg-num">' + n0(troops) + '</b></span><span class="sg-chip-i" data-tip="防">' + icon('shield') + '<b class="sg-num">' + def + '</b></span>';
       const offs = g.officersIn(c).map((x, i) => ({ x, r: g.isRuler(x) ? 1 : 0, i })).sort((a, b) => (b.r - a.r) || (b.x.troops - a.x.troops) || (a.i - b.i)).map(o => o.x);
       const free = mine ? g.freeFoundIn(c.id) : [];
+      // 第四版 TITLES §9.1：君主坐镇、由文官代理时的「主政：荀彧（尚书令）」
+      let adm = '';
+      try { adm = SG.TitleUI && SG.TitleUI.adminLine ? SG.TitleUI.adminLine(c) : ''; } catch (e) { adm = ''; }
       L.innerHTML = '<div class="sg-dv">' + dev + '</div><div class="sg-chips">' + chips + '</div>' +
-        '<div class="sg-gh">武将 ' + offs.length + (free.length ? '<span class="sg-gh-free">在野 ' + free.length + '</span>' : '') + '<i class="sg-brushline"></i><small>兵 / 训</small></div><div class="sg-gl"></div>';
+        '<div class="sg-gh">武将 ' + offs.length + (free.length ? '<span class="sg-gh-free">在野 ' + free.length + '</span>' : '') + (adm ? '<span class="sg-gh-free sg-cp-admin">' + adm + '</span>' : '') + '<i class="sg-brushline"></i><small>兵 / 训</small></div><div class="sg-gl"></div>';
       // 金粮兵防的说明
       const tips = { 金: () => '<b>金 ' + n0(c.gold) + '</b>' + (SG.Econ && SG.Econ.cityGold ? '<br>每月约 +' + n0(SG.Econ.cityGold(c).gold) : ''), 粮: () => '<b>粮 ' + n0(c.food) + '</b><br>七月秋收', 兵: () => '<b>兵 ' + n0(troops) + '</b><br>城中武将的兵力合计', 防: () => '<b>城防 ' + def + '</b><br>町越大城防越高' };
       L.querySelectorAll('.sg-chip-i').forEach(x => SG.UI.tip(x, tips[x.dataset.tip]));
@@ -564,6 +593,7 @@
             b.style.setProperty('--bd', (-((k * 1.7) % 6)).toFixed(2) + 's');
             b.dataset.cmd = name;
             b._ic = ic; b._tok = !!tok;
+            h('i', 'sg-tile-glow', null, b).setAttribute('aria-hidden', 'true');
             b.addEventListener('pointerdown', ev => { if (ev.button === 0 || ev.button === undefined) { this.lastTile = b; this._pressSound(b); } });
             SG.UI.tip(b, () => '<b>' + name + '</b>' + (hot && !SG.isTouch ? '　<span class="sg-muted">' + hot + '</span>' : '') + '<br>' + (b._why ? b._why : CMD_DESC[name] || ''));
             D._tiles.set(name, b);
@@ -587,6 +617,13 @@
         const hint = !why && this.ss._hint && this.ss._hint.name === name && performance.now() < this.ss._hint.until;
         b.classList.toggle('sg-cmd-hint', !!hint);
       }
+      // 呼吸的指令印至多 6 格（每行先挑第一格可用的，再按顺序补满）：整屏环境动画 ≤ 12（UI-V4 §5.8 / §13.4）
+      const avail = [];
+      for (const [name, b] of D._tiles) if (!b._why && !(b._tok && noTok) && !b.classList.contains('primary-tile')) avail.push(b);
+      const pick = new Set();
+      for (let r = 0; r < DOCK.length; r++) { const b = avail.find(x => DOCK[r][2].some(c => c[0] === x.dataset.cmd)); if (b) pick.add(b); }
+      for (const b of avail) { if (pick.size >= 6) break; pick.add(b); }
+      for (const [, b] of D._tiles) b.classList.toggle('is-breath', pick.has(b));
     },
     _pressSound(b) {
       if (b._why) return;
@@ -698,11 +735,13 @@
       this._keyHooked = true;
       let spaceAt = 0;
       window.addEventListener('keydown', e => {
-        if (!this.hud || this.hud.style.display === 'none' || !this.ss) return;
-        if (SG.Gfx && SG.Gfx.topScreen && SG.Gfx.topScreen()) return;            // 单挑、攻击画面等全屏场景
         const t = e.target;
         if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
         const k = e.key;
+        // M：任何画面（含战斗、单挑、窗口）都可静音 / 取消（UI-V4 §15.3）
+        if ((k === 'm' || k === 'M') && !e.ctrlKey && !e.metaKey && !e.altKey && !e.repeat) { this.toggleMute(); return; }
+        if (!this.hud || this.hud.style.display === 'none' || !this.ss) return;
+        if (SG.Gfx && SG.Gfx.topScreen && SG.Gfx.topScreen()) return;            // 单挑、攻击画面等全屏场景
         // Ctrl / ⌘ + S：快速记录（任何时候都拦住浏览器的「保存网页」）
         if ((e.ctrlKey || e.metaKey) && (k === 's' || k === 'S')) {
           e.preventDefault();
@@ -710,7 +749,6 @@
           return;
         }
         if (e.ctrlKey || e.metaKey || e.altKey) return;
-        if (k === 'm' || k === 'M') { this.toggleMute(); return; }
         if (SG.UI.anyModal() || this.ss.busy) return;
         const up = k.length === 1 ? k.toUpperCase() : k;
         if (up === 'G') { e.preventDefault(); this.openGenerals(); return; }
@@ -723,6 +761,9 @@
           if (this._city >= 0) this.ss.selectCity(-1); else this.openMenu();
           return;
         }
+        // Enter / 长按 Space = 结束本月，只在「空地图」上：焦点在按钮、指令印、案头纸签、武将行上时交给它自己（按下它）
+        const onCtl = t && t !== document.body && t !== document.documentElement && t.closest && t.closest('button, a, input, select, [role="button"], [role="tab"], [tabindex]');
+        if ((k === 'Enter' || k === ' ') && onCtl) return;
         if (k === 'Enter') { e.preventDefault(); this.ss.do(() => this.ss.confirmEnd()); return; }
         if (k === ' ' && !e.repeat) { spaceAt = performance.now(); return; }
         if (k === ' ' && e.repeat && spaceAt && performance.now() - spaceAt > 400) { spaceAt = 0; this.ss.do(() => this.ss.confirmEnd()); return; }
@@ -736,60 +777,195 @@
       });
       window.addEventListener('keyup', e => { if (e.key === ' ') spaceAt = 0; });
     },
+    // M：全部静音 / 取消（音乐、音效、人声与朗读；不改设置里的音量）
     toggleMute() {
       const S = SG.Sfx;
       if (!S) return;
       this._muted = !this._muted;
-      if (this._muted) { this._wasMusic = S.musicOn; S.setMusic(false); S.setSound(false); }
-      else { S.setSound(true); if (this._wasMusic !== false) S.setMusic(true); }
+      if (this._muted) { this._wasMusic = S.musicOn; this._wasSound = S.soundOn; S.setMusic(false); S.setSound(false); }
+      else { S.setSound(this._wasSound !== false); if (this._wasMusic !== false) S.setMusic(true); }
+      // 人声总线（audio.js 的 voiceIn / 混响送出）：静音时增益置 0；正在说的台词与系统朗读一并停下
+      try {
+        const bus = S.voiceBus ? S.voiceBus() : null;
+        const k = this._muted ? 0 : 1;
+        if (bus) { const t = bus.ctx.currentTime; for (const n of [bus.input, bus.hall]) if (n && n.gain) { n.gain.cancelScheduledValues(t); n.gain.setValueAtTime(k, t); } }
+        if (this._muted && typeof speechSynthesis !== 'undefined' && speechSynthesis.cancel) speechSynthesis.cancel();
+      } catch (e) { /* 无音频 */ }
       SG.UI.toast(this._muted ? '静音' : '取消静音', { seconds: 1.4, seal: this._muted ? '静' : '声' });
     },
+    get muted() { return !!this._muted; },
   };
 
   // 武林大会、文会等由各自的模块登记案头来源：SG.Shell.agendaSources.push(g => ({ id, pri, cls, icon, title, line, go, open }))
   SG.Shell = Shell;
 
-  // ---- 版式检查（tests/ui-layout.html；UI-V4 §15.1 的溢出次序与 44 px 触控目标）----
-  // SG.UITest.layoutReport() → { w, h, short, problems: [文字], boxes: { 名: [x, y, w, h] } }
-  SG.UITest = {
-    layoutReport() {
-      const W = innerWidth, H = innerHeight, short = document.documentElement.classList.contains('sg-short');
-      const cs = getComputedStyle(document.documentElement);
+  // ================================================================ 测试钩子（UI-V4 §17.3、§19.1；tests/ui-layout.html）==
+  // SG.UITest.open(screen, opts) → Promise   打开一个画面（见 SCREENS）；opts：{ page, tab, view, gen, wait, noTokens }
+  // SG.UITest.closeAll() → Promise             逐层按 Esc 关掉所有窗口与对话
+  // SG.UITest.layoutReport(opts?) → { w, h, short, insets, fit, problems: [文字], boxes, small, tiny, clipped, errors }
+  //   problems：顶梁 / 案头 / 城池面板 / 结束本月互相覆盖或出安全视口；横向滚动；最上层窗口出安全视口；
+  //   可点部件小于 44 × 44（矮屏）/ 32 × 32（桌面）；字小于 13 px（矮屏）/ 12.5 px（桌面）；单行标签被截断；页面错误
+  // ?uitest=1 时从载入起记下 pageerror / unhandledrejection / console.error（SG.UITest.errors）
+  const UITest = SG.UITest = {
+    errors: [],
+    sleep: ms => new Promise(r => setTimeout(r, ms)),
+    finishAnims() { try { for (const a of document.getAnimations()) { const t = a.effect && a.effect.getTiming ? a.effect.getTiming() : null; if (t && t.iterations !== Infinity) a.finish(); } } catch (e) { /* 忽略 */ } },
+    async closeAll() {
+      for (let i = 0; i < 10 && SG.UI.anyModal(); i++) {
+        if (!SG.UI.escapeTop()) { const p = SG.UI.topModal(); if (p) { const c = p.querySelector('.sg-close'); if (c) c.click(); else break; } }
+        await UITest.sleep(260);
+      }
+      return !SG.UI.anyModal();
+    },
+    ss() { return SG.Game && SG.Game.strategy; },
+    capital() { const g = G(); return g.cities[g.ruler(g.player).city]; },
+    general(name) { const g = G(); const mine = g.generalsOf(g.player).filter(x => !x.dead); return mine.find(x => x.name === (name || '关羽')) || mine.find(x => !g.isRuler(x)) || g.ruler(g.player); },
+    SCREENS: ['strategy', 'city', 'dock', 'agenda', 'month', 'menu', 'settings', 'generals', 'character', 'shop', 'titles', 'tourney'],
+    async open(screen, opts) {
+      opts = opts || {};
+      const ss = UITest.ss(), g = G();
+      if (screen !== 'month') await UITest.closeAll();
+      const go = fn => { try { const r = fn(); if (r && r.catch) r.catch(e => console.error(e)); } catch (e) { console.error(e); } };
+      switch (screen) {
+        case 'strategy': if (ss) ss.selectCity(-1); break;
+        case 'city': if (ss) ss.selectCity(UITest.capital().id); break;
+        case 'dock':
+          if (opts.noTokens && g) { g.tokens = 0; }
+          if (ss) { ss.selectCity(UITest.capital().id); ss.refreshAll(); }
+          break;
+        case 'agenda':
+          if (!UITest._agendaSrc) {
+            UITest._agendaSrc = gg => [
+              { id: 't-tourney', pri: 1, cls: 'hot', icon: 'tourney', title: '武林大会', line: '本月于洛阳平乐观举行 · 选派至多 5 人', go: '选将', open() {} },
+              { id: 't-event', pri: 2, cls: 'warn', icon: 'chronicle', title: '灾异', line: '东郡蝗灾', go: '查看', open() {} },
+              { id: 't-shop', pri: 5, cls: '', icon: 'market', title: '胡商抵达', line: '平原市中来了一位大宛马商', go: '市场', open() {} },
+              { id: 't-build', pri: 6, cls: 'jade', icon: 'build', title: '营建落成', line: '平原 · 市集', go: '查看', open() {} },
+            ];
+            Shell.agendaSources.push(UITest._agendaSrc);
+          }
+          if (ss) { ss.selectCity(-1); ss.refreshAll(); }
+          break;
+        case 'month': go(() => Shell.monthTransition(g)); await UITest.sleep(opts.wait || 1300); return true;
+        case 'menu': go(() => SG.MenuScreen.open(opts.page || 'save')); break;
+        case 'settings': go(() => SG.SettingsScreen.open(opts.tab)); break;
+        case 'generals': go(() => SG.GeneralsScreen.open({})); break;
+        case 'character': go(() => SG.CharacterScreen.open(opts.gen || UITest.general(opts.name), { tab: opts.tab })); break;
+        case 'shop': if (!SG.ShopScreen) return false; go(() => SG.ShopScreen.open({ city: UITest.capital(), tab: opts.tab })); break;
+        case 'titles': if (!SG.TitleUI || !SG.Titles || SG.Titles.enabled === false) return false; go(() => SG.TitleUI.open()); break;
+        case 'tourney': if (!SG.TourneyScreen) return false; go(() => SG.TourneyScreen.preview(opts.view || 'bracket')); break;
+        default: return false;
+      }
+      await UITest.sleep(opts.wait || 1200);
+      UITest.finishAnims();
+      return true;
+    },
+    layoutReport(opts) {
+      opts = opts || {};
+      const W = innerWidth, H = innerHeight, de = document.documentElement, short = de.classList.contains('sg-short');
+      const cs = getComputedStyle(de);
       const insL = parseFloat(cs.getPropertyValue('--sg-sal')) || 0, insR = parseFloat(cs.getPropertyValue('--sg-sar')) || 0;
+      UITest.finishAnims();
       const E = Shell.el || {};
-      // 入场动画（顶梁落下、面板滑入）先跳到终态再量
-      try { for (const a of document.getAnimations()) { const t = a.effect && a.effect.getTiming ? a.effect.getTiming() : null; if (t && t.iterations !== Infinity) a.finish(); } } catch (e) { /* 忽略 */ }
-      const parts = { beam: E.beam, panel: E.panel, dock: E.dock, endseal: E.endBtn, agenda: E.agenda };
-      const boxes = {}, problems = [];
-      const vis = el => !!el && el.offsetParent !== null && getComputedStyle(el).visibility !== 'hidden';
-      for (const k of Object.keys(parts)) {
-        const el = parts[k];
-        if (!vis(el)) continue;
-        const r = el.getBoundingClientRect();
-        if (k === 'agenda' && r.height < 2) continue;
-        boxes[k] = [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)];
-        if (r.left < insL - 1 || r.right > W - insR + 1 || r.top < -1 || r.bottom > H + 1) problems.push(k + ' outside the safe viewport ' + JSON.stringify(boxes[k]));
-      }
-      const hit = (a, b) => a && b && a[0] < b[0] + b[2] && b[0] < a[0] + a[2] && a[1] < b[1] + b[3] && b[1] < a[1] + a[3];
-      for (const [a, b] of [['beam', 'panel'], ['beam', 'endseal'], ['panel', 'endseal'], ['agenda', 'panel'], ['agenda', 'endseal'], ['beam', 'agenda']]) if (hit(boxes[a], boxes[b])) problems.push(a + ' overlaps ' + b);
-      if (document.documentElement.scrollWidth > W + 1) problems.push('horizontal page scroll: ' + document.documentElement.scrollWidth + ' > ' + W);
-      if (E.beam && (E.beam.scrollWidth > E.beam.clientWidth + 1 || (E.center && E.center.scrollWidth > E.center.clientWidth + 1))) problems.push('beam content overflows (' + E.beam.className + ')');
-      const fit = E.beam ? (E.beam.className.match(/fit-\d/g) || []).join(' ') : '';
-      // 触控目标（手机）：顶梁铜钮、指令印、结束本月 ≥ 44 px（指令印 ≥ 48 宽 × 56 高）
-      if (short) {
-        const small = [];
-        for (const b of document.querySelectorAll('.sg-beam .sg-btn, .sg-dock .sg-btn, .sg-cp-head .sg-btn')) {
-          if (!vis(b)) continue;
-          const r = b.getBoundingClientRect();
-          if (r.width < 40 - 0.5 || r.height < 40 - 0.5) small.push((b.dataset.cmd || b.getAttribute('aria-label') || b.textContent.trim()).slice(0, 6) + ' ' + Math.round(r.width) + '×' + Math.round(r.height));
+      const problems = [], boxes = {};
+      const visible = el => {
+        if (!el || !el.isConnected) return false;
+        const st = getComputedStyle(el);
+        if (st.display === 'none' || st.visibility === 'hidden' || +st.opacity === 0) return false;
+        if (el.offsetParent === null && st.position !== 'fixed') return false;
+        return true;
+      };
+      // 祖先的裁剪框（overflow 不是 visible 的）与视口求交：滚出视野的部件不算
+      const clipRect = el => {
+        let r = el.getBoundingClientRect(); let x0 = r.left, y0 = r.top, x1 = r.right, y1 = r.bottom;
+        for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+          const st = getComputedStyle(p);
+          if (st.overflowX !== 'visible' || st.overflowY !== 'visible') { const q = p.getBoundingClientRect(); x0 = Math.max(x0, q.left); y0 = Math.max(y0, q.top); x1 = Math.min(x1, q.right); y1 = Math.min(y1, q.bottom); }
         }
-        if (small.length) problems.push('touch targets under 40 px: ' + small.join(', '));
-        const t = document.querySelector('.sg-dock .sg-btn.k-tile');
-        if (t) { const r = t.getBoundingClientRect(); if (r.width < 48 || r.height < 52) problems.push('dock tile ' + Math.round(r.width) + '×' + Math.round(r.height) + ' < 48×56'); }
+        x0 = Math.max(x0, 0); y0 = Math.max(y0, 0); x1 = Math.min(x1, W); y1 = Math.min(y1, H);
+        return { w: Math.max(0, x1 - x0), h: Math.max(0, y1 - y0), full: r };
+      };
+      // 最上层：窗口 / 对话；没有时看全屏场景（武林大会的对阵、颁奖：.sg-tny-scene）
+      const modal = SG.UI.anyModal() ? SG.UI.topModal() : Array.from(document.querySelectorAll('.sg-tny-scene:not(.is-out)')).pop() || null;
+      const root = modal || document.getElementById('ui') || document.body;
+      // 1 外壳的区块（没有窗口时）
+      if (!modal && Shell.hud && Shell.hud.style.display !== 'none') {
+        const parts = { beam: E.beam, panel: E.panel, dock: E.dock, endseal: E.endBtn, agenda: E.agenda };
+        for (const k of Object.keys(parts)) {
+          const el = parts[k];
+          if (!visible(el)) continue;
+          const r = el.getBoundingClientRect();
+          if (k === 'agenda' && r.height < 2) continue;
+          boxes[k] = [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)];
+          if (r.left < insL - 1 || r.right > W - insR + 1 || r.top < -1 || r.bottom > H + 1) problems.push(k + ' outside the safe viewport ' + JSON.stringify(boxes[k]));
+        }
+        const hit = (a, b) => a && b && a[0] < b[0] + b[2] && b[0] < a[0] + a[2] && a[1] < b[1] + b[3] && b[1] < a[1] + a[3];
+        for (const [a, b] of [['beam', 'panel'], ['beam', 'endseal'], ['panel', 'endseal'], ['agenda', 'panel'], ['agenda', 'endseal'], ['beam', 'agenda']]) if (hit(boxes[a], boxes[b])) problems.push(a + ' overlaps ' + b);
+        if (E.beam && visible(E.beam) && (E.beam.scrollWidth > E.beam.clientWidth + 1 || (E.center && E.center.scrollWidth > E.center.clientWidth + 1))) problems.push('beam content overflows (' + E.beam.className + ')');
+        for (const ts of document.querySelectorAll('.sg-toast')) { if (!visible(ts)) continue; const r = ts.getBoundingClientRect(), tb = [r.left, r.top, r.width, r.height]; for (const k of ['panel', 'endseal', 'beam']) if (hit(tb, boxes[k])) problems.push('toast overlaps ' + k); }
       }
-      // 字不溢出：城名、势力匾
-      for (const sel of ['.sg-plaque', '.sg-cp-name']) { const el = document.querySelector(sel); if (vis(el) && el.scrollWidth > el.clientWidth + 2) problems.push(sel + ' text clipped'); }
-      return { w: W, h: H, short, insets: [insL, insR], fit, problems, boxes };
+      if (modal) {
+        const r = modal.getBoundingClientRect();
+        boxes.window = [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)];
+        if (r.left < insL - 1 || r.right > W - insR + 1 || r.top < -1 || r.bottom > H + 1) problems.push('window outside the safe viewport ' + JSON.stringify(boxes.window));
+      }
+      const scrollW = (document.scrollingElement || de).scrollWidth;
+      if (scrollW > W + 1) problems.push('horizontal page scroll: ' + scrollW + ' > ' + W);
+      // 2 可点部件的大小
+      const minT = short ? 44 : 32;
+      const small = [];
+      const SEL = 'button, [role="button"], [role="tab"], [role="switch"], [role="radio"], a[href], input:not([type="hidden"]), select, .sg-slider';
+      for (const b of root.querySelectorAll(SEL)) {
+        if (!visible(b) || b.closest('.sg-slider') && !b.classList.contains('sg-slider')) continue;
+        if (b.closest('[aria-hidden="true"]') || b.closest('.sg-tip')) continue;
+        if (b.tagName === 'INPUT' && b.closest('.sg-search')) continue;              // 搜索框量外面的纸签
+        const c = clipRect(b);
+        if (c.w * c.h < 0.5 * c.full.width * c.full.height || c.w < 2 || c.h < 2) continue;   // 滚出视野
+        const w = c.full.width, h = c.full.height;
+        if (w < minT - 0.5 || h < minT - 0.5) small.push(((b.getAttribute('aria-label') || b.dataset.cmd || b.dataset.tab || b.textContent || b.className || '').trim().replace(/\s+/g, ' ').slice(0, 10)) + ' ' + Math.round(w) + '×' + Math.round(h));
+      }
+      if (short) { const t = document.querySelector('.sg-dock .sg-btn.k-tile'); if (!modal && visible(t)) { const r = t.getBoundingClientRect(); if (r.width < 56 - 0.5 || r.height < 56 - 0.5) small.push('dock tile ' + Math.round(r.width) + '×' + Math.round(r.height) + ' < 56×56'); } }
+      if (small.length) problems.push(small.length + ' targets < ' + minT + ' px: ' + small.slice(0, 12).join(', '));
+      // 3 字号
+      const minF = short ? 13 : 12.5;
+      const tiny = [];
+      const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => (/\S/.test(n.data) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT) });
+      let n;
+      const seen = new Set();
+      while ((n = tw.nextNode())) {
+        const el = n.parentElement;
+        if (!el || seen.has(el) || el.closest('svg') || el.closest('.sg-tw-hide') || el.closest('.sg-tip')) continue;
+        seen.add(el);
+        if (!visible(el)) continue;
+        const c = clipRect(el);
+        if (c.w < 1 || c.h < 1) continue;
+        const fs = parseFloat(getComputedStyle(el).fontSize);
+        if (fs < minF - 0.05) tiny.push(n.data.trim().slice(0, 8) + ' ' + fs.toFixed(1) + 'px <' + (el.className && el.className.baseVal === undefined ? String(el.className).split(' ')[0] : el.tagName.toLowerCase()) + '>');
+      }
+      if (tiny.length) problems.push(tiny.length + ' text nodes < ' + minF + ' px: ' + tiny.slice(0, 12).join(', '));
+      // 4 单行标签被截断（按钮、页签、木牌、匾、城名、窗口标题）
+      const clipped = [];
+      for (const el of root.querySelectorAll('.sg-btn, .sg-tab, .sg-seg-o, .sg-plaque, .sg-cp-name, .sg-win-title, .sg-tile-lb, .sg-btn-l, .sg-gr-name')) {
+        if (!visible(el)) continue;
+        const st = getComputedStyle(el);
+        if (st.whiteSpace.indexOf('nowrap') < 0 && st.textOverflow !== 'ellipsis') continue;
+        if (st.overflowX === 'visible' && st.textOverflow !== 'ellipsis') continue;
+        if (el.scrollWidth > el.clientWidth + 1) clipped.push((el.textContent || '').trim().slice(0, 10) + ' ' + el.scrollWidth + '>' + el.clientWidth);
+      }
+      if (clipped.length) problems.push(clipped.length + ' clipped labels: ' + clipped.slice(0, 8).join(', '));
+      // 5 页面错误
+      if (UITest.errors.length) problems.push(UITest.errors.length + ' page errors: ' + UITest.errors.slice(0, 3).join(' | '));
+      const fit = E.beam ? (E.beam.className.match(/fit-\d/g) || []).join(' ') : '';
+      return { w: W, h: H, short, insets: [insL, insR], fit, window: modal ? (modal.dataset.win || modal.className.split(' ').slice(0, 3).join(' ')) : null, problems, boxes, small, tiny, clipped, errors: UITest.errors.slice() };
     },
   };
+  // ?uitest=1：从载入起记下页面错误
+  try {
+    if (/[?&]uitest=1\b/.test(location.search)) {
+      const push = m => { if (UITest.errors.length < 50) UITest.errors.push(String(m).slice(0, 300)); };
+      addEventListener('error', e => push('pageerror: ' + (e.message || e)));
+      addEventListener('unhandledrejection', e => push('rejection: ' + (e.reason && e.reason.message ? e.reason.message : e.reason)));
+      const ce = console.error.bind(console);
+      console.error = (...a) => { push('console.error: ' + a.map(x => (x && x.message) || String(x)).join(' ')); ce(...a); };
+    }
+  } catch (e) { /* 忽略 */ }
 })();

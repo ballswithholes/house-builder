@@ -17,9 +17,13 @@
      SG.Voice.profile(gen | 'herald' | 'merchant', lingua?) → { lingua, voice, pack, sex, age, band, temper, ruler, pitchK, rate,
          presence: { f, q, gain }, body, grit, tremolo, pan, space }   纯函数（测试用）
      SG.Voice.linguaOf(gen) / pickLine(gen, cue, opts) → { lingua, cue, variant, text, zh, cry, pack, clipId }（纯函数）
-     SG.Voice.preload(linguas) → Promise     SG.Voice.settings（§B10.4）  SG.Voice.busy  SG.Voice.log（最近 200 条决定）
+     SG.Voice.preload(speakers | linguas[, { battle }]) → Promise（说话人 → 只载他用的那个包；语言编号 → 该语言的全部包）
+     SG.Voice.settings（§B10.4）  SG.Voice.busy  SG.Voice.log（最近 200 条决定）
      SG.Voice.hooks                          把人声接到现有的指令与战斗事件上（SG.Events 'command' / 'month.phase' /
-                                             'faction.succession'，BattleController / BattleView / Clash / DuelGame 的公开方法外包一层）；
+                                             'faction.succession'，BattleController / BattleView / Clash / DuelGame 的公开方法外包一层；
+                                             选君主画面 Game._focusCapital / selectRuler → 试听（rulerPick；退回标题时标题曲回来），
+                                             ShopScreen.reveal → item.*（卡片先关则不说），外交 / 任命 / 官制 → 庙堂曲（council），
+                                             月末消息 → 他国君主的号令（news），离间被识破 → 对方君主的号令）；
                                              各拥有者直接调用 SG.Voice.say 之后可用 SG.Voice.hooks.off(name) 关掉对应的一层
    SG.VoicePacks.add(meta, base64)           语音包脚本调用（包可先于本文件载入：先排队）
    ========================================================================== */
@@ -367,10 +371,31 @@
     loadScript(base + (useMp3 ? e.mp3 : e.file)).then(ok => { if (!ok) { delete loading[lk]; res(false); } else if (packs[id]) res(true); });
     return p;
   }
-  function preload(linguas) {
-    const ids = [];
-    for (const lg of linguas || []) { const u = usableLingua(lg); const L = u && D().LINGUA[u]; if (L) for (const p of L.packs) if (SG.VoiceManifest && SG.VoiceManifest.packs[p]) ids.push(p); }
-    return Promise.all(ids.map(loadPack));
+  // preload(list): a speaker (general / name) → only the pack his voice uses (his base voice; the Gothic battle voice too in a
+  // battle), so a session downloads the m or f pack of a lingua only when someone speaks with it (§B10.6); a lingua id → all its
+  // packs (the old behaviour, kept for callers that name languages)
+  function packsFor(x, battle) {
+    const M = SG.VoiceManifest, out = [];
+    const has = p => !!(p && M && M.packs[p]);
+    if (typeof x === 'string' && D().LINGUA[x]) {
+      const u = usableLingua(x); const L = u && D().LINGUA[u];
+      if (L) for (const p of L.packs) if (has(p)) out.push(p);
+      return out;
+    }
+    const prof = profile(x);
+    if (!prof) return out;
+    const u = usableLingua(prof.lingua);
+    const lg = u || prof.lingua;
+    const main = (u === prof.lingua && has(prof.pack)) ? prof.pack : voicePack(lg, prof, 'ack');
+    if (has(main)) out.push(main);
+    if (battle) { const b = voicePack(lg, prof, 'charge'); if (has(b) && b !== main) out.push(b); }
+    return out;
+  }
+  function preload(list, opts) {
+    const ids = new Set();
+    const battle = !!(opts && opts.battle);
+    for (const x of list || []) { try { for (const p of packsFor(x, battle)) ids.add(p); } catch (e) { /* 忽略 */ } }
+    return Promise.all([...ids].map(loadPack));
   }
   function b64ToBytes(b64) {
     if (typeof atob === 'function') { const s = atob(b64); const u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
@@ -943,7 +968,7 @@
   // These wrap PUBLIC methods (never change arguments, return values or timing; every voice call is fire-and-forget).
   // Each owner can replace a layer by calling SG.Voice.say at the exact beat and then SG.Voice.hooks.off('<name>').
   const Hooks = {
-    on: { commands: true, month: true, succession: true, battle: true, clash: true, duel: true, ui: true, ending: true },
+    on: { commands: true, month: true, succession: true, battle: true, clash: true, duel: true, ui: true, ending: true, rulerPick: true, items: true, council: true, news: true },
     installed: {},
     off(name) { Hooks.on[name] = false; },
     install() {
@@ -957,13 +982,25 @@
         E.on('conquest.prepare', (s) => { try { onPrepare(s); } catch (e) { /* 忽略 */ } });
         E.on('conquest.apply', (s, r) => { if (Hooks.on.battle) onConquest(s, r); });
       }
-      wrapBattle(); wrapClash(); wrapDuel(); wrapEnding();
-      if (!Hooks.installed.retry && typeof document !== 'undefined') { Hooks.installed.retry = true; setTimeout(() => { wrapBattle(); wrapClash(); wrapDuel(); wrapEnding(); }, 1500); }
+      wrapAll();
+      if (!Hooks.installed.retry && typeof document !== 'undefined') { Hooks.installed.retry = true; setTimeout(wrapAll, 1500); }
     },
   };
+  function wrapAll() { wrapBattle(); wrapClash(); wrapDuel(); wrapEnding(); wrapRulerPick(); wrapReveal(); wrapCouncil(); wrapNews(); }
   function playerF() { const g = G(); return g ? g.player : -1; }
   function byId(id) { const g = G(); return g && id !== null && id !== undefined && id >= 0 ? g.generals[id] : null; }
   function rulerOfF(f) { const g = G(); try { return g && f >= 0 ? g.ruler(f) : null; } catch (e) { return null; } }
+  // another ruler's calling card (§A3): his fanfare as an overlay, ducking the music to 0.35; the time is kept so the month-end
+  // news does not play a second fanfare right after a succession's
+  const FANFARE_LEAD = 0.9;       // seconds from a fanfare to the line it announces
+  let lastFanfareAt = -1e9;
+  function fanfareOf(r) {
+    try {
+      if (!r || !r.name || !SG.Sfx || !SG.Sfx.fanfare) return false;
+      lastFanfareAt = now();
+      return SG.Sfx.fanfare(r.name, { duck: 0.35 }) !== 0;
+    } catch (e) { return false; }
+  }
   const CMD_CUE = { recruit: 'cmd.recruit', train: 'cmd.train', move: 'cmd.move', transport: 'cmd.transport', trade: 'cmd.trade' };
   // ---- §B9 signature lines: ruler selection (audio.js previewRuler), a won decisive battle, unification, the first diplomatic meeting ----
   const hasSig = x => { const VD = D(); const n = nameOf(x); return !!(VD && n && VD.SIGNATURE[n]); };
@@ -998,7 +1035,7 @@
         const who = tr || gen;
         const me = g && g.ruler(res.f);
         const op = Object.assign({}, o, { pair: me && tr ? [me, tr] : undefined });
-        try { if (tr && SG.Sfx && SG.Sfx.fanfare) SG.Sfx.fanfare(tr.name, { duck: 0.35 }); } catch (e) { /* 忽略 */ }
+        if (tr) fanfareOf(tr);
         // the first time the player meets a hand-suite ruler in diplomacy he introduces himself with his signature line (§B9)
         const first = tr && hasSig(tr) && firstMeeting(tr);
         setTimeout(() => {
@@ -1007,7 +1044,14 @@
         }, 900);
         return;
       }
-      case 'discord': if (res.ok) say(gen, 'cmd.discord.ok', o); else say(gen, 'miss', o); return;
+      case 'discord': {
+        if (res.ok) { say(gen, 'cmd.discord.ok', o); return; }
+        // §A3: 离间 caught → the target's ruler announces himself (his fanfare as an overlay, duck 0.35) before the line
+        const t = byId(res.target);
+        const tr = t && res.reason !== 'ruler' ? rulerOfF(t.faction) : null;
+        if (tr && tr.faction !== res.f && fanfareOf(tr)) { setTimeout(() => say(gen, 'miss', o), FANFARE_LEAD * 1000); return; }
+        say(gen, 'miss', o); return;
+      }
       case 'persuade': { const t = byId(res.target); if (res.ok) say(t || gen, 'cmd.persuade.yes', o); else say(gen, 'miss', o); return; }
       case 'reward': if (res.ok) say(gen, 'cmd.reward.thanks', o); return;
       case 'appoint': if (res.ok) say(gen, 'cmd.appoint.yes', o); return;
@@ -1032,7 +1076,7 @@
     if (fid === g.player) {
       // the map switches to the heir's suite by itself (audio.js follows the player's current ruler); his fanfare and line now
       try { if (SG.Sfx && SG.Sfx.suite && SG.Sfx.setSuite) SG.Sfx.setSuite(null); } catch (e) { /* 忽略 */ }
-      try { if (SG.Sfx && SG.Sfx.fanfare) SG.Sfx.fanfare(heir.name, { duck: 0.35 }); } catch (e) { /* 忽略 */ }
+      fanfareOf(heir);
       setTimeout(() => say(heir, 'news.succession', { scene: 'strategy', player: true }), 1200);
     }
   }
@@ -1098,6 +1142,153 @@
       if (ru) setTimeout(() => say(ru, 'sig', { scene: 'strategy', pri: 3, player: true, force: true }), 2600);
     });
   }
+  // ---- the ruler-selection screen (§A3 / §B9 preview): game.js focuses the camera on a ruler's capital when a row is hovered
+  // (world list) or chosen (both lists, before the confirm card) → his fanfare after a 0.3 s dwell, then his map suite and his
+  // signature line (SG.Sfx.previewRuler); leaving the screen stops a pending preview. game.js (W8) may call SG.Sfx.previewRuler
+  // itself and switch this layer off with SG.Voice.hooks.off('rulerPick').
+  function wrapRulerPick() {
+    const GM = SG.Game;
+    if (!GM || Hooks.installed.rulerPick || typeof GM._focusCapital !== 'function') return;
+    Hooks.installed.rulerPick = true;
+    wrap(GM, '_focusCapital', function (a) {
+      if (!Hooks.on.rulerPick) return;
+      const g = a[0], f = a[1];
+      const ru = g && f && typeof g.ruler === 'function' ? g.ruler(f.id) : null;
+      if (ru && SG.Sfx && SG.Sfx.previewRuler) SG.Sfx.previewRuler(ru);
+    });
+    // false = the player backed out to the title: the title music comes back (stopPreview(true)); true = the game starts and the
+    // strategy screen plays the chosen ruler's map suite itself
+    wrapAfter(GM, 'selectRuler', function (a, started) { if (Hooks.on.rulerPick && SG.Sfx && SG.Sfx.stopPreview) SG.Sfx.stopPreview(started === false); });
+  }
+  // ---- ITEMS reveal (§2; UI-V4 §8: the holder's cry as his portrait slides in): a 神品 → item.epic, a 天宝 → item.legendary,
+  // said by the general who now holds it (else the receiving faction's ruler). The shop task may call SG.Voice.say at its own
+  // beat and switch this layer off with SG.Voice.hooks.off('items').
+  const REVEAL_CUE = { epic: 'item.epic', legendary: 'item.legendary' };
+  const REVEAL_DELAY = 0.9;      // seconds after the card opens (the placeholder card has no portrait beat yet)
+  function wrapReveal() {
+    const SH = SG.ShopScreen;
+    if (!SH || Hooks.installed.reveal || typeof SH.reveal !== 'function' || SH.reveal.__sgVoice) return;
+    Hooks.installed.reveal = true;
+    // the line waits for the card's beat; a card dismissed before that (the reveal's promise settled) cancels it
+    const orig = SH.reveal;
+    const w = function (rv) {
+      let timer = 0;
+      try { timer = revealLine(rv); } catch (e) { timer = 0; }
+      const r = orig.apply(this, arguments);
+      if (timer && r && typeof r.then === 'function') { const cancel = () => clearTimeout(timer); r.then(cancel, cancel); }
+      return r;
+    };
+    w.__sgVoice = true; w.__orig = orig;
+    SH.reveal = w;
+  }
+  function revealLine(rv) {
+    if (!Hooks.on.items || !rv) return 0;
+    const I = SG.Items;
+    const it = I && I.get ? I.get(rv.id) : null;
+    const cue = REVEAL_CUE[(it && it.rarity) || rv.rarity];
+    if (!cue) return 0;
+    const g = G();
+    const who = (rv.uid != null && I && I.genOf ? I.genOf(rv.uid) : null) || (g && rv.to >= 0 ? rulerOfF(rv.to) : null);
+    if (!who) return 0;
+    return setTimeout(() => say(who, cue, { scene: 'strategy', player: true, pri: cue === 'item.legendary' ? 3 : 2 }), REVEAL_DELAY * 1000);
+  }
+  // ---- §A3 council music: 外交, 任命 and the TITLES board / edicts / ceremonies play council@<player ruler> over the map; the map
+  // suite comes back when the last of them closes. Only with the ruler suites (the v3 「地域」 style keeps its map piece). The
+  // owners of those screens may call SG.Sfx.music('council' / 'map') themselves and switch this layer off with
+  // SG.Voice.hooks.off('council').
+  const COUNCIL_DWELL = 0.6;      // seconds a council menu must stay open before the music changes (a quick cancel keeps the map)
+  const COUNCIL_RELEASE = 1.5;    // seconds the council piece holds after the last screen closes (a ceremony or the next menu
+                                  // right after keeps it: no map ↔ council flutter)
+  const council = { depth: 0, timer: 0, dwell: 0, on: false, release: 0 };
+  function councilEnter(dwell) {
+    council.depth++;
+    if (council.release) { clearTimeout(council.release); council.release = 0; }
+    if (council.on || !Hooks.on.council) return;
+    if (council.timer && dwell >= council.dwell) return;
+    if (council.timer) clearTimeout(council.timer);
+    council.dwell = dwell;
+    council.timer = setTimeout(() => {
+      council.timer = 0;
+      const S = SG.Sfx;
+      if (council.depth <= 0 || !S || S.musicKind !== 'map') return;
+      const k = S.resolveMusic ? S.resolveMusic('council') : null;
+      if (!k || !/^suite:/.test(k)) return;
+      council.on = true;
+      S.music('council');
+    }, dwell * 1000);
+  }
+  function councilLeave() {
+    if (council.depth <= 0 || --council.depth > 0) return;
+    if (council.timer) { clearTimeout(council.timer); council.timer = 0; }
+    if (!council.on) return;
+    council.release = setTimeout(() => {
+      council.release = 0;
+      if (council.depth > 0 || !council.on) return;
+      council.on = false;
+      const S = SG.Sfx;
+      if (S && S.musicKind === 'council') S.music('map');
+    }, COUNCIL_RELEASE * 1000);
+  }
+  // wraps a screen that returns (a promise of) its close: entering counts one council scope, settling (or throwing) leaves it
+  function wrapScope(obj, name, dwell) {
+    if (!obj || typeof obj[name] !== 'function' || obj[name].__sgVoice) return false;
+    const orig = obj[name];
+    const leave = () => { try { councilLeave(); } catch (e) { /* 忽略 */ } };
+    const w = function () {
+      try { councilEnter(dwell === undefined ? COUNCIL_DWELL : dwell); } catch (e) { /* 忽略 */ }
+      let r;
+      try { r = orig.apply(this, arguments); } catch (e) { leave(); throw e; }
+      if (r && typeof r.then === 'function') r.then(leave, leave); else leave();
+      return r;
+    };
+    w.__sgVoice = true; w.__orig = orig;
+    obj[name] = w;
+    return true;
+  }
+  function wrapCouncil() {
+    const SS = SG.StrategyScreen, TU = SG.TitleUI;
+    if (SS && SS.prototype && !Hooks.installed.councilSS) {
+      Hooks.installed.councilSS = true;
+      wrapScope(SS.prototype, 'cmdDiplomacy'); wrapScope(SS.prototype, 'cmdAppoint');
+    }
+    if (TU && !Hooks.installed.councilTU) {
+      Hooks.installed.councilTU = true;
+      for (const n of ['open', 'grant', 'manage']) wrapScope(TU, n);
+      for (const n of ['ceremony', 'rankUp', 'flush']) wrapScope(TU, n, 0);    // a ceremony is no menu to cancel: at once
+    }
+  }
+  // ---- §A3 month-end news: an enemy / ally ruler the shown news names announces himself with his fanfare as the batch opens —
+  // at most one per batch (the ruler named first), none right after another fanfare (a succession's)
+  const NEWS_GAP = 6;             // seconds
+  function newsRuler(text) {
+    const g = G(); if (!g || !text) return null;
+    let best = null, at = Infinity;
+    for (const f of g.factions || []) {
+      if (!f || f.id === g.player || f.alive === false) continue;
+      let ru = null;
+      try { ru = g.ruler(f.id); } catch (e) { ru = null; }
+      if (!ru || !ru.name) continue;
+      for (const n of [ru.name, f.name]) {
+        if (!n || n.length < 2) continue;
+        const i = text.indexOf(n);
+        if (i >= 0 && i < at) { at = i; best = ru; }
+      }
+    }
+    return best;
+  }
+  function wrapNews() {
+    const SS = SG.StrategyScreen;
+    if (!SS || !SS.prototype || Hooks.installed.news) return;
+    Hooks.installed.news = true;
+    wrap(SS.prototype, 'sayNews', function (a) {
+      const news = a[0];
+      if (!Hooks.on.news || !news || !news.length || now() - lastFanfareAt < NEWS_GAP) return;
+      let text;
+      try { text = typeof this.pickNews === 'function' ? this.pickNews(news) : news.slice(0, 6).join('\n'); } catch (e) { text = news.join('\n'); }
+      const ru = newsRuler(String(text).replace(/<[^>]*>/g, ''));
+      if (ru) fanfareOf(ru);
+    });
+  }
   // ---- battle (BattleController / BattleView) ----
   function autoOf(bc) { return !!(bc && (bc.autoPlayer || bc.playerSide < 0 || (bc.M && bc.M.side !== bc.playerSide) || (typeof bc.watching === 'function' && bc.watching()))); }
   function unitOpts(bc, u, extra) {
@@ -1158,7 +1349,8 @@
       try {
         const ra = g && g.ruler(s.attacker), rd = s.defender >= 0 && g ? g.ruler(s.defender) : null;
         if (SG.MusicSuites) { if (ra) SG.MusicSuites.ensure(ra.name); if (rd) SG.MusicSuites.ensure(rd.name); }
-        preload([ra, rd].filter(Boolean).map(r => linguaOf(r)));
+        // the packs of the voices that can speak in this battle (both rulers, every officer on both sides), not whole linguas
+        preload([ra, rd].concat(s.atk || [], s.def || []).filter(Boolean), { battle: true });
         warmBattle(s);                // §B11: the clash crowd and the lead officers' cries in idle slices before the first clash
       } catch (e) { /* 忽略 */ }
     }, function (a) {
@@ -1359,6 +1551,7 @@
     _reset() { active.splice(0); lastCue.clear(); lastPri1 = -1e9; lastShell = -1e9; log.splice(0); recent.splice(0); },
     _clearCries() { cries.clear(); cryBytes = 0; cryRenders = 0; warmJobs = 0; warmQ.splice(0); },
     _fnv: fnv,
+    _packsFor: packsFor,
     _subtitle(x, line, dur, opts) { const prof = x === 'herald' || x === 'merchant' ? profile(x) : profile(genOf(x)); return subtitle(prof, line, dur || 1, opts || {}); },
   };
   SG.Voice = Voice;

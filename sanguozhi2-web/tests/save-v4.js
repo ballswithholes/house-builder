@@ -15,6 +15,20 @@ function section(name, fn) { console.log('== ' + name); try { fn(); } catch (e) 
 
 const SG = load({ v4: true });
 const { GameState, StrategyAI, MigrateV4 } = SG;
+// Sections 1–8 test the save core with stand-in modules, so the v4 modules that have landed (items.js, titles.js, combos.js …)
+// are switched off with their own INTEGRATION §1.2 switches (an off system creates no state); section 9 switches them on and
+// round-trips, migrates and late-migrates their real state.
+const MODULE_SWITCHES = ['Items', 'Titles', 'Engage', 'Tourney', 'Combos'];
+function switchModules(on) {
+  const out = [];
+  for (const n of MODULE_SWITCHES) {
+    const o = SG[n];
+    if (o && typeof o === 'object' && 'enabled' in o && typeof o.enabled !== 'function') { o.enabled = !!on; out.push(n); }
+  }
+  return out;
+}
+const LANDED = switchModules(false);
+console.log('  v4 modules present (switched off for sections 1–8): ' + (LANDED.length ? LANDED.join(', ') : 'none'));
 
 // localStorage stand-in with an optional quota (characters)
 function fakeStorage(limit) {
@@ -102,8 +116,11 @@ section('2 migration order (explicit registration in scrambled order), skips, er
   for (const id of ['tourney', 'domestic', 'items', 'combat', 'engage', 'titles']) MigrateV4.unregister(id);
   MigrateV4.errors.length = 0;
   let threw = false; try { MigrateV4.register('nope', {}); } catch (e) { threw = true; } ok(threw, 'unknown module id throws');
-  // auto-discovery of module objects (SG.Items.migrate / init / setup / enabled)
+  // auto-discovery of module objects (SG.Items.migrate / init / setup / enabled); the real module objects, when they have
+  // landed, are put aside for this check and restored after it
   log.length = 0;
+  const realItems = SG.Items, realTourney = SG.Tourney, realOthers = {};
+  for (const n of ['Titles', 'Engage', 'Combos']) { realOthers[n] = SG[n]; delete SG[n]; }
   SG.Items = { enabled: false, migrate: (G, f) => log.push('auto-items:' + f), setup: () => log.push('auto-setup'), saveKeys: ['items'] };
   SG.Tourney = { enabled: () => true, migrate: (G, f) => log.push('auto-tourney:' + f) };
   GameState.fromJSON(JSON.stringify(d3));
@@ -112,6 +129,9 @@ section('2 migration order (explicit registration in scrambled order), skips, er
   game('liubei', 5, 0);
   eq(log.join(), 'auto-setup,auto-tourney:0', 'discovered init: setup() for ITEMS, migrate(G, 0) default for TOURNAMENT');
   delete SG.Items; delete SG.Tourney;
+  if (realItems) SG.Items = realItems;
+  if (realTourney) SG.Tourney = realTourney;
+  for (const n of Object.keys(realOthers)) if (realOthers[n]) SG[n] = realOthers[n];
 });
 
 // ------------------------------------------------------------------------------------------------- 3 --
@@ -258,6 +278,71 @@ section('8 v4 save without a module state: migrate(G, 4) before load, g.systemsA
   GameState.fromJSON(JSON.stringify(d3));
   eq(log.filter(x => x[0] === 'm' || x[0] === 'i').join(), 'm:items:3,i:titles,m:tourney:3:true', 'v3 save: migrate(G, 3) (init for a module without migrate)');
   for (const id of ['tourney', 'items', 'titles', 'engage', 'combat']) MigrateV4.unregister(id);
+});
+
+// ------------------------------------------------------------------------------------------------- 9 --
+// The landed modules' REAL state (items.js G.items / gen.gear / city.shop, titles.js gen.office / G.officeSeq, combos.js
+// G.combos …) through the save core: v4 round trip (and the same game afterwards), a v3 save migrated in the §6.2 order,
+// a v4 save written while they were off (late migrate, g.systemsAdded), and a switched-off module's state surviving load + save.
+section('9 landed modules switched on: v4 round trip, v3 migration order, v4 save without their state, off keeps state', () => {
+  if (!LANDED.length) { ok(true, 'no v4 module has landed yet (skipped)'); return; }
+  const KEY = { Items: 'items', Titles: 'officeSeq', Combos: 'combos', Engage: 'engage', Tourney: 'tourney' };
+  const ID = { Items: 'items', Titles: 'titles', Engage: 'engage', Tourney: 'tourney', Combos: 'combat' };
+  const eager = LANDED.filter(n => n !== 'Combos');           // G.combos is lazy (created on the first combo seen)
+  const run = (g, months, seed) => { SG.G = g; SG.Random.seed(seed); for (let m = 0; m < months; m++) { StrategyAI.runAI([]); StrategyAI.endMonth(); } return JSON.stringify(g); };
+  // a v4-state-less save, written with every module off (what the phase-A/B game wrote before the modules landed)
+  const gOff = game('liubei', 31, 3);
+  const textOff = JSON.stringify(gOff);
+  switchModules(true);
+  try {
+    // (a) new game with the modules on: their state is in the save; fromJSON → JSON is the same text; the loaded game plays on
+    //     exactly like the original (load() rebuilds whatever the modules keep outside the save)
+    const g = game('liubei', 32, 4);
+    const t = JSON.stringify(g), d = JSON.parse(t);
+    for (const n of eager) ok(d[KEY[n]] !== undefined, 'on: the save holds G.' + KEY[n] + ' (' + n + ')');
+    if (LANDED.indexOf('Items') >= 0) ok(d.generals.some(x => x.gear && Object.values(x.gear).some(u => u != null)), 'on: generals carry gear (ITEMS starting kits)');
+    const back = GameState.fromJSON(t);
+    eq(JSON.stringify(back), t, 'on: v4 round trip is byte-identical');
+    eq(back.migratedFrom, 0, 'on: not flagged as migrated'); eq(back.systemsAdded.length, 0, 'on: nothing added (all state present)');
+    const a = run(g, 3, 77), b = run(back, 3, 77);
+    eq(a === b, true, 'on: the loaded copy plays the next 3 months exactly like the original (' + a.length + ' chars)');
+    // (b) a v3 save migrates into every landed module, in the INTEGRATION §6.2 order
+    const calls = [];
+    const wraps = [];
+    for (const n of LANDED) {
+      const o = SG[n];
+      for (const fn of ['migrate', 'init', 'setup']) if (typeof o[fn] === 'function') { const f0 = o[fn]; o[fn] = function () { calls.push(ID[n] + '.' + fn); return f0.apply(this, arguments); }; wraps.push([o, fn, f0]); }
+    }
+    try {
+      const d3 = JSON.parse(textOff); d3.version = 3;
+      const m3 = GameState.fromJSON(JSON.stringify(d3));
+      eq(m3.migratedFrom, 3, 'v3: migratedFrom 3');
+      const order = calls.filter(c => /\.migrate$/.test(c)).map(c => c.split('.')[0]);
+      const want = MigrateV4.ORDER.filter(id => order.indexOf(id) >= 0);
+      eq(order.join(), want.join(), 'v3: migrate calls follow ITEMS → TITLES → ENGAGEMENT → TOURNAMENT → COMBAT');
+      ok(LANDED.every(n => order.indexOf(ID[n]) >= 0 || calls.some(c => c.indexOf(ID[n] + '.') === 0)), 'v3: every landed module ran (' + calls.join(' ') + ')');
+      for (const n of eager) ok(m3[KEY[n]] !== undefined, 'v3: G.' + KEY[n] + ' exists after migration');
+      eq(JSON.stringify(m3.systemsAdded), JSON.stringify(MigrateV4.ORDER.filter(id => LANDED.some(n => ID[n] === id))), 'v3: g.systemsAdded lists the migrated modules');
+      const m3t = JSON.stringify(m3);
+      eq(JSON.stringify(GameState.fromJSON(m3t)), m3t, 'v3 → v4: the migrated game round-trips');
+      // (c) a version-4 save without the modules' state: late migrate(G, 4) (INTEGRATION §6.2), listed once in systemsAdded
+      calls.length = 0;
+      const late = GameState.fromJSON(textOff);
+      eq(late.migratedFrom, 0, 'v4 without state: still a version-4 save');
+      eq(JSON.stringify(late.systemsAdded), JSON.stringify(MigrateV4.ORDER.filter(id => eager.some(n => ID[n] === id))), 'v4 without state: systemsAdded = the modules whose state was created now (lazy COMBAT not listed)');
+      for (const n of eager) ok(late[KEY[n]] !== undefined, 'v4 without state: G.' + KEY[n] + ' created');
+      ok(calls.some(c => c === 'items.migrate') || LANDED.indexOf('Items') < 0, 'v4 without state: ITEMS got migrate(G, 4)');
+      const lt = JSON.stringify(late);
+      const again = GameState.fromJSON(lt);
+      eq(again.systemsAdded.length, 0, 'saved again: the next load adds nothing');
+      eq(JSON.stringify(again), lt, 'saved again: round trip');
+    } finally { for (const [o, fn, f0] of wraps) o[fn] = f0; }
+    // (d) a module switched off at load: its state in the save is kept untouched through load + save (INTEGRATION §1.2)
+    switchModules(false);
+    const kept = GameState.fromJSON(t);
+    for (const n of eager) eq(JSON.stringify(JSON.parse(JSON.stringify(kept))[KEY[n]]), JSON.stringify(d[KEY[n]]), 'off at load: G.' + KEY[n] + ' kept as saved');
+    eq(kept.systemsAdded.length, 0, 'off at load: nothing migrated');
+  } finally { switchModules(false); }
 });
 
 console.log(`${checks} checks`);

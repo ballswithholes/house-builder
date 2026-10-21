@@ -63,10 +63,12 @@
      SG.CultureArt.object(size, culture, capital, city?, { lod }) → THREE.Group（LP.mesh + 墨线；userData.lp.lamps 已按 size
          缩放，可直接 SG.LPProps.addLamps(obj, mood)）
      SG.CultureArt.lamps(size, culture, capital, city?) → 灯位数组（按 size 缩放的模型坐标）
-     SG.CultureArt.scatter(list, { chunk, lodDist, inkDist, midDist }) → { group, scatter, lamps, update(camera) }
+     SG.CultureArt.scatter(list, { chunk, lodDist, inkDist, midDist, cull, inkTaper }) → { group, scatter, lamps, update(camera), setCull(on) }
+         （inkTaper：缺省开，墨线从 0.6 × inkDist 起收细，到 inkDist 只剩一半宽；false = 恒宽）
          战略地图的推荐接法：list = [{ x, y, z（three 坐标）, yaw（弧度）, size, culture, capital, city }]；同一模型键的城
          实例化（LP.Scatter：墨线也实例化），按块切换近景（< midDist，墨线在 inkDist 以内）/ 中景 / 远景（> lodDist）；
-         lamps 为世界坐标的灯位（给 SG.Gfx.addLamp / mood.addLamp）
+         近景 / 中景区块每帧逐城做视锥剔除（cull，缺省开：只画画面里的城，实例矩阵按可见重排、实例数 = 可见数；
+         update(camera) 每帧在相机定好之后、渲染之前调用）；lamps 为世界坐标的灯位（给 SG.Gfx.addLamp / mood.addLamp）
      SG.CultureArt.modelKey(culture, city?, capital?) / tierOf(size, capital, city?) / variantOf(city) / U（每个 size 单位的米数）
      SG.CultureArt.clearCache()                     释放全部缓存的几何体（model / object / scatter 给出的几何体都在其中，勿自行 dispose）
    测试页：tests/culture-art.html（全部文化 × 普通 / 大城 / 都城，近景 / 远景，正午 / 黄昏 / 夜，可旋转；scatter=1 用实例化接法，
@@ -491,6 +493,11 @@
           M.box([0, 0.45, 0], [mw, 0.9, 0.62], P.shade(pal.par, 1.06), 'tfkrl');
           M.pop();
         }
+        // 中景：垛口环换成一圈矮女墙（外壁 + 顶沿，2 × n 面），塔顶仍读作有女墙的平台，不再是削平的矮圆柱
+        if (K.mid) {
+          M.color = pal.par;
+          M.lathe([[rt * 1.03, h - 0.05], [rt * 1.05, h + 0.75], [rt * 0.78, h + 0.75]], n, false, false, false, [P.shade(pal.par, 0.94), P.shade(pal.par, 1.04), P.shade(pal.par, 1.08)], (K.seed * 37) % 360);
+        }
       }
     }
     M.pop();
@@ -670,6 +677,10 @@
   /** 茅草顶：圆锥（圆屋）/ 面包形长顶（长屋）—— 厚厚的草檐一圈深色，顶部亮 */
   /** 草色：把给定的（偏暗的）草色提亮、提纯到 Lanternvale 的金黄草顶（#D7AC62 → #E9C680 一带） */
   const strawC = c => P.hsv(C(c || '#C8A868'), 0, 1.12, 1.16);
+  // 各文化草顶的底色（经 strawC 提亮；近景与远景共用，远近切换不变色）：凯尔特 / 倭 / 南海 = 金黄麦秆（各自的调用里），
+  // 日耳曼 = 褐色芦苇，夷洲 = 偏青黄的竹叶草，南中 = 深褐棕榈叶——相邻的文化在地图上一眼分得开
+  const THATCH = { yi: ['#BAA466', '#AE985E'], nanman: ['#9C7C4A', '#907246'], german: ['#927A54', '#8A7250'] };
+  const thatchMid = k => mix(THATCH[k][0], THATCH[k][1], 0.5);
   /** 圆锥草顶（圆屋、竖穴、望楼）：外凸的锥面、深色滴水檐、亮顶、顶结；o: { color, sides, rot, knot } */
   function thatchCone(K, x, y, z, r, h, o) {
     const M = K.M, straw = strawC(o && o.color), eave = P.shade(P.mix(straw, H('#8E6A3A'), 0.5), 0.8), top = P.shade(straw, 1.1), n = (o && o.sides) || 10;
@@ -2140,7 +2151,8 @@
     mark(K, 'pad');
     const R = 16.8, pts = ringPts(18, R, R * 0.96, 0.17);
     palisade(K, pts, nan ? 2.8 : 2.4, { step: nan ? 1.5 : 1.25, r: nan ? 0.48 : 0.36, skip: (x, z) => southGap(0.2)(x, z) || (x > 10 && z < -10), bamboo: !nan, color: nan ? '#7E5E40' : '#B4A866' });
-    woodGate(K, 0, R * 0.96, 0, 3.8, 3.8, { thatch: nan ? '#A8884E' : '#B8975A' });
+    const TH = THATCH[nan ? 'nanman' : 'yi'];
+    woodGate(K, 0, R * 0.96, 0, 3.8, 3.8, { thatch: TH[1] });
     mark(K, 'walls');
     const M = K.M;
     if (nan) {
@@ -2156,11 +2168,11 @@
     }
     mark(K, 'center');
     const big1 = cap ? [0, -10, 9.5, 6.4] : big ? [0, -10.5, 7.6, 5.2] : null;
-    if (big1) stiltHouse(K, big1[0], big1[1], big1[2], big1[3], { postH: 2.4, wallH: 2.3, thatch: nan ? '#A08048' : '#B8975A', wall: nan ? '#86684A' : '#9E8458', sweep: nan ? 0.6 : 1.5, roofH: big1[3] * 0.8, over: 0.9 });
+    if (big1) stiltHouse(K, big1[0], big1[1], big1[2], big1[3], { postH: 2.4, wallH: 2.3, thatch: TH[nan ? 1 : 0], wall: nan ? '#86684A' : '#9E8458', sweep: nan ? 0.6 : 1.5, roofH: big1[3] * 0.8, over: 0.9 });
     const hs = [[-9.5, 4, 5, 4.0], [9, 4.5, 5, 4.0], [-6, 10.5, 4.6, 3.6], [6.5, 10.5, 4.6, 3.6], [-11, -5.5, 4.6, 3.8], [10.5, -5, 4.6, 3.8]];
     if (!cap && !big) hs.push([-3.5, -10.5, 4.6, 3.6], [4.5, -10, 4.4, 3.6]);
     if (big && !cap) hs.push([-8.5, -11.5, 4.4, 3.6]);
-    hs.forEach(([x, z, w, d], i) => stiltHouse(K, x + (v ? 0.5 : 0), z, w * 0.85, d * 0.9, { postH: 2.0, wallH: 1.8, yaw: ((i + v) % 2 ? 90 : 0) + (i * 37 + v * 13) % 24 - 12, thatch: (i + v) % 2 ? '#B8975A' : '#A8884E', wall: nan ? '#86684A' : '#9E8458', sweep: nan ? 0.5 : 1.1, roofH: d * 0.74, lamp: i < 2 }));
+    hs.forEach(([x, z, w, d], i) => stiltHouse(K, x + (v ? 0.5 : 0), z, w * 0.85, d * 0.9, { postH: 2.0, wallH: 1.8, yaw: ((i + v) % 2 ? 90 : 0) + (i * 37 + v * 13) % 24 - 12, thatch: TH[(i + v) % 2 ? 0 : 1], wall: nan ? '#86684A' : '#9E8458', sweep: nan ? 0.5 : 1.1, roofH: d * 0.74, lamp: i < 2 }));
     mark(K, 'houses');
     const trees = v ? [[-14, 10], [14, 9.5], [-14.5, -9], [0, 14.5]] : [[14, 10.5], [-14, 9], [14.5, -9], [-2, 14.5]];
     trees.forEach(([x, z], i) => (i % 2 || !nan ? palm(K, x, z, 0.62, 0, x * 7 + z) : tree(K, x, z, 0.6, 'fig')));
@@ -2179,14 +2191,14 @@
     glowPool(K, 0, 1.5, 7.5, ger ? '#A8A070' : '#ACA472', { y: hy + 0.06, n: 10 });
     mark(K, 'pad');
     palisade(K, ringPts(22, 14.4, 13.8, 0), 2.4, { y0: hy + 0.9, step: 1.5, r: 0.48, skip: (x, z) => southGap(0.24)(x, z), color: ger ? '#7A5A3E' : '#8A6844' });
-    woodGate(K, 0, 13.8, 0, 3.6, 3.8, { y0: hy + 0.1, thatch: '#A8884E' });
+    woodGate(K, 0, 13.8, 0, 3.6, 3.8, { y0: hy + 0.1, thatch: ger ? THATCH.german[1] : '#A8884E' });
     mark(K, 'walls');
     const y0 = hy;
     if (ger) {
-      if (cap) longhouse(K, 0, -5.5, 15, 6.2, { y0, horns: true, h: 2.8, roofH: 4.6, wall: '#7A5A3E', thatch: '#A08452' });
+      if (cap) longhouse(K, 0, -5.5, 15, 6.2, { y0, horns: true, h: 2.8, roofH: 4.6, wall: '#7A5A3E', thatch: THATCH.german[1] });
       const lh = cap ? [[-7.5, 4.5, 10, 4.4, 20], [7.5, 4, 10, 4.4, -15]] : [[0, -6.5, big ? 13 : 12, 5.0, 0], [-7.5, 3.5, 10, 4.4, 25], [7.5, 3.5, 10, 4.4, -20]];
       if (big && !cap) lh.push([0, 9, 9, 4.0, 0]);
-      lh.forEach(([x, z, len, w, yaw], i) => longhouse(K, x, z, len, w, { y0, yaw: yaw + (v ? 8 : 0), horns: i === 0 && !cap && big, wall: i % 2 ? '#8A6A4A' : '#7E5E42' }));
+      lh.forEach(([x, z, len, w, yaw], i) => longhouse(K, x, z, len, w, { y0, yaw: yaw + (v ? 8 : 0), horns: i === 0 && !cap && big, wall: i % 2 ? '#8A6A4A' : '#7E5E42', thatch: THATCH.german[i % 2] }));
     } else {
       if (cap) roundHut(K, 0, -4.5, 5.6, 2.6, { y0, wall: '#C8B08A', thatch: '#B49A5E', sides: 10, roofH: 6.4 });
       const rh = cap ? [[-8, 4.5, 2.8], [8, 4.5, 2.8], [-8.5, -8, 2.6], [8.5, -7.5, 2.6]] : [[0, -5, big ? 4.0 : 3.6], [-7.5, 3.5, 3.0], [7.5, 3.5, 3.0], [-8, -6.5, 2.7], [8, -6.5, 2.7], [0, 6.5, 2.6]];
@@ -2709,7 +2721,7 @@
     fRing(K, 16.8, 16.1, 2.6, 0.7, nan ? '#7E5E40' : '#B4A866', { n: 12, gap: 0.2, skip: (x, z) => x > 10 && z < -10 });
     const hs = [[-9.5, 4, 5, 4], [9, 4.5, 5, 4], [-6, 10.5, 4.6, 3.6], [6.5, 10.5, 4.6, 3.6], [-11, -5.5, 4.6, 3.8], [10.5, -5, 4.6, 3.8]];
     if (o.cap || o.tier) hs.push([0, -10.5, 8.5, 5.8]); else hs.push([-3.5, -10.5, 4.6, 3.6]);
-    for (const [x, z, w, d] of hs) { fBox(K, x, 1.4, z, w, 2.0, d, nan ? '#9A7A54' : '#B49C6A'); fWin(K, x, 2.4, z + d / 2, 0, 1, 1.5, 1.1); fHouse(K, x, z, w, d, 0.01, '#B49C6A', strawC(nan ? '#A8884E' : '#B8975A'), 'loaf', 3.4); }
+    for (const [x, z, w, d] of hs) { fBox(K, x, 1.4, z, w, 2.0, d, nan ? '#9A7A54' : '#B49C6A'); fWin(K, x, 2.4, z + d / 2, 0, 1, 1.5, 1.1); fHouse(K, x, z, w, d, 0.01, '#B49C6A', strawC(thatchMid(nan ? 'nanman' : 'yi')), 'loaf', 3.4); }
     if (nan) fBox(K, 0, 0, -2, 5.4, 2.4, 5.4, '#9A9284', '#6E8A62');
     fPalm(K, 14, 10.5, 0.62); fPalm(K, -14, 9, 0.62);
   };
@@ -2721,7 +2733,7 @@
     fRing(K, 20.6, 20, 1.1, 2.2, '#86985A', { n: 12, gap: 0.2, bank: true, plain: true });
     fRing(K, 14.4, 13.8, 2.4, 0.6, '#8A6844', { n: 12, gap: 0.24, y0: 3.4 });
     const y = 2.6;
-    if (ger) for (const [x, z, len, w, yaw] of o.cap ? [[0, -5.5, 15, 6.2, 0], [-7.5, 4.5, 10, 4.4, 20], [7.5, 4, 10, 4.4, -15]] : [[0, -6.5, 12, 5, 0], [-7.5, 3.5, 10, 4.4, 25], [7.5, 3.5, 10, 4.4, -20]]) { const M = K.M; M.push().translate(x, 0, z).rotate(0, yaw, 0); fBox(K, 0, y, 0, len, 2.0, w, '#7E5E42'); fWin(K, 0, y + 1.0, w / 2, 0, 1, 1.6, 1.3); fHouse(K, 0, 0, len, w + 1.6, 0.01, '#7E5E42', strawC('#A88C58'), 'loaf', y + 2.0); M.pop(); }
+    if (ger) for (const [x, z, len, w, yaw] of o.cap ? [[0, -5.5, 15, 6.2, 0], [-7.5, 4.5, 10, 4.4, 20], [7.5, 4, 10, 4.4, -15]] : [[0, -6.5, 12, 5, 0], [-7.5, 3.5, 10, 4.4, 25], [7.5, 3.5, 10, 4.4, -20]]) { const M = K.M; M.push().translate(x, 0, z).rotate(0, yaw, 0); fBox(K, 0, y, 0, len, 2.0, w, '#7E5E42'); fWin(K, 0, y + 1.0, w / 2, 0, 1, 1.6, 1.3); fHouse(K, 0, 0, len, w + 1.6, 0.01, '#7E5E42', strawC(thatchMid('german')), 'loaf', y + 2.0); M.pop(); }
     else for (const [x, z, r] of o.cap ? [[0, -4.5, 5.6], [-8, 4.5, 2.8], [8, 4.5, 2.8], [-8.5, -8, 2.6], [8.5, -7.5, 2.6]] : [[0, -5, 3.6], [-7.5, 3.5, 3], [7.5, 3.5, 3], [-8, -6.5, 2.7], [8, -6.5, 2.7], [0, 6.5, 2.6]]) fHouse(K, x, z, r * 2, r * 2, 1.9, '#C4AC86', strawC('#B49A5E'), 'cone', y);
     fTree(K, 16, 12.5, 0.7, 'oak');
   };
@@ -3037,7 +3049,9 @@
     if (!ready()) return { group: new THREE.Group(), scatter: null, lamps: [], update() {} };
     const inkDist = opts.inkDist != null ? +opts.inkDist : 45, lodDist = opts.lodDist || 90;
     const midDist = Math.min(opts.midDist != null ? +opts.midDist : inkDist > 0 ? inkDist : lodDist * 0.6, lodDist * 0.95);
-    const sc = new LP.Scatter({ chunk: opts.chunk || 60, lodDist, name: opts.name || 'Cities' });
+    // 墨线随距离收细（基础库 outlineMaterial 的 distance）：0.6 × inkDist 以内原宽，到切掉墨线的距离时只剩一半——中景不再一下子掉一整圈墨
+    const inkOpts = inkDist > 0 && opts.inkTaper !== false ? { distance: [inkDist * 0.6, inkDist * 1.08, 0.5] } : null;
+    const sc = new LP.Scatter({ chunk: opts.chunk || 60, lodDist, name: opts.name || 'Cities', outline: inkOpts });
     // 中景模型不在这里一次建完（世界地图约 70 份，一次建完会卡一帧 1–2 s）：区块第一次进入中景距离时才建，每帧至多建一份
     const lamps = [], repOf = new Map();
     for (const it of list) {
@@ -3059,6 +3073,49 @@
     const group = sc.build();
     // 墨线部分与不描墨线的部分（中景的贴面较少）都按距离换几何体；c.midGeo：undefined = 还没建，null = 中景与近景相同
     for (const c of sc.chunks) { const rp = repOf.get(c.near.geometry); if (rp) { c.nearGeo = c.near.geometry; c.midRep = rp; } }
+    // 逐城的视锥剔除（opts.cull !== false）：一个区块里同一模型的几座城共用一个 InstancedMesh，three 只按整块的包围球剔除——
+    // 近镜头时画面外的近景城（约 5 千三角形 + 墨线）照样画。近景 / 中景区块每帧按每座城的包围球（含余量）测视锥，
+    // 只把画面里的城排在前面、实例数设成可见的数目（墨线共用同一份实例矩阵）；远景区块不剔（全图时几乎都在画面里）
+    let cullOn = opts.cull !== false;
+    const _fr = new THREE.Frustum(), _pm = new THREE.Matrix4(), _sp = new THREE.Sphere(), _bc = new THREE.Vector3(), _im4 = new THREE.Matrix4();
+    for (const c of sc.chunks) {
+      const im = c.near, n = im.count;
+      if (!(n > 1)) continue;
+      const g = c.nearGeo || im.geometry;
+      if (!g.boundingSphere) g.computeBoundingSphere();
+      const S = new Float32Array(n * 4);
+      for (let i = 0; i < n; i++) {
+        im.getMatrixAt(i, _im4);
+        _bc.copy(g.boundingSphere.center).applyMatrix4(_im4);
+        S[i * 4] = _bc.x; S[i * 4 + 1] = _bc.y; S[i * 4 + 2] = _bc.z; S[i * 4 + 3] = g.boundingSphere.radius * _im4.getMaxScaleOnAxis();
+      }
+      c.cull = { n, S, mats: im.instanceMatrix.array.slice(0, n * 16), cols: im.instanceColor ? im.instanceColor.array.slice(0, n * 3) : null, vis: new Uint8Array(n).fill(1) };
+    }
+    function cullChunk(c, gm, gs) {
+      const k = c.cull, im = c.near, vis = k.vis, margin = im.castShadow ? 2.0 : 1.25;
+      let changed = false, m = 0;
+      for (let i = 0; i < k.n; i++) {
+        _sp.center.set(k.S[i * 4], k.S[i * 4 + 1], k.S[i * 4 + 2]).applyMatrix4(gm);
+        _sp.radius = k.S[i * 4 + 3] * gs * margin + 0.5;
+        const v = _fr.intersectsSphere(_sp) ? 1 : 0;
+        if (v !== vis[i]) { vis[i] = v; changed = true; }
+        m += v;
+      }
+      if (!changed) return;
+      const A = im.instanceMatrix.array, CC = im.instanceColor ? im.instanceColor.array : null;
+      let j = 0;
+      for (let i = 0; i < k.n; i++) {
+        if (!vis[i]) continue;
+        A.set(k.mats.subarray(i * 16, i * 16 + 16), j * 16);
+        if (CC && k.cols) CC.set(k.cols.subarray(i * 3, i * 3 + 3), j * 3);
+        j++;
+      }
+      im.count = m;
+      im.instanceMatrix.needsUpdate = true;
+      if (CC) im.instanceColor.needsUpdate = true;
+      const out = im.userData.outline;
+      if (out) out.count = m;
+    }
     const _c = new THREE.Vector3(), _p = new THREE.Vector3();
     function midOf(c) {
       const rp = c.midRep, md = model(rp.culture, rp.cap, rp.city, { size: rp.size, lod: 'mid' }), g = md && md[rp.part];
@@ -3069,6 +3126,14 @@
       if (!cam || !sc.chunks) return;
       cam.getWorldPosition(_p);
       let builds = 1;
+      if (cullOn && cam.isCamera) {
+        cam.updateWorldMatrix(true, false);
+        _pm.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
+        _fr.setFromProjectionMatrix(_pm);
+        group.updateWorldMatrix(true, false);
+        const gm = group.matrixWorld, gs = gm.getMaxScaleOnAxis();
+        for (const c of sc.chunks) if (c.cull && !c.isFar) cullChunk(c, gm, gs);
+      }
       for (const c of sc.chunks) {
         const out = c.near && c.near.userData.outline;
         if (!c.midRep && !(inkDist > 0 && out)) continue;
@@ -3089,7 +3154,22 @@
         }
       }
     }
-    return { group, scatter: sc, lamps, update };
+    // setCull(false)：关掉逐城剔除并恢复每块的全部实例（对比用）；setCull(true)：下一次 update 起重新剔除
+    function setCull(on) {
+      cullOn = !!on;
+      if (cullOn) return;
+      for (const c of sc.chunks) {
+        const k = c.cull;
+        if (!k) continue;
+        const im = c.near;
+        im.instanceMatrix.array.set(k.mats);
+        if (im.instanceColor && k.cols) { im.instanceColor.array.set(k.cols); im.instanceColor.needsUpdate = true; }
+        im.instanceMatrix.needsUpdate = true;
+        im.count = k.n; if (im.userData.outline) im.userData.outline.count = k.n;
+        k.vis.fill(1);
+      }
+    }
+    return { group, scatter: sc, lamps, update, setCull };
   }
 
   SG.CultureArt = {

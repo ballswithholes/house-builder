@@ -209,7 +209,7 @@
         if (!usable) card.classList.add('is-off');
         h('span', 'sg-slot-tag', esc(c.label), card);
         if (c.empty) {
-          h('div', 'sg-slot-emptyl', c.broken ? '损坏的记录' : '空 · 第' + (c.label === '自动' ? '自动' : c.label) + '份', card);
+          h('div', 'sg-slot-emptyl', c.broken ? '损坏的记录' : (c.label === '自动' ? '空 · 月初自动记录' : '空 · 第' + c.label + '份'), card);
         } else {
           const thumb = h('div', 'sg-slot-thumb', null, card);
           if (e.thumb) thumb.style.backgroundImage = 'url("' + e.thumb + '")';

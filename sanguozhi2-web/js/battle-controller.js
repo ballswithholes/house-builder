@@ -337,7 +337,8 @@
         `<div>武力 ${u.gen.war}　智力 ${u.gen.intel}${this.vetText(u.gen)}</div>` +
         `<div>阵型 <span class="sg-goldc">${f.name}</span>（攻×${f.atk.toFixed(2)} 防×${f.def.toFixed(2)}）${this.critText(u)}</div>` +
         `<div>地形 ${SG.Defs.terrainName(this.M.map[u.x][u.y])}${u.confused > 0 ? '　<span style="color:#c79bff">混乱中</span>' : ''}</div>` +
-        this.specialLine(u);
+        this.specialLine(u) +
+        this.titleLine(u);
       if (SG.Portrait) this.card.prepend(SG.Portrait.el(u.gen, { size: 70, className: u.alive ? '' : 'is-dead' }));
     }
 
@@ -366,6 +367,11 @@
       if (!progressOn() || !gen || typeof SG.Progress.vetK !== 'function') return '';
       const k = SG.Progress.vetK(gen);
       return k > 1.0001 ? `　<span class="sg-goldc" title="老练：攻击、防御与计策威力 +${Math.round((k - 1) * 100)}%（每级 +${Math.round(SG.Progress.VET_PER_LEVEL * 100)}%）">老练 +${Math.round((k - 1) * 100)}%</span>` : '';
+    }
+
+    // 第四版：情报卡的官职一行（TITLES §9.6：小印信、官名、战斗效果，主将的统率加成；官爵未载入或无官职时为空）
+    titleLine(u) {
+      try { return SG.TitleUI && typeof SG.TitleUI.cardLine === 'function' ? SG.TitleUI.cardLine(u, this.M) : ''; } catch (e) { console.error(e); return ''; }
     }
 
     // 情报卡的必杀一行：招式名 + 未施展 / 已施展（「可用」留给行动菜单：此刻是否有目标）

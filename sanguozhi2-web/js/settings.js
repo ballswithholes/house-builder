@@ -16,6 +16,7 @@
    SG.UISettings.get(id) / set(id, v)   = SG.Settings.get / set（未登记时回到 DEFAULTS）
    SG.UISettings.textCps() → 每秒字数（Infinity = 即时）   longPressMs()   reducedMotion() → bool   motionLevel() → 'full'|'lite'|'off'
    SG.UISettings.rowCount() → { defined, visible, table }   tests 用
+   SG.UISettings.shakeK() · aiSpeedK() · duelTimeK({ tourneyPlayer }) · duelWatch() · ceremonyShort() · noFlash()   拥有者模块读设置的一行接口
    ========================================================================== */
 (function () {
   const W = typeof window !== 'undefined' ? window : globalThis;
@@ -227,6 +228,8 @@
 
   function resetTips() {
     try { if (typeof localStorage !== 'undefined') { localStorage.removeItem('sanguozhi2_tip_move'); localStorage.removeItem('sanguozhi2_tips_v4'); } } catch (e) { /* 忽略 */ }
+    // 已载入的画面（strategy-screen.js 的「移动」提示）在内存里也记着「提示过」：一并清掉
+    try { if (typeof SG.onTipsReset === 'function') SG.onTipsReset(); } catch (e) { /* 忽略 */ }
     try { if (SG.UI && SG.UI.toast) SG.UI.toast('提示已重置', 1.6); } catch (e) { /* 忽略 */ }
   }
 
@@ -274,6 +277,7 @@
   }
 
   const CPS = { slow: 20, mid: 40, fast: 80, instant: Infinity };
+  const AI_SPEED = { normal: 0.75, fast: 1, vfast: 1.5 };
   const UISettings = {
     KEY, DEFAULTS, TABLE, TABS, TAB_ZH, TAB_ICON, UI_ROWS, BRIDGES, OWNER_LOADED,
     define, bridge, applyAll, get, set,
@@ -281,6 +285,13 @@
     longPressMs() { return Math.round((+get('ui.longPress') || 0.45) * 1000); },
     reducedMotion() { const rm = get('ui.reduceMotion'); return rm === 'on' || (rm === 'system' && sysReduced()); },
     motionLevel() { return UISettings.reducedMotion() ? 'off' : get('ui.motion'); },
+    // 给拥有者模块的一行接口（INTEGRATION：clash.js / duel-game.js / battle-controller.js / 武林大会 读这些，不必各自解析设置）
+    shakeK() { const v = get('cam.shake'); return v === 'off' ? 0 : v === 'low' ? 0.5 : 1; },                       // 34 画面震动
+    aiSpeedK() { return AI_SPEED[get('ui.aiSpeed')] || 1; },                                                         // 21 电脑回合速度（快 = 现行速度）
+    duelTimeK(opts) { if (opts && opts.tourneyPlayer) return 1; const v = +get('ui.duelSpeed'); return v === 85 ? 0.85 : v === 70 ? 0.7 : 1; },   // 48 单挑速度（武林大会亲自出战不受影响）
+    duelWatch() { return get('ui.duelWatch') || 'highlights'; },                                                     // 22 单挑观战
+    ceremonyShort() { return get('ui.ceremony') === 'short' || UISettings.reducedMotion(); },                     // 20 仪式动画
+    noFlash() { return get('ui.flash') === 'none'; },                                                              // 47 闪光
     // 行数（tests/settings.js）：定义了的、当前可见的、总表
     rowCount() { const R = S(); return { defined: R ? R.all().length : 0, visible: R ? R.rows().length : 0, table: TABLE.length }; },
   };

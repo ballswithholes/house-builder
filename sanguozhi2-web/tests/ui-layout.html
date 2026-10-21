@@ -5,68 +5,126 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>版式检查 · 第四版</title>
 <style>
-  /* UI-V4 §15.1：五种视口（含 844 × 390、左右安全区 47 px 的最坏手机）依次载入游戏（?start=liubei 跳过标题），
-     城池面板打开后调用 SG.UITest.layoutReport()：区块不出安全视口、不互相覆盖、无横向滚动、手机触控目标 ≥ 40 px、指令印 ≥ 48 × 56。
-     一次只开一个框（省 CPU）；结果写在表格与 window.RESULT（tests 用）。?only=2 只跑第 3 个视口。
-     须经 http(s) 打开（同源才能读框内的 SG），例如在仓库根目录 python3 -m http.server 8765 后访问 /tests/ui-layout.html。 */
+  /* UI-V4 §19.1：在 iframe 里按 8 种视口载入游戏（index.html?seed=7&uitest=1，另一个框载入标题画面），经 SG.UITest.open 打开
+     各个画面（标题、战略画面（无城 / 有城 / 指令坞的灰格 / 案头满 / 换月）、菜单（记录 · 读取 · 卷宗 · 操作说明）、设置（六页）、武将录、
+     人物菜单（八页）、市场、官制、武林大会（英雄帖 · 选将 · 签表 · 对阵 · 颁奖 · 英雄榜）），每个画面调用 SG.UITest.layoutReport()：
+       顶梁 / 案头 / 城池面板 / 结束本月 / 提示条互不覆盖、不出安全视口（含左右 47 px 安全区）；最上层窗口不出安全视口；无横向滚动；
+       可点部件 ≥ 44 × 44（矮屏）/ ≥ 32 × 32（桌面）；字 ≥ 13 px（矮屏）/ ≥ 12.5 px（桌面）；单行标签不被截断；无 pageerror / console.error。
+     130 % 字号（桌面）与 115 % 字号（手机）各跑一遍（设置第 43 行，跑完改回 100 %）。
+     一次只开一个框（省 CPU）。结果写在表格与 window.RESULT（{ fails, results }），data-ready="1" 表示跑完。
+     参数：?only=3（只跑第 4 种视口，可写 3,4）· ?screens=strategy,menu（只跑这些画面，名字取 SCREENS 的第一列）· ?keep=1（失败时截一张框内的说明）。
+     须经 http(s) 打开（同源才能读框内的 SG），例如在 sanguozhi2-web 目录 python3 -m http.server 8765 后访问 /tests/ui-layout.html。 */
   body { margin: 0; padding: 12px; background: #2b2420; color: #f3e7cc; font: 13px/1.5 system-ui, sans-serif; }
-  table { border-collapse: collapse; margin-bottom: 12px; }
-  td, th { border: 1px solid #5a4a3a; padding: 4px 8px; vertical-align: top; text-align: left; }
-  .ok { color: #8ddc93; } .bad { color: #ff8f73; }
+  h1 { font-size: 16px; margin: 0 0 8px; }
+  table { border-collapse: collapse; margin-bottom: 12px; width: 100%; }
+  td, th { border: 1px solid #5a4a3a; padding: 3px 6px; vertical-align: top; text-align: left; }
+  td.ok { color: #8ddc93; } td.bad { color: #ff8f73; } td.na { color: #b7a690; }
+  #sum { margin: 8px 0; font-size: 14px; }
   #stage { position: relative; }
   iframe { border: 2px solid #e8b54a; background: #000; display: block; }
 </style>
 </head>
 <body>
-<table id="t"><tr><th>视口</th><th>安全区</th><th>结果</th><th>区块</th></tr></table>
+<h1>版式检查（UI-V4 §19.1）</h1>
+<div id="sum">运行中……</div>
+<table id="t"><tr><th>视口</th><th>画面</th><th>结果</th></tr></table>
 <div id="stage"></div>
 <script>
 'use strict';
 const VIEWPORTS = [
-  { w: 1280, h: 720, ins: 0, name: '桌面 1280×720' },
-  { w: 1600, h: 900, ins: 0, name: '宽屏 1600×900' },
-  { w: 1024, h: 768, ins: 0, name: '平板 1024×768' },
-  { w: 844, h: 390, ins: 0, name: '手机 844×390' },
+  { w: 1920, h: 1080, name: '宽屏 1920×1080' },
+  { w: 1280, h: 720, name: '桌面 1280×720' },
+  { w: 1024, h: 768, name: '平板 1024×768' },
+  { w: 844, h: 390, name: '手机 844×390' },
   { w: 844, h: 390, ins: 47, name: '手机 844×390 · 安全区 47' },
+  { w: 667, h: 375, name: '手机 667×375' },
+  { w: 1280, h: 720, scale: '130', name: '桌面 1280×720 · 字号 130 %' },
+  { w: 844, h: 390, ins: 47, scale: '115', name: '手机 844×390 · 安全区 47 · 字号 115 %' },
+];
+// [名字, SG.UITest.open 的 screen, opts, 之后多等的毫秒]
+const SCREENS = [
+  ['strategy', 'strategy'], ['city', 'city'], ['agenda', 'agenda'], ['month', 'month', {}, 2200],
+  ['menu-save', 'menu', { page: 'save' }], ['menu-load', 'menu', { page: 'load' }], ['menu-dossier', 'menu', { page: 'dossier' }], ['menu-help', 'menu', { page: 'help' }],
+  ['settings-audio', 'settings', { tab: 'audio' }], ['settings-video', 'settings', { tab: 'video' }], ['settings-game', 'settings', { tab: 'game' }],
+  ['settings-camera', 'settings', { tab: 'camera' }], ['settings-controls', 'settings', { tab: 'controls' }], ['settings-access', 'settings', { tab: 'access' }],
+  ['generals', 'generals', {}, 1500],
+  ['char-overview', 'character', { tab: 'overview' }, 1500], ['char-gear', 'character', { tab: 'gear' }], ['char-skills', 'character', { tab: 'skills' }], ['char-tactics', 'character', { tab: 'tactics' }],
+  ['char-army', 'character', { tab: 'army' }], ['char-office', 'character', { tab: 'office' }], ['char-bonds', 'character', { tab: 'bonds' }], ['char-history', 'character', { tab: 'history' }],
+  ['shop', 'shop'], ['titles', 'titles'],
+  ['tourney-announce', 'tourney', { view: 'announce' }], ['tourney-entry', 'tourney', { view: 'entry' }], ['tourney-bracket', 'tourney', { view: 'bracket' }],
+  ['tourney-match', 'tourney', { view: 'match' }], ['tourney-podium', 'tourney', { view: 'podium' }], ['tourney-hall', 'tourney', { view: 'hall' }],
+  ['dock-locked', 'dock', { noTokens: true }],
 ];
 const q = new URLSearchParams(location.search);
-const only = q.has('only') ? +q.get('only') : -1;
-const T = document.getElementById('t'), S = document.getElementById('stage');
+const only = q.has('only') ? q.get('only').split(',').map(Number) : null;
+const pick = q.has('screens') ? q.get('screens').split(',') : null;
+const T = document.getElementById('t'), S = document.getElementById('stage'), SUM = document.getElementById('sum');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-async function run(v) {
+const results = [];
+function row(v, name, r) {
+  const tr = document.createElement('tr');
+  const cls = r.na ? 'na' : r.problems.length ? 'bad' : 'ok';
+  tr.innerHTML = '<td>' + v.name + '</td><td>' + name + (r.window ? ' <small>(' + r.window + ')</small>' : '') + (r.fit ? ' <small>' + r.fit + '</small>' : '') + '</td><td class="' + cls + '">' +
+    (r.na ? '（此画面未载入）' : r.problems.length ? r.problems.map(p => String(p).replace(/</g, '&lt;')).join('<br>') : 'ok') + '</td>';
+  T.appendChild(tr);
+  results.push(Object.assign({ viewport: v.name, screen: name }, r));
+}
+async function frame(v, start) {
   const f = document.createElement('iframe');
   f.width = v.w; f.height = v.h;
-  f.src = '../index.html?seed=7&start=liubei' + (v.ins ? '&insets=' + v.ins : '');
+  f.src = '../index.html?seed=7&uitest=1' + (start ? '&start=liubei' : '') + (v.ins ? '&insets=' + v.ins : '');
   S.innerHTML = ''; S.appendChild(f);
   const t0 = Date.now();
   for (;;) {
     await sleep(500);
     let w = null, ok = false;
-    try { w = f.contentWindow; ok = !!(w && w.SG && w.SG.Shell && w.SG.Shell.el && w.SG.Shell.el.beam && w.SG.G); }
-    catch (e) { return { problems: ['cannot read the frame (' + e.name + '): open this page over http(s), e.g. python3 -m http.server, not file://'], boxes: {} }; }
-    if (ok) {
-      // 打开君主所在城的面板
-      try { const g = w.SG.G, c = g.cities[g.ruler(g.player).city]; w.SG.Game.strategy.selectCity(c.id); } catch (e) { /* 忽略 */ }
-      await sleep(2500);
-      return w.SG.UITest.layoutReport();
+    try { w = f.contentWindow; ok = !!(w && w.SG && w.SG.UITest && (start ? w.SG.Shell && w.SG.Shell.el && w.SG.Shell.el.beam && w.SG.G : w.document.querySelector('.sg-title-menu .sg-btn'))); }
+    catch (e) { return { err: 'cannot read the frame (' + e.name + '): open this page over http(s), e.g. python3 -m http.server, not file://' }; }
+    if (ok) return { w };
+    if (Date.now() - t0 > 240000) return { err: 'timeout: the game did not start', w };
+  }
+}
+async function runViewport(v) {
+  // 标题画面（另一个框）
+  if (!pick || pick.indexOf('title') >= 0) {
+    const fr = await frame(v, false);
+    if (fr.err) row(v, 'title', { problems: [fr.err] });
+    else { await sleep(2500); try { if (v.scale) { fr.w.SG.Settings.set('ui.textScale', v.scale); await sleep(800); } row(v, 'title', fr.w.SG.UITest.layoutReport()); if (v.scale) fr.w.SG.Settings.set('ui.textScale', '100'); } catch (e) { row(v, 'title', { problems: ['threw: ' + e.message] }); } }
+  }
+  const list = SCREENS.filter(s => !pick || pick.indexOf(s[0]) >= 0);
+  if (!list.length) return;
+  const fr = await frame(v, true);
+  if (fr.err) { row(v, 'boot', { problems: [fr.err] }); return; }
+  const w = fr.w;
+  await sleep(1500);
+  try {
+    w.SG.Settings.set('ui.textScale', v.scale || '100');
+    if (v.scale) await sleep(800);
+    for (const [name, screen, opts, extra] of list) {
+      let r;
+      try {
+        const ok = await w.SG.UITest.open(screen, Object.assign({}, opts || {}));
+        if (!ok) { row(v, name, { na: true, problems: [] }); continue; }
+        r = w.SG.UITest.layoutReport();
+      } catch (e) { r = { problems: ['threw: ' + (e && e.message)] }; }
+      row(v, name, r);
+      if (extra) await sleep(extra);
     }
-    if (Date.now() - t0 > 180000) return { problems: ['timeout: game did not start'], boxes: {} };
+    await w.SG.UITest.closeAll();
+  } finally {
+    try { w.SG.Settings.set('ui.textScale', '100'); } catch (e) { /* 框已关 */ }
   }
 }
 (async () => {
-  const results = [];
   for (let i = 0; i < VIEWPORTS.length; i++) {
-    if (only >= 0 && i !== only) continue;
-    const v = VIEWPORTS[i];
-    const r = await run(v);
-    results.push(Object.assign({ name: v.name }, r));
-    const tr = document.createElement('tr');
-    tr.innerHTML = '<td>' + v.name + '</td><td>' + (v.ins || 0) + ' px</td><td class="' + (r.problems.length ? 'bad' : 'ok') + '">' + (r.problems.length ? r.problems.join('<br>') : 'ok') + '</td><td>' +
-      Object.keys(r.boxes || {}).map(k => k + ' ' + r.boxes[k].join(',')).join('<br>') + '</td>';
-    T.appendChild(tr);
+    if (only && only.indexOf(i) < 0) continue;
+    SUM.textContent = '运行中…… ' + VIEWPORTS[i].name;
+    await runViewport(VIEWPORTS[i]);
   }
   S.innerHTML = '';
-  window.RESULT = { fails: results.reduce((s, r) => s + r.problems.length, 0), results };
+  const fails = results.reduce((s, r) => s + (r.na ? 0 : r.problems.length ? 1 : 0), 0);
+  SUM.textContent = (fails ? fails + ' 个画面有问题' : '全部通过') + '（' + results.length + ' 个画面 × 视口）';
+  window.RESULT = { fails, results };
   document.body.dataset.ready = '1';
 })();
 </script>

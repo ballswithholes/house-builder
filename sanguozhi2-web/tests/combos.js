@@ -132,6 +132,24 @@ section('(5) glyphs, knowledge, describe, mastery, save', () => {
   if (SG.MigrateV4) SG.MigrateV4.run(old, 3);
   ok(!old.combos && C.known(old, '关羽') === 0, 'a migrated v3 save has empty combo knowledge (missing = 0)');
   ok(SG.GameState.saveKeys().indexOf('combos') >= 0, 'G.combos is a save key');
+  // §12.2：玩家俘获 / 登用 / 劝诱的武将全知——规则层事件（SG.Events，js/registry.js）上的钩子
+  if (!SG.Events) load('registry.js');
+  C.hookEvents();
+  const pf = G.player, other = G.generals.filter(x => x.faction >= 0 && x.faction !== pf);
+  const [c1, c2, c3, c4] = [other[0], other[1], other[2], other[3]];
+  SG.Events.emit('captive.taken', { attacker: pf, defender: c1.faction }, c1);
+  ok(C.known(G, c1.name) === 255, 'a general the player captures becomes fully known (captive.taken)');
+  SG.Events.emit('captive.taken', { attacker: c2.faction, defender: pf }, c2);
+  ok(C.known(G, c2.name) === 255, 'captured while defending also counts');
+  const third = G.factions.findIndex((f, i) => i !== pf && i !== c3.faction && f && !f.dead);
+  SG.Events.emit('captive.taken', { attacker: third, defender: c3.faction }, c3);
+  ok(C.known(G, c3.name) === 0, 'captives taken by an AI faction teach the player nothing');
+  SG.Events.emit('command', 'hire', { ok: true, f: pf, target: c4.id });
+  ok(C.known(G, c4.name) === 255, 'a general the player recruits (hire / persuade) becomes fully known');
+  const c5 = other[4];
+  SG.Events.emit('command', 'hire', { ok: false, f: pf, target: c5.id });
+  SG.Events.emit('command', 'hire', { ok: true, f: c5.faction, target: c5.id });
+  ok(C.known(G, c5.name) === 0, 'failed or AI recruits do not reveal a string');
 });
 
 console.log(`${checks} checks`);

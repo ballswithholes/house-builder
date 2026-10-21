@@ -52,6 +52,29 @@
     <button id="btnBots">人机强度</button>
     <button id="btnParry">格开示范</button>
   </div>
+  <!-- 第四版（COMBAT-V4 §15.4）：木人模式、脚本玩家、会心开关、招式谱查看与演示 -->
+  <div class="row">
+    <label>对手 <select id="selDummy">
+      <option value="">电脑</option>
+      <option value="dummy">木人·站立</option><option value="dummyBlock">木人·格挡</option><option value="dummyCrouch">木人·蹲挡</option>
+      <option value="dummyKanpa">木人·看破（第 4 式）</option><option value="dummyBackJ">木人·背向连按轻</option>
+      <option value="ai30">对练·武力 30</option><option value="ai60">对练·武力 60</option><option value="ai90">对练·武力 90</option>
+    </select></label>
+    <label>玩家一方 <select id="selBot">
+      <option value="">键盘 / 触摸</option>
+      <option value="combo">连段（踩准整串）</option><option value="delay">连段 + 迟滞</option><option value="breaker">看破者</option>
+      <option value="hbguard">背向格挡</option><option value="mixup">上下二择</option><option value="parry">格开反击</option>
+    </select></label>
+    <label><input type="checkbox" id="chkCrit" checked> 会心</label>
+    <label>招式谱条 <select id="selRibbon"><option value="">按设置</option><option value="on">开</option><option value="off">关</option></select></label>
+  </div>
+  <div class="row">
+    <button id="btnView">招式谱</button>
+    <button id="btnStr">连段演示</button>
+    <button id="btnHB">背向格挡演示</button>
+    <button id="btnLow">蹲挡演示</button>
+    <button id="btnMix">二择演示</button>
+  </div>
   <div id="out"></div>
 </div>
 <script src="../vendor/three.min.js"></script>
@@ -64,8 +87,10 @@
              &fig=0 不载入 js/figure.js（退回旧模型，对照用）
              &mood=golden|dusk|night|16.5 场地的时刻（第四版；缺省按地形：平原黄金时刻、森林 / 丘陵 / 河川午后、城墙黄昏）· &lp=0 第三版场地
              &bots=1 载入后立即跑「人机强度」回归 · &pbot=parry|heavy|guard|spam|masher|jumper 玩家一方交给脚本玩家（真实画面里看格开 / 反击；heavy 多用重击，看满蓄重击的举刀一顿与格开）
-   测试钩子：window.runDuel(opts) → Promise<结果>（opts.bot = 脚本玩家种类）· window.tally(n, a, b) · window.memTest(n) · window.wireTest(opts) ·
-             window.botTally(n) · window.parryDemo(a, b) · window.__log */
+             第四版（COMBAT-V4 §15.4）：&pbot=combo|delay|breaker|hbguard|mixup · &dummy=dummy|dummyBlock|dummyCrouch|dummyKanpa|dummyBackJ|ai30|ai60|ai90 对手（木人模式 / 对练武力）·
+             &crit=0 关掉单挑会心 · &ribbon=on|off 招式谱条 · &hints=0 关掉招式提示 · &view=1 载入后列出挑战者的招式谱与帧数据 · &demo=str|hb|low|mix 载入后放演示
+   测试钩子：window.runDuel(opts) → Promise<结果>（opts.bot = 脚本玩家种类，opts.dummy = 对手木人 / 对练）· window.tally(n, a, b) · window.memTest(n) · window.wireTest(opts) ·
+             window.botTally(n) · window.parryDemo(a, b) · window.viewString(name) · window.demo(kind) · window.__log */
 (function () {
   const Q = new URLSearchParams(location.search);
   const optional = ['../js/data.js', '../js/world-data.js', '../js/model.js', '../js/strategy-ai.js', '../js/battle-model.js', '../js/audio.js', '../js/ui.js', '../js/lowpoly.js', '../js/lp-props.js', '../js/art.js',
@@ -127,21 +152,34 @@
     // 背景：未进入单挑时渲染主场景（只有天空）
     (function idle() { if (!SG.DuelGame.active) SG.Gfx.render(); requestAnimationFrame(idle); })();
 
+    const selDummy = document.getElementById('selDummy'), selBot = document.getElementById('selBot'), chkCrit = document.getElementById('chkCrit'), selRibbon = document.getElementById('selRibbon');
+    if (Q.has('dummy')) selDummy.value = Q.get('dummy');
+    if (Q.has('pbot')) selBot.value = Q.get('pbot');
+    if (Q.get('crit') === '0') chkCrit.checked = false;
+    if (Q.has('ribbon')) selRibbon.value = Q.get('ribbon');
     async function runDuel(o) {
       o = o || {};
-      const A = byName(o.a || selA.value) || gens[0], B = byName(o.b || selB.value) || gens[1];
+      let A = byName(o.a || selA.value) || gens[0], B = byName(o.b || selB.value) || gens[1];
       const side = o.side !== undefined ? String(o.side) : selSide.value;
       SG.DuelGame.auto = side === 'auto' || Q.get('duelauto') === '1' || !!o.auto;
+      SG.DuelGame.critEnabled = o.crit !== undefined ? !!o.crit : chkCrit.checked;     // 会心开关（§15.4）
       const playerSide = side === 'watch' ? null : side === '1' ? 1 : 0;
       const terrain = o.terrain !== undefined ? +o.terrain : +selT.value;
       const sp = SG.Specials && SG.Specials.of ? { a: SG.Specials.of(A), b: SG.Specials.of(B) } : null;
       document.body.classList.add('fighting');
       const t0 = performance.now();
-      // 脚本玩家接管玩家一方（DuelGame.scriptBot，与 tests/duel-bots.js 同一套）
-      const bot = o.bot || Q.get('pbot');
-      const ctrl = bot && playerSide !== null ? [0, 1].map(i => i === playerSide ? f => SG.DuelGame.scriptBot(bot, f.idx) : null) : null;
+      // 脚本玩家接管玩家一方（DuelGame.scriptBot，与 tests/duel-bots.js 同一套）；对手可换成演武木人（§12.4）或指定武力的电脑（对练）
+      // 下拉框里没有的种类（heavy、guard、spam、masher、jumper、dummy、combo……）照样可从网址 &pbot= / &dummy= 指定
+      const bot = o.bot !== undefined ? o.bot : selBot.value || Q.get('pbot') || '';
+      const dummy = o.dummy !== undefined ? o.dummy : selDummy.value || Q.get('dummy') || '';
+      const foe = playerSide === null ? 1 : 1 - playerSide;
+      const aiWar = /^ai(\d+)$/.exec(dummy || '');
+      if (aiWar) { const w = +aiWar[1]; if (foe === 0) A = Object.assign({}, A, { war: w }); else B = Object.assign({}, B, { war: w }); }
+      const dk = dummy && !aiWar ? dummy : '';
+      const ctrl = (bot && playerSide !== null) || dk ? [0, 1].map(i => i === playerSide && bot ? f => SG.DuelGame.scriptBot(bot, f.idx) : i === foe && dk ? f => SG.DuelGame.scriptBot(dk, f.idx) : null) : null;
       const mood = o.mood !== undefined ? o.mood : Q.get('mood') ? (isNaN(+Q.get('mood')) ? Q.get('mood') : +Q.get('mood')) : undefined;
-      const res = await SG.DuelGame.play({ a: { gen: A, side: 0, color: A.color }, b: { gen: B, side: 1, color: B.color }, playerSide, terrain, special: sp, ctrl, mood });
+      const ribbon = o.ribbon || selRibbon.value || undefined, hints = Q.get('hints') === '0' ? false : undefined;
+      const res = await SG.DuelGame.play({ a: { gen: A, side: 0, color: A.color }, b: { gen: B, side: 1, color: B.color }, playerSide, terrain, special: sp, ctrl, mood, ribbon, hints });
       document.body.classList.remove('fighting');
       const w = res.winner === 0 ? A : B;
       const ps = res.stats ? ` 格开 ${res.stats[0].parries}/${res.stats[0].parryTries} : ${res.stats[1].parries}/${res.stats[1].parryTries} 反击 ${res.stats[0].counters}:${res.stats[1].counters}` : '';
@@ -250,6 +288,35 @@
       try { return await runDuel({ a: a || '赵云', b: b || '张辽', side: '0', bot: 'parry' }); } finally { SG.DuelGame.speed = prev; }
     };
     document.getElementById('btnParry').onclick = () => window.parryDemo();
+    // 招式谱查看（§15.4 string viewer）：八式字形、动作变体、每式的帧数据（基准秒）、对同武力的伤害占比、终结技
+    window.viewString = function (name) {
+      const D = SG.DuelGame, C = SG.Combos, g = byName(name || selA.value);
+      if (!g || !C) { log('招式谱：缺 SG.Combos'); return null; }
+      const e = C.of(g), d = C.describe(g, -1, null), seq = e.seq, je = D.jEntry(seq);
+      const rows = [];
+      log(`${g.name}（武力 ${g.war}）招式谱 ${seq}  ${d.glyphs.join(' ')}  终结技「${e.finisher.name}」(${e.finisher.variant})  kStr ${e.kStr.toFixed(3)}  ${e.src}` +
+        `  全中约 ${d.totals.dmgPct}%  用时 ${d.totals.time != null ? d.totals.time.toFixed(2) : '?'} 秒（÷ 出招速度 ${(0.9 + Math.min(110, g.war) / 100 * 0.22).toFixed(2)}）` + (seq[0] === 'M' && je >= 0 ? `  J 起手：${je === 0 ? '代替第一式' : '从第二式起'}` : ''));
+      log('式  类  变体        起手   判定   收招   伤害    →下一式间隔  标签');
+      for (let i = 0; i < 8; i++) {
+        const mv = D.stepMove(seq, i), s = d.steps[i], gap = i < 7 ? D.stepGap(seq, i).toFixed(3) : '  —  ';
+        const vr = i === 7 ? e.finisher.variant : e.steps[i].variant;
+        rows.push({ i: i + 1, type: seq[i], variant: vr, startup: mv.startup, active: mv.active, recovery: mv.recovery, dmg: mv.dmg, gap: i < 7 ? D.stepGap(seq, i) : null, pct: s.dmgPct, tags: s.tags });
+        log(`${i + 1}   ${seq[i]}   ${(vr + '         ').slice(0, 10)}  ${mv.startup.toFixed(2)}   ${mv.active.toFixed(2)}   ${mv.recovery.toFixed(2)}   ${mv.dmg.toFixed(1)}≈${s.dmgPct}%   ${gap}       ${s.tags.join(' ')}`);
+      }
+      return { name: g.name, seq, finisher: e.finisher, rows, describe: d };
+    };
+    // 演示（§15.4）：连段打木人（谱条强制显示）· 背向格挡对电脑 · 蹲挡木人吃二择 · 二择打电脑；慢放 0.6
+    window.demo = async function (kind) {
+      const prev = SG.DuelGame.speed;
+      SG.DuelGame.speed = 0.6;
+      const cfg = { str: { bot: 'combo', dummy: 'dummy' }, hb: { bot: 'hbguard', dummy: '' }, low: { bot: 'mixup', dummy: 'dummyCrouch' }, mix: { bot: 'mixup', dummy: '' } }[kind] || { bot: 'combo', dummy: 'dummy' };
+      try { return await runDuel(Object.assign({ side: '0', ribbon: 'on' }, cfg)); } finally { SG.DuelGame.speed = prev; }
+    };
+    document.getElementById('btnView').onclick = () => window.viewString();
+    document.getElementById('btnStr').onclick = () => { window.viewString(); window.demo('str'); };
+    document.getElementById('btnHB').onclick = () => window.demo('hb');
+    document.getElementById('btnLow').onclick = () => window.demo('low');
+    document.getElementById('btnMix').onclick = () => window.demo('mix');
     document.getElementById('btnWire').onclick = () => window.wireTest();
     document.getElementById('btnGo').onclick = () => runDuel();
     document.getElementById('btnTally').onclick = () => {
@@ -261,7 +328,9 @@
     document.getElementById('btnMem').onclick = () => window.memTest(5);
     window.__ready = true;
     log('载入：' + Object.keys(loaded).filter(k => loaded[k]).map(k => k.replace('../js/', '')).join(' '));
-    if (Q.get('go') === '1') runDuel();
+    if (Q.get('view') === '1') window.viewString();
+    if (Q.get('demo')) window.demo(Q.get('demo'));
+    else if (Q.get('go') === '1') runDuel();
     if (Q.get('bots') === '1') window.botTally();
   }
 })();

@@ -2,6 +2,8 @@
 /* ==========================================================================
    tests/econ.js — 第四版整合核心（W0）：SG.Mods / SG.Econ / SG.AIBudget / battle-math / 月末流程 / 城级 / 结果记录
    INTEGRATION §3–§5、§6.3、§12，COMBAT-V4 §2，DOMESTIC-FX §3.2 / §4.2。
+   已落地的第四版模块（items.js、titles.js、combos.js …）在 §1–§12 用它们自己的开关关掉（测的是整合核心本身）；
+   §13 查关掉时它们对核心不可见（提供者一律 0、不建状态），打开时提供者生效、AIBudget 的断言照样成立。
    用法：
      node tests/econ.js             全部本地检查（约 10 秒）
      node tests/econ.js --quick     同上（本套件没有长模式；run-all 的快速档也跑全部）
@@ -35,6 +37,21 @@ if (ARGS[0] === '--refs-child') { refsChild(ARGS[1] || 'classic', ARGS[2]); retu
 
 const SG = load({ v4: true });
 const { GameState, StrategyAI, Mods, Econ, AIBudget, Balance: B, M } = SG;
+// Sections 1–12 test the integration core itself, so the v4 modules that have landed (items.js, titles.js, combos.js …) are
+// switched off with their own INTEGRATION §1.2 switches: an off system creates no state, draws no random numbers and its
+// providers return 0 — section 13 checks exactly that, and then switches them on again to check the core with them live.
+const MODULE_SWITCHES = ['Items', 'Titles', 'Engage', 'Tourney', 'Combos'];
+function switchModules(on) {
+  const out = [];
+  for (const n of MODULE_SWITCHES) {
+    const o = SG[n];
+    if (o && typeof o === 'object' && 'enabled' in o && typeof o.enabled !== 'function') { o.enabled = !!on; out.push(n); }
+  }
+  return out;
+}
+const LANDED = switchModules(false);
+const PROVIDERS_AT_LOAD = JSON.stringify(Mods.providers());   // the landed modules' own registrations (still listed while off)
+console.log('  v4 modules present (switched off for sections 1–12): ' + (LANDED.length ? LANDED.join(', ') : 'none'));
 function newGame(key, seed, scen) {
   if (scen) SG.ScenarioData = SG.Scenarios[scen];
   SG.Random.seed(seed);
@@ -258,7 +275,7 @@ section('4 SG.Mods.provide: additive / replace / any-true, when() switch, off()'
   off1(); off2(); off4();
   eq(Mods.z('gearAtk', gen), 0, 'all removed → 0');
   eq(SG.cityDefense(c), 20 + M.idiv(c.town, 12), 'cityDefense back to v3');
-  eq(JSON.stringify(Mods.providers()), '{}', 'provider table empty again');
+  eq(JSON.stringify(Mods.providers()), PROVIDERS_AT_LOAD, 'provider table back to what the landed modules registered at load');
   let threw = false; try { Mods.provide({ x: 3 }); } catch (e) { threw = true; } ok(threw, 'non-function provider throws');
 });
 
@@ -371,6 +388,40 @@ section('6 battle-math: capped products, army crit (COMBAT-V4 §2), one random d
   near(S.Mods.atkMul(stk, { commander: () => stk }, [0.2]), 1.6, 'a conditional term can push the product to the cap');
   eq(inst({ gearMorale: () => 20 }).Mods.startMorale(stk, 90), 100, 'start morale ≤ 100');
   eq(inst({ gearMorale: () => 20, titleMorale: () => 20 }).Mods.startMorale(stk, 60), 85, 'start morale bonus ≤ +25');
+});
+
+// ITEMS §3.2 / §7.2 (W1's INTEGRATION request on js/battle-math.js): conditional crit (gearCritCond, inside the +6 pp gear +
+// title cap), conditional crit multiplier (gearCritMulCond, inside +0.30), the target's crit resistance (gearCritRes, − pp) and
+// ward (gearCritWard, × (1 − k)) after the clamp; without target / ctx the results are exactly the section-6 ones
+section('6b battle-math: conditional crit and the target\'s crit resistance (ITEMS §3.2 / §7.2), still one draw per roll', () => {
+  const mk = (war, lvl, form, morale) => ({ gen: { war, level: lvl, exp: SG.Progress.EXP[lvl], name: 'C' + war, faction: -1 }, formation: form, morale, confused: 0, side: 0, alive: true });
+  const P = { gearCrit: () => 0.03, gearCritCond: (g, ctx) => (ctx && ctx.charge ? 0.05 : 0), gearCritMul: () => 0.1, gearCritMulCond: (g, ctx) => (ctx && ctx.charge ? 0.4 : 0),
+    gearCritRes: g => (g.name === 'res' ? 0.03 : 0), gearCritWard: g => (g.name === 'ward' ? 0.5 : 0) };
+  const I = inst(P);
+  const u = mk(100, 1, 1, 70), base = 0.02 + 0.0015 * 50;
+  near(I.Mods.critChance(u), base + 0.03, 'no ctx: the plain gear crit only');
+  near(I.Mods.critChance(u, null, { charge: true }), base + 0.06, 'conditional crit counted inside the +6 pp cap');
+  near(I.Mods.critK(u), 1.6, 'crit multiplier without ctx');
+  near(I.Mods.critK(u, { charge: true }), 1.8, 'conditional crit multiplier inside +0.30');
+  const tRes = { gen: { name: 'res', war: 50 } }, tWard = { gen: { name: 'ward', war: 50 } }, tNone = { gen: { name: 'plain', war: 50 } };
+  near(I.Mods.critChance(u, tNone), base + 0.03, 'a target without resistance changes nothing');
+  near(I.Mods.critChance(u, tRes), base, 'target resistance − 3 pp');
+  near(I.Mods.critChance(u, tWard), (base + 0.03) * 0.5, 'target ward × (1 − 0.5)');
+  eq(inst({ gearCritRes: () => 1 }).Mods.critChance(mk(30, 1, 1, 70), tRes), 0, 'resistance never below 0');
+  // section-6 results unchanged when nothing passes a target / ctx
+  const I0 = inst({});
+  near(I0.Mods.critChance(u, tRes, { charge: true }), base, 'no providers: target and ctx change nothing');
+  // one draw per rollCrit with a target and ctx, crit off or on
+  const R = SG.Random, v0 = R.value; let draws = 0;
+  R.value = function () { draws++; return v0.call(R); };
+  try {
+    for (let i = 0; i < 20; i++) I.Mods.rollCrit(u, undefined, tWard, { charge: true });
+    for (let i = 0; i < 20; i++) I.Mods.rollCrit(u, false, tWard, { charge: true });
+  } finally { R.value = v0; }
+  eq(draws, 40, 'rollCrit(u, enabled, t, ctx) draws exactly one value per call');
+  SG.Random.seed(9); let hit = 0, k = 0; const N = 20000;
+  for (let i = 0; i < N; i++) { const r = I.Mods.rollCrit(u, true, tNone, { charge: true }); if (r.crit) { hit++; k = r.k; } }
+  near(hit / N, base + 0.06, 'rollCrit rate with ctx ≈ critChance(u, t, ctx)', 0.01); near(k, 1.8, 'rollCrit k with ctx');
 });
 
 // ===================================================================== 7 commands & lastResult =====
@@ -526,15 +577,16 @@ section('8 StrategyAI.endMonth: phases in INTEGRATION §6.3 order, ctx, discreti
 });
 
 // ===================================================================== 9 city level =====
-section('9 SG.Balance.CityLevel / SG.Econ.stages vs design-v4/domestic/city-stages.js (both scenarios, every city)', () => {
+// the CITY-VIEW reference's walls stage takes the garrison (TITLES 驻军, ENGAGEMENT walls) as extra.garrison; SG.cityDefense
+// adds the same SG.Mods.cityDefBonus(c), so the comparison holds with the modules off (bonus 0) and on (section 13)
+function compareCityStages(months) {
   const CS = require(path.join(ROOT, 'design-v4', 'domestic', 'city-stages.js'));
   let n = 0, bad = 0;
-  eq(JSON.stringify(SG.Balance.CityLevel.HUBS), JSON.stringify(CS.HUBS), 'HUBS equal the reference');
   for (const scen of ['classic', 'world']) {
     const g = newGame(scen === 'world' ? 'roma' : 'liubei', 14, scen);
-    for (let m = 0; m < 30; m++) { StrategyAI.runAI([]); StrategyAI.endMonth(); }
+    for (let m = 0; m < months; m++) { StrategyAI.runAI([]); StrategyAI.endMonth(); }
     for (const c of g.cities) {
-      const ctx = CS.ctxFor(g, c, {});
+      const ctx = CS.ctxFor(g, c, { garrison: Mods.cityDefBonus(c) });
       const ref = CS.stages(ctx);
       const mine = Econ.stages(c);
       for (const k of SG.Balance.CityLevel.CORE) { n++; if (ref[k] !== mine[k]) bad++; }
@@ -545,6 +597,11 @@ section('9 SG.Balance.CityLevel / SG.Econ.stages vs design-v4/domestic/city-stag
       for (const k of SG.Balance.CityLevel.CORE) { n++; if (refH[k] !== mineH[k]) bad++; }
     }
   }
+  return { n, bad, CS };
+}
+section('9 SG.Balance.CityLevel / SG.Econ.stages vs design-v4/domestic/city-stages.js (both scenarios, every city)', () => {
+  const { n, bad, CS } = compareCityStages(30);
+  eq(JSON.stringify(SG.Balance.CityLevel.HUBS), JSON.stringify(CS.HUBS), 'HUBS equal the reference');
   console.log(`  ${n} comparisons, ${bad} differences`);
   eq(bad, 0, 'core stages and city level equal the CITY-VIEW reference');
   eq(Econ.levelName(2), '郡城', 'level names');
@@ -698,6 +755,85 @@ section('11b absent generals are rehomed when their city changes hands (conquest
     off();
     eq(Q.attackBlocked(g.player, t), null, 'provider removed → a target again');
   }
+  // (g) ITEMS §8.2 阵斩 (W1's INTEGRATION request on js/strategy-ai.js): a general slain in the battle (Items.slay: dead,
+  // faction −1) is never taken captive by Conquest.apply, even when the capture roll would hit; the roll is still drawn
+  {
+    const g = newGame('liubei', 10, 'classic'); g.player = -1;
+    const src = g.cities.find(x => x.owner >= 0 && g.officersIn(x).filter(o => o.troops > 0).length >= 2 && x.links.some(j => g.cities[j].owner >= 0 && g.cities[j].owner !== x.owner));
+    const tgt = g.cities[src.links.find(j => g.cities[j].owner >= 0 && g.cities[j].owner !== src.owner)];
+    const squad = g.officersIn(src).filter(o => o.troops > 0 && !g.isRuler(o)).slice(0, 2);
+    if (squad.length === 2) {
+      const s = Q.prepare(src.owner, src, tgt, squad, 0, 0);
+      s.attackerWon = false;
+      const [dead, alive] = squad;
+      for (const x of squad) { s.routed.add(x.id); x.troops = 0; }
+      dead.dead = true; dead.faction = -1;   // as SG.Items.slay leaves him
+      const R = SG.Random, v0 = R.value; let draws = 0;
+      R.value = () => { draws++; return 0; };   // every capture roll hits
+      try { Q.apply(s); } finally { R.value = v0; }
+      ok(s.captives.indexOf(dead) < 0 && !Q.isCaptive(dead), 'a slain attacker is not captured');
+      ok(s.captives.indexOf(alive) >= 0, 'the routed living attacker is captured as before (forced roll)');
+      eq(draws, 1, 'one capture roll for the living routed attacker, none for the slain one');
+    } else ok(true, 'no two-officer sortie found (skipped)');
+  }
+});
+
+// ===================================================================== 13 landed modules =====
+// The v4 modules that have landed (items.js, titles.js, combos.js …) against the core: switched off they are invisible to
+// it (INTEGRATION §1.2: every provider they registered returns 0 / undefined / false, a new game holds none of their state);
+// switched on they feed SG.Mods / SG.Econ and spend through SG.AIBudget without breaking its asserts (§5.2).
+section('13 landed v4 modules vs the core: off = invisible (providers 0, no state); on = live providers, AIBudget asserts', () => {
+  if (!LANDED.length) { ok(true, 'no v4 module has landed yet (skipped)'); return; }
+  const own = {};   // provider name → owners that are landed modules
+  const modOwners = new Set(LANDED.map(n => n.toLowerCase()));
+  for (const [name, owners] of Object.entries(JSON.parse(PROVIDERS_AT_LOAD))) {
+    const o = owners.filter(x => modOwners.has(x));
+    if (o.length) own[name] = o;
+  }
+  console.log('  landed: ' + LANDED.join(', ') + '; providers they registered: ' + Object.keys(own).length);
+  // (a) off: every provider they registered is silent, whatever it is asked
+  switchModules(false);
+  const g = newGame('liubei', 21, 'classic');
+  for (let m = 0; m < 3; m++) { StrategyAI.runAI([]); StrategyAI.endMonth(); }
+  let loud = 0, asked = 0;
+  const gens = g.generals.filter(x => x.faction >= 0).slice(0, 40), cities = g.cities.slice(0, 20);
+  for (const name of Object.keys(own)) {
+    const fn = Mods.P[name];
+    if (typeof fn !== 'function') continue;
+    const args = [[gens[0]], [gens[1], 'pol'], [cities[0]], [cities[1], 'income'], [g.player, 0], [{ gen: gens[2], side: 0 }, { commander: () => null, units: [] }]];
+    for (const a of args) {
+      asked++;
+      let v; try { v = fn(a[0], a[1], a[2]); } catch (e) { v = 'threw ' + e.message; }
+      if (!(v === 0 || v === undefined || v === false)) { loud++; if (loud <= 5) console.log('    provider ' + name + ' (' + own[name].join() + ') answered ' + JSON.stringify(v) + ' while switched off'); }
+    }
+  }
+  eq(loud, 0, `switched off: ${Object.keys(own).length} module providers × 6 argument shapes (${asked} calls) all return 0 / undefined / false`);
+  const keysOff = Object.keys(JSON.parse(JSON.stringify(g))).join();
+  eq(keysOff, 'version,scenario,year,month,player,tokens,seed,cities,generals,factions,alliance,log', 'switched off: a new game and 3 months create no module state');
+  // (b) on: a new game gets the modules' state, their providers answer, the core's asserts hold over 2 all-AI years
+  switchModules(true);
+  try {
+    const g2 = newGame('liubei', 22, 'classic'); g2.player = -1;
+    AIBudget.resetStats();
+    for (let m = 0; m < 24; m++) { StrategyAI.runAI([]); StrategyAI.endMonth(); }
+    const keysOn = Object.keys(JSON.parse(JSON.stringify(g2)));
+    const want = { Items: 'items', Titles: 'officeSeq', Combos: null, Engage: 'engage', Tourney: 'tourney' };
+    for (const n of LANDED) if (want[n]) ok(keysOn.indexOf(want[n]) >= 0, 'switched on: the save holds G.' + want[n] + ' (' + n + ')');
+    let live = 0;
+    for (const name of Object.keys(own)) {
+      const fn = Mods.P[name];
+      if (typeof fn !== 'function') continue;
+      for (const x of g2.generals) { if (x.faction < 0 || x.dead) continue; let v; try { v = fn(x, 'pol'); } catch (e) { v = 0; } if (typeof v === 'number' && v !== 0) { live++; break; } }
+    }
+    ok(live > 0, 'switched on: module providers answer for some general (' + live + ' of ' + Object.keys(own).length + ' names non-zero)');
+    const st = AIBudget.stats, disc = ['title', 'gear', 'project', 'festival'].reduce((s, k) => s + (st.byKind[k] || 0), 0);
+    eq(st.below0, 0, 'switched on: no city below 0 after a discretionary spend (INTEGRATION §5.2 assert 1)');
+    ok(st.gross === 0 || disc <= AIBudget.share * st.gross + 1e-6, 'switched on: discretionary ≤ 22 % of gross over 24 months (' + (st.gross ? (100 * disc / st.gross).toFixed(1) : '0') + ' %)');
+    console.log('  on, 24 months all-AI: gross ' + st.gross + ', spent ' + JSON.stringify(st.byKind) + ', refused ' + JSON.stringify(st.refused));
+    // city stages still equal the CITY-VIEW reference with TITLES' garrison in the walls stage
+    const cs = compareCityStages(12);
+    eq(cs.bad, 0, 'switched on: core stages and city level equal the CITY-VIEW reference (garrison included), ' + cs.n + ' comparisons');
+  } finally { switchModules(false); }
 });
 
 // ===================================================================== 12 refs =====

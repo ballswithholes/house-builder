@@ -71,7 +71,7 @@ function nativeIdentity() {
     gate(`identity ${scen} seed ${seed} × ${months} months`, a === b, a + (a === b ? ' = ' : ' ≠ ') + b);
   }
 }
-function nativeCampaign(scen, seeds, years) {
+function nativeCampaign(scen, seeds, years, seed0) {
   const SG = load({ v4: true });
   const present = MODULES.filter(([n]) => SG[n] && typeof SG[n] === 'object' && 'enabled' in SG[n]).map(([n]) => n);
   const out = {};
@@ -82,7 +82,7 @@ function nativeCampaign(scen, seeds, years) {
     const oGold = SG.Econ.cityGold;
     SG.Econ.cityGold = function (c) { const r = oGold.call(this, c); st.n++; st.incomePct.push(r.pct); if (r.pct >= SG.Mods.CAPS.incomeHi - 1e-9) st.atCap++; return r; };
     const runs = [];
-    for (let s = 1; s <= seeds; s++) {
+    for (let s = (seed0 || 0) + 1; s <= (seed0 || 0) + seeds; s++) {
       SG.ScenarioData = SG.Scenarios[scen];
       SG.Random.seed(s);
       const g = SG.G = SG.GameState.newGame(scen === 'world' ? 'roma' : 'liubei', scen);
@@ -111,38 +111,43 @@ function nativeCampaign(scen, seeds, years) {
   return out;
 }
 function nativeGates() {
-  const C = NIGHTLY ? [48, 25] : [12, 6], Wd = NIGHTLY ? [24, 15] : [4, 6];
+  // DESIGN-V4 §16 / INTEGRATION §9.1 measure the classic gates on two sets of 48 seeds (seeds 1–48 and 1001–1048), each set gated
+  const sets = NIGHTLY ? [['classic', 48, 25, 0], ['classic', 48, 25, 1000], ['world', 24, 15, 0]] : [['classic', 12, 6, 0], ['world', 4, 6, 0]];
   nativeIdentity();
-  for (const [scen, [seeds, years]] of [['classic', C], ['world', Wd]]) {
+  for (const [scen, seeds, years, s0] of sets) {
     const t0 = Date.now();
-    console.log(`== A2 native all-AI campaign ${scen}: ${seeds} seeds × ${years} y, variants off / all`);
-    const r = nativeCampaign(scen, seeds, years);
+    console.log(`== A2 native all-AI campaign ${scen}: ${seeds} seeds × ${years} y${s0 ? ' (seeds ' + (s0 + 1) + '–' + (s0 + seeds) + ')' : ''}, variants off / all`);
+    const r = nativeCampaign(scen, seeds, years, s0);
+    const tag = scen + (s0 ? ' s' + s0 : '');
     info(`v4 modules present: ${r.present.length ? r.present.join(', ') : '(none yet — all = off)'}  [${((Date.now() - t0) / 1000).toFixed(0)} s]`);
     const yk = scen === 'classic' ? Math.min(10, years) : Math.min(15, years);
     const aliveOff = avg(r.off.runs.map(x => x.alive[yk])), aliveAll = avg(r.all.runs.map(x => x.alive[yk]));
     const tolA = scen === 'classic' ? (NIGHTLY ? 0.8 : 1.5) : (NIGHTLY ? 2 : 4);
-    gate(`${scen} factions alive y${yk} (all ≥ off − ${tolA})`, aliveAll >= aliveOff - tolA, `${aliveOff.toFixed(2)} → ${aliveAll.toFixed(2)}`);
+    gate(`${tag} factions alive y${yk} (all ≥ off − ${tolA})`, aliveAll >= aliveOff - tolA - 1e-9, `${aliveOff.toFixed(2)} → ${aliveAll.toFixed(2)}`);
     if (scen === 'classic') {
       const f = v => median(v.runs.map(x => (x.f25 === null ? 99 : x.f25)));
       const tolF = NIGHTLY ? 0.5 : 1.0;
-      gate(`classic first faction > 25 % median (all ≥ off − ${tolF} y)`, f(r.all) >= f(r.off) - tolF, `${f(r.off).toFixed(2)} → ${f(r.all).toFixed(2)} y`);
+      gate(`${tag} first faction > 25 % median (all ≥ off − ${tolF} y)`, f(r.all) >= f(r.off) - tolF - 1e-9, `${f(r.off).toFixed(2)} → ${f(r.all).toFixed(2)} y`);
     }
     const dOff = avg(r.off.runs.map(x => x.defections)), dAll = avg(r.all.runs.map(x => x.defections));
-    gate(`${scen} defections per seed (all ≤ off + 2)`, dAll <= dOff + 2, `${dOff.toFixed(2)} → ${dAll.toFixed(2)}`);
+    gate(`${tag} defections per seed (all ≤ off + 2)`, dAll <= dOff + 2 + 1e-9, `${dOff.toFixed(2)} → ${dAll.toFixed(2)}`);
     const a = r.all.aib, gross = a.gross || 0;
     const disc = ['title', 'gear', 'project', 'festival'].reduce((s, k) => s + (a.byKind[k] || 0), 0);
-    gate(`${scen} no city below 0 after a discretionary spend`, a.below0 === 0, `below0 ${a.below0}`);
-    gate(`${scen} discretionary spending ≤ 22 % of gross (+ starting purse)`, gross === 0 || disc / gross <= 0.22 + 0.01, gross ? (100 * disc / gross).toFixed(2) + ' %' : 'no discretionary spending (no module spends yet)');
+    gate(`${tag} no city below 0 after a discretionary spend`, a.below0 === 0, `below0 ${a.below0}`);
+    gate(`${tag} discretionary spending ≤ 22 % of gross (+ starting purse)`, gross === 0 || disc / gross <= 0.22 + 0.01, gross ? (100 * disc / gross).toFixed(2) + ' %' : 'no discretionary spending (no module spends yet)');
     if (r.present.indexOf('Items') >= 0 && gross > 0 && NIGHTLY) {
       const gs = (a.byKind.gear || 0) / gross;
-      gate(`${scen} AI gear spending in ITEMS' 8–15 % band`, scen === 'world' ? gs >= 0.07 && gs <= 0.15 : gs >= 0.08 && gs <= 0.15, (100 * gs).toFixed(2) + ' %');
+      gate(`${tag} AI gear spending in ITEMS' 8–15 % band (INTEGRATION §5.2 assert 3)`, gs >= 0.08 && gs <= 0.15, (100 * gs).toFixed(2) + ' %');
     }
+    // INTEGRATION §5.2 assert 3: the discretionary kinds' shares of gross (gear is gated above; titles 1–4 %, projects 3–9 %,
+    // festivals ≤ 2 % are reported — their modules decide what to buy, the budget only bounds the sum)
+    if (gross > 0) info('AI spending share of gross: ' + ['title', 'gear', 'project', 'festival', 'tribute', 'event'].map(k => k + ' ' + (100 * (a.byKind[k] || 0) / gross).toFixed(2) + ' %').join(', ') + '; refused ' + JSON.stringify(a.refused));
     const fameAll = avg(r.all.runs.map(x => x.fame));
-    gate(`${scen} fame bonus ≤ +10`, fameAll <= 10 + 1e-9, fameAll.toFixed(2));
+    gate(`${tag} fame bonus ≤ +10`, fameAll <= 10 + 1e-9, fameAll.toFixed(2));
     // INTEGRATION §6.6: ≤ 60 ms CPU per AI faction-month (v3 AI turn + every v4 phase; the January tournament is exempt and
     // measured by tests/tourney.js)
     const msPer = v => v.runs.reduce((s, x) => s + x.ms, 0) / Math.max(1, v.runs.reduce((s, x) => s + x.fm, 0));
-    gate(`${scen} CPU per AI faction-month ≤ 60 ms (runAI + endMonth, all on)`, msPer(r.all) <= 60, `${msPer(r.off).toFixed(3)} → ${msPer(r.all).toFixed(3)} ms`);
+    gate(`${tag} CPU per AI faction-month ≤ 60 ms (runAI + endMonth, all on)`, msPer(r.all) <= 60, `${msPer(r.off).toFixed(3)} → ${msPer(r.all).toFixed(3)} ms`);
     info(`income pct median ${median(r.all.st.incomePct).toFixed(3)}, at the +35 % cap ${(100 * r.all.st.atCap / Math.max(1, r.all.st.n)).toFixed(2)} % of city-months; AP avg ${avg(r.all.runs.map(x => x.ap)).toFixed(2)}`);
   }
 }
@@ -202,11 +207,11 @@ function protoGates() {
     const yk = years >= 10 ? 10 : years >= 5 ? 5 : 3;
     const al = b => num(new RegExp('y' + yk + ' ([0-9.]+)'), b.slice(0, 1));
     const tolA = Q ? 1.5 : 0.8, tolF = Q ? 1.0 : 0.5, tolD = 2;
-    gate(`classic s${s0}: factions alive y${yk} (all ≥ off − ${tolA})`, al(all) >= al(off) - tolA, `${al(off)} → ${al(all)}`);
+    gate(`classic s${s0}: factions alive y${yk} (all ≥ off − ${tolA})`, al(all) >= al(off) - tolA - 1e-9, `${al(off)} → ${al(all)}`);
     const f25 = b => num(/first > 25 %: median ([0-9.]+) y/, b);
-    gate(`classic s${s0}: first faction > 25 % (all ≥ off − ${tolF} y)`, f25(all) >= f25(off) - tolF, `${f25(off)} → ${f25(all)} y`);
+    gate(`classic s${s0}: first faction > 25 % (all ≥ off − ${tolF} y)`, f25(all) >= f25(off) - tolF - 1e-9, `${f25(off)} → ${f25(all)} y`);
     const de = b => num(/defections per seed ([0-9.]+)/, b);
-    gate(`classic s${s0}: defections per seed (all ≤ off + ${tolD})`, de(all) <= de(off) + tolD, `${de(off)} → ${de(all)}`);
+    gate(`classic s${s0}: defections per seed (all ≤ off + ${tolD})`, de(all) <= de(off) + tolD + 1e-9, `${de(off)} → ${de(all)}`);
     const below = num(/below 0 after a discretionary spend: (\d+)/, all);
     gate(`classic s${s0}: cities below 0 after a discretionary spend = 0`, below === 0, String(below));
     const disc = num(/discretionary total ([0-9.]+)%/, all), gear = num(/gear ([0-9.]+)%/, all);

@@ -116,6 +116,9 @@
     click(btn('.sg-shop-tabs .sg-btn', '购买')); await wait(250);
     const small = qa('.sg-shop .sg-btn, .sg-shop-tile, .sg-shop-slot').filter(b => b.offsetParent && b.getBoundingClientRect().height < 43.5);
     step('touch targets ≥ 44 px', small.length === 0, small.map(b => b.textContent.trim().slice(0, 8)).join(' | '));
+    // 9b 尚未接入的效果（脱身 / 救主 / 擒将要等 Conquest.apply 接上 SG.Items.captureP）：卡上标「暂未生效」，接上之后不标
+    { const c0 = S.card('chitu'), w0 = I.captureWired; I.captureWired = true; const c1 = S.card('chitu'); I.captureWired = w0;
+      step('inert effects marked on the card (赤兔 脱身)', /暂未生效/.test(c0) && /sg-shop-pending/.test(c0) && !/暂未生效/.test(c1), (c0.match(/注：[^<]*/) || [''])[0]); }
     // 10 关闭
     click(q('.sg-shop .sg-close')); await wait(300);
     step('close', !q('.sg-shop') && !S.current);

@@ -30,6 +30,8 @@
              torus · extrude(poly[[x,z]..], y0, y1) · blade(base, tip, width, side?) · triangle · triangleFacing · quad · quadColors · quadTwoSided · append
      辅助：  shell · panel · band · body · flat(pts[[x,y]..], thick) · strip · curvedStrip · spike · curve · loft(rings, capS?, capE?, colorOf?) · fan ·
              obox · beam(a, b, w, h, up?) · rope · tuft · paperLantern / ribLantern(c, r, h, paper, lit, cap, tassel?, sides?, dayGlow?)（lit: true | false | 'night'）
+     合并：  append(otherBuilder) · appendGeometry(lpGeometry, { matrix?, ink: 0 | 1 | 'attr'（缺省，沿用几何体自己的墨线宽度）, bone? })
+             （把做好的 LP 几何体在当前变换 × matrix 下复制进来：位置、法线、顶点色、两种自发光、风摆）
      逐顶点：boneBy(start, p => bone) · windBy(start, p => w)
      树叶：  softLump(center, radii, detail, yawDeg, ramp, lumpiness?)；SG.LP.foliage(bucket, base, hueStep?, tune?)、SG.LP.canopyRamp(top, side, bottom, y0, y1, tune?)、
              SG.LP.FOLIAGE_TUNE、SG.LP.byNormal(top, side, bottom, from?)
@@ -39,17 +41,20 @@
      SG.LP.Paint（hex / shade / mix / hsv / lin / luma）· SG.LP.PAL（共用调色板）· SG.LP.MeshCache.get(key, build) · SG.LP.hash01 · SG.LP.V（vec3）
    材质（共用实例，按选项缓存；不要改共用材质，逐物体外观用 look，逐实例颜色用 instanceColor）
      SG.LP.material({ side, tint, rim, fogScale, windScale, flash, lit, detail + planar + detailK, map, alpha + opacity, depthWrite, polygonOffset })
-     SG.LP.outlineMaterial({ color, width (1080p 下的像素，默认 2.2), windScale, fogScale })   SG.LP.INK / INK_GOLD
+     SG.LP.outlineMaterial({ color, width (1080p 下的像素，默认 2.2), windScale, fogScale, distance: [d0, d1, k]（可选：视距 d0 → d1 墨线由 1 倍
+             收细到 k 倍） })   SG.LP.INK / INK_GOLD
      SG.LP.setLook(obj, look | null) → 给整棵子树（含墨线）设外观：{ tint, flash 0..1, flashColor, fade 0..1（抖动溶解；1 = 实）, rim,
              fogScale, windScale, lit（夜窗：true / false / 0..1）, opacity, ink（墨线色，如 SG.LP.INK_GOLD 表示选中）, inkWidth（倍数） }；
              同一个 look 对象可随时改字段（绘制时读取）。SG.LP.getLook(obj)
    网格  SG.LP.mesh(geo, opts?) → Mesh（opts.outline 默认 true：子网格 = 墨线外壳；castShadow / receiveShadow / look）
          SG.LP.skinnedMesh(geo, skeleton, opts?) → SkinnedMesh（绑定已有骨架；墨线同样蒙皮）
          SG.LP.lod(near, far, distance) → THREE.LOD · SG.LP.trisOf(obj)
-   实例化 SG.LP.instances(geo, capacity, opts) → InstancedMesh（+ 共享 instanceMatrix 的实例化墨线子网格；opts.tints = 逐实例颜色）
+   实例化 SG.LP.instances(geo, capacity, opts) → InstancedMesh（+ 共享 instanceMatrix 的实例化墨线子网格；opts.tints = 逐实例颜色，
+         sRGB 乘数，在片元着色器里与顶点色相乘）
          SG.LP.setInstance(im, i, x, y, z, yaw, scale, tint?) · setInstanceMatrix(im, i, m4, tint?) · commitInstances(im, count?)
-         new SG.LP.Scatter({ chunk, lodDist }) .add(geo | { near, far }, x, y, z, yaw, scale, tint?, { outline, farOutline, farShadow, castShadow })
-             .build() → Group（每种几何体每块一个实例化网格 + 一个实例化墨线）.update(camera)（按块切换近 / 远景）
+         new SG.LP.Scatter({ chunk, lodDist, outline（墨线材质选项，如 { distance }） }) .add(geo | { near, far }, x, y, z, yaw, scale, tint?,
+             { outline, farOutline, farShadow, castShadow }) .build() → Group（每种几何体每块一个实例化网格 + 一个实例化墨线）.update(camera)
+             （按块切换近 / 远景）· .chunks = [{ center, radius, near, far, isFar }]（有远景的块；可读，供自定的 LOD / 剔除）· .meshes
    合并  new SG.LP.StaticBatch({ chunk }) .add(geo, m4, { outline, castShadow, tint }) / .addAt(geo, x, y, z, yaw, scale) / .addObject(obj) .build()
          SG.LP.mergeGeometries([{ geo, matrix, tint }]) → 一个紧凑几何体（独一无二的静态道具：城中建筑；重复的东西用 Scatter）
    影子  SG.LP.blobShadow(rx, rz, strength?, softness?) → Mesh；new SG.LP.BlobShadows(capacity) .set(i, x, y, z, rx, rz, strength) .commit(n) .mesh（一次绘制）
@@ -63,7 +68,9 @@
              正午保持它们的原样）, baseDir（正午太阳方向）, fog: { base, golden, dusk, night, background }, fogMax, maxLamps: 8 })
          mood.set('dawn' | 'morning' | 'noon' | 'afternoon' | 'golden' | 'dusk' | 'night' | 小时数) → mood；mood.state = { hour, night, golden, dir, … }
          mood.addLamp([x,y,z], { color, intensity, range, nightOnly, halo, haloSize, flicker }) → lamp · setLampLit · moveLamp · removeLamp
-             所有灯共享 maxLamps 盏点光源（离镜头 / mood.focus 最近的亮灯优先），加灯不会重编译着色器；每盏灯都有光晕
+             所有灯共享 maxLamps 盏点光源（离镜头 / mood.focus 最近的亮灯优先），加灯不会重编译着色器；每盏灯都有光晕；
+             没有亮灯时（白天）整个灯池隐藏（着色器里没有点光源），只有 0 / 灯池盏数两种变体
+         mood.prewarm(renderer, camera, count?, keep = 1)（预先编译亮灯的着色器变体：场景建好、之后会入夜时调一次）
          mood.apply() / mood.update(camera)（场景钩子自动调用）· mood.dispose()
          主场景的氛围：SG.Gfx.mood（见 js/art.js：SG.Gfx.setMood / addLamp / newMood）
    ========================================================================== */
@@ -580,6 +587,43 @@
       for (let i = 0; i < other.P.length / 3; i++) this.K.push(other.K && other.K[i] != null ? other.K[i] : 1);
       for (let i = 0; i < other.T.length; i += 3) this.addTri(other.T[i] + base, other.T[i + 1] + base, other.T[i + 2] + base);
     }
+    /**
+     * Copies a finished LP geometry (MeshBuilder.toGeometry output, compact or not, non-indexed) into this builder through
+     * the current transform × opts.matrix (THREE.Matrix4, optional): positions, normals, sRGB colours, emission (both
+     * kinds, decoded from the colour's alpha), wind weights. opts.ink: 0 = no ink on these vertices, 1 = full ink,
+     * 'attr' (default) = the geometry's own per-vertex width (lpSmooth's length); opts.bone: rigid bone index (0).
+     * Mirrored transforms keep the winding. → this
+     */
+    appendGeometry(geo, opts) {
+      if (!geo || !geo.attributes || !geo.attributes.position) return this;
+      opts = opts || {};
+      const A = geo.attributes, pos = A.position.array, nor = A.normal ? A.normal.array : null, col = A.color ? A.color.array : null;
+      const wind = A.lpWind ? A.lpWind.array : null, sm = A.lpSmooth ? A.lpSmooth.array : null;
+      const nScale = A.normal && A.normal.normalized ? 1 / 127 : 1, cScale = A.color && A.color.normalized ? 1 / 255 : 1, sScale = A.lpSmooth && A.lpSmooth.normalized ? 1 / 127 : 1;
+      const cStride = A.color ? A.color.itemSize : 4;
+      const inkMode = opts.ink == null ? 'attr' : opts.ink, bone = opts.bone | 0;
+      this.push();
+      if (opts.matrix) this.setMatrix(this.m.clone().multiply(opts.matrix));
+      const e = this.m.elements, ne = this.nm.elements, base = this.P.length / 3, n = pos.length / 3;
+      for (let i = 0; i < n; i++) {
+        const x = pos[i * 3], y = pos[i * 3 + 1], z = pos[i * 3 + 2];
+        this.P.push(e[0] * x + e[4] * y + e[8] * z + e[12], e[1] * x + e[5] * y + e[9] * z + e[13], e[2] * x + e[6] * y + e[10] * z + e[14]);
+        const a = nor ? nor[i * 3] * nScale : 0, b = nor ? nor[i * 3 + 1] * nScale : 1, c = nor ? nor[i * 3 + 2] * nScale : 0;
+        const nx = ne[0] * a + ne[3] * b + ne[6] * c, ny = ne[1] * a + ne[4] * b + ne[7] * c, nz = ne[2] * a + ne[5] * b + ne[8] * c;
+        const l = Math.hypot(nx, ny, nz) || 1; this.N.push(nx / l, ny / l, nz / l);
+        if (col) {
+          this.C.push(col[i * cStride] * cScale, col[i * cStride + 1] * cScale, col[i * cStride + 2] * cScale);
+          const ea = cStride > 3 ? col[i * cStride + 3] * cScale : 0;
+          this.E.push(ea >= 0.5 ? -Math.max(0, (ea - EMIT.night0) / EMIT.day) : ea / EMIT.day);
+        } else { this.C.push(1, 1, 1); this.E.push(0); }
+        this.W.push(wind ? wind[i] : 0);
+        this.B.push(bone);
+        this.K.push(inkMode === 'attr' ? (sm ? Math.min(1, Math.hypot(sm[i * 3], sm[i * 3 + 1], sm[i * 3 + 2]) * sScale) : 1) : +inkMode);
+      }
+      for (let i = 0; i + 2 < n; i += 3) this.addTri(base + i, base + i + 1, base + i + 2);
+      this.pop();
+      return this;
+    }
 
     // ------------------------------------------------ kit helpers (UnitMeshKit / PropKit)
     /** Part of an ellipsoid surface (θ0..θ1 around Y from +Z towards +X, φ from phTop to phBottom(θ), degrees). */
@@ -1055,9 +1099,9 @@ uniform float uWindScale;
 varying vec3 vViewPosition;
 varying vec3 vNormalV;
 varying vec4 vColor;
-#ifdef USE_INSTANCING_COLOR
-  varying vec3 vInstTint;
-#endif
+// per-instance tint (instanceColor, sRGB multiplier) linearised in the vertex shader; 1 without instance colours.
+// (three r158 defines USE_INSTANCING_COLOR in the vertex shader only, so the fragment shader reads it unconditionally)
+varying vec3 vInstTint;
 #ifdef LP_DETAIL
   uniform float uPlanar;
   varying vec2 vDetailUv;
@@ -1084,7 +1128,9 @@ void main() {
   vViewPosition = - mvPosition.xyz;
   vColor = color;
   #ifdef USE_INSTANCING_COLOR
-    vInstTint = instanceColor;
+    vInstTint = lpLin( instanceColor );
+  #else
+    vInstTint = vec3( 1.0 );
   #endif
   #ifdef LP_DETAIL
     vDetailUv = worldPosition.xz * uPlanar;
@@ -1121,9 +1167,9 @@ uniform float uLit;
 varying vec3 vViewPosition;
 varying vec3 vNormalV;
 varying vec4 vColor;
-#ifdef USE_INSTANCING_COLOR
-  varying vec3 vInstTint;
-#endif
+// per-instance tint (instanceColor, sRGB multiplier) linearised in the vertex shader; 1 without instance colours.
+// (three r158 defines USE_INSTANCING_COLOR in the vertex shader only, so the fragment shader reads it unconditionally)
+varying vec3 vInstTint;
 #ifdef LP_DETAIL
   uniform sampler2D uDetail;
   uniform float uDetailK;
@@ -1153,9 +1199,7 @@ void main() {
     n = gl_FrontFacing ? n : - n;
   #endif
   vec3 albedo = lpLin( vColor.rgb ) * uTint;
-  #ifdef USE_INSTANCING_COLOR
-    albedo *= lpLin( vInstTint );
-  #endif
+  albedo *= vInstTint;
   float alpha = 1.0;
   #ifdef LP_DETAIL
     // painted detail (Lanternvale's planar _MainTex on terrain): a tileable multiplier around 1 (texel 0.5 = 1)
@@ -1273,6 +1317,9 @@ attribute float lpWind;
 attribute vec3 lpSmooth;
 uniform float uWindScale;
 uniform float uWidth;
+#ifdef LP_INK_DIST
+  uniform vec3 uInkDist;   // x: view distance where the ink starts to thin, y: where it reaches z × its width
+#endif
 varying float vDist;
 void main() {
   vec3 objectNormal = lpSmooth;
@@ -1296,6 +1343,9 @@ void main() {
   float l = length( nc );
   if ( l > 0.00001 ) {
     float px = max( uWidth * lpView.z, lpView.w ) * ink;
+    #ifdef LP_INK_DIST
+      px *= mix( 1.0, uInkDist.z, smoothstep( uInkDist.x, uInkDist.y, length( mvPosition.xyz ) ) );
+    #endif
     pos.xy += ( nc / l ) * ( px * 2.0 / lpView.xy ) * pos.w;
   }
   gl_Position = pos;
@@ -1371,20 +1421,26 @@ void main() {
     MATS.set(key, m);
     return m;
   };
-  /** Ink outline: inverted hull of constant pixel width along the smoothed normal (BackSide). { color, width, windScale, fogScale } */
+  /**
+   * Ink outline: inverted hull of constant pixel width along the smoothed normal (BackSide). { color, width, windScale,
+   * fogScale, distance: [d0, d1, k] (optional: the width thins from 1× at view distance d0 to k× at d1 and beyond —
+   * far copies of big models keep a hairline instead of a fixed-pixel band) }
+   */
   LP.outlineMaterial = function (opts) {
     opts = opts || {};
     const ink = toRGB(opts.color) || LP.INK;
     const width = opts.width != null ? opts.width : 2.2;
     const windScale = opts.windScale != null ? opts.windScale : 1, fogScale = opts.fogScale != null ? opts.fogScale : 1;
-    const key = ['out', ink.join(','), width, windScale, fogScale, opts.fade ? 'fade' : ''].join('|');
+    const dist = Array.isArray(opts.distance) && opts.distance.length >= 2 ? [+opts.distance[0], Math.max(+opts.distance[0] + 0.01, +opts.distance[1]), opts.distance[2] != null ? +opts.distance[2] : 0.5] : null;
+    const key = ['out', ink.join(','), width, windScale, fogScale, opts.fade ? 'fade' : '', dist ? dist.join(',') : ''].join('|');
     let m = MATS.get(key);
     if (m) return m;
     const u = THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
       uInk: { value: new THREE.Vector3(ink[0], ink[1], ink[2]) }, uWidth: { value: width }, uWindScale: { value: windScale }, uFogScale: { value: fogScale }, uFade: { value: 1 },
     }]);
+    if (dist) u.uInkDist = { value: new THREE.Vector3(dist[0], dist[1], dist[2]) };
     m = new THREE.ShaderMaterial({ uniforms: withGlobals(u), vertexShader: OUT_VERT, fragmentShader: OUT_FRAG, fog: true, side: THREE.BackSide });
-    if (opts.fade) m.defines = { LP_FADE: 1 };
+    if (opts.fade || dist) { m.defines = {}; if (opts.fade) m.defines.LP_FADE = 1; if (dist) m.defines.LP_INK_DIST = 1; }
     m.name = 'LP Outline';
     m.userData.lpKind = 'outline';
     m.userData.lpBase = { ink: ink.slice(), width, wind: windScale, fog: fogScale };
@@ -1588,12 +1644,16 @@ void main() {
    * Scatter: many copies of a few geometries (trees, bushes, rocks, fences, crowds of props) as instanced meshes with
    * instanced outlines — one draw (+ one ink draw) per geometry per chunk. opts: { chunk: metres (0 = one set per
    * geometry; > 0 splits copies into square chunks so off-screen chunks are culled; 48–80 m suits a battle map), lodDist:
-   * metres (chunks farther than this from the camera use the far geometry), name }.
+   * metres (chunks farther than this from the camera use the far geometry), outline: LP.outlineMaterial options for
+   * every instanced ink hull (e.g. { distance: [d0, d1, k] }), name }.
    *   sc.add(geo | { near, far }, x, y, z, yaw, scale, tint, o)   o: { outline (true), farOutline (false), farShadow (false),
    *                                                                 castShadow (true),
    *                                                                 receiveShadow (true), tints (auto) }
    *   sc.addMatrix(geo, matrix4, tint, o) · sc.build() → THREE.Group (sc.group) · sc.update(camera) (LOD; call per frame
    *   when far geometries are used) · sc.dispose() · sc.stats → { copies, meshes, sets }
+   *   sc.chunks (after build, only for sets with a far geometry): [{ center (Vector3, scatter-local), radius, near, far
+   *   (the two InstancedMeshes; each inked one has userData.outline), isFar }] — readable for custom LOD / culling
+   *   (CultureArt.scatter swaps geometries and culls instances on these); sc.meshes: every InstancedMesh built
    */
   class Scatter {
     constructor(opts) {
@@ -1602,6 +1662,7 @@ void main() {
       this.group.name = opts.name || 'LP scatter';
       this.chunk = opts.chunk || 0;
       this.lodDist = opts.lodDist || 70;
+      this.outlineOpts = opts.outline || null;
       this.sets = new Map();
       this.chunks = [];
       this.meshes = [];
@@ -1639,7 +1700,7 @@ void main() {
         }
         for (const list of groups.values()) {
           const mk = (geo, outline) => {
-            const im = LP.instances(geo, list.length, { outline, tints: set.tinted, castShadow: set.cast, receiveShadow: set.recv, material: set.material });
+            const im = LP.instances(geo, list.length, { outline, outlineOpts: this.outlineOpts || undefined, tints: set.tinted, castShadow: set.cast, receiveShadow: set.recv, material: set.material });
             list.forEach((it, i) => { _im.fromArray(it.e); im.setMatrixAt(i, _im); if (set.tinted) { const t = it.t || [1, 1, 1]; im.instanceColor.setXYZ(i, t[0], t[1], t[2]); } });
             LP.commitInstances(im, list.length);
             im.computeBoundingSphere();
@@ -2446,6 +2507,7 @@ void main() {
         const light = new THREE.PointLight(0xffffff, 0, 5, 0);
         light.castShadow = false;
         light.name = 'LP lamp ' + i;
+        light.visible = false;   // shown by update() while a lamp is lit (pool gate)
         this.scene.add(light);
         this.pool.push(light);
       }
@@ -2492,10 +2554,12 @@ void main() {
         chosen = chosen.slice(0, this.pool.length);
       }
       for (const L of this.lamps) L.light = null;
+      let any = false;
       for (let i = 0; i < this.pool.length; i++) {
         const light = this.pool[i], L = chosen[i];
         if (!L) { light.intensity = 0; continue; }
         L.light = light;
+        any = true;
         const col = lampColor(L.color, night);
         light.color.setRGB(...P.lin(col));
         const fl = L.flicker ? 1 + L.flicker * (0.6 * Math.sin(t * 11.3 + L.phase) + 0.4 * Math.sin(t * 6.7 + L.phase * 1.7)) : 1;
@@ -2503,6 +2567,12 @@ void main() {
         light.distance = L.range * (1 + 0.22 * clamp01(night));
         if (light.position.x !== L.pos[0] || light.position.y !== L.pos[1] || light.position.z !== L.pos[2]) { light.position.set(L.pos[0], L.pos[1], L.pos[2]); light.updateMatrixWorld(); }
       }
+      // pool gate: the point lights take part in the scene's lighting only while at least one lamp is lit. By day every
+      // pool light sits at intensity 0, yet three would still compile and loop over all of them per pixel; hidden, the
+      // shaders have no point lights. Only two variants exist (0 and the pool size), each compiled once — see prewarm().
+      const warm = this._warm;
+      if (warm) { if (++warm.renders > warm.keep) this._warm = null; else any = true; }
+      for (const l of this.pool) if (l.visible !== any) l.visible = any;
       if (this.halos && (this._lampsDirty || this.lamps.some(L => L.flicker))) {
         let k = 0;
         const show = night > 0.45;
@@ -2515,6 +2585,26 @@ void main() {
         this.halos.commit(k);
       }
       this._lampsDirty = false;
+    }
+    /**
+     * Compiles the lamp-lit shader variant ahead of time (the pool's point lights stay hidden until a lamp is lit, so the
+     * first lit dusk would otherwise compile every visible LP material at once: a 10–20 s hitch in SwiftShader). Grows
+     * the pool to `count` lights (default: the lamps added so far, at least 1; capped at maxLamps), shows it for the
+     * next `keep` renders (intensity 0, so the picture is unchanged; drivers generate code on the first draw) and asks
+     * the renderer to compile the scene (compileAsync when available). Call it once a scene is built, e.g. when a view
+     * that will later reach night is shown. → this
+     */
+    prewarm(renderer, camera, count, keep = 1) {
+      const n = Math.min(this.maxLamps, Math.max(1, count != null ? count | 0 : Math.max(this.lamps.length, this.pool ? this.pool.length : 0)));
+      if (!renderer || !camera) return this;
+      this._ensurePool(n);
+      for (const l of this.pool) l.visible = true;
+      try {
+        if (renderer.compileAsync) { const pr = renderer.compileAsync(this.scene, camera); if (pr && pr.catch) pr.catch(() => {}); }
+        else if (renderer.compile) renderer.compile(this.scene, camera);
+      } catch (e) { /* compiling ahead is only an optimisation */ }
+      this._warm = { renders: 0, keep: Math.max(1, keep | 0) };
+      return this;
     }
     dispose() {
       if (this._hooked) { this.scene.onBeforeRender = this._prevB; this.scene.onAfterRender = this._prevA; this._hooked = false; }

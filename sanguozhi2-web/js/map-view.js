@@ -766,6 +766,9 @@
   const GRASS_MAX = 3600, FLOWER_MAX = 500;
   // 第四版：地形的面化强度（0 = 平滑法线，1 = 完全按三角格平面着色）与坡地上的逐面亮度抖动
   const FACET_K = 0.85, FACET_JITTER = 0.09;
+  // 第四轮：面化的等边三角格——边长（面积与原 1.25 方格的半格相当）与两条基向量（地图坐标 x, z；与 x 轴成 15° / 75°，
+  // 三组格线都不与屏幕横竖平行）。改动时同步 art.js 的 sgFp 矩阵（基向量矩阵的逆）与雪面的重心换算矩阵
+  const FACET_SIDE = 1.35, FACET_E1 = [Math.cos(Math.PI / 12), Math.sin(Math.PI / 12)], FACET_E2 = [Math.cos(5 * Math.PI / 12), Math.sin(5 * Math.PI / 12)];
   // 第四版：道具库草丛（高 0.51 米）缩到地图上约 0.2 单位
   const GRASS_LP_K = 1.0, FLOWER_LP_K = 0.7;
   // 绘制地面：草叶笔画的近景距离（满 / 无）、野花点密度、水彩斑块强度
@@ -1750,7 +1753,7 @@ void main() {
   // 修订：地图比例下，黄山松（云片）远看像苏铁、竹丛像竿上的棒棒糖——地中海的伞松改用压扁的松（sx / sy：宽、高的额外缩放），
   // 竹丛改用加宽的杨树团（一簇浓密的竹林）
   const VEG_KINDS = Object.keys(VEG);
-  const VEG_NEAR = 34;            // 镜头到树的距离 < VEG_NEAR：3D 模型；否则公告板
+  const VEG_NEAR = 28;            // 镜头到树的距离 < VEG_NEAR：3D 模型；否则公告板（第三轮：34 → 28，特写视角的帧时间）
   const VEG_WIND = 0.3;           // 风摆（世界单位的摆幅随缩放变小）
   function LP_HASH(x, z) { const v = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453; return v - Math.floor(v); }
   // 群落色 c 相对树种常用色 ref 的实例调色（乘在道具原色上）：只调亮度（−12% … +4%：北方的树不提亮成黄绿）外加一点冷暖（红、蓝反向，绿不动）——
@@ -2133,6 +2136,31 @@ void main() {
 
   // 城池的灯（CultureArt 给的灯位按城池模型的比例：地图上把灯池放大，城在夜里成一团暖光）
   const CITY_LAMP_R = 3.4, CITY_LAMP_I = 2.0, CITY_LAMP_H = 1.1;
+  // 势力 / 选中光圈的陆地权重（地表高度 → 0 … 1）：水面（高度 0）稍下为 0，岸上 0.09 以上为 1
+  function ringLandW(sy) { return M.clamp01((sy + 0.03) / 0.12); }
+  // 只夜里亮的灯点亮时的夜色（与 LP.Mood._lampOn 一致）：城灯在地图第一次到这个夜色时才交给氛围
+  const LAMP_NIGHT = 0.45;
+  // 第四轮：氛围灯池的点光源只在有灯亮着时留在光照里。白天（以及地图隐藏、战场也没点灯时）池里每盏灯的强度都是 0，
+  // three 却照样按 6 盏点光源编译 LP 材质、逐像素遍历它们（SwiftShader 下整帧慢约 37%）。改为「有亮灯 → 全池可见，
+  // 没有 → 全池隐藏」：只有 0 / 6 盏两种着色器变体，各编译一次以后来回切换只是换程序。挂在这个氛围实例的 update 上
+  // （场景钩子每次渲染都调；战场借用主场景时同样生效）。INTEGRATION：应由 lowpoly.js 的 Mood.update 自己做——做了以后这里
+  // 只是重复同样的赋值
+  function gateLampPool(mood) {
+    if (!mood || mood._sgPoolGate || typeof mood.update !== 'function') return;
+    const up = mood.update;
+    mood._sgPoolGate = true;
+    mood.update = function (camera) {
+      up.call(this, camera);
+      // MapView._prewarmLampPool 的临时点光源：画过一次之后移走（第二次渲染开始时；不依赖地图的 update 是否还在跑）
+      const w = this._sgWarm;
+      if (w && ++w.renders >= 2) { for (const l of w.lights) { if (l.parent) l.parent.remove(l); if (l.dispose) l.dispose(); } this._sgWarm = null; }
+      const pool = this.pool;
+      if (!pool || !pool.length) return;
+      let any = false;
+      for (const L of this.lamps) if (L.light) { any = true; break; }
+      for (const l of pool) if (l.visible !== any) l.visible = any;
+    };
+  }
   // 地图的缺省时刻：温暖的午后（黄金时刻提亮约一半，太阳偏暖）。MapView.setMood / followClock 可改
   const MAP_HOUR = 16.3;
   // 标题画面的飞越：黄昏，城里的灯笼亮起（开局后平滑转回午后）。标题画面 = game.js 的 .sg-title > .sg-title-hero 在页面上
@@ -2685,6 +2713,7 @@ void main() {
         self._buildSelectRing(); self.refresh(state); yield;
         // 第四版：地图的时刻（缺省为温暖的午后；重建地图时沿用之前设定的时刻 / 跟随时钟）
         self._moodVis = undefined;
+        gateLampPool(SG.Gfx.mood);
         self._applyMood(self._follow && SG.Clock && SG.Clock.hour ? SG.Clock.hour() : self._moodWant != null ? self._moodWant : defaultHour());
         self._initGrass(); yield;
         // 按当前镜头预先补齐近处的细地形块（之后每帧按需补建）
@@ -2726,7 +2755,8 @@ void main() {
       this._ownMats = [];
       if (this._lamps && SG.Gfx.removeLamp) for (const l of this._lamps) SG.Gfx.removeLamp(l);
       if (this._glow) { this._glow.b.dispose(); this._glow = null; }
-      this._lamps = null; this._lampSpecs = null; this._cityScatter = null; this._lampsOn = undefined;
+      this._lamps = null; this._lampSpecs = null; this._cityScatter = null; this._lampsOn = undefined; this._poolWarm = false;
+      this._endPrewarm();
       this._flags = null; this._rings = null; this._selectRing = null; this._debug = null; this._treeTiles = null; this._scatter = null; this._cityTiles = null; this._inkProps = null;
       this._grassT = null; this._flowerT = null; this._grassKey = null; this._grassJob = null;
       this._master = null; this._outer = null; this._tex = null; this._roadIdx = null; this._roadSegs = null; this._roadLines = null; this._cityBase = null;
@@ -3030,17 +3060,47 @@ void main() {
       this._traceTag = 'terrain.extra';
       const xData = new Uint8Array(cw * chh * 4);
       yield* this._paintExtra(state, xData, x0, z0, step, cw, chh, mData);
-      // 第四版：固定三角格（1.25，交替对角线）的面法线：每格两个三角形的法线 xz（three 坐标），着色器按此平面着色山坡
+      // 第四版：固定三角格的面法线：每格两个三角形的法线 xz（three 坐标），着色器按此平面着色山坡。
+      // 第四轮：等边三角格（边长 FACET_SIDE，基向量 FACET_E1 / FACET_E2 与 x 轴成 15° / 75°，每格沿 (1,0)–(0,1) 对角线分开），
+      // 不再是与坐标轴对齐的方格（镜头不转时陡坡上显出竖直 / 水平的方块）。格点高度取主网格高度（0.625 间距）的双线性插值；
+      // 纹理覆盖内区四角在格坐标里的外包框，facetXf.xy = 纹理第一格的格点（世界坐标），与 art.js 的 sgFp 一致
       this._traceTag = 'terrain.facets';
-      const fw = nx, fh = nz, fData = new Uint8Array(fw * fh * 4);
+      const [e1x, e1z] = FACET_E1, [e2x, e2z] = FACET_E2, side = FACET_SIDE, fdet = e1x * e2z - e1z * e2x;
+      const toLat = (x, z) => [(e2z * (x - x0) - e2x * (z - z0)) / (fdet * side), (-e1z * (x - x0) + e1x * (z - z0)) / (fdet * side)];
+      let fu0 = Infinity, fv0 = Infinity, fu1 = -Infinity, fv1 = -Infinity;
+      for (const [cx, cz] of [[x0, z0], [x0 + nx * step, z0], [x0, z0 + nz * step], [x0 + nx * step, z0 + nz * step]]) {
+        const [u, v] = toLat(cx, cz);
+        fu0 = Math.min(fu0, u); fv0 = Math.min(fv0, v); fu1 = Math.max(fu1, u); fv1 = Math.max(fv1, v);
+      }
+      fu0 = Math.floor(fu0) - 1; fv0 = Math.floor(fv0) - 1;
+      const fw = Math.ceil(fu1) + 1 - fu0, fh = Math.ceil(fv1) + 1 - fv0, fData = new Uint8Array(fw * fh * 4);
+      const fpx = x0 + side * (fu0 * e1x + fv0 * e2x), fpz = z0 + side * (fu0 * e1z + fv0 * e2z);
       {
-        const Hm = (i, j) => mh[(2 * j) * mnx + 2 * i], s2 = step;
-        const put = (q, hx, hz) => { const l = 1 / Math.sqrt(hx * hx + 1 + hz * hz); fData[q] = b8(0.5 - 0.5 * hx * l); fData[q + 1] = b8(0.5 + 0.5 * hz * l); };
+        // 格点 (i, j)（相对纹理原点）的世界坐标与高度
+        const LW = fw + 1, lx = new Float32Array(LW * (fh + 1)), lz = new Float32Array(LW * (fh + 1)), lh = new Float32Array(LW * (fh + 1));
+        const mxMax = mnx - 1, mzMax = mnz - 1;
+        for (let j = 0; j <= fh; j++) {
+          for (let i = 0; i <= fw; i++) {
+            const x = fpx + side * (i * e1x + j * e2x), z = fpz + side * (i * e1z + j * e2z), o = j * LW + i;
+            const gx = M.clamp((x - x0) / res, 0, mxMax), gz = M.clamp((z - z0) / res, 0, mzMax);
+            const gi = Math.min(mxMax - 1, Math.floor(gx)), gj = Math.min(mzMax - 1, Math.floor(gz)), tx = gx - gi, tz = gz - gj, r0 = gj * mnx + gi;
+            lx[o] = x; lz[o] = z;
+            lh[o] = (mh[r0] * (1 - tx) + mh[r0 + 1] * tx) * (1 - tz) + (mh[r0 + mnx] * (1 - tx) + mh[r0 + mnx + 1] * tx) * tz;
+          }
+          if ((j & 63) === 63) yield;
+        }
+        // 三个格点所在平面的坡度（地图坐标的 dh/dx、dh/dz）→ three 坐标的法线 xz
+        const put = (q, a, b, c) => {
+          const d1x = lx[b] - lx[a], d1z = lz[b] - lz[a], d2x = lx[c] - lx[a], d2z = lz[c] - lz[a], dh1 = lh[b] - lh[a], dh2 = lh[c] - lh[a];
+          const det = d1x * d2z - d1z * d2x, hx = (dh1 * d2z - dh2 * d1z) / det, hz = (d1x * dh2 - d2x * dh1) / det;
+          const l = 1 / Math.sqrt(hx * hx + 1 + hz * hz);
+          fData[q] = b8(0.5 - 0.5 * hx * l); fData[q + 1] = b8(0.5 + 0.5 * hz * l);
+        };
         for (let j = 0; j < fh; j++) {
           for (let i = 0; i < fw; i++) {
-            const h00 = Hm(i, j), h10 = Hm(i + 1, j), h01 = Hm(i, j + 1), h11 = Hm(i + 1, j + 1), q = (j * fw + i) * 4;
-            if (((i + j) & 1) === 0) { put(q, (h11 - h01) / s2, (h01 - h00) / s2); put(q + 2, (h10 - h00) / s2, (h11 - h10) / s2); }
-            else { put(q, (h10 - h00) / s2, (h01 - h00) / s2); put(q + 2, (h11 - h01) / s2, (h11 - h10) / s2); }
+            const o00 = j * LW + i, o10 = o00 + 1, o01 = o00 + LW, o11 = o01 + 1, q = (j * fw + i) * 4;
+            put(q, o00, o10, o01);        // f.x + f.y < 1
+            put(q + 2, o11, o01, o10);    // f.x + f.y ≥ 1
           }
           if ((j & 31) === 31) yield;
         }
@@ -3066,7 +3126,7 @@ void main() {
         n: tex(nData, mnx, mnz), c: tex(cData, cw, chh), m: tex(mData, cw, chh), oc: tex(ocData, onx, onz), om: tex(omData, onx, onz),
         x: tex(xData, cw, chh), facet: facetTex,
         xfN: xf(x0, z0, res, mnx, mnz), xfC: xf(x0, z0, step, cw, chh), xfO: xf(ox0, oz0, R, onx, onz), inner: new THREE.Vector4(x0, z0, X1, Z1),
-        facetXf: new THREE.Vector4(x0, z0, step, 0), facetSz: new THREE.Vector4(1 / fw, 1 / fh, FACET_K, FACET_JITTER),
+        facetXf: new THREE.Vector4(fpx, fpz, side, 0), facetSz: new THREE.Vector4(1 / fw, 1 / fh, FACET_K, FACET_JITTER),
       };
       // 5) 细节纹理、地形材质、四叉树（预建到第 2 级，之后按镜头补建）
       this._traceTag = 'terrain.detail';
@@ -3485,6 +3545,8 @@ void main() {
           const plain = !ref || vk === 'maple' || vk === 'cedar' || vk === 'snowpine' || vk === 'mangrove' || vk === 'baobab';
           // 荒漠、草原上的灌丛：偏灰的鼠尾草色（逐通道调色——这里要的正是去饱和）
           const t = plain ? [1, 1, 1] : kind === 'dshrub' ? [1.2, 1.04, 1.1] : lpTint(c, ref);
+          // 第三轮：阔叶（槐 / 榆 / 栎）在策略镜头下只看得到暖色的树冠顶，午后光里偏橄榄——红稍减、蓝略减，回到试点的中绿
+          if (vk === 'huai' || vk === 'elm' || vk === 'oak') { t[0] *= 0.93; t[2] *= 0.95; }
           const variant = d.v > 1 ? Math.floor(LP_HASH(pz + 3.1, px - 1.7) * d.v) % d.v : 0;
           // 当树种的灌丛（稀树草原、荒漠）小一号：道具库的灌丛又宽又矮，与树冠同宽时远看是一团团怪异的大色块
           const ks = kind === 'shrub' || kind === 'dshrub' ? 0.75 : 1;
@@ -4292,7 +4354,8 @@ void main() {
       const cityList = [];
       this._flagInfo = [];
       // 势力光圈：贴合地表的圆盘，合并为一个网格（RGBA 顶点色）
-      const ringPos = [], ringUv = [], ringIdx = [];
+      // 第四轮：ringLand = 每个顶点的陆地权重（水面上为 0：光圈不再横跨湖面、海湾，云南的褐色光圈不再像穿湖的路）
+      const ringPos = [], ringUv = [], ringIdx = [], ringLand = [];
       this._ringRanges = new Map();
       const RING_N = 7, RING_R = 2.9;
 
@@ -4358,7 +4421,9 @@ void main() {
           for (let j = 0; j <= RING_N; j++) {
             const ux = mx - RING_R + 2 * RING_R * i / RING_N, uz = mz - RING_R + 2 * RING_R * j / RING_N;
             // 贴地，但不爬上相邻山坡（高出城基的部分留在地形下面，与 Unity 的平面圆盘一致）
-            ringPos.push(ux, Math.min(Math.max(this.surfaceY(ux, uz), 0.02), y + 0.45) + 0.12, -uz);
+            const sy = this.surfaceY(ux, uz);
+            ringPos.push(ux, Math.min(Math.max(sy, 0.02), y + 0.45) + 0.12, -uz);
+            ringLand.push(ringLandW(sy));
             ringUv.push(i / RING_N, j / RING_N);
           }
         for (let i = 0; i < RING_N; i++)
@@ -4421,6 +4486,7 @@ void main() {
       rg.setAttribute('color', rc);
       rg.setIndex(ringIdx);
       rg.computeBoundingSphere();
+      this._ringLand = new Float32Array(ringLand);
       const ringMat = new THREE.MeshBasicMaterial({
         map: Gfx.ringTexture, vertexColors: true, transparent: true, depthWrite: false,
         side: THREE.DoubleSide, fog: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
@@ -4452,14 +4518,17 @@ void main() {
       return mb.toGeometry();
     }
     // 贴合地表的方形面片（地图坐标中心 cx, cz；半径 r；n×n 格；抬高 lift；地表高度上限 maxY）
+    // 第四轮：带 RGBA 顶点色（白色，A = 陆地权重：水面上为 0；材质开 vertexColors 时光圈在岸边淡出）
     drapedDisc(cx, cz, r, n, lift, maxY) {
       if (maxY === undefined) maxY = Infinity;
-      const pos = [], uv = [], idx = [];
+      const pos = [], uv = [], idx = [], col = [];
       for (let i = 0; i <= n; i++)
         for (let j = 0; j <= n; j++) {
           const ux = cx - r + 2 * r * i / n, uz = cz - r + 2 * r * j / n;
-          pos.push(ux, Math.min(Math.max(this.surfaceY(ux, uz), 0.02), maxY) + lift, -uz);
+          const sy = this.surfaceY(ux, uz);
+          pos.push(ux, Math.min(Math.max(sy, 0.02), maxY) + lift, -uz);
           uv.push(i / n, j / n);
+          col.push(1, 1, 1, ringLandW(sy));
         }
       for (let i = 0; i < n; i++)
         for (let j = 0; j < n; j++) {
@@ -4469,6 +4538,7 @@ void main() {
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
       g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+      g.setAttribute('color', new THREE.Float32BufferAttribute(col, 4));
       g.setIndex(idx);
       g.computeBoundingSphere();
       return g;
@@ -4535,6 +4605,7 @@ void main() {
       tex.center.set(0.5, 0.5);
       const mat = SG.Gfx.unlit([1, 0.85, 0.35, 0.95], tex);
       mat.polygonOffsetFactor = -3; mat.polygonOffsetUnits = -6;
+      mat.vertexColors = true;   // drapedDisc 的顶点 A = 陆地权重：选中光圈在水面上淡出
       const m = new THREE.Mesh(new THREE.BufferGeometry(), mat);
       m.name = 'SelectRing';
       m.renderOrder = 2;
@@ -4576,16 +4647,53 @@ void main() {
       if (!this.root || this.root.visible) { Gfx.setMood(h); this._ensureLamps(); }
       return Gfx.moodState();
     }
-    // 第一次入夜（氛围的夜色 > 0.15）时把城与关的灯交给氛围；之后一直保留（夜里点亮、白天自动熄灭，地图隐藏时熄灭）
+    // 第一次真正入夜（氛围的夜色 > 0.45：只夜里亮的灯这时才点亮，LP.Mood._lampOn）时把城与关的灯交给氛围；
+    // 之后一直保留（夜里点亮、白天自动熄灭，地图隐藏时熄灭）。
     // 只在明确要了时刻（setMood / followClock）时建：缺省时刻（标题画面的黄昏）用 _updateGlow 的加色光晕代替
+    // （第四轮：原阈值 0.15 在跟随时钟的月初 07:00（夜色 0.21）就建了灯池，整个白天都多付 6 盏点光源）
     _ensureLamps() {
       if (!(this._follow || this._moodWant != null)) return;
       const Gfx = SG.Gfx, st = Gfx && Gfx.moodState && Gfx.moodState();
-      if (!this._lampSpecs || !this._lampSpecs.length || !st || !(st.night > 0.15) || !Gfx.addLamp) return;
+      if (this._lampSpecs && this._lampSpecs.length && !this._poolWarm) this._prewarmLampPool();
+      if (!this._lampSpecs || !this._lampSpecs.length || !st || !(st.night > LAMP_NIGHT) || !Gfx.addLamp) return;
+      gateLampPool(Gfx.mood);
       this._lamps = this._lamps || [];
       for (const [pos, o] of this._lampSpecs) { const lamp = Gfx.addLamp(pos, o); if (lamp) this._lamps.push(lamp); }
       this._lampSpecs = null;
       if (this.root && !this.root.visible && Gfx.setLampLit) for (const l of this._lamps) Gfx.setLampLit(l, false);
+    }
+    // 第四轮：灯池第一次亮起（黄昏）时，所有看得见的 LP 材质都要编译「6 盏点光源」的着色器变体——SwiftShader 下一帧卡 10–20 秒，
+    // 真显卡上也有明显的顿挫。在明确要了时刻（进入战略画面、followClock / setMood）时预先编译：临时放进同样多盏强度为 0 的
+    // 点光源，renderer.compileAsync 编译场景里的全部材质（有 KHR_parallel_shader_compile 时不阻塞），并保留到画完下一帧
+    // （画面不变；驱动 / SwiftShader 在第一次绘制时才真正生成代码）——与原来进战略画面时灯池常驻的第一帧代价相同。
+    // 着色器变体只取决于点光源的盏数，之后黄昏亮灯只是换程序。每次构建地图做一次
+    _prewarmLampPool() {
+      this._poolWarm = true;
+      const Gfx = SG.Gfx, r = Gfx && Gfx.renderer, mood = Gfx && Gfx.mood;
+      if (!r || !Gfx.scene || !Gfx.camera || !mood || !this.root || !this.root.visible) { this._poolWarm = false; return; }
+      const t0 = now();
+      const pool = mood.pool || [];
+      const n = Math.max(pool.length, Math.min(mood.maxLamps || 6, pool.length + this._lampSpecs.length));
+      const vis = pool.map(l => l.visible), tmp = [];
+      for (const l of pool) l.visible = false;
+      for (let i = 0; i < n; i++) { const l = new THREE.PointLight(0xffffff, 0, 5, 0); l.castShadow = false; Gfx.scene.add(l); tmp.push(l); }
+      try {
+        if (r.compileAsync) r.compileAsync(Gfx.scene, Gfx.camera).catch(() => {});
+        else if (r.compile) r.compile(Gfx.scene, Gfx.camera);
+      } catch (e) { /* 预编译失败不影响画面：黄昏时照常按需编译 */ }
+      pool.forEach((l, i) => { l.visible = vis[i]; });
+      // 画过一次之后由 gateLampPool 的 update 移走
+      gateLampPool(mood);
+      if (mood._sgWarm) for (const l of mood._sgWarm.lights) if (l.parent) l.parent.remove(l);
+      mood._sgWarm = { lights: tmp, renders: 0 };
+      this._poolWarmMs = now() - t0;
+    }
+    // 地图销毁时移走还没画过的预编译光源
+    _endPrewarm() {
+      const mood = SG.Gfx && SG.Gfx.mood, w = mood && mood._sgWarm;
+      if (!w) return;
+      for (const l of w.lights) { if (l.parent) l.parent.remove(l); if (l.dispose) l.dispose(); }
+      mood._sgWarm = null;
     }
     _updateMood(dt) {
       const Gfx = SG.Gfx;
@@ -4632,17 +4740,18 @@ void main() {
         const c = state.cities[cv.city.id] || cv.city;
         cv.city = c;
         const owned = c.owner >= 0 && state.factions[c.owner];
-        const col = owned ? SG.Gfx.color(state.factions[c.owner].color) : new THREE.Color(0.75, 0.75, 0.72);
+        // 第三轮：无主城的光圈改为偏暗的暖灰（原来的浅灰白在近景里像一道竖直的雾带）
+        const col = owned ? SG.Gfx.color(state.factions[c.owner].color) : new THREE.Color(0.46, 0.43, 0.38);
         // 旗帜
         const fi = this._flagInfo[c.id];
         fi.visible = !!owned;
         this._flags.setColorAt(c.id, col);
         // 光圈
-        const a = owned ? (c.owner === state.player ? 0.85 : 0.6) : 0.25;
-        const rr = this._ringRanges.get(c.id);
+        const a = owned ? (c.owner === state.player ? 0.85 : 0.6) : 0.22;
+        const rr = this._ringRanges.get(c.id), land = this._ringLand;
         for (let k = 0; k < rr.count; k++) {
           const o = (rr.start + k) * 4;
-          arr[o] = col.r; arr[o + 1] = col.g; arr[o + 2] = col.b; arr[o + 3] = a;
+          arr[o] = col.r; arr[o + 1] = col.g; arr[o + 2] = col.b; arr[o + 3] = a * (land ? land[rr.start + k] : 1);
         }
       }
       colAttr.needsUpdate = true;
@@ -4817,7 +4926,9 @@ void main() {
     // 缺省时刻（标题画面的黄昏）不建点光源灯池（灯池一旦建立，白天每个像素也要遍历它们：SwiftShader 下慢约 15–20%）：
     // 城与关的灯改用一批加色光晕（LP.HaloBatch，一次绘制）——每处一大团暗金的「灯池」光 + 一颗亮的灯晕；建了真灯就熄掉
     _updateGlow(st) {
-      const want = !(this._lamps && this._lamps.length) && !!st && st.night > 0.2;
+      // （第四轮：明确要了时刻（跟随时钟 / setMood）时不用光晕：真灯在夜色 0.45 时才建，之前若先建光晕，黄昏会先冒出一团加色光晕
+      // 再换成真灯，还多编译一次光晕材质）
+      const want = !(this._lamps && this._lamps.length) && !(this._follow || this._moodWant != null) && !!st && st.night > 0.2;
       if (!this._glow) {
         if (!want || !this._lampSpecs || !this._lampSpecs.length || !SG.LP || !SG.LP.HaloBatch) return;
         const specs = this._lampSpecs.slice(), b = new SG.LP.HaloBatch(specs.length * 2);

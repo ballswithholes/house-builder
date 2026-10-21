@@ -1294,8 +1294,30 @@ void main() {
     if (lp && kind === 'mountain') {
       for (const [x, z, k, nm] of [[-9.6, -8.6, 0.9, 'cliff'], [10.2, -8.2, 1.0, 'cliff'], [-11.8, -6.4, 0.5, 'boulder'], [12.2, -6.8, 0.55, 'boulder'], [-5.6, -13.5, 1.2, 'cliff'], [6.8, -14.8, 1.3, 'cliff'], [-14.5, -16.5, 1.6, 'cliff'], [15.5, -17.5, 1.5, 'cliff']]) {
         if (dry(x, z) < 1.5) continue;
-        const sk = FIG_S * 1.6 * k, wk = nm === 'cliff' ? 1.7 : 1;     // 崖石放宽成岩脊（不是一根根石柱）
-        LPS.add(nm, { seed: Math.floor(lhash(x, z, 31) * 2) }, x, H(x, z) - 0.25 * k, z, lhash(x, z, 32) * 6.283, [sk * wk, sk * (nm === 'cliff' ? 0.85 : 1), sk * wk * 0.9]);
+        // 第三轮修订：每处是一簇不规则的多面石块（Lanternvale props_wild 的做法），不再用层叠岩片的「崖石」
+        // （拉宽了像一摞摞饼或木箱，不拉宽像一座石塔）：一块大巨石（半埋、随机朝向）+ 旁边两三块大石 / 巨石 + 前面几块碎石；
+        // 只用 lhash，地形随机数序列不变
+        const sk = FIG_S * 1.6 * k, sd = Math.floor(lhash(x, z, 31) * 2), yaw = lhash(x, z, 32) * 6.283;
+        if (nm === 'cliff') {
+          const bk = sk * (0.9 + 0.25 * lhash(x, z, 33));
+          LPS.add('boulder', { seed: sd, near: true }, x, H(x, z) - 0.3 * bk, z, yaw, [bk * 1.2, bk * (0.95 + 0.25 * lhash(x, z, 35)), bk]);
+          const nb = 2 + (lhash(x, z, 34) < 0.5 ? 1 : 0);
+          for (let i = 0; i < nb; i++) {
+            const a = yaw + 1.2 + i * (4.2 / nb) + (lhash(x, z, 40 + i) - 0.5) * 0.8, d = sk * (1.1 + 0.5 * lhash(x, z, 50 + i));
+            const bx = x + Math.cos(a) * d * 1.25, bz = z + Math.sin(a) * d, nm2 = lhash(x, z, 60 + i) < 0.55 ? 'boulder' : 'rock_large';
+            const bs = FIG_S * (nm2 === 'boulder' ? 0.62 : 0.95) * k * (0.7 + 0.6 * lhash(x, z, 70 + i));
+            if (dry(bx, bz) < 1.2) continue;
+            LPS.add(nm2, { seed: (sd + i) & 1, near: true }, bx, H(bx, bz) - 0.12 * bs, bz, lhash(x, z, 80 + i) * 6.283, [bs, bs * (0.85 + 0.3 * lhash(x, z, 85 + i)), bs]);
+          }
+        } else LPS.add(nm, { seed: sd }, x, H(x, z) - 0.25 * k, z, yaw, sk);
+        // 碎石：靠镜头一侧散几块
+        const ns = 2 + Math.floor(lhash(x, z, 90) * 3);
+        for (let i = 0; i < ns; i++) {
+          const a = (lhash(x, z, 91 + i) - 0.5) * 2.4 + Math.PI / 2, d = sk * (1.3 + 0.9 * lhash(x, z, 96 + i));
+          const rx = x + Math.cos(a) * d, rz = z + Math.sin(a) * d, rs = FIG_S * k * (0.35 + 0.3 * lhash(x, z, 101 + i));
+          if (dry(rx, rz) < 1.2) continue;
+          LPS.add('rock_small', { seed: i & 1 }, rx, H(rx, rz) - 0.05 * rs, rz, lhash(x, z, 106 + i) * 6.283, rs);
+        }
       }
     }
     // 近景（镜头前 z 3–6.5）的战场遗物：折断的长枪、丢下的圆盾、倒地的军旗、碎石——框住画面下缘，不挡交锋处
@@ -1883,7 +1905,7 @@ void main() {
     const hi = sstep(6, 22, y) * sstep(30, 50, -z);
     if (hi > 0) c = lmix(c, lhx('#B4B276'), hi * 0.55);
     // 岩石：陡坡与山巅（按面着色的灰褐）
-    const rW = sstep(0.3, 0.52, slope + (n2 - 0.5) * 0.22 + Math.max(0, ga.g2) * 0.35 + hi * 0.25 + (kind === 'mountain' ? 0.24 + 0.2 * sstep(-6, -16, z) : 0));   // 修订：山岳的坡多露岩
+    const rW = sstep(0.3, 0.52, slope + (n2 - 0.5) * 0.22 + Math.max(0, ga.g2) * 0.35 + hi * 0.25 + (kind === 'mountain' ? 0.34 + 0.2 * sstep(-6, -16, z) : 0));   // 修订：山岳的坡多露岩（第三轮 0.24 → 0.34）
     if (rW > 0.01) c = lmix(c, lmul(lmix(lhx('#8E877C'), lhx('#A89A84'), n1), 0.9 + 0.16 * n3), rW);
     // 雪
     const snW = sstep(snowH, snowH + 3, y + (n2 - 0.5) * 4) * (1 - sstep(0.45, 0.75, slope));
@@ -1919,7 +1941,9 @@ void main() {
     constructor() { this.sc = new SG.LP.Scatter({ chunk: 0, name: 'ClashProps' }); this.n = 0; this.tris = 0; }
     add(name, opts, x, y, z, yaw, scale, tint) {
       try {
-        const far = z < LP_FAR_Z, o = Object.assign({}, opts || {}, { lod: far ? 'far' : 'near' });
+        // opts.near：远处也用近景模型（山岳两翼的大石簇：远景的石块只剩几个八面体，太大太显眼）
+        const far = z < LP_FAR_Z && !(opts && opts.near), o = Object.assign({}, opts || {}, { lod: far ? 'far' : 'near' });
+        delete o.near;
         const g = SG.LPProps.geometry(name, o);
         const t = tint || null;
         if (g.ink) this.sc.add(g.ink, x, y, z, yaw, scale, t, { castShadow: g.castShadow && !far, outline: !far });
@@ -2235,7 +2259,7 @@ void main() {
         }
       });
       if (gx !== null) {
-        const g = lpMakeNamed('gate_tower', { color: defHex, hallName: castle ? '镇远楼' : '宾阳楼' }, { gate_tower: (sc.opts.scene && sc.opts.scene.city) || '城门' });
+        const g = lpMakeNamed('gate_tower', { color: defHex, name: (sc.opts.scene && sc.opts.scene.city) || '城门', hallName: castle ? '镇远楼' : '宾阳楼' }, { gate_tower: (sc.opts.scene && sc.opts.scene.city) || '城门' });
         g.position.set(gx, H(gx, WALL_Z) - 0.05, gateZ); g.scale.setScalar(S);
         objs.push(g);
         const L = g.userData.lp && g.userData.lp.lamps;
@@ -2747,7 +2771,8 @@ void main() {
     // 士兵群（实例化）、旗手、武将与战马、帅旗、箭
     *buildFigures() {
       const scene = this.scene;
-      const crowd = this.crowd = SG.Figure.crowd({ lod: 'low', shadow: true, capacity: 16 });
+      // 第三轮修订：LP 版的士兵脚下已有柔和的圆影（ClashShadows），不再另投实时阴影（省掉每组一次阴影绘制）
+      const crowd = this.crowd = SG.Figure.crowd({ lod: 'low', shadow: !this.lp, capacity: 16 });
       scene.add(crowd.root);
       for (const A of this.armies) {
         const info = A.info;

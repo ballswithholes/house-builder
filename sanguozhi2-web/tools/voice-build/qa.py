@@ -8,17 +8,22 @@
 #   (iv)  licence: a model whose licence is non-commercial or unknown fails a release build unless --allow-nc (dev builds)
 # A lingua FAILS QA when more than half of its clips hard-fail, or when Whisper is reliable for it and its median error
 # exceeds 0.75; a failed lingua ships no pack and the runtime walks its fallback chain (SG.VoiceData.LINGUA[lg].fb).
+# A lingua that ships is labelled against the §3.3 targets, not just "ok": A grade with an ASR median > 0.5 → "needs review";
+# zh needs whisper-small ≤ 0.35 or a human listen (whisper-base alone → "needs review"); B / C grade or no ASR → "specialist
+# review" (AUDIO-V4 §4 Q3). The report also records whether --allow-nc was used and every model's licence (§B7.2 iv).
 # Usage: python3 -I tools/voice-build/qa.py <wav dir> --models <dir>[,<dir2>] [--allow-nc] [--no-asr] → <wav dir>/qa.json, qa.md
+#        python3 -I tools/voice-build/qa.py <wav dir> --report-only   → rewrite qa.md from an existing qa.json + synth.json
 import sys, os, json, glob, wave, argparse, unicodedata, statistics
-import numpy as np
 
 ap = argparse.ArgumentParser()
 ap.add_argument('wavdir')
-ap.add_argument('--models', required=True)
+ap.add_argument('--models', default='')
+ap.add_argument('--report-only', action='store_true')
 ap.add_argument('--allow-nc', action='store_true')
 ap.add_argument('--no-asr', action='store_true')
 ap.add_argument('--threads', type=int, default=3)
 A = ap.parse_args()
+if not A.report_only and not A.models: ap.error('--models is required (unless --report-only)')
 recs = json.load(open(os.path.join(A.wavdir, 'synth.json'), encoding='utf-8'))
 
 # characters per second at bark delivery (design-v4/audio/voice-lines.js SPEED, measured on the tts-eval clips)
@@ -60,6 +65,66 @@ def read_wav(fn):
         sr = w.getframerate(); x = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16).astype(np.float32) / 32768
     return x, sr
 
+ASR_TARGET = 0.5        # §3.3: A languages, error ≤ 0.5
+ZH_TARGET = 0.35        # §3.3: zh with whisper-small ≤ 0.35 on syllables, or a human review
+
+def review_of(lg, s, asr_model):
+    """the §3.3 label of a lingua that ships (s = its summary row)"""
+    if s['failed']: return 'FAILED → fallback chain'
+    med = s['asrMedian']
+    if lg == 'zh':
+        if asr_model != 'whisper-small': return f"needs review (zh: {asr_model or 'no ASR'} only; §3.3 wants whisper-small ≤ {ZH_TARGET} or a human listen)"
+        return 'ok' if med is not None and med <= ZH_TARGET else f'needs review (ASR median {med} > {ZH_TARGET})'
+    if s.get('conf') != 'A':
+        return 'specialist review (grade ' + str(s.get('conf')) + (f'; ASR median {med}' if med is not None else '; no ASR') + ')'
+    if med is None: return 'specialist review (A grade, no ASR)'
+    if med > ASR_TARGET: return f"needs review (ASR median {med} > {ASR_TARGET}{'' if s['asrReliable'] else '; Whisper unreliable here'})"
+    return 'ok'
+
+def write_report(out, summary, allow_nc, asr_model):
+    for lg, s in summary.items(): s['review'] = review_of(lg, s, asr_model)
+    L = ['# Voice QA report', '',
+         f"ASR: {asr_model or 'none'} · targets (AUDIO-V4 §3.3): A languages ≤ {ASR_TARGET}, zh ≤ {ZH_TARGET} with whisper-small or a human listen · "
+         f"a lingua FAILS (ships no pack) when > ½ of its clips hard-fail, or Whisper is reliable for it and its median > 0.75", '',
+         '| lingua | grade | clips | hard fails | flagged | ASR median (n) | reliable | result |', '|---|---|---|---|---|---|---|---|']
+    for lg, s in summary.items():
+        L.append(f"| {lg} | {s.get('conf', '?')} | {s['n']} | {s['hardFails']} | {s['flagged']} | {s['asrMedian'] if s['asrMedian'] is not None else '—'} ({s['asrN']}) | {'yes' if s['asrReliable'] else 'no'} | {s['review']} |")
+    ok_n = sum(1 for s in summary.values() if s['review'] == 'ok')
+    L += ['', f"{ok_n} of {len(summary)} linguas meet the §3.3 target outright; the rest ship but are listed for a listen above.", '']
+    # licences (§B7.2 iv): every model used, its licence, the packs and clips it voices
+    models = {}
+    for r in recs:
+        m = models.setdefault(r['model'], dict(packs=set(), clips=0))
+        m['packs'].add(r['pack']); m['clips'] += 1
+    blocked = [k for k in models if LIC.get(k, ('unknown', 'unknown'))[1] != 'ok']
+    L += ['## Licences (§B7.2 iv)', '',
+          f"Built with `--allow-nc`: **{'yes' if allow_nc else 'no'}**." + (
+              f" These packs are a DEV build: a release build (without `--allow-nc`) fails the licence gate for {len(blocked)} of {len(models)} models "
+              f"({sum(models[k]['clips'] for k in blocked)} clips). Korean (KSS) is non-commercial; the 'see URL' / 'see model card' voices must be checked before any distribution (AUDIO-V4 §4 Q1)."
+              if allow_nc and blocked else ''), '',
+          '| model | licence | kind | packs | clips |', '|---|---|---|---|---|']
+    for k in sorted(models):
+        lic = LIC.get(k, ('unknown', 'unknown'))
+        L.append(f"| `{k}` | {lic[0]} | {'**' + lic[1] + '**' if lic[1] != 'ok' else 'ok'} | {', '.join(sorted(models[k]['packs']))} | {models[k]['clips']} |")
+    L += ['', '## Hard fails (dropped from the packs)', '']
+    L += [f"- `{o['pack']}/{o['id']}` {o['text']} — {'; '.join(o['hard'])}" for o in out if o['hard']] or ['(none)']
+    L += ['', '## Flagged for a human listen', '']
+    L += [f"- `{o['pack']}/{o['id']}` {o['text']} — {'; '.join(o['soft'])}" for o in out if o['soft'] and not o['hard']] or ['(none)']
+    open(os.path.join(A.wavdir, 'qa.md'), 'w', encoding='utf-8').write('\n'.join(L) + '\n')
+
+def conf_of(lg):
+    for r in recs:
+        if r['lingua'] == lg: return r.get('conf')
+    return None
+
+if A.report_only:
+    Q = json.load(open(os.path.join(A.wavdir, 'qa.json'), encoding='utf-8'))
+    for lg, s in Q['linguas'].items(): s.setdefault('conf', conf_of(lg))
+    write_report(Q['clips'], Q['linguas'], Q.get('allowNc', False), Q.get('asrModel', 'whisper-base' if any('asr' in o for o in Q['clips']) else None))
+    print('qa.md rewritten from qa.json:', ', '.join(f"{lg} {s['review']}" for lg, s in Q['linguas'].items()))
+    sys.exit(0)
+
+import numpy as np      # the gates need it; --report-only does not
 recs_by_lg = {}
 for r in recs: recs_by_lg.setdefault(r['lingua'], []).append(r)
 asr = {}
@@ -122,16 +187,10 @@ summary = {}
 for lg, p in per.items():
     med = statistics.median(p['errs']) if p['errs'] else None
     failed = p['hard'] > p['n'] / 2 or (lg in RELIABLE and med is not None and med > 0.75)
-    summary[lg] = dict(n=p['n'], hardFails=p['hard'], flagged=p['soft'], asrMedian=med, asrN=len(p['errs']), asrReliable=lg in RELIABLE, failed=failed)
-json.dump(dict(clips=out, linguas=summary, allowNc=A.allow_nc), open(os.path.join(A.wavdir, 'qa.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=0)
-# human-readable report: the flagged clips with their audio paths
-L = ['# Voice QA report', '', '| lingua | clips | hard fails | flagged | ASR median (n) | reliable | result |', '|---|---|---|---|---|---|---|']
-for lg, s in summary.items():
-    L.append(f"| {lg} | {s['n']} | {s['hardFails']} | {s['flagged']} | {s['asrMedian'] if s['asrMedian'] is not None else '—'} ({s['asrN']}) | {'yes' if s['asrReliable'] else 'no'} | {'FAILED → fallback chain' if s['failed'] else 'ok'} |")
-L += ['', '## Hard fails (dropped from the packs)', '']
-L += [f"- `{o['pack']}/{o['id']}` {o['text']} — {'; '.join(o['hard'])}" for o in out if o['hard']] or ['(none)']
-L += ['', '## Flagged for a human listen', '']
-L += [f"- `{o['pack']}/{o['id']}` {o['text']} — {'; '.join(o['soft'])}" for o in out if o['soft'] and not o['hard']] or ['(none)']
-open(os.path.join(A.wavdir, 'qa.md'), 'w', encoding='utf-8').write('\n'.join(L) + '\n')
+    summary[lg] = dict(n=p['n'], conf=conf_of(lg), hardFails=p['hard'], flagged=p['soft'], asrMedian=med, asrN=len(p['errs']), asrReliable=lg in RELIABLE, failed=failed)
+asr_model = 'whisper-base' if asr else None
+# human-readable report (labels against §3.3, licences, dropped and flagged clips), then the machine-readable one with the labels
+write_report(out, summary, A.allow_nc, asr_model)
+json.dump(dict(clips=out, linguas=summary, allowNc=A.allow_nc, asrModel=asr_model), open(os.path.join(A.wavdir, 'qa.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=0)
 print(f"QA: {len(out)} clips, hard fails {sum(1 for o in out if o['hard'])}, flagged {sum(1 for o in out if o['soft'] and not o['hard'])}; failed linguas: {[lg for lg, s in summary.items() if s['failed']]}")
 for lg, s in summary.items(): print(f"  {lg:4s} n={s['n']:4d} hard={s['hardFails']:3d} flagged={s['flagged']:3d} asr={s['asrMedian']} ({s['asrN']}) {'FAILED' if s['failed'] else ''}")

@@ -22,7 +22,13 @@ js/strategy-ai.js          Conquest, StrategyAI                           ← St
 js/battle-model.js         BattleModel, BUnit                             ← Battle/BattleModel.cs
 js/audio.js                Sfx                                            ← Core/Sfx.cs
 js/ui.js                   UI kit (DOM)                                   ← UI/UIKit.cs
+…                          (v4: settings, UI art, shell, portraits — see index.html)
+js/portrait.js             Portrait (face data used by figure.js)
+js/lowpoly.js              SG.LP: v4 low-poly toolkit (MeshBuilder, materials, outlines, instancing, Mood)   — v4 art
+js/lp-props.js             SG.LPProps: shared prop recipes + building parts (needs SG.LP)                   — v4 art
+js/figure.js               SG.Figure: generals, soldiers, horses, crowds (needs SG.LP / SG.LPProps)          — v4 art
 js/art.js                  Gfx (renderer, scene, lights, sky, materials), MeshBuilder, Models ← View/Art.cs + shaders + Game.SetupWorld
+js/culture-art.js          SG.CultureArt: city models per culture (needs SG.LP / SG.LPProps)               — v4 art
 js/camera.js               CameraRig                                      ← View/CameraRig.cs
 js/map-view.js             MapView                                        ← View/MapView.cs
 js/battle-view.js          BattleView, UnitVisual                         ← Battle/BattleView.cs
@@ -344,3 +350,52 @@ billboarded sprites or `THREE.Points` with additive material, updated in `update
 `window.SG` stays reachable from the page so Playwright tests can call
 `SG.Game`, `SG.G`, `SG.Commands`, etc. Add `?seed=N` support in `game.js`
 (`SG.Random.seed(N)`) for reproducible screenshots.
+
+## v4 art: the Lanternvale low-poly style (SG.LP, SG.LPProps, moods)
+
+Load order (fixed): `portrait.js → lowpoly.js → lp-props.js → figure.js → art.js → culture-art.js → camera.js →
+map-view.js → …`. Test pages that use the pilot recipes load `lp-pilot.js` **after** `lp-props.js` (its `Pilot.*`
+wrappers build from SG.LPProps). The full API of each module is in its file header; the parts other modules rely on:
+
+- **SG.LP** (`js/lowpoly.js`, version `SG.LP.version` = '1.0'): `MeshBuilder` (transform stack, primitives, `softLump`
+  foliage, `append(builder)`, `appendGeometry(lpGeometry, { matrix, ink: 0 | 1 | 'attr', bone })`,
+  `toGeometry({ skinned, compact })`); `material(opts)` / `outlineMaterial({ color, width, windScale, fogScale,
+  distance: [d0, d1, k] })` (shared instances — per-object looks go through `setLook(obj, look)`, never by editing a
+  shared material); `mesh(geo, opts)`, `skinnedMesh`, `lod`; `instances(geo, capacity, { tints, outline, outlineOpts })`
+  + `setInstance` / `setInstanceMatrix` / `commitInstances` (per-instance tints are sRGB multipliers applied in the
+  fragment shader); `Scatter({ chunk, lodDist, outline })` (`.add`, `.build()`, `.update(camera)`, `.chunks` =
+  `[{ center, radius, near, far, isFar }]` for sets with a far geometry, `.meshes`); `StaticBatch`, `mergeGeometries`;
+  `BlobShadows`, `blobShadow`; `decal`, `groundDecal`, `decalTexture`, `boardTexture`; `HaloBatch`; globals
+  `setTime`, `setWind`, `setViewport`; `Mood` (below). Gamma workflow: LP shaders decode vertex colours as sRGB and
+  encode their own output.
+- **LP.Mood(scene, opts)**: `set('dawn' | 'morning' | 'noon' | 'afternoon' | 'golden' | 'dusk' | 'night' | hour)`,
+  `state`, `addLamp(pos, { color, intensity, range, nightOnly, halo, haloSize, flicker })`, `setLampLit`, `moveLamp`,
+  `removeLamp`, `prewarm(renderer, camera, count?, keep = 1)`, `update(camera)` (scene hook), `dispose()`. Lamps share a
+  pool of `maxLamps` point lights (nearest lit lamps win); the pool is hidden while no lamp is lit, so day scenes compile
+  shaders without point lights. Add a scene's lamps while building it, before its first render; call `prewarm` once
+  for a view that will later reach night (it compiles the lamp-lit variant ahead of the first dusk).
+- **SG.Gfx mood** (`js/art.js`, main scene): `SG.Gfx.mood` (LP.Mood driving the existing sun / sky lights; noon is
+  the classic look), `setMood(what)` → state, `moodState()`, `addLamp`, `removeLamp`, `setLampLit`,
+  `newMood(scene, opts)` (own mood for a full-screen scene such as the duel or the siege clash).
+- **SG.LPProps** (`js/lp-props.js`): `names(group)`, `groups`, `info(name)`, `has(name)`, `geometry(name, opts)` →
+  `{ ink, plain, lamps, decals, anchors, tris, size }` (cached and shared — never dispose), `make(name, opts)`,
+  `addLamps(obj, mood)`, `scatter(sc, …)`, `batch(sb, …)`, `parts.*(M, opts)` (building parts), `clearCache()`.
+  Options: `{ seed, lod: 'near' | 'far', color, variant, lit }` plus per-recipe keys; `gate_tower` takes `name`
+  (gate plaque) and `hallName` (hall plaque) — the plaques are decals, the mesh is shared between names.
+- **Budgets** (triangles): character ≤ ~3.1k (`SG.Figure.budgets`: high 3100, **hero 3200**, mid 1800,
+  low / soldier 900, horse 2600 / 1800 / 900), big building ≤ ~3.2k, tree ≤ 1.5k, small prop ≤ 400.
+  Characters have real adult proportions (≈ 7.5 heads, heroic generals up to ~7.8).
+- **SG.CultureArt** (`js/culture-art.js`): `model(culture, capital, city, { size, lod: 'near' | 'mid' | 'far' })`
+  (cached geometry flagged `userData.sharedGeometry` — never dispose), `object(size, culture, capital, city, { lod })`,
+  `lamps(size, culture, capital, city)`, `scatter(list, { chunk, lodDist, inkDist, midDist, cull, inkTaper })` →
+  `{ group, scatter, lamps, update(camera), setCull(on) }` (call `update(camera)` every frame after the camera rig
+  update: per-city frustum culling and LOD rely on it), `modelKey(culture, city, capital)` (e.g. `persia:ctesiphon`),
+  `tierOf`, `variantOf`, `cultureOfCity`, `isCapital`, `city(…)`, `cityInto(mb, …)`, `cityFarInto(mb, …)` (without a
+  city it reuses the city of the previous `cityInto` call), `clearCache()`.
+- **MapView mood**: `setMood('dawn' | 'morning' | 'noon' | 'afternoon' | 'golden' | 'dusk' | 'night' | 'title' | hour |
+  null)` (null = default: warm afternoon 16.3, 'title' = the title flyover's lantern-lit dusk; `Game.titleFlow` calls
+  `setMood('title')` on entry and `setMood(null)` on leaving), `followClock(on)` (follow `SG.Clock.hour()`; the strategy
+  screen turns it on when the 昼夜光影 setting is on), `moodHour` (getter). City lamps join the main mood only after
+  the first real dusk (night > 0.45); until then no point lights exist. `BattleView#setMood(what)` sets the board's
+  hour on the shared main scene and restores the map's on dispose.
+

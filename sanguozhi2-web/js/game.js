@@ -197,6 +197,68 @@
       document.documentElement.classList.toggle('sg-touch', !!SG.isTouch);
     } catch (e) { /* 忽略 */ }
   }
+  // 镜头设置（UI-V4 §7 第 28–33 行）施加到这一台 CameraRig 上：camera.js 不改，只在实例上包一层
+  //（缩放速度 → 滚轮与双指的倍率；平移速度 / 拖动反转 → _pan；镜头飞行 平滑 · 快速 · 直接切换 → flyTo / focusWorld；
+  //  屏幕边缘平移 → Game.frame 里 edgePan(dt)）。读设置时缓存，改了经 SG.Settings.on 更新。
+  const CAM = { zoom: 1, pan: 1, invert: false, edge: false, fly: 'smooth' };
+  function readCam() {
+    const U = SG.UISettings;
+    if (!U) return;
+    CAM.zoom = Math.max(0.5, Math.min(2, (+U.get('cam.zoomSpeed') || 100) / 100));
+    CAM.pan = Math.max(0.5, Math.min(2, (+U.get('cam.panSpeed') || 100) / 100));
+    CAM.invert = !!U.get('cam.invert');
+    CAM.edge = !!U.get('cam.edgePan') && !SG.isTouch;
+    CAM.fly = U.get('cam.fly') || 'smooth';
+  }
+  function installCamSettings(rig) {
+    if (!rig || rig._sgCam) return;
+    rig._sgCam = true;
+    readCam();
+    try { if (SG.Settings && SG.Settings.on) for (const id of ['cam.zoomSpeed', 'cam.panSpeed', 'cam.invert', 'cam.edgePan', 'cam.fly']) SG.Settings.on(id, readCam); } catch (e) { /* 忽略 */ }
+    const wheel = rig._wheel, move = rig._move, pan = rig._pan, fly = rig.flyTo, focus = rig.focusWorld;
+    // 缩放速度：一次滚轮 / 一段双指的距离倍率按 CAM.zoom 次方放大或减小
+    const zoomed = (fn, self, args) => { const d0 = self.desiredDistance; const r = fn.apply(self, args); if (CAM.zoom !== 1 && d0 > 0 && self.desiredDistance !== d0) self.desiredDistance = d0 * Math.pow(self.desiredDistance / d0, CAM.zoom); return r; };
+    rig._wheel = function (e) { return zoomed(wheel, this, [e]); };
+    rig._move = function (e) { return this._pointers && this._pointers.size >= 2 ? zoomed(move, this, [e]) : move.call(this, e); };
+    rig._pan = function (dx, dz) { const k = CAM.pan * (CAM.invert ? -1 : 1); return pan.call(this, dx * k, dz * k); };
+    rig.flyTo = function (x, y, dist, opts) {
+      if (CAM.fly === 'cut') { this._endFly(); this.focusMap(x, y, dist, true); return Promise.resolve(); }
+      const p = fly.call(this, x, y, dist, opts);
+      if (CAM.fly === 'fast' && this._fly && !(opts && opts.duration > 0)) this._fly.dur *= 0.5;
+      return p;
+    };
+    rig.focusWorld = function (p, dist, instant) { return focus.call(this, p, dist, instant || CAM.fly === 'cut'); };
+    // 屏幕边缘平移（桌面，鼠标贴近边缘 12 px；窗口打开时不动）
+    let mx = -1, my = -1;
+    window.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') { mx = e.clientX; my = e.clientY; } }, { passive: true });
+    document.addEventListener('pointerleave', () => { mx = my = -1; });
+    window.addEventListener('blur', () => { mx = my = -1; });
+    rig.edgePan = function (dt) {
+      if (!CAM.edge || !this.inputEnabled || mx < 0 || this._pressing || (SG.UI && SG.UI.anyModal && SG.UI.anyModal())) return;
+      const W = innerWidth, H = innerHeight, m = 12;
+      const h = mx <= m ? -1 : mx >= W - 1 - m ? 1 : 0, v = my <= m ? 1 : my >= H - 1 - m ? -1 : 0;
+      if (!h && !v) return;
+      this._endFly();
+      const y = this.yaw * Math.PI / 180, s = dt * this.distance * 0.9 * CAM.pan;
+      const ux = h * Math.cos(y) + v * Math.sin(y), uz = -h * Math.sin(y) + v * Math.cos(y);
+      this.desired.x += ux * s; this.desired.z -= uz * s;
+    };
+  }
+  // 帧率上限（第 13 行）每帧都要读：缓存，改了再更新（设置的 get 每次都读 localStorage）
+  let fpsCap = 60;
+  function readFps() { try { fpsCap = SG.UISettings && SG.UISettings.get('ui.fps') === '30' ? 30 : 60; } catch (e) { fpsCap = 60; } }
+
+  // 后台静音（设置第 10 行）：audio.js 在页面隐藏时挂起音频；设为「关」时在它之后再恢复（继续在后台播放）
+  function installBackgroundAudio() {
+    document.addEventListener('visibilitychange', () => {
+      try {
+        if (!document.hidden || !SG.Sfx || !SG.Sfx.unlocked || !SG.UISettings || SG.UISettings.get('ui.muteHidden') !== false) return;
+        const bus = SG.Sfx.voiceBus ? SG.Sfx.voiceBus() : null;
+        if (bus && bus.ctx && bus.ctx.state === 'suspended') bus.ctx.resume().catch(() => {});
+      } catch (e) { /* 无音频 */ }
+    });
+  }
+
   // 首次用户手势：解锁音频
   function installAudioUnlock() {
     const evs = ['pointerdown', 'pointerup', 'touchend', 'mousedown', 'click', 'keydown'];
@@ -250,9 +312,11 @@
         installShortClass();
         installGestureGuards(SG.Gfx.renderer.domElement);
         installAudioUnlock();
+        installBackgroundAudio();
 
         // CameraRig.Create + Focus(60, 0, 50), 95, instant
         this.rig = new SG.CameraRig(SG.Gfx.camera, SG.Gfx.renderer.domElement);
+        installCamSettings(this.rig);
         this.rig.focusMap(60, 50, 95, true);
 
         // 先用一份临时的经典剧本生成地图，作为标题背景
@@ -317,10 +381,12 @@
       if (this._running) return;
       this._running = true;
       this._last = performance.now();
+      readFps();
+      try { if (SG.Settings && SG.Settings.on) SG.Settings.on('ui.fps', readFps); } catch (e) { /* 忽略 */ }
       const loop = now => {
         requestAnimationFrame(loop);
         // 帧率上限 30（设置第 13 行）：隔帧渲染
-        if (SG.UISettings && SG.UISettings.get('ui.fps') === '30' && now - this._last < 1000 / 31) return;
+        if (fpsCap === 30 && now - this._last < 1000 / 31) return;
         const dt = Math.min(0.1, Math.max(0, (now - this._last) / 1000));
         this._last = now;
         this.frame(dt);
@@ -331,6 +397,7 @@
     frame(dt) {
       try {
         const rig = this.rig;
+        if (rig.edgePan) rig.edgePan(dt);
         rig.update(dt);
         if (this.map) this.map.update(dt);
         if (this.battleView) this.battleView.update(dt);
@@ -349,6 +416,9 @@
     async titleFlow() {
       const rig = this.rig;
       music('title');
+      // 标题画面用地图自己的黄昏（不跟随一局里的时钟）：明确告诉地图（MapView.setMood('title')；离开标题时 setMood(null)，
+      // 进入战略画面后由 StrategyScreen 按「昼夜光影」改为跟随时钟）
+      try { if (this.map && this.map.setMood) this.map.setMood('title'); } catch (e) { /* 地图无氛围 */ }
       rig.inputEnabled = false;
       // ?start=<势力键>：直接开局（测试 / 版式检查用）
       let quick = null;
@@ -485,6 +555,7 @@
       }
       rig.desiredYaw = 0;
       rig.inputEnabled = true;
+      try { if (this.map && this.map.setMood) this.map.setMood(null); } catch (e) { /* 地图无氛围 */ }
       this.map.refresh(SG.G);
       await this.strategy.run();
     },

@@ -621,6 +621,8 @@
     if (ot === 'burnous') { look.C.cape = of.color || '#e8e0cc'; look.C.cloth = of.color2 || '#c8b48c'; }
     // 袈裟 / 白衣（第三版的僧人：龙树、提婆、童受、伊兰戈）：头像里 outfit.toga 为袍色
     if (ot === 'toga' && of.toga) look.C.cloth = of.toga;
+    // 袈裟（染色的 toga）：斜披的那一幅与袍同色（深一档）、第二色织边——不再是白托加搭在橙袍上
+    if (ot === 'toga' && of.toga && !/^#e[0-9a-f]e[0-9a-f]d[0-9a-f]$/i.test(of.toga)) L.kasaya = true;
     if ((culture === 'africa' || culture === 'india') && L.torso === 'bare' && L.legs === 'trousers') { L.legs = 'bare'; L.boots = 'sandal'; }
     // 第三版修订：安息 / 萨尔马特将领（头像里是长衫）在三维里披鳞甲（铁甲骑兵贵族）；贵霜长袍加鳞片护肩、护胸与护臂——
     // 不再是一件纯色的「睡衣」
@@ -966,8 +968,12 @@
       this.bone('thigh' + S); M.color = thigh;
       const lean = this.D.det === 0;
       this.seg(hip, knee, this.thighR * tk, this.thighR * 0.76 * tk, o.thighSides || this.D.thigh, false, true);
-      this.bone('shin' + S); M.color = o.kneeCol || thigh;
-      if (o.knee !== false && this.D.det >= 1) M.sphere(V.add(knee, [0, 0, 0.004]), this.thighR * 0.78 * Math.max(tk * 0.9, sk), Math.max(4, this.D.lim - 1), Math.max(2, this.D.sph[1] - 1));
+      this.bone('shin' + S); M.color = o.kneeCol || (o.bareKnee ? shin : thigh);
+      if (o.knee !== false && this.D.det >= 1) {
+        // 赤腿的膝：顺着腿的长椭球、不比大腿末端粗（圆球会像木偶的关节）
+        if (o.bareKnee) { const rk = Math.max(this.thighR * 0.76 * tk, this.shinR * sk) * 1.01; M.sphere(V.add(knee, [0, 0.006 * k, 0.003]), [rk, rk * 1.35, rk * 0.94], Math.max(4, this.D.lim - 1), Math.max(2, this.D.sph[1] - 1)); }
+        else M.sphere(V.add(knee, [0, 0, 0.004]), this.thighR * 0.78 * Math.max(tk * 0.9, sk), Math.max(4, this.D.lim - 1), Math.max(2, this.D.sph[1] - 1));
+      }
       M.color = shin;
       this.seg(knee, V.add(ankle, [0, 0.02 * k, 0]), this.shinR * sk, this.shinR * 0.78 * sk, this.D.lim, true, !lean && bootTop <= 0);
       this.bootTop = null;
@@ -1311,7 +1317,7 @@
       const foot = bt === 'boot' ? X.boots : bt === 'shoe' ? C3('#3A2E2A') : X.skin;
       const top = bt === 'boot' && !wraps ? (gen ? 0.62 : 0.56) : 0;
       kit.leg(s, thighC, shinC, X.boots, top, bt === 'sandal' ? X.leather : bt === 'bare' ? X.skinDark : null,
-        { knee: D.det >= 2 || lg === 'bare', thighK: tk, shinK: sk, footCol: foot, noSole: bt === 'bare', thighSides: gen ? Math.max(5, D.thigh - 2) : D.thigh });
+        { knee: D.det >= 2 || lg === 'bare', bareKnee: lg === 'bare', thighK: tk, shinK: sk, footCol: foot, noSole: bt === 'bare', thighSides: gen ? Math.max(5, D.thigh - 2) : D.thigh });
       if (top > 0 && kit.bootTop && D.det >= 1) {
         kit.bone('shin' + S); M.color = gen ? X.gold : shT(X.boots, 1.25);
         M.band(kit.bootTop, kit.shinR * 1.26, kit.shinR * 1.24, -0.03 * k, 0.005 * k, D.lim);
@@ -1345,7 +1351,8 @@
         M.push().translate(V.lerp(a, b, 0.5)).scale(1.18 * sk, 1, 1.1 * sk);
         M.shell([0, 0, 0.004], [kit.shinR * 1.15, V.len(V.sub(a, b)) * 0.55, kit.shinR * 1.2], -80, 80, Math.max(3, D.pan + 1), 45, 135, 1);
         M.pop();
-        if (D.det >= 1) { M.color = X.metalLight; M.sphere(V.add(kn, [0, 0.01, kit.thighR * 0.7]), [kit.thighR * 0.55, kit.thighR * 0.6, kit.thighR * 0.35], D.sph[0], D.sph[1]); }
+        // 护膝：贴在膝前的一块扁圆甲片（不是一颗球）
+        if (D.det >= 1) { M.color = X.metal; M.sphere(V.add(kn, [0, 0.012, kit.thighR * 0.6]), [kit.thighR * 0.62, kit.thighR * 0.58, kit.thighR * 0.24], D.sph[0], D.sph[1]); }
       }
     }
     kit.mark('legs');
@@ -1400,7 +1407,7 @@
   }
   // 贴着躯干的连续披带（托加、绶带、兽皮斜挎）：沿 [θ 度, y] 路径按 Catmull-Rom 细分，每个截面在躯干表面外 off 处取宽 w 的横线，
   // 相邻截面连成一条不断的带（外面 + 深一点的里面），按顶点高度分骨。cols：逐段颜色（循环），sub：每段细分数
-  function drapeBand(kit, path, w, cols, off, sub) {
+  function drapeBand(kit, path, w, cols, off, sub, edge) {
     const M = kit.M, V = kit.V, k = kit.k, dk = kit.depthK, n = kit.D.tor;
     const at = (th, y) => { const r = kit.torsoR(y) * lerp(Math.cos(PI / n), 1, 0.6) + off, t = th * D2R; return [Math.sin(t) * r, y, Math.cos(t) * r * dk]; };
     const cr = (a, b, c, d, t) => { const t2 = t * t, t3 = t2 * t; return 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3); };
@@ -1424,6 +1431,19 @@
       M.color = c;
       M.quad(L[i], R[i], R[i + 1], L[i + 1], o);
       if (kit.D.det >= 1) { const inn = V.mul(o, -0.006); M.quad(V.add(L[i], inn), V.add(R[i], inn), V.add(R[i + 1], inn), V.add(L[i + 1], inn), V.neg(o), shT(c, 0.7)); }
+    }
+    // 织边（埃塞俄比亚 shamma 的 tibeb）：沿披带在胸前较低的那条边织一道色带
+    if (edge) {
+      let fi = 0; for (let i = 1; i < pts.length; i++) if (pts[i][2] > pts[fi][2]) fi = i;
+      const E = L[fi][1] < R[fi][1] ? L : R, I = E === L ? R : L;
+      M.color = edge.col;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const o = V.norm(V.add(Nn[i], Nn[i + 1])), lift = V.mul(o, 0.005);
+        if (o[2] < -0.25) continue;   // 背后那段披带层层相叠，织边只织在身前与肩侧
+        const a0 = V.add(E[i], lift), a1 = V.add(E[i + 1], lift);
+        const b0 = V.add(V.lerp(E[i], I[i], edge.w / w), lift), b1 = V.add(V.lerp(E[i + 1], I[i + 1], edge.w / w), lift);
+        M.quad(a0, b0, b1, a1, o);
+      }
     }
     M.boneBy(v0, p => kit.torsoBone(p[1]));
   }
@@ -1531,7 +1551,7 @@
       kit._robeTrim = trim;
     }
     // 交领（袍服 / 短衣 cross）：左襟压右襟，沿躯干表面的一条浅色宽带
-    if (L.collar === 'cross' || t === 'robe') {
+    if ((L.collar === 'cross' || t === 'robe') && !L.toga) {
       const c2 = L.white ? X.cloth2 : (gen ? (X.cloth2 && kit.P.luma(X.cloth2) > 0.45 ? X.cloth2 : X.cream) : X.cream);
       const nY = kit.neckY + 0.03 * k, sY = kit.shoulderY - 0.05 * k;
       torsoStrip(kit, [[32, nY], [12, sY], [-18, kit.chestY - 0.02 * k], [-55, kit.spineY + 0.04 * k]], 0.045 * k, c2);
@@ -1543,8 +1563,8 @@
     if (L.pelt) drapeBand(kit, sashPath, 0.13 * k, L.pelt === 'leopard' ? [C3('#D8A848'), C3('#E2B860'), C3('#3A2A1E')] : [C3('#D8782A'), C3('#2A2220'), C3('#E08A34')], 0.016 * k, bandSub);
     if (L.sash && !L.toga) drapeBand(kit, sashPath, 0.065 * k, X.cloth2, 0.014 * k, bandSub);
     if (L.toga) {
-      const tc = L.white ? X.cloth : C3('#ECE6D8');
-      drapeBand(kit, sashPath, 0.22 * k, [tc, kit.P.shade(tc, 0.94)], 0.02 * k, bandSub);
+      const tc = L.white ? X.cloth : L.kasaya ? shT(X.cloth, 0.86) : C3('#ECE6D8');
+      drapeBand(kit, sashPath, 0.22 * k, [tc, kit.P.shade(tc, 0.94)], 0.02 * k, bandSub, (L.white || L.kasaya) && X.cloth2 ? { col: X.cloth2, w: 0.035 * k } : null);
     }
     // 彝族背心：前开的短背心
     if (L.vest) {
@@ -2444,10 +2464,11 @@
       if (!cov.top) {
         const n = D.det >= 2 ? 12 : D.det >= 1 ? 8 : 4;
         for (let i = 0; i < n; i++) {
-          const th = (i / n) * 360 - 180 + 15, ph = 30 + (i % 3) * 22;
+          const th = (i / n) * 360 - 180 + 15, ph = Math.min(30 + (i % 3) * 22, hl(th) - 14);
           const p = kit.hairPoint(th, ph, 1.0);
           M.color = kit.P.shade(hc, 0.92 + 0.12 * ((i * 7) % 3) / 2);
-          if (hs === 'spiky' || hs === 'wild') M.spike(p, V.norm(V.sub(p, kit.hairC)), 0.035 * k, (hs === 'wild' ? 0.07 : 0.05) * k, 4);
+          // 尖簇朝上、朝后（额前的不朝脸上戳）
+          if (hs === 'spiky' || hs === 'wild') M.spike(p, V.norm(V.add(V.norm(V.sub(p, kit.hairC)), [0, 0.45, -0.35])), 0.035 * k, (hs === 'wild' ? 0.07 : 0.05) * k, 4);
           else M.sphere(p, (hs === 'tightcurl' ? 0.024 : 0.032) * k, 4, 2);
         }
       }
@@ -2618,7 +2639,8 @@
         const a = lerp(-60, 60, n > 1 ? i / (n - 1) : 0.5);
         const y = kit.neckY - 0.02 * k - 0.07 * k * Math.cos(a * D2R * 1.4);
         M.color = Array.isArray(col2[0]) ? col2[i % col2.length] : col2;
-        M.sphere(kit.torsoPt(a, y, 0.012 * k + r), r, 4, 2);
+        // 托加 / 披带之上（不被斜披的布吃掉一半）
+        M.sphere(kit.torsoPt(a, y, 0.012 * k + r + (look.L && look.L.toga ? 0.024 * k : 0)), r, D.det >= 2 ? 5 : 4, 2);
       }
     };
     if (acc.includes('torc') || acc.includes('goldcollar')) {

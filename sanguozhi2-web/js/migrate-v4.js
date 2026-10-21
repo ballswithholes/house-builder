@@ -23,7 +23,8 @@
    SG.MigrateV4.init(G)       → [id…]   新局
    SG.MigrateV4.load(G, data) → [id…]   v4 存档：按次序对每个打开的模块——存档里没有它的状态（keys 全缺）时先 migrate(G, 4)
                                         （没有 migrate 时 init(G)），再 load(G, data′)，data′ = data 加上刚补齐的字段；
-                                        返回的数组另带 .added = [补齐了状态的模块 id]（GameState 存为 g.systemsAdded，界面显示「新系统」卡片）
+                                        返回的数组另带 .added = [补齐了状态的模块 id]（GameState 存为 g.systemsAdded，界面显示「新系统」卡片；
+                                        迁移之后仍没有任何 keys 字段的模块——状态懒建，如 COMBAT 的 G.combos——不算）
    SG.MigrateV4.ORDER / RANK / list() / unregister(id)
    每个调用期间 SG.G 临时指向 G（模块的工具函数大多读 SG.G），结束后还原。
    一个模块抛错时记入 SG.MigrateV4.errors 并继续下一个（存档仍可读）；tests/save-v4.js 断言次序与跳过。
@@ -117,7 +118,8 @@
             if (fn) {
               try {
                 fn.call(d, G);
-                added.push(id);
+                // 「新系统」只算真正建了状态的模块（招式谱 G.combos 是懒建的：迁移后仍没有该键，不算，免得每次读档都报一次）
+                if (keys.some(k => G[k] !== undefined)) added.push(id);
                 dd = Object.assign({}, data);
                 for (const k of keys) if (G[k] !== undefined) dd[k] = G[k];
               } catch (e) {

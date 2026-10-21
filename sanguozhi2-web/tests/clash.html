@@ -83,7 +83,7 @@
          ?speed=2             速度
          ?mood=golden|dusk|night|16.5  攻击画面的时刻（play 的 mood 选项；缺省：战场的时刻，没有战场时按种子取午后 / 黄金时刻 / 黄昏）
          ?lp=0                不载入 js/lowpoly.js / js/lp-props.js（第三版布景，对照用）
-   window.T：play(caseKey, extra) / cut(side) / memTest(n) / info() */
+   window.T：play(caseKey, extra) / cut(side) / memTest(n) / info() / timeline()（COMBAT-V4 §1.5 时长验收；&timeline=1 载入后即跑） */
 (function () {
   const Q = new URLSearchParams(location.search);
   if (Q.get('embed')) document.body.classList.add('embed');
@@ -275,6 +275,51 @@
       const m = SG.Gfx.renderer.info.memory, r = SG.Gfx.renderer.info;
       return `geometries ${m.geometries}  textures ${m.textures}  programs ${r.programs ? r.programs.length : '?'}  screens ${SG.Gfx._screens.length}  dom .sg-clash ${document.querySelectorAll('.sg-clash').length}`;
     },
+    // COMBAT-V4 §1.5 时长验收：以 1/60 秒定步推进时间轴（与帧率无关），量实际秒数（含淡入淡出 0.4 秒）与逐段伤亡之和。
+    // 第四版时间轴（clash.js 的 tlMap / realT / CRIT_BEAT，clash.patch）未落地时只报告实测值、标为 pending，不判失败
+    async timeline() {
+      const v4 = typeof SG.Clash.realT === 'function' && !!SG.Clash.CRIT_BEAT;
+      const cases = [
+        { name: '普通', mode: 'on', speed: 1, crit: false, want: 4.86, tol: 0.10 },
+        { name: '普通 + 会心', mode: 'on', speed: 1, crit: true, base: '普通', add: 0.43, tol: 0.05 },
+        { name: '快', mode: 'fast', speed: 1, crit: false, want: 2.18, tol: 0.08 },
+        { name: '电脑回合 ×1.7', mode: 'on', speed: 1.7, crit: false, want: 3.02, tol: 0.10 },
+        { name: '委任 ×2.0', mode: 'on', speed: 2.0, crit: false, want: 2.63, tol: 0.10 },
+      ];
+      const modeWas = SG.Clash.mode, rows = [], by = {};
+      try {
+        for (const c of cases) {
+          SG.Clash.mode = c.mode;
+          const o = makeOpts('plain-even', {});
+          if (c.speed !== 1) o.speed = c.speed;
+          if (c.crit) o.crit = { side: 0, k: 1.5 };
+          const p = SG.Clash.play(o);
+          const t0 = performance.now();
+          while (!(SG.Clash.active && SG.Clash.active.built && SG.Clash.active.state === 'run') && performance.now() - t0 < 60000) await new Promise(r => setTimeout(r, 20));
+          const sc = SG.Clash.active;
+          if (!sc) { rows.push({ name: c.name, err: 'no scene' }); await p; continue; }
+          const upd = sc.update; sc.update = () => {};
+          const real0 = sc.real, onChunk = sc.onChunk.bind(sc);
+          let loss = 0, steps = 0;
+          sc.onChunk = ch => { loss += ch.amount; onChunk(ch); };
+          while (sc.state === 'run' && steps < 3000) { if (sc.paused) sc.paused = false; sc.advance(1 / 60); steps++; }
+          const total = +(sc.real - real0 + 0.4).toFixed(3);
+          sc.update = upd;
+          await p;
+          const want = c.add !== undefined ? +(by[c.base] + c.add).toFixed(3) : c.want;
+          const sumOk = loss === (o.attacker.troopsBefore - o.attacker.troopsAfter) + (o.defender.troopsBefore - o.defender.troopsAfter);
+          const pass = v4 ? Math.abs(total - want) <= c.tol && sumOk : null;
+          by[c.name] = total;
+          rows.push({ name: c.name, total, want, tol: c.tol, loss, sumOk, pass });
+        }
+      } finally { SG.Clash.mode = modeWas; }
+      const ok = v4 ? rows.every(r => r.pass) : null;
+      log('攻击画面时长（COMBAT-V4 §1.5）' + (v4 ? '' : '：第四版时间轴未落地（clash.patch），只报告实测值') + '\n' +
+        rows.map(r => r.err ? `${r.name}：${r.err}` : `${r.pass === null ? '·' : r.pass ? '✓' : '✗'} ${r.name} ${r.total.toFixed(2)} 秒（规格 ${r.want.toFixed(2)} ± ${r.tol}）伤亡之和 ${r.sumOk ? '相符' : '不符 ' + r.loss}`).join('\n') +
+        '\n' + (ok === null ? 'pending' : ok ? '时长：全部通过' : '时长：有未通过项'));
+      window.__timeline = { v4, ok, rows };
+      return window.__timeline;
+    },
     _opts: makeOpts,
     mem() { const m = SG.Gfx.renderer.info.memory; return { geometries: m.geometries, textures: m.textures, programs: SG.Gfx.renderer.info.programs.length }; },
     // 连播 n 次（每次播一小段后跳过），比较前后显存计数
@@ -333,6 +378,7 @@
   const spd = btn('opts', '速度 ×1', () => { SG.Clash.speed = SG.Clash.speed > 1 ? 1 : 2; spd.textContent = '速度 ×' + SG.Clash.speed; });
   const en = btn('opts', '已启用', () => { SG.Clash.enabled = !SG.Clash.enabled; en.textContent = SG.Clash.enabled ? '已启用' : '已关闭（play 立即返回）'; });
   btn('opts', '显存测试 ×10', () => T.memTest(10));
+  btn('opts', '时长验收（§1.5）', () => T.timeline());
   btn('opts', '手机尺寸预览', () => {
     const ph = document.getElementById('phone'), fr = document.getElementById('phoneFrame');
     const k = Math.min(1, (window.innerWidth - 60) / 844, (window.innerHeight - 90) / 390);
@@ -357,6 +403,7 @@
   window.__ready = true;
   if (Q.get('case')) setTimeout(() => T.play(Q.get('case'), { special: Q.get('special') || null, cult: Q.get('cult') || null }), 300);
   if (Q.get('cut')) setTimeout(() => T.cut(Q.get('cut') === '1' ? 1 : 0), 300);
+  if (Q.get('timeline') === '1') setTimeout(() => T.timeline(), 300);
 })();
 </script>
 </body>

@@ -80,6 +80,8 @@
       this.tacReady = {};         // 新计策的冷却：编号 → 可再用的日子
       this.mods = [];             // 限时加成（见 BattleModel.addMod）
       this.xp = { dmg: 0, heal: 0, routs: 0, cmdRouts: 0, duelWin: 0, duelLoss: 0, specials: 0, tactics: 0, tacFail: 0, crits: 0 };   // 本战经验来源（第四版 + crits）
+      this.movedThisAct = 0;      // 第四版 ITEMS §3.2：本次行动移动的格数（冲锋、赤兔 / 两刃矛的不能反击）
+      this.attacks = 0;           // 第四版 ITEMS §3.2：本战已攻击的次数（先登）
       if (o) Object.assign(this, o);
     }
     get troops() { return this.gen.troops; }
@@ -88,6 +90,8 @@
     get mobility() {
       let mv = 0;
       if (this.mods && this.mods.length) for (const m of this.mods) if (typeof m.move === 'number') mv += m.move;
+      const GB = gearBattle();   // 第四版 ITEMS §3.2：装备的机动 clamp(Σ mob, −1, 2)
+      if (GB && this.gen) mv += GB.mobility(this.gen);
       return Math.max(1, 3 + this.form.move + mv);   // 疑兵等削弱机动力时至少 1
     }
   }
@@ -136,6 +140,9 @@
         this.units.push(u);
       }
       this.deploy();
+      // 第四版 ITEMS §3.2 / §7.2：开战时的威（敌方士气 − 我方最大的威，开场 opening.awe 另加）与开场士气；不取随机数
+      const GB = gearBattle();
+      if (GB) GB.applyOpening(this);
       for (const u of this.units) u.formation = this.aiFormation(u);
       this.startSide(0);
     }
@@ -308,7 +315,7 @@
       for (const u of this.units) if (u.side === s && u.mods && u.mods.length) this.expireMods(u);   // 必杀技加成按本方行动计时
     }
     canAct(u) { return u.alive && u.side === this.side && !u.acted && this.ap > 0 && u.confused <= 0 && this.result === 0; }
-    spend(u) { if (!u.acted) { u.acted = true; this.ap--; } }
+    spend(u) { if (!u.acted) { u.acted = true; this.ap--; } u.movedThisAct = 0; }
 
     // 结束本方行动，返回 true 表示新的一天开始
     endSide() {
@@ -342,40 +349,59 @@
     }
 
     // ---------------------------------------------------------- 行动 --
-    move(u, to) { u.x = to.x; u.y = to.y; this.checkEnd(); }
+    move(u, to) { u.movedThisAct = (u.movedThisAct | 0) + BattleModel.dist(u, to); u.x = to.x; u.y = to.y; this.checkEnd(); }
 
-    atkPower(u) {
-      return u.troops * (0.5 + u.gen.war / 200) * u.form.atk * (0.6 + u.gen.training / 250) * (0.6 + u.morale / 250) * this.modK(u, 'atk') * this.vetK(u) * this.v4Atk(u);
+    // extra（可缺省）：这一击的条件项（attack() 的装备条件乘数、破甲、受伤加减），与装备 / 官职 / 羁绊 / 光环一起进 SG.Mods 的上限
+    atkPower(u, extra) {
+      return u.troops * (0.5 + u.gen.war / 200) * u.form.atk * (0.6 + u.gen.training / 250) * (0.6 + u.morale / 250) * this.modK(u, 'atk') * this.vetK(u) * this.v4Atk(u, extra);
     }
-    defFactor(u) { return u.form.def * Defs.terrainDef(this.map[u.x][u.y]) * (0.8 + u.gen.training / 500) * this.modK(u, 'def') * this.vetK(u) * this.v4Def(u); }
+    defFactor(u, extra) { return u.form.def * Defs.terrainDef(this.map[u.x][u.y]) * (0.8 + u.gen.training / 500) * this.modK(u, 'def') * this.vetK(u) * this.v4Def(u, extra); }
     // 第四版：装备 × 官职 / 主将 × 羁绊 × 光环的乘积（SG.Mods.atkMul / defMul，js/battle-math.js；各自 ≤ ×1.60、负向 ≥ ×0.5；
     // 没有 js/econ.js 或没有提供者时为 1）。clash.js 与人物菜单读同样的数字（SG.BattleMath.unitPreview）。
-    v4Atk(u) { const Mo = SG.Mods; return Mo && Mo.atkMul ? Mo.atkMul(u, this) : 1; }
-    v4Def(u) { const Mo = SG.Mods; return Mo && Mo.defMul ? Mo.defMul(u, this) : 1; }
+    // 条件项（ITEMS §7.2 terrain / castle / sea / lastStand / mount；守方的坐镇守城 defendCity）由 SG.Gear.battle.condTerms 给出
+    v4Atk(u, extra) { const Mo = SG.Mods, GB = gearBattle(); return Mo && Mo.atkMul ? Mo.atkMul(u, this, condWith(GB ? GB.condTerms(this, u, 'atk') : undefined, extra)) : 1; }
+    v4Def(u, extra) { const Mo = SG.Mods, GB = gearBattle(); return Mo && Mo.defMul ? Mo.defMul(u, this, condWith(GB ? GB.condTerms(this, u, 'def') : undefined, extra)) : 1; }
     // 第四版：军队会心率（COMBAT-V4 §2.1；人物菜单用 BattleModel.critChanceOf）
     critChance(u) { const Mo = SG.Mods; return Mo && Mo.critChance ? Mo.critChance(u) : 0; }
     // 第三版：老练加成（SG.Progress.vetK：每高 1 级攻、防、计策威力 +4%；1 级与成长关闭时为 1，与第一版相同）
     vetK(u) { const P = SG.Progress; return P && P.vetK && u.gen ? P.vetK(u.gen) : 1; }
-    // 计策 / 智力系必杀的威力：施计者老练 ÷ 目标老练
-    tacK(u, e) { return this.vetK(u) / this.vetK(e); }
+    // 计策 / 智力系必杀的威力：施计者老练 ÷ 目标老练；第四版 × (1 + 官职计策威力)（TITLES §7.1 tac；没有官爵时为 1）
+    tacK(u, e) { return this.vetK(u) / this.vetK(e) * (1 + v4z('titleTac', u.gen)); }
+    // 第四版：计策成功率的加项 = 施计者官职的计策成功 − 目标一方的识破（TITLES §7.1 tacHit / tacRes；没有官爵时为 0）
+    tacHitAdj(u, t) { return t && t.side !== u.side ? v4z('titleTacHit', u.gen) - v4z('tacRes', this, t.side) : 0; }
 
     attack(a, t) {
       const r = { dmg: 0, counter: 0, targetRouted: false, selfRouted: false, crit: false, critK: 1, critP: 0 };
       // 第四版：会心判定最先取恰好一个随机数（COMBAT-V4 §2.2；关掉会心时照取，开 / 关的对局一一配对）
-      const cr = SG.Mods && SG.Mods.rollCrit ? SG.Mods.rollCrit(a) : null;
+      // 第四版 ITEMS §3.2：装备的攻击上下文（不取随机数）；会心另传目标与条件（battle-math.patch：条件会心、抗会心、护身）
+      const GB = gearBattle(), gc = GB ? GB.attackCtx(this, a, t) : null;
+      const cr = SG.Mods && SG.Mods.rollCrit ? SG.Mods.rollCrit(a, undefined, t, gc ? gc.crit : undefined) : null;
       if (cr) { r.crit = cr.crit; r.critK = cr.k; r.critP = cr.p; }
-      r.dmg = Math.max(10, M.roundToInt(this.atkPower(a) * Balance.DamageK / this.defFactor(t) * SG.Random.rangeFloat(0.85, 1.15) * r.critK));
+      // 条件乘数（冲锋、先登、斩将、攻城、以寡击众、对骑、自身攻 × 拒马）作攻方 atkMul 的一个条件项；破甲、受伤加减作目标 defMul 的条件项——
+      // 都在 SG.Mods 的 ×1.60 上限与 ×0.5 下限之内（INTEGRATION §3.2：条件项由调用者传入，别处不再乘战斗数字）。上限不起作用时与 ITEMS §3.2 的连乘相同
+      let aC, tC;
+      if (GB) {
+        aC = [GB.attackK(a.gen, gc) * GB.antiHorseAt(this, a) - 1];
+        tC = [-GB.armorBreak(a.gen), takenTerm(GB.dmgTaken(t.gen, 'attack'))];
+      }
+      a.attacks = (a.attacks | 0) + 1;
+      r.dmg = Math.max(10, M.roundToInt(this.atkPower(a, aC) * Balance.DamageK / this.defFactor(t, tC) * SG.Random.rangeFloat(0.85, 1.15) * r.critK));
       r.dmg = Math.min(r.dmg, t.troops);
       t.troops -= r.dmg;
       t.morale = Math.max(0, t.morale - M.roundToInt(r.dmg * 40 / Math.max(200, t.troops + r.dmg)) - (r.crit ? Balance.CritMorale : 0));
       if (r.crit && a.xp) a.xp.crits++;
       if (r.crit && a.gen) a.gen.crits = (a.gen.crits | 0) + 1;   // 存档：武将的军队会心次数（INTEGRATION §6.1 gen.crits；人物菜单显示）
       r.targetRouted = this.checkRout(t);
+      if (r.targetRouted && GB) this.gearRouted(t, a);
       // 第四版 ITEMS §8.2 阵斩：会心击溃君主的部队时 25 %（SG.Items.rollSlay：只在阵斩概率 > 0 时取一个随机数——缺省只限君主；
       // 装备系统关掉时不取，随机数流与第三版相同）
       if (r.targetRouted && r.crit && slayOn()) r.slain = !!SG.Items.rollSlay(t.gen, 'critRout', a.gen.faction);
-      if (!r.targetRouted) {
-        r.counter = Math.max(5, M.roundToInt(this.atkPower(t) * Balance.DamageK * Balance.CounterRatio * this.modK(t, 'counter') / this.defFactor(a) * SG.Random.rangeFloat(0.85, 1.15)));
+      // 不能反击（ITEMS §7.2）：noCounter 能力；赤兔 / 两刃矛只在移动 ≥ 2 格后（两刃矛还要骑乘）
+      if (!r.targetRouted && !(GB && GB.noCounter(a.gen, gc))) {
+        // 第四版 ITEMS §3.2 反击加减：反击者的 counter 作其 atkMul 条件项；被反击者的 counterGuard 与受伤加减作其 defMul 条件项（同上，都在上限之内）
+        const cA = GB ? [GB.counter(t.gen)] : undefined;
+        const cD = GB ? [takenTerm(-GB.counterGuard(a.gen)), takenTerm(GB.dmgTaken(a.gen, 'counter'))] : undefined;
+        r.counter = Math.max(5, M.roundToInt(this.atkPower(t, cA) * Balance.DamageK * Balance.CounterRatio * this.modK(t, 'counter') / this.defFactor(a, cD) * SG.Random.rangeFloat(0.85, 1.15)));
         r.counter = Math.min(r.counter, a.troops);
         a.troops -= r.counter;
         a.morale = Math.max(0, a.morale - M.roundToInt(r.counter * 30 / Math.max(200, a.troops + r.counter)));
@@ -397,6 +423,15 @@
         u.xp.routs++;
         if (victim.commander) u.xp.cmdRouts++;
       }
+    }
+
+    // 第四版 ITEMS §3.2：被击溃者的俘虏条件记进 setup（击溃者的 capture、周围友军的救主 rescue），Conquest.apply 经 SG.Items.captureP 读
+    gearRouted(t, by) {
+      const s = this.setup, I = SG.Items;
+      if (!t || !t.gen || !I) return;
+      if (by && by.gen) (s.routedBy = s.routedBy || {})[t.gen.id] = by.gen.id;
+      const p = I.rescueAt ? I.rescueAt(this, t) : 0;
+      if (p > 0) (s.rescueP = s.rescueP || {})[t.gen.id] = p;
     }
 
     checkRout(u) {
@@ -443,7 +478,7 @@
         }
         return { success: true, dmg: 0 };
       }
-      const p = M.clamp(0.5 + (u.gen.intel - target.gen.intel) / 110, 0.12, 0.92);
+      const p = M.clamp(0.5 + (u.gen.intel - target.gen.intel) / 110 + this.tacHitAdj(u, target), 0.12, 0.92);
       if (SG.Random.value() > p) return { success: false, dmg: 0 };
       let dmg = 0;
       if (t.kind === TacticKind.Confuse) { target.confused = 2; target.acted = true; }
@@ -513,11 +548,11 @@
     tacticChance(u, t, target) {
       if (typeof t.kind !== 'string') {
         if (t.kind === TacticKind.Inspire || !target) return 1;
-        return M.clamp(0.5 + (u.gen.intel - target.gen.intel) / 110, 0.12, 0.92);
+        return M.clamp(0.5 + (u.gen.intel - target.gen.intel) / 110 + this.tacHitAdj(u, target), 0.12, 0.92);
       }
       const r = t.roll;
       if (!r || !target || target.side === u.side) return 1;
-      let p = r.base + (u.gen.intel - target.gen.intel) / r.div;
+      let p = r.base + (u.gen.intel - target.gen.intel) / r.div + this.tacHitAdj(u, target);
       if (r.forest && this.map[target.x][target.y] === Terrain.Forest) p += r.forest;
       if (r.lowMorale && target.morale < 50) p += r.lowMorale;
       return M.clamp(p, r.min, r.max);
@@ -677,6 +712,7 @@
 
     // 单挑：是否应战（拒绝时双方士气变化）。随机数调用与第一版 duel() 完全相同
     duelAccepts(a, b) {
+      if (gearBattle() && SG.Items.duelLure && SG.Items.duelLure(a.gen)) return true;   // 第四版 ITEMS §7.2 小霸王兜鍪：持有者的挑战必定应战（不取随机数）
       const ok = b.gen.war >= a.gen.war - 8 || SG.Random.value() < 0.25 || (b.commander && SG.Random.value() < 0.4);
       if (!ok) { b.morale = Math.max(0, b.morale - 12); a.morale = Math.min(100, a.morale + 8); }
       return ok;
@@ -686,6 +722,7 @@
     duelFinish(a, b, winnerIsA, rounds, info) {
       const winner = winnerIsA ? a : b, loser = winnerIsA ? b : a;
       loser.troops = 0; loser.alive = false; this.setup.routed.add(loser.gen.id);
+      if (gearBattle()) this.gearRouted(loser, winner);
       if (winner.xp) { winner.xp.duelWin++; this.xpHit(winner, loser, 0); }
       if (loser.xp) loser.xp.duelLoss++;
       for (const o of this.alive(loser.side)) o.morale = Math.max(0, o.morale - 8);
@@ -1158,7 +1195,7 @@
     // 敌军 e 每回合对 t 的威胁（普通攻击，或其火计期望的一半——电脑并非每回合都用计）
     threat(e, t) {
       let v = Math.min(t.troops, this.atkExpect(e, t));
-      if (this.tacticUsable(e, Defs.tactics[0]).ok) v = Math.max(v, 0.5 * M.clamp(0.5 + (e.gen.intel - t.gen.intel) / 110, 0.12, 0.92) * (260 + e.gen.intel * 11) * M.clamp(t.troops / 2500, 0.4, 1.4));
+      if (this.tacticUsable(e, Defs.tactics[0]).ok) v = Math.max(v, 0.5 * M.clamp(0.5 + (e.gen.intel - t.gen.intel) / 110 + this.tacHitAdj(e, t), 0.12, 0.92) * (260 + e.gen.intel * 11) * M.clamp(t.troops / 2500, 0.4, 1.4) * (1 + v4z('titleTac', e.gen)));
       return v;
     }
     // 电脑：不用必杀技时最好的一手（普通攻击扣除反击 / 火计期望）
@@ -1172,8 +1209,8 @@
       const fire = Defs.tactics[0];
       if (this.tacticUsable(u, fire).ok) {
         for (const t of this.tacticTargets(u, fire)) {
-          const p = M.clamp(0.5 + (u.gen.intel - t.gen.intel) / 110, 0.12, 0.92);
-          best = Math.max(best, p * Math.min(t.troops, (260 + u.gen.intel * 11) * M.clamp(t.troops / 2500, 0.4, 1.4)));
+          const p = M.clamp(0.5 + (u.gen.intel - t.gen.intel) / 110 + this.tacHitAdj(u, t), 0.12, 0.92);
+          best = Math.max(best, p * Math.min(t.troops, (260 + u.gen.intel * 11) * M.clamp(t.troops / 2500, 0.4, 1.4) * (1 + v4z('titleTac', u.gen))));
         }
       }
       return best;
@@ -1245,6 +1282,7 @@
           res.killed = k; res.dmg += d; res.hits.push({ unit: k, dmg: d, primary: true, killed: true });
           routed(k); touch(k); killed = true;
           this.xpHit(u, k, d);
+          if (gearBattle()) this.gearRouted(k, u);
           // 第四版 ITEMS §8.2 阵斩：暗杀得手于君主 50 %（只在概率 > 0 时取一个随机数）
           if (slayOn()) res.slain = !!SG.Items.rollSlay(k.gen, 'assassinate', u.gen.faction);
         } else res.success = false;                     // 失手（仍可能造成少量伤害）
@@ -1424,8 +1462,15 @@
     return Mo.critChance({ gen, side: 0, formation: formationIdx === undefined ? (gen.formation | 0) : formationIdx, morale: 70, confused: 0, commander: true });
   };
   // 阵斩（ITEMS §8.2）只在装备系统开着、已载入游戏状态时判定（否则不取随机数）
+  // 第四版 ITEMS §3.2：装备能力的战斗钩子（SG.Gear.battle，js/items.js）；没有装备模块或关掉时为 null（与第三版完全相同，不取随机数）
+  function gearBattle() { return SG.Items && SG.Items.enabled && SG.Gear && SG.Gear.battle && SG.G && SG.G.items ? SG.Gear.battle : null; }
   function slayOn() { const I = SG.Items; return !!(I && I.enabled !== false && typeof I.rollSlay === 'function' && SG.G && SG.G.items); }
+  // 条件项合并（SG.Mods.atkMul / defMul 的 cond）；受伤 × (1 + x) 折成防御条件项 1 / (1 + x) − 1
+  function condWith(base, extra) { if (!extra || !extra.length) return base; return base && base.length ? base.concat(extra) : extra; }
+  function takenTerm(x) { return x ? 1 / Math.max(0.05, 1 + x) - 1 : 0; }
   function startMorale(u, base) { const Mo = SG.Mods; return Mo && Mo.startMorale ? Mo.startMorale(u, base) : base; }
+  // 第四版的提供者（官爵的 titleTac / titleTacHit / tacRes；没有 js/econ.js 或没有提供者时为 0）
+  function v4z(name, a, b) { const Mo = SG.Mods; return Mo && typeof Mo.z === 'function' ? Mo.z(name, a, b) : 0; }
   // 电脑施展习得新计策的门槛（aiTactic）：期望价值 ≥ max(普通一手 × k, floor)；adj = 已与敌相邻
   BattleModel.aiTactic = { kAdj: 0.9, kFree: 0.8, floorAdj: 80, floorFree: 25, nowDays: 0.5 };
   // 第三版：电脑之间自动结算的攻城战也给经验（strategy-ai.js 先于本文件载入；不耗随机数，s.progressDone 防重复）

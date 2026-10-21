@@ -14,6 +14,10 @@
      7. 运行时的 §B4.2：单挑双方两句相隔 > 3 秒仍然区分（say 与程序化喊叫都走同一规则），先说的一方保持原声
      8. §B11 程序化喊叫：空闲时段预先渲染（战斗的群呼与主将喊声、单挑双方的 5 种用力声），独立 LRU ≤ RULES.cryCacheBytes，
         预渲染后接敌时的群呼不再渲染
+   9. 真的 audio.js（曲库 + 君主乐章，无 AudioContext）上的音乐状态：选君主试听后退回标题 → 标题曲回来（musicKind = title）、
+        开局 → 不闪回标题；§A3 庙堂曲：外交 / 任命 / 官制画面停留 ≥ 0.6 秒 → council@玩家君主，关闭 1.5 秒后 → map，嵌套只切一次，
+        快速取消不切，「地域」风格不切，授官仪式立即切；月末消息的号令（每批至多一次，取文中最先提到的他国君主；继位号令之后不再响）；
+        离间被识破 → 对方君主的号令先于回报；揭示卡在台词之前关闭 → 不说
    ========================================================================== */
 const fs = require('fs');
 const path = require('path');
@@ -286,7 +290,19 @@ const hookDone = new Promise(resolve => {
     S.G = { player: 0, year: 194, monthIndex: 5, generals: gl, cities: [{ owner: 0 }, { owner: 1 }, { owner: 1 }],
       factions: [{ ruler: 0, alive: true }, { ruler: 1, alive: true }], ruler(f) { return gl[this.factions[f].ruler]; } };
     S.Voice.settings.set ? S.Voice.settings.set('frequency', 'all') : (S.Voice.settings.frequency = 'all');
+    // the ruler-selection screen (game.js): a focused / chosen ruler → SG.Sfx.previewRuler; leaving the screen → stopPreview
+    const pick = [];
+    S.Sfx = { previewRuler(r) { pick.push('preview:' + (r && r.name)); }, stopPreview() { pick.push('stop'); } };
+    S.Game = { _focusCapital(g, f, d) { pick.push('focus'); return 'cap'; }, selectRuler(sid) { pick.push('select'); return Promise.resolve(true); } };
+    // ITEMS reveal: a 天宝 held by 关羽 → his item.legendary; a 珍品 → silent
+    S.Items = { get(id) { return { rarity: id === 'L' ? 'legendary' : id === 'E' ? 'epic' : 'rare' }; }, genOf(uid) { return uid === 7 ? gl[2] : null; } };
+    S.ShopScreen = { reveal(rv) { pick.push('reveal:' + rv.id); return 'rv'; } };
     S.Voice.init(); S.Voice.hooks.install();
+    ok(S.ShopScreen.reveal({ id: 'L', uid: 7, to: 0 }) === 'rv', 'wrapped ShopScreen.reveal returns the original result');
+    S.ShopScreen.reveal({ id: 'R', uid: 8, to: 0 });
+    S.ShopScreen.reveal({ id: 'E', uid: 9, to: 1 });
+    ok(S.Game._focusCapital(S.G, { id: 1 }, 58) === 'cap', 'wrapped _focusCapital returns the original result');
+    S.Game.selectRuler('classic').then(v => ok(v === true, 'wrapped selectRuler resolves to the original result'));
     const bc = new BC();
     const u = { gen: '关羽', side: 0 }, foe = { gen: '颜良', side: 1 };
     ok(bc.aiPhase() === 7, 'wrapped aiPhase returns the original result');
@@ -329,19 +345,125 @@ const hookDone = new Promise(resolve => {
       const seq = S.Voice.log.filter(x => ['bat.cityTaken', 'sig', 'cmd.ally.yes', 'cmd.ally.no'].includes(x.cue)).map(x => x.cue + '@' + x.speaker);
       const want = ['bat.cityTaken@关羽', 'sig@刘备', 'bat.cityTaken@关羽', 'sig@曹操', 'cmd.ally.yes@曹操', 'cmd.ally.no@曹操', 'sig@刘备'];
       ok(seq.join(' ') === want.join(' '), 'signature routing: ' + seq.join(' ') + ' (want ' + want.join(' ') + ')');
-      hooksOk = `hooks routed ${[...cues].join(' ')}; §B9 ${seq.join(' → ')}`;
+      ok(pick.join(' ') === 'reveal:L reveal:R reveal:E preview:曹操 focus select stop', 'ruler-pick preview / reveal: ' + pick.join(' ') + ' (want reveal:L reveal:R reveal:E preview:曹操 focus select stop)');
+      const items = S.Voice.log.filter(x => /^item\./.test(x.cue)).map(x => x.cue + '@' + x.speaker);
+      ok(items.join(' ') === 'item.legendary@关羽 item.epic@曹操', 'item reveal lines: ' + items.join(' ') + ' (want item.legendary@关羽 item.epic@曹操)');
+      hooksOk = `hooks routed ${[...cues].join(' ')}; §B9 ${seq.join(' → ')}; ruler pick / reveal ${pick.join(' → ')}; ${items.join(' ')}`;
       resolve();
     }, 6600);
   } catch (e) { fails.push('hook harness threw: ' + e.message); resolve(); }
 });
 
-Promise.all([hookDone, cryDone, pairDone]).then(() => {
+// ---------------------------------------------------------------- 9. music state on the real audio.js --
+let musicOk = '(skipped)';
+const musicDone = new Promise(resolve => {
+  try {
+    const ctx = { console, Math, JSON, Date, setTimeout, clearTimeout, setInterval, clearInterval, performance: { now: () => Date.now() } };
+    ctx.window = ctx; ctx.globalThis = ctx;
+    vm.createContext(ctx);
+    for (const f of ['js/core.js', 'js/registry.js', 'js/data.js', 'js/world-data.js', 'js/audio.js', 'js/music.js', 'js/music-inst.js', 'js/music-han.js', 'js/music-world.js',
+      'js/music-suites.js', 'js/music-suites-gen.js', 'js/voice-data.js', 'js/voice.js', 'js/voice-cry.js'])
+      vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f });
+    const S = ctx.SG, X = S.Sfx;
+    const gl = [{ id: 0, name: '刘备', faction: 0 }, { id: 1, name: '曹操', faction: 1 }, { id: 2, name: '关羽', faction: 0 }, { id: 3, name: '夏侯惇', faction: 1 }, { id: 4, name: '孙坚', faction: 2 }];
+    S.G = { player: 0, year: 194, month: 5, monthIndex: 5, generals: gl, cities: [{ owner: 0 }, { owner: 1 }, { owner: 2 }],
+      factions: [{ id: 0, name: '刘备', ruler: 0, alive: true }, { id: 1, name: '曹操', ruler: 1, alive: true }, { id: 2, name: '孙坚', ruler: 4, alive: true }],
+      ruler(f) { return gl[this.factions[f].ruler]; } };
+    S.Voice.settings.set ? S.Voice.settings.set('frequency', 'all') : (S.Voice.settings.frequency = 'all');
+    const st = () => X.musicKind + '/' + X.resolveMusic(X.musicKind);
+    const fan = [];
+    const realFan = X.fanfare;
+    X.fanfare = function (who, o) { fan.push((typeof who === 'string' ? who : who && who.name) + '@' + (Date.now() - T0)); realFan.call(this, who, o); return 3.6; };
+    let selRes = false;
+    S.Game = { _focusCapital(g, f) { return 'cap'; }, selectRuler() { return new Promise(r => setTimeout(() => r(selRes), 1900)); } };
+    class SS {
+      constructor(ms) { this.ms = ms || {}; }
+      cmdDiplomacy() { return new Promise(r => setTimeout(() => r('dip'), this.ms.dip || 1200)); }
+      cmdAppoint() { return S.TitleUI.open().then(() => 'app'); }
+      pickNews(news) { return news.slice(0, 6).join('\n'); }
+      sayNews(news) { return 'said'; }
+    }
+    S.StrategyScreen = SS;
+    S.TitleUI = { open() { return new Promise(r => setTimeout(r, 1000)); }, ceremony() { return new Promise(r => setTimeout(() => r('cer'), 1800)); }, flush() { return Promise.resolve(); } };
+    S.Items = { get(id) { return { rarity: 'epic' }; }, genOf() { return null; } };
+    S.ShopScreen = { reveal(rv) { return new Promise(r => setTimeout(() => r('rv:' + rv.id), rv.ms)); } };
+    S.Voice.init(); S.Voice.hooks.install();
+    const T0 = Date.now();
+    const at = (ms, fn) => setTimeout(() => { try { fn(); } catch (e) { fails.push('music harness step @' + ms + ': ' + e.message); } }, ms);
+    const trace = [];
+    X.music('title');
+    ok(st() === 'title/title', 'boot music ' + st());
+    // (a) preview 曹操 → back out (selectRuler false) → the title music returns
+    S.Game.selectRuler('classic');
+    S.Game._focusCapital(S.G, { id: 1 }, 45);
+    at(1700, () => { trace.push(st()); ok(st() === 'map/suite:曹操:map', 'preview did not play 曹操\'s map suite: ' + st()); });
+    at(2100, () => { trace.push(st()); ok(st() === 'title/title', 'backing out of the ruler list left ' + st() + ' (want title/title)'); });
+    // (b) preview 曹操 → the game starts (selectRuler true): no title flash, the strategy screen's music('map') = the player's suite
+    at(2300, () => { selRes = true; S.Game.selectRuler('classic'); S.Game._focusCapital(S.G, { id: 1 }, 45); });
+    at(4050, () => { trace.push(st()); ok(st() === 'map/suite:曹操:map', 'second preview: ' + st()); });
+    at(4400, () => {
+      trace.push(st()); ok(X.musicKind === 'map', 'starting the game flashed back to ' + X.musicKind);
+      X.music('map'); trace.push(st()); ok(st() === 'map/suite:刘备:map', 'strategy map after the pick: ' + st());
+    });
+    // (c) council: 外交 open 1.2 s → council@刘备 after 0.6 s; the council holds 1.5 s after it closes, then the map
+    at(4500, () => { const r = new SS().cmdDiplomacy(); r.then(v => ok(v === 'dip', 'wrapped cmdDiplomacy result ' + v)); });
+    at(4900, () => ok(X.musicKind === 'map', 'council switched before the dwell'));
+    at(5300, () => { trace.push(st()); ok(st() === 'council/suite:刘备:council', '外交 did not play the council suite: ' + st()); });
+    at(6400, () => ok(X.musicKind === 'council', 'the council did not hold after 外交 closed: ' + X.musicKind));
+    at(7400, () => { trace.push(st()); ok(st() === 'map/suite:刘备:map', 'closing 外交 did not restore the map: ' + st()); });
+    // nested: 任命 → 官制 board (1 s) — one council scope
+    at(7500, () => { new SS().cmdAppoint().then(v => ok(v === 'app', 'wrapped cmdAppoint result ' + v)); });
+    at(8300, () => { trace.push(st()); ok(X.musicKind === 'council', '任命 → 官制: ' + st()); });
+    at(10300, () => { trace.push(st()); ok(X.musicKind === 'map', 'after the nested board: ' + st()); });
+    // a quick cancel (0.2 s) keeps the map; the 「地域」 style keeps the map
+    at(10400, () => { new SS({ dip: 200 }).cmdDiplomacy(); });
+    at(11200, () => ok(X.musicKind === 'map', 'a 0.2 s 外交 cancel switched the music to ' + X.musicKind));
+    at(11300, () => { X.setSetting('musicStyle', 'region'); new SS({ dip: 1000 }).cmdDiplomacy(); });
+    at(12000, () => { ok(X.musicKind === 'map', 'the 地域 style switched to ' + X.musicKind); });
+    at(12500, () => { X.setSetting('musicStyle', 'suite'); X.music('map');
+      // (d) news: the first other ruler named → his fanfare; at most one per batch; none right after a succession fanfare
+      fan.length = 0;
+      ok(new SS().sayNews(['许昌秋收，得粮 300。', '孙坚攻下了庐江。', '曹操与孙坚结盟。']) === 'said', 'wrapped sayNews result');
+    });
+    at(12600, () => {
+      ok(fan.length === 1 && /^孙坚@/.test(fan[0]), 'news fanfare: ' + fan.join(' ') + ' (want one, 孙坚)');
+      S.Events.emit('faction.succession', 0, gl[2]);       // the player's heir: his fanfare …
+      fan.length = 0;
+      new SS().sayNews(['曹操攻下了小沛。']);                // … so the news batch right after stays silent
+      ok(fan.length === 0, 'news fanfare right after a succession fanfare: ' + fan.join(' '));
+    });
+    // (e) 离间 caught → 曹操's fanfare, then 关羽's report line; 离间 on a ruler → no fanfare
+    at(13200, () => { fan.length = 0; S.Voice.log.length = 0; S.Events.emit('command', 'discord', { f: 0, gen: 2, target: 3, ok: false }); });
+    at(13400, () => { ok(fan.length === 1 && /^曹操@/.test(fan[0]), '离间 caught fanfare: ' + fan.join(' ')); ok(!S.Voice.log.some(x => x.cue === 'miss'), 'the miss line came before the fanfare lead'); });
+    at(14400, () => { const m = S.Voice.log.filter(x => x.cue === 'miss').map(x => x.speaker); ok(m.join(' ') === '关羽', '离间 caught line: ' + m.join(' ')); });
+    at(14500, () => { fan.length = 0; S.Events.emit('command', 'discord', { f: 0, gen: 2, target: 1, ok: false, reason: 'ruler' }); });
+    at(14700, () => ok(fan.length === 0, '离间 on a ruler played a fanfare: ' + fan.join(' ')));
+    // (f) reveal dismissed at 0.3 s → no line; shown 1.5 s → the line
+    at(14800, () => { S.Voice.log.length = 0; S.ShopScreen.reveal({ id: 'E1', to: 0, ms: 300 }).then(v => ok(v === 'rv:E1', 'wrapped reveal result ' + v)); });
+    at(16200, () => { ok(!S.Voice.log.some(x => /^item\./.test(x.cue)), 'a reveal dismissed at 0.3 s still spoke: ' + S.Voice.log.map(x => x.cue).join(' ')); S.ShopScreen.reveal({ id: 'E2', to: 0, ms: 1500 }); });
+    at(17400, () => {
+      const it = S.Voice.log.filter(x => /^item\./.test(x.cue)).map(x => x.cue + '@' + x.speaker);
+      ok(it.join(' ') === 'item.epic@刘备', 'a reveal shown 1.5 s: ' + it.join(' ') + ' (want item.epic@刘备)');
+      // (g) a 授官 ceremony (1.8 s) switches at once (no dwell) and holds 1.5 s after it
+      S.TitleUI.ceremony().then(v => ok(v === 'cer', 'wrapped ceremony result ' + v));
+    });
+    at(17600, () => { trace.push(st()); ok(X.musicKind === 'council', 'a ceremony did not play the council at once: ' + st()); });
+    at(21300, () => {
+      trace.push(st()); ok(X.musicKind === 'map', 'after the ceremony: ' + st());
+      musicOk = 'music ' + trace.join(' → ') + '; news / 离间 fanfares and reveal cancel checked';
+      resolve();
+    });
+  } catch (e) { fails.push('music harness threw: ' + e.message); resolve(); }
+});
+
+Promise.all([hookDone, cryDone, pairDone, musicDone]).then(() => {
 console.log(`generals ${gens.length}; by lingua: ${Object.entries(byLingua).sort((a, b) => b[1] - a[1]).map(([k, v]) => k + ' ' + v).join(' · ')}`);
 console.log(`female ${female} (${femaleF} on a female voice; others on the mild shift), pitch-shifted voices ${shifted}; duel pairs ${pairsN} (${adjusted} adjusted by the uniqueness rule)`);
 console.log('random: ' + randomOk + (MF ? '' : '   (no voice/manifest.js: pack checks skipped)'));
 console.log(hooksOk);
 console.log('§B4.2 run time: ' + pairOk);
 console.log('§B11 cries: ' + cryOk);
+console.log('§A3 / §B9 music state: ' + musicOk);
 console.log(fails.length ? 'FAIL\n  ' + fails.slice(0, 40).join('\n  ') + (fails.length > 40 ? `\n  … ${fails.length - 40} more` : '') : 'ALL OK');
 process.exitCode = fails.length ? 1 : 0;
 });

@@ -20,6 +20,9 @@
    第三版 §4 成长界面：
      UI.notice(title, bodyHtml, { ok, width, className }) → Promise   只有一个按钮的说明框（结构同 confirm：.sg-confirm-btns）
      UI.lvTag(gen) → 「Lv5」小标签 HTML    UI.expBar(pct, cls?) → 经验进度条 HTML（.sg-expbar > i，--v = 0..1）
+   第四版（UI-V4 §4、§13）：button kinds、tabs、segmented、toggle、slider、counter、frame、slot、brushBar、window、sheet、tip、longPress、SG.Motion；
+     UI.escapeTop() → bool（对最上层窗口按一次 Esc）  UI.modalDepth()  UI.topModal() → 面板元素
+     UI.installBackGuard(onBare)：手机「返回」手势关掉最上层窗口，没有窗口时调用 onBare（战略画面：菜单）
    ========================================================================== */
 (function () {
   const SG = window.SG;
@@ -487,6 +490,32 @@
   UI.openModal = function (className, opts) { return openModal(className, opts); };
 
   UI.anyModal = function () { return modalStack.length > 0; };
+
+  // ---- 手机的「返回」手势（UI-V4 §4.3、§6）：历史里垫一条记录，返回时关掉最上层的窗口 / 对话（同 Esc）；
+  //      没有窗口时交给 onBare（战略画面：打开菜单）。安装一次；之后每次返回都再垫一条，所以不会离开游戏页面。
+  UI.installBackGuard = function (onBare) {
+    if (UI._backGuard) { UI._backBare = onBare || UI._backBare; return true; }
+    try { if (!window.history || !history.pushState) return false; history.pushState({ sgGuard: 1 }, ''); } catch (e) { return false; }
+    UI._backGuard = true;
+    UI._backBare = onBare || null;
+    window.addEventListener('popstate', () => {
+      try { history.pushState({ sgGuard: 1 }, ''); } catch (e) { /* 忽略 */ }
+      if (UI.escapeTop()) return;
+      if (modalStack.length) return;
+      if (UI._backBare) { try { UI._backBare(); } catch (err) { console.error(err); } }
+    });
+    return true;
+  };
+  // 对最上层的窗口 / 对话按一次 Esc（与键盘相同：choose 返回 −1、confirm 返回 false、窗口关闭）；没有窗口时返回 false
+  UI.escapeTop = function () {
+    const top = modalStack[modalStack.length - 1];
+    if (!top) return false;
+    const fake = { key: 'Escape', code: 'Escape', repeat: false, target: top.panel, preventDefault() {}, stopPropagation() {} };
+    try { if (top.onKey) return top.onKey('Escape', fake) === true; } catch (err) { console.error(err); }
+    return false;
+  };
+  UI.modalDepth = function () { return modalStack.length; };
+  UI.topModal = function () { const t = modalStack[modalStack.length - 1]; return t ? t.panel : null; };
 
   function focusEl(e) {
     if (!e) return;
@@ -1512,7 +1541,7 @@
       const k = Math.min(1, (now - t0) / dur);
       const v = from + (goal - from) * ease(k);
       if (k >= 1 || now - lastWrite > 33) { num.textContent = fmt(k >= 1 ? goal : v); lastWrite = now; }
-      if (k < 1) raf = requestAnimationFrame(frame); else { raf = 0; shown = goal; }
+      if (k < 1) raf = requestAnimationFrame(frame); else { raf = 0; shown = goal; num.style.minWidth = String(fmt(goal)).length + 'ch'; }
     }
     function tag(delta) {
       if (!delta) return;
@@ -1542,6 +1571,8 @@
         }
         from = raf ? +String(num.textContent).replace(/[^\d.-]/g, '') || shown : shown;
         goal = v;
+        // 滚动时宽度不跳：先按终值的位数留出宽度（等宽数字，1ch = 一位）
+        num.style.minWidth = Math.max(String(fmt(v)).length, String(fmt(from)).length) + 'ch';
         if (Motion.reduced || Motion.level === 'off' || opts2.instant) { shown = v; num.textContent = fmt(v); if (raf) cancelAnimationFrame(raf); raf = 0; return; }
         dur = 1000 * M.clamp(0.35 + 0.12 * Math.log10(Math.abs(delta) + 1), 0.35, 0.9);
         t0 = performance.now();

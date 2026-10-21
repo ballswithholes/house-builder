@@ -36,8 +36,8 @@ const SUITES = [
   ['world', 'tests/world.js', [], [], 'v3'],
   ['duel-bots', 'tests/duel-bots.js', ['--quick'], [], 'COMBAT'],
   // ---- v4 workstreams (skip until they land)
-  ['items', 'tests/items.js', ['--quick'], [], 'ITEMS'],
-  ['titles', 'tests/titles.js', ['--quick'], [], 'TITLES'],
+  ['items', 'tests/items.js', ['--quick'], ['--full'], 'ITEMS'],          // --full: classic 40 × 20 y, world 10 × 20 y (ITEMS §17.4)
+  ['titles', 'tests/titles.js', ['--quick'], ['--nightly'], 'TITLES'],   // --nightly: the second 48-seed set and the world years (TITLES §12.1)
   ['engage', 'tests/engage.js', ['--quick'], [], 'ENGAGEMENT'],
   ['tourney', 'tests/tourney.js', ['--quick'], [], 'TOURNAMENT'],
   ['combos', 'tests/combos.js', [], [], 'COMBAT'],

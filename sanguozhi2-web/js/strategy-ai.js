@@ -31,6 +31,8 @@
        faction.succession / general.rehomed（js/registry.js 的 SG.Events）。出征也写结果记录（Commands.record('attack', …)：
        onCommand 与 'command' 事件同样收到）。Conquest.attackBlocked(f, target) → 不能出征的原因或 null（玩家的出征列表用）。
        城易主（攻陷、出奔后的空城、拉拢献城）时，守方外出 / 伤病的武将由 G.rehomeStrays() 安置（INTEGRATION §6.4）。
+       Conquest.apply 的俘虏判定（ITEMS §8.2）：阵斩者（gen.dead）不被俘、也不取那一次随机数；其余照旧（v3 的 0.75 / 0.35）。
+       ITEMS §3.2 的被俘几率（SG.Items.captureP：脱身、替身、救主）尚未接入——见 fix-core 报告的 INTEGRATION（先由 ITEMS 复核平衡）。
    ========================================================================== */
 (function () {
   const SG = window.SG;
@@ -116,6 +118,7 @@
         const retreatTo = D >= 0 ? Seq.first(s.target.links.map(i => g.cities[i]), c => c.owner === D) : null;
         for (const d of g.officersIn(s.target)) {
           const routed = s.routed.has(d.id) || d.troops <= 0;
+          if (d.dead) continue;   // 第四版 ITEMS §8.2：阵斩的君主不再被俘
           if (retreatTo != null && (!routed || SG.Random.value() < 0.5)) { d.city = retreatTo.id; }
           else if (routed || retreatTo == null) { if (SG.Random.value() < 0.75 || retreatTo == null) capture(s, d); else d.city = retreatTo.id; }
         }
@@ -133,7 +136,7 @@
         if (D >= 0) { Conquest.handleRulerLoss(D); g.checkFactionDeath(D); }
       } else {
         for (const a of s.atk) {
-          if (s.routed.has(a.id) && SG.Random.value() < 0.35 && D >= 0) capture(s, a);
+          if (s.routed.has(a.id) && !a.dead && SG.Random.value() < 0.35 && D >= 0) capture(s, a);
           else a.city = s.src.id;
         }
         s.src.food += s.atkFood; s.src.gold += s.atkGold;
@@ -282,6 +285,7 @@
   // checkFactionDeath，俘虏的 faction 已成 −1，处置俘虏时仍须知道「君主不会投降」与原属势力
   function capture(s, gen) {
     const g = G();
+    if (gen.dead) return;   // 第四版 ITEMS §8.2：阵斩者不被俘
     if (!s.captiveInfo) s.captiveInfo = {};
     if (!s.captiveInfo[gen.id]) s.captiveInfo[gen.id] = { faction: gen.faction, wasRuler: gen.faction >= 0 && g.factions[gen.faction].ruler === gen.id };
     gen.troops = 0;

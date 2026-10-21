@@ -12,7 +12,9 @@
      5 授官规则（名额、官位席位、一月一次、礼金与付款城、每品一次的忠诚、晋升差额、平调、越级不平、罢免 / 贬官、虚衔与复任、
        俘虏、释放、被俘方登用、继位、许官、名号）
      6 钩子（§7.1 每条公式与手算相同；关掉时全部还原）    7 随机数契约（0 次调用；关掉官爵 = 不载入官爵，存档 md5 相同）
-     8 电脑（确定性、从不罢免、礼金经钱袋与保留额）    9 战役平衡（§12.1 的门槛）   10 战术平衡（第 8 年的有官职军队）
+     8 电脑（确定性、从不罢免、礼金经钱袋与保留额；礼金额度 CFG.ai 的记账、上限与扣除；新局的开局官职 startCourt）
+     9 战役平衡（§12.1 的门槛；礼金逐年占总收入：第 1–2 年 ≤ 8 %、第 1–6 年 ≤ 5 %、全程 1–4 %）
+     10 战术平衡（第 8 年的有官职军队；有官职的攻方与守方都要换得更划算）
      11 性能（世界地图：电脑授官每月 ≤ 2 ms、monthStart ≤ 1 ms，进程 CPU 时间）   12 存档与迁移   13 单挑：一品武官的镜像对局
      14 玩家节奏（§12.4：脚本玩家每月按功绩授官，「官制」角标在前 3 年 ≥ 60 % 的月份不为零；最佳武将等级、首个五品官）
    退出码 = 失败数
@@ -493,13 +495,13 @@ section(7, 'random-number contract (titles never draw; off = no titles module, s
   R.rangeInt = function () { n.v++; return orig.rangeInt.apply(R, arguments); };
   R.rangeFloat = function () { n.v++; return orig.rangeFloat.apply(R, arguments); };
   try {
-    T.aiManageAll(); T.monthStart();
+    T.aiManageAll(); T.startCourt(); T.monthStart();
     for (const x of g.generals) for (const k of Object.keys(D.effects)) T.bonus(x, k);
     const f = g.factions.find(q => q.alive).id, x = g.generals.find(y => y.faction === f && !g.isRuler(y));
     if (x) { setLevel(x, 7); g.cities[x.city].gold = 9999; for (const p of D.posts) T.canGrant(f, x, p.id); T.grant(f, x, 'w1'); T.revoke(x); }
     T.board(f); T.pending(f); T.fillByMerit(f, false); T.rankInfo(f);
   } finally { Object.assign(R, orig); }
-  eq(n.v, 0, 'SG.Random calls during aiManageAll / monthStart / bonus / grant / revoke / board / fillByMerit');
+  eq(n.v, 0, 'SG.Random calls during aiManageAll / startCourt / monthStart / bonus / grant / revoke / board / fillByMerit');
   // titles off == titles not loaded: a 5-year classic all-AI run, md5 of the save JSON
   const run = (SGx, on) => {
     if (SGx.Titles) SGx.Titles.enabled = on;
@@ -565,6 +567,80 @@ section(8, 'AI: deterministic, never revokes, gifts through the purse and above 
     ok(lines.some(l => /午已可出任七品官/.test(l)), 'hint text: 午已可出任七品官。');
     ok(!!(rec && rec.tier === 2 && rec.postId && POST[rec.postId].tier === 2 && T.eligible(hx, rec.postId)), 'lastHints record { gen, tier 2, postId } (' + JSON.stringify(rec) + ')');
   }
+  // CFG.ai: the AI's title credit (faction.officeCredit; reviewer: the gifts were front-loaded, 16 % of AI gross income in year 1).
+  // It accrues creditRate × the month's gross income once a month, is capped at creditCapMonths, and a gift needs the purse AND the credit.
+  {
+    const CA = T.CFG.ai, keepAI = Object.assign({}, CA);
+    try {
+      near(T.creditRate(), CA.creditOfPurse * AIBudget.share, 'creditRate = creditOfPurse × AIBudget.share (follows Decisions.aiPurseShare)');
+      CA.startCourt = false;                     // empty seats to fill
+      const g6 = newGame('cao', 9, 'classic'); g6.player = -1;
+      const f6 = g6.factions.filter(q => q.alive && T.caps(q.id)[0] > 0).sort((a, b) => b.id - a.id)[0].id, fa6 = g6.factions[f6];
+      const inc = 1000; AIBudget.income.set(f6, inc);
+      delete fa6.officeCredit;
+      const k = T.creditRate();
+      near(T.aiCredit(f6), k * inc, 'first use in a month: credit = creditRate × gross income (' + (k * inc).toFixed(1) + ')', 1e-6);
+      near(T.aiCredit(f6), k * inc, 'a second use in the same month does not accrue again', 1e-6);
+      fa6.officeCredit.mi = g6.monthIndex - 1;
+      near(T.aiCredit(f6), 2 * k * inc, 'the next month accrues again', 1e-6);
+      fa6.officeCredit = { c: 1e9, mi: g6.monthIndex - 1 };
+      near(T.aiCredit(f6), CA.creditCapMonths * k * inc, `capped at creditCapMonths (${CA.creditCapMonths}) months of accrual`, 1e-6);
+      // purse and city gold plenty, credit 40 < the cheapest gift 50 → nothing; credit 60 → exactly one 九品 gift, credit 10 left
+      for (const c of g6.cities) if (c.owner === f6) c.gold = 5000;
+      if (!g6.aiBudget) g6.aiBudget = { purse: {} };
+      g6.aiBudget.purse[f6] = 5000;
+      fa6.officeCredit = { c: 40, mi: g6.monthIndex };
+      const r0 = T.aiManage(f6);
+      eq(r0.length, 0, 'credit 40 < gift 50: the AI grants nothing (purse 5000)');
+      fa6.officeCredit = { c: 60, mi: g6.monthIndex };
+      const r1 = T.aiManage(f6);
+      eq(r1.length, 1, 'credit 60: exactly one 九品 grant');
+      near(fa6.officeCredit.c, 10, 'the gift is taken from the credit (60 − 50)', 1e-9);
+      near(g6.aiBudget.purse[f6], 4950, '… and from the purse (5000 − 50)', 1e-9);
+      // credit off (creditOfPurse = null): the purse alone decides (the old rule)
+      CA.creditOfPurse = null;
+      eq(T.aiCredit(f6), null, 'creditOfPurse null: no credit');
+      ok(T.aiManage(f6).length >= 1, 'credit off: the purse alone pays (one more grant)');
+      Object.assign(CA, keepAI);
+      // the player's faction never has a credit (the player is never limited by AIBudget)
+      CA.startCourt = true;
+      const g7 = newGame('cao', 9, 'classic');
+      month(g7, 6);
+      eq(g7.factions[g7.player].officeCredit, undefined, 'the player faction has no title credit');
+      ok(g7.factions.some(q => q.id !== g7.player && q.officeCredit && q.officeCredit.mi === g7.monthIndex), 'AI factions keep their credit (faction.officeCredit, saved with the faction)');
+    } finally { Object.assign(CA, keepAI); }
+  }
+  // CFG.ai.startCourt (TITLES §8 「also runs once in GameState.newGame」; the purse is empty then, so with gifts nothing could be granted):
+  // the AI factions' opening court is granted without gifts — 九品 only (every general starts at level 1); the player's faction has none
+  {
+    const CA = T.CFG.ai, keepSC = CA.startCourt;
+    try {
+      CA.startCourt = false; modules(true);
+      const gA = newGame('cao', 9, 'classic');
+      const goldA = gA.cities.map(c => c.gold), loyA = gA.generals.map(x => x.loyalty), offA = gA.generals.filter(x => x.office).length;
+      const rA = SG.Random.value();
+      CA.startCourt = true;
+      AIBudget.resetStats();
+      const gB = newGame('cao', 9, 'classic');
+      const rB = SG.Random.value();
+      eq(offA, 0, 'startCourt off: no offices at newGame (the empty purse pays no gift)');
+      const held = gB.generals.filter(x => x.office);
+      ok(held.length > 0, 'startCourt: AI offices at newGame ' + held.length);
+      ok(held.every(x => x.office.tier === 1), 'startCourt: only 九品 (every general starts at level 1)');
+      ok(held.every(x => x.faction !== gB.player), 'startCourt: none in the player faction');
+      let filled = true;
+      for (const q of gB.factions) {
+        if (!q.alive || q.id === gB.player) continue;
+        const cand = gB.generals.filter(x => x.faction === q.id && !x.dead && !gB.isRuler(x)).length;
+        if (gB.generals.filter(x => x.faction === q.id && x.office).length !== Math.min(T.caps(q.id)[0], cand)) filled = false;
+      }
+      ok(filled, 'startCourt: every AI faction fills its 九品 seats (min(cap, officers))');
+      ok(gB.cities.every((c, i) => c.gold === goldA[i]), 'startCourt: no gift paid (every city has the gold of the startCourt-off game)');
+      eq(AIBudget.stats.byKind.title || 0, 0, 'startCourt: nothing spent through SG.AIBudget');
+      ok(held.every(x => x.loyalty === Math.min(100, loyA[x.id] + D.tiers[0].loyGrant)), 'startCourt: the 九品 grant loyalty (+' + D.tiers[0].loyGrant + ') is paid once');
+      eq(rB, rA, 'startCourt draws no random numbers (the next SG.Random value is unchanged)');
+    } finally { CA.startCourt = keepSC; modules(true); }
+  }
   // the order with the REAL modules (INTEGRATION §5.2 assert 6; tests/econ.js checks it with stand-in hooks): Titles + Items on,
   // an AI faction whose purse holds exactly one purchase → the title gift is bought, the gear is not. The control (titles off,
   // the same purse) buys gear, so the case is a real one. Every fresh grant is priced at the probe's first gear purchase P.
@@ -575,13 +651,17 @@ section(8, 'AI: deterministic, never revokes, gifts through the purse and above 
     const keep = D.tiers.map(t => t.grantGold);
     const run = (titlesOn, purse) => {
       modules(true, true);
-      const g5 = newGame('cao', 21, 'classic'); g5.player = -1;
+      const keepSC = T.CFG.ai.startCourt; T.CFG.ai.startCourt = false;   // the 九品 seats stay empty (a fresh grant is possible)
+      let g5;
+      try { g5 = newGame('cao', 21, 'classic'); } finally { T.CFG.ai.startCourt = keepSC; }
+      g5.player = -1;
       const f5 = g5.factions.filter(q => q.alive).sort((a, b) => g5.cityCount(b.id) - g5.cityCount(a.id) || a.id - b.id)[0].id;
       for (const c of g5.cities) if (c.owner === f5) c.gold = 5000;
       T.enabled = titlesOn;
       const gross = g5.factions.map(() => 0); gross[f5] = 1000;          // accrue adds share × 1000; every other faction's purse is capped to ~0
       if (!g5.aiBudget) g5.aiBudget = { purse: {} };
       g5.aiBudget.purse = {}; g5.aiBudget.purse[f5] = purse - AIBudget.share * 1000;
+      g5.factions[f5].officeCredit = { c: purse, mi: g5.monthIndex };   // the title credit (CFG.ai) covers exactly the one purchase too
       spends.length = 0;
       StrategyAI.phaseDiscretionary(g5, { g: g5, gross });
       const by = k => spends.filter(q => q[0] === k).reduce((a, q) => a + q[1], 0);
@@ -615,7 +695,8 @@ function campaign(scen, seed, years, variant) {
   g.player = -1;
   AIBudget.resetStats();
   const d0 = StrategyAI.stats.defections;
-  const out = { alive: {}, top: {}, first25: null, tiers: {}, titled: {}, ranks: {}, wd: {} };
+  const out = { alive: {}, top: {}, first25: null, tiers: {}, titled: {}, ranks: {}, wd: {}, gy: [] };
+  let lastT = 0, lastG = 0;
   const N = g.cities.length;
   // TITLES §12.3 world.js variant (the battle, specials, tactics and titles modules are all loaded here): world.js (2)'s
   // Rome / Parthia / Kushan / barbarian checks at years 3 and 5
@@ -637,6 +718,9 @@ function campaign(scen, seed, years, variant) {
       const rk = [0, 0, 0, 0, 0, 0]; for (const f of g.factions) if (f.alive) rk[f.rank || 1]++;
       out.ranks[y] = rk.slice(1);
       if (W && (y === 3 || y === 5)) out.wd[y] = { roma: g.cityCount(fid('roma')), parthia: g.cityCount(fid('parthia')), kushan: g.cityCount(fid('kushan')), barbar: barbar.filter(i => i >= 0 && g.factions[i].alive).length };
+      // this year's title gifts and gross income (the early-years gift gate)
+      const tt = AIBudget.stats.byKind.title || 0, gg = AIBudget.stats.gross;
+      out.gy.push([tt - lastT, gg - lastG]); lastT = tt; lastG = gg;
     }
   }
   out.defections = StrategyAI.stats.defections - d0;
@@ -661,6 +745,9 @@ section(9, 'campaign balance (TITLES §12.1 targets; titles alone vs off, the re
     // 中位数在 12 个种子时噪声太大（一组种子相差可达 1 年）：快速档用封顶的平均数（未发生的按年数计）
     const f25m = v => avg(res[v].map(o => Math.min(o.first25 == null ? 1e9 : o.first25, years * 12))) / 12;
     const A = (v, k, y) => avg(res[v].map(o => o[k][y]));
+    // title gifts ÷ gross income, pooled over the seeds: per year, and over the years a..b
+    const gwin = (rs, a, b) => { let t = 0, gr = 0; for (const o of rs) for (let y = a - 1; y < Math.min(b, o.gy.length); y++) { t += o.gy[y][0]; gr += o.gy[y][1]; } return gr > 0 ? t / gr : 0; };
+    const gyear = rs => rs[0].gy.map((_, i) => gwin(rs, i + 1, i + 1));
     console.log(`  -- ${scen} seeds ${s0}..${s0 + seeds - 1} × ${years} y (${((Date.now() - t) / 1000).toFixed(0)} s)`);
     for (const v of ['off', 'on']) {
       console.log(`     ${v}: alive y5 ${A(v, 'alive', Math.min(5, years)).toFixed(2)} y${yMid} ${A(v, 'alive', yMid).toFixed(2)} y${yEnd} ${A(v, 'alive', yEnd).toFixed(2)}; top y${yMid} ${A(v, 'top', yMid).toFixed(1)}; first > 25 % median ${f25(v).toFixed(2)} y (capped mean ${f25m(v).toFixed(2)}); defections/seed ${avg(res[v].map(o => o.defections)).toFixed(2)}`);
@@ -668,6 +755,7 @@ section(9, 'campaign balance (TITLES §12.1 targets; titles alone vs off, the re
         const tiers = y => [0, 1, 2, 3, 4].map(k => avg(res.on.map(o => o.tiers[y][k])).toFixed(2)).join(' / ');
         console.log(`         titled share y1 ${(100 * A('on', 'titled', 1)).toFixed(0)} % y${yMid} ${(100 * A('on', 'titled', yMid)).toFixed(0)} % y${yEnd} ${(100 * A('on', 'titled', yEnd)).toFixed(0)} %; offices T1..T5 y${yMid} ${tiers(yMid)}; y${yEnd} ${tiers(yEnd)}`);
         console.log(`         gifts / gross ${(100 * avg(res.on.map(o => o.giftShare))).toFixed(2)} %; grants/seed ${avg(res.on.map(o => o.grants)).toFixed(0)}; passed over/seed ${avg(res.on.map(o => o.passedOver)).toFixed(2)}; ranks R1..R5 y${yMid} ${[0, 1, 2, 3, 4].map(k => avg(res.on.map(o => o.ranks[yMid][k])).toFixed(1)).join(' / ')}`);
+        console.log(`         gifts / gross by year (pooled) ${gyear(res.on).map(v => (100 * v).toFixed(1)).join(' ')} %; years 1–2 ${(100 * gwin(res.on, 1, 2)).toFixed(2)} %, 1–6 ${(100 * gwin(res.on, 1, 6)).toFixed(2)} %`);
       }
     }
     all[scen + s0] = { res, A, f25, yMid, yEnd, seeds };
@@ -700,8 +788,16 @@ section(9, 'campaign balance (TITLES §12.1 targets; titles alone vs off, the re
       ok(A('on', 'alive', yEnd) >= A('off', 'alive', yEnd) - (QUICK ? 3 : 2), `world alive y${yEnd} on ≥ off − 2 (${A('off', 'alive', yEnd).toFixed(2)} → ${A('on', 'alive', yEnd).toFixed(2)})`);
       ok(A('on', 'top', yMid) <= A('off', 'top', yMid) + tolTop, `world largest y${yMid} ≤ off + ${tolTop} (${A('off', 'top', yMid).toFixed(1)} → ${A('on', 'top', yMid).toFixed(1)})`);
     }
-    ok(avg(res.on.map(o => o.defections)) <= avg(res.off.map(o => o.defections)) + tolDef, `${scen} defections/seed ≤ off + ${tolDef}`);
+    // (the quick tier's 10 classic years see almost no defections in either variant, so there this gate is informational; the default
+    // and nightly tiers run 25 years)
+    ok(avg(res.on.map(o => o.defections)) <= avg(res.off.map(o => o.defections)) + tolDef, `${scen} defections/seed ≤ off + ${tolDef} (${avg(res.off.map(o => o.defections)).toFixed(2)} → ${avg(res.on.map(o => o.defections)).toFixed(2)})`);
     ok(avg(res.on.map(o => o.giftShare)) <= 0.05, `${scen} gifts ≤ 5 % of gross income`);
+    // the early years (reviewer: the AI starts with empty seats and spent 16 % of its gross income on gifts in year 1, 10 % in year 2,
+    // which sped up the snowball; CFG.ai's title credit spreads the backlog): years 1–2 ≤ 8 %, years 1–6 ≤ 5 % (TITLES' 5 % in every
+    // stretch, not only as the average of a long run); the whole run inside INTEGRATION §5.2's 1–4 % band at full length
+    ok(gwin(res.on, 1, 2) <= 0.08, `${scen} gifts in years 1–2 ≤ 8 % of gross income (${(100 * gwin(res.on, 1, 2)).toFixed(2)} %)`);
+    if (yEnd >= 6) ok(gwin(res.on, 1, 6) <= 0.05, `${scen} gifts in years 1–6 ≤ 5 % of gross income (${(100 * gwin(res.on, 1, 6)).toFixed(2)} %)`);
+    if (yEnd >= 15) { const w = gwin(res.on, 1, yEnd); ok(w >= 0.01 && w <= 0.04, `${scen} gifts over ${yEnd} years in INTEGRATION §5.2's 1–4 % band (${(100 * w).toFixed(2)} %)`); }
   }
   modules(true);
 });
@@ -804,6 +900,9 @@ section(10, 'tactical balance (year-8 titled armies; title effects none / both /
   ok(dmgPer('both') <= 1.35 * dmgPer('none'), `troops lost per battle, titles on both sides ≤ 1.35 × off (sim.js (7g) ratio; ×${(dmgPer('both') / Math.max(1, dmgPer('none'))).toFixed(3)})`);
   const better = out.atk.ratio / out.none.ratio;
   ok(better >= (QUICK ? 0.98 : 1.0) && better <= 1.15, `the titled attacker trades better (losses ratio ×${better.toFixed(3)}; TITLES ≈ 3–10 %)`);
+  // … and the titled defender (the ratio is defender ÷ attacker losses, so a better defender makes it smaller)
+  const betterD = out.none.ratio / Math.max(1e-9, out.def.ratio);
+  ok(betterD >= (QUICK ? 0.98 : 1.0) && betterD <= 1.15, `the titled defender trades better (losses ratio ×${betterD.toFixed(3)}; TITLES ≈ 3–10 %)`);
 });
 
 // ===================================================================================================== 11 ==
@@ -841,12 +940,24 @@ section(12, 'save v4 round trip, v3 migration (rank computed, no offices), name 
   const text = JSON.stringify(g);
   const back = SG.G = GameState.fromJSON(text);
   eq(JSON.stringify(back), text, 'v4 round trip identical');
+  ok(back.factions.some(f => f.officeCredit && typeof f.officeCredit.c === 'number'), 'the AI title credit (faction.officeCredit) is saved');
+  // play on from the save and from the live game: the same offices and credits (the credit is real saved state, not a cache)
+  {
+    const cont = gx => { SG.G = gx; gx.player = -1; SG.Random.seed(4242); T.reset(); SG.Conquest.pendingCaptives.clear(); month(gx, 3); return JSON.stringify([gx.generals.map(x => x.office ? [x.office.post, x.office.tier] : 0), gx.factions.map(f => f.officeCredit || null)]); };
+    const a = cont(GameState.fromJSON(text)), b = cont(g);   // g: the live game the save was made from
+    SG.G = back;
+    eq(a, b, 'three more AI months from a reloaded save: identical offices and credits');
+    const d0 = JSON.parse(text); for (const f of d0.factions) delete f.officeCredit;
+    const c0 = cont(GameState.fromJSON(JSON.stringify(d0)));
+    ok(c0 !== a, 'control: the same months without the saved credits differ (the credit matters)');
+    SG.G = back;
+  }
   ok(back.generals.filter(x => x.office).every(x => T.nameOf(x)), 'names re-resolved from data');
   // v3 save: strip the v4 fields, version 3 → migrate: ranks computed, no offices
   const d = JSON.parse(text);
   d.version = 3; delete d.officeSeq; delete d.items; delete d.aiBudget;
   for (const x of d.generals) { delete x.office; delete x.officeBest; delete x.officeLog; delete x.gear; }
-  for (const f of d.factions) { delete f.rank; delete f.armoury; }
+  for (const f of d.factions) { delete f.rank; delete f.armoury; delete f.officeCredit; }
   for (const c of d.cities) delete c.shop;
   const m3 = SG.G = GameState.fromJSON(JSON.stringify(d));
   eq(m3.migratedFrom, 3, 'migrated from v3');

@@ -1,6 +1,7 @@
 #!/bin/bash
 # tools/voice-build/build.sh — the offline voice pipeline of AUDIO-V4 §B7.2, end to end (developer machine, no network needed
-# once the models are on disk). Outputs (committed): js/voice-data.js, voice/*.js, voice/mp3/*.js, voice/manifest.js, voice/LICENSES.md
+# once the models are on disk). Outputs (committed): js/voice-data.js, voice/*.js, voice/mp3/*.js, voice/manifest.js, voice/LICENSES.md,
+# voice/QA.md (the §B7.2 QA report: per-lingua results, the dropped clips, the clips flagged for a human listen)
 #
 #   tools/voice-build/build.sh <python venv> <models dir>[,<models dir 2>] <work dir> [--allow-nc] [--no-asr]
 #
@@ -25,4 +26,5 @@ node "$ROOT/tools/voice-build/export-lines.js" "$WORK/lines.json"
 "$VENV/bin/python" -I "$ROOT/tools/voice-build/synth.py" "$WORK/lines.json" --models "$MODELS" --out "$WORK/wav"
 "$VENV/bin/python" -I "$ROOT/tools/voice-build/qa.py" "$WORK/wav" --models "$MODELS" $QA_FLAGS
 "$VENV/bin/python" -I "$ROOT/tools/voice-build/pack.py" "$WORK/wav" "$ROOT"
+cp "$WORK/wav/qa.md" "$ROOT/voice/QA.md"
 node "$ROOT/tests/voice-lines.js"

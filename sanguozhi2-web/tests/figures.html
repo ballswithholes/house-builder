@@ -73,7 +73,8 @@
   const mood = new LP.Mood(scene, { center: [0, 0, -1], extent: 14, shadowSize: 2048 });
   mood.set(MOODN);
   LP.globals.lpFog.value.x = 0.6;
-  if (MOODN === 'night') { mood.addLamp([-2.2, 2.2, 1.6], { color: '#ffb35c', intensity: 1.6, range: 9 }); mood.addLamp([2.6, 2.2, 1.2], { color: '#ffb35c', intensity: 1.4, range: 9 }); }
+  // 夜：只有左边一盏灯（琥珀色的灯池），右半边的人物在月色里（蓝灰的夜色调）——两种读法同屏比对
+  if (MOODN === 'night') { mood.addLamp([-2.6, 2.3, 1.2], { color: '#ffb35c', intensity: 1.6, range: 4.6 }); }
   // 地面：试点的米绿色棋盘格（1 米格，便于比对身高）
   function checkerGround(n) {
     const M = new LP.MeshBuilder(5);

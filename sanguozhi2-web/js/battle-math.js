@@ -14,11 +14,12 @@
                                     攻 × 防 之积超过它，两边各乘 √(cap / (攻 × 防))（atkMul、defMul、unitPreview 一致）
      startMorale(u, base)           min(100, base + min(25, 装备 + 官职))
      FORM_CRIT                      阵型会心（SG.Defs.formations[i].crit）
-     critChance(u)                  clamp(2 % + 0.15 % × max(0, 武力 − 50) + 0.4 % × (vetLevel − 1) + 阵型
-                                         + min(6 %, 装备 + 官职) + (士气 ≥ 90 ? 1 % : 0) − (混乱 ? 1 : 0), 0, 25 %)
-     critK(u)                       1.5 + min(0.30, 装备会心伤害)
+     critChance(u, t?, ctx?)        clamp(2 % + 0.15 % × max(0, 武力 − 50) + 0.4 % × (vetLevel − 1) + 阵型
+                                         + min(6 %, 装备 + 装备条件会心 gearCritCond(gen, ctx) + 官职) + (士气 ≥ 90 ? 1 % : 0) − (混乱 ? 1 : 0), 0, 25 %)
+                                    有目标 t 时再 max(0, p − 抗会心 gearCritRes) × (1 − 护身 gearCritWard)（ITEMS §3.2 / §7.2）
+     critK(u, ctx?)                 1.5 + min(0.30, 装备会心伤害 + 条件项 gearCritMulCond)
      critEnabled()                  SG.Crit.enabled !== false 且 SG.BattleModel.critEnabled !== false
-     rollCrit(u, enabled?) → { roll, p, crit, k }
+     rollCrit(u, enabled?, t?, ctx?) → { roll, p, crit, k }
                                     **每次调用恰好取一次 SG.Random.value()**（COMBAT-V4 §2.2：即使 p = 0 或会心关闭），
                                     放在 attack() 的第一个随机数；关掉会心时随机数流不变，开 / 关的对局一一配对
      vetLevel(gen) / vetK(gen)      老练等级（非战斗经验按一半，ENGAGEMENT §4.4）与乘数（SG.Progress）
@@ -96,26 +97,30 @@
         return Pg && typeof Pg.vetK === 'function' ? Pg.vetK(gen) : 1;
       },
       // COMBAT-V4 §2.1 with the level term on 老练 level (ENGAGEMENT §4.4)
-      critChance(u) {
+      // t / ctx（可缺省）：目标与 ITEMS 的条件会心（ctx = { charge, vsCommander, moreTroops, plain, outnumbered }，gearCritCond 仍在 critAdd 0.06 之内）；
+      // 目标的抗会心 gearCritRes（减 pp，≥ 0）与护身 gearCritWard（× (1 − k)）在封顶之后
+      critChance(u, t, ctx) {
         const g = u.gen, Bb = B();
         const lvl = SGx.Progress && SGx.Progress.enabled ? Mods.vetLevel(g) : 1;
-        return clamp(Bb.CritBase + Bb.CritPerWar * Math.max(0, g.war - Bb.CritWarFrom) + Bb.CritPerLevel * (lvl - 1) + (FORM_CRIT[u.formation] || 0)
-          + Math.min(CAPS.critAdd, z(P.gearCrit, g) + z(P.titleCrit, g)) + (u.morale >= 90 ? 0.01 : 0) - (u.confused > 0 ? 1 : 0), 0, Bb.CritCap);
+        let p = clamp(Bb.CritBase + Bb.CritPerWar * Math.max(0, g.war - Bb.CritWarFrom) + Bb.CritPerLevel * (lvl - 1) + (FORM_CRIT[u.formation] || 0)
+          + Math.min(CAPS.critAdd, z(P.gearCrit, g) + (ctx ? z(P.gearCritCond, g, ctx) : 0) + z(P.titleCrit, g)) + (u.morale >= 90 ? 0.01 : 0) - (u.confused > 0 ? 1 : 0), 0, Bb.CritCap);
+        if (t && t.gen && p > 0) p = Math.max(0, p - z(P.gearCritRes, t.gen)) * (1 - Math.min(1, z(P.gearCritWard, t.gen)));
+        return p;
       },
-      critK(u) { return B().CritK + Math.min(CAPS.critMul, z(P.gearCritMul, u.gen)); },
+      critK(u, ctx) { return B().CritK + Math.min(CAPS.critMul, z(P.gearCritMul, u.gen) + (ctx ? z(P.gearCritMulCond, u.gen, ctx) : 0)); },
       critEnabled() {
         if (SGx.Crit && SGx.Crit.enabled === false) return false;
         if (SGx.BattleModel && SGx.BattleModel.critEnabled === false) return false;
         return true;
       },
       // exactly one SG.Random.value() per call, first in attack() (COMBAT-V4 §2.2)
-      rollCrit(u, enabled) {
+      rollCrit(u, enabled, t, ctx) {
         const roll = SGx.Random.value();
         const on = enabled === undefined ? Mods.critEnabled() : !!enabled;
         if (!on) return { roll, p: 0, crit: false, k: 1 };
-        const p = Mods.critChance(u);
+        const p = Mods.critChance(u, t, ctx);
         const crit = roll < p;
-        return { roll, p, crit, k: crit ? Mods.critK(u) : 1 };
+        return { roll, p, crit, k: crit ? Mods.critK(u, ctx) : 1 };
       },
       // the character sheet's numbers (UI-V4 §9): a lone army led by gen, no state change, no random draw
       unitPreview(gen, opts) {

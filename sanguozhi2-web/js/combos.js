@@ -357,4 +357,34 @@
     init(G) { if (G && G.combos) store(G); },
   };
   SG.Combos = Combos;
+
+  // §12.2「玩家俘获或登用的武将从此全知」：挂在规则层事件上（js/registry.js SG.Events；没有事件总线时——如 Node 的单挑测试——不挂）。
+  //   'captive.taken' (s, gen)：俘获者 = 出征双方中不是他原属的一方；'command' (cmd, res)：登用 hire、劝诱 persuade 成功且为玩家势力。
+  //   markAll 照存进 G.combos（日后离去也记得）；监听者不取随机数（INTEGRATION §1.2）
+  let hooked = false;
+  function hookEvents() {
+    const E = SG.Events;
+    if (hooked || !E || typeof E.on !== 'function') return;
+    hooked = true;
+    const playerOf = G => (G && typeof G.player === 'number' && G.player >= 0 ? G.player : -1);
+    E.on('captive.taken', (s, gen) => {
+      try {
+        const G = SG.G, pf = playerOf(G);
+        if (pf < 0 || !s || !gen || !gen.name) return;
+        const captor = gen.faction === s.attacker ? s.defender : s.attacker;
+        if (captor === pf) markAll(G, gen.name);
+      } catch (e) { console.error(e); }
+    });
+    E.on('command', (cmd, res) => {
+      try {
+        if ((cmd !== 'hire' && cmd !== 'persuade') || !res || !res.ok) return;
+        const G = SG.G, pf = playerOf(G);
+        if (pf < 0 || res.f !== pf || res.target === undefined || res.target === null) return;
+        const g = G.generals && (G.generals[res.target] && G.generals[res.target].id === res.target ? G.generals[res.target] : G.generals.find(x => x.id === res.target));
+        if (g && g.name) markAll(G, g.name);
+      } catch (e) { console.error(e); }
+    });
+  }
+  hookEvents();
+  Combos.hookEvents = hookEvents;
 })();

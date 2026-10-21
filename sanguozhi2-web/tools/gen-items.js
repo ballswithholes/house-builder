@@ -17,7 +17,9 @@
      items, shops, classic, world, kits, fig2type, styleFallback, kitWeapon, meta }
      与 items.json 的差别：每件装备 availability.<剧本> 里的城市名单（native / neighbour / trade）换成计数
      （名单在 shops 表里，SG.Items 运行时建反查索引，约省 136 KB）；另加 kitWeapon（武将名 → 起始兵器类型，
-     ITEMS §8.10：「v3 外观决定兵器类型」，生成时冻结，Node 与浏览器结果一致）。
+     ITEMS §8.10：「v3 外观决定兵器类型」，生成时冻结，Node 与浏览器结果一致）；duelWeapons 的 style / reach / pow 取自
+     js/duel-game.js 的 WEAPONS（W5 的兵器平衡为准，duelWeaponsSource 记来源），每件兵器自己的 duel.style / reach 随之、
+     duel.pow = 表上的 pow × 这件在设计表上的品级倍数（itemDuel）；check 模式报告类型表与每件兵器的漂移。
    ========================================================================== */
 const fs = require('fs');
 const path = require('path');
@@ -99,8 +101,68 @@ function kitWeapons(data, from) {
   return { src, table };
 }
 
+// ------------------------------------------------------------------ duel weapons (COMBAT-V4 §15) --
+// 单挑兵器表归 js/duel-game.js（W5：兵器平衡之后冻结的 style / reach / pow）；items.json 的 duelWeapons 是设计期的数。
+// 生成时以 SG.DuelGame.WEAPONS 为准（同名键，新键 fan* / staff* / club* / vajra* 去掉 * 对上），只改 style / reach / pow；
+// duel-game.js 不在或载不进 Node 时保留 items.json 的数（duelWeaponsSource 记来源）
+function duelWeaponTable() {
+  try {
+    const ctx = { console: { log() {}, warn() {}, error() {}, info() {} }, Math, JSON, Date, setTimeout, clearTimeout, performance: { now: () => Date.now() } };
+    ctx.window = ctx; ctx.global = ctx; ctx.self = ctx;
+    ctx.document = { createElement: () => ({ getContext: () => null, style: {}, setAttribute() {}, appendChild() {} }), createElementNS: () => ({ style: {}, setAttribute() {} }), body: { appendChild() {} } };
+    ctx.navigator = { userAgent: 'node' };
+    vm.createContext(ctx);
+    for (const f of ['js/core.js', 'js/data.js', 'js/world-data.js', 'js/duel-game.js']) vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f });
+    const W = ctx.SG.DuelGame && ctx.SG.DuelGame.WEAPONS;
+    return W && typeof W === 'object' ? JSON.parse(JSON.stringify(W)) : null;
+  } catch (e) { return null; }
+}
+function duelWeapons(D, W) {
+  W = W === undefined ? duelWeaponTable() : W;
+  if (!W) return { src: 'items.json', table: D.duelWeapons };
+  const table = {};
+  for (const [k, v] of Object.entries(D.duelWeapons)) {
+    const w = W[k.replace(/\*$/, '')];
+    table[k] = w ? Object.assign({}, v, { style: w.style, reach: w.reach, pow: w.pow === undefined ? 1 : w.pow }) : v;
+  }
+  return { src: 'duel-game.js', table };
+}
+// 每件兵器自己的 duel.style / reach / pow 跟着类型表走：reach、style 取表上的；pow = 表上的 pow × 这件在设计表上的倍数
+// （items.json 里每件的 pow = 设计期类型 pow × (1 + 品级加成)，如枪 1.00 / 1.01 / 1.02 / 1.03），三位小数
+const r3 = x => Math.round(x * 1000) / 1000;
+function itemDuel(it, D, table) {
+  if (!it.duel || !it.duel.key) return it.duel;
+  const t = table[it.duel.key], d0 = D.duelWeapons[it.duel.key];
+  if (!t || !d0) return it.duel;
+  const k = typeof it.duel.pow === 'number' && d0.pow ? it.duel.pow / d0.pow : 1;
+  return Object.assign({}, it.duel, { style: t.style, reach: t.reach, pow: r3((t.pow === undefined ? 1 : t.pow) * k) });
+}
+// 单挑兵器漂移：js/items-data.js 的 duelWeapons（与每件兵器的 duel 数）和当前 duel-game.js 的 WEAPONS 比较
+// （W5 再调兵器之后要重跑 node tools/gen-items.js js）
+function duelDrift(D) {
+  const cur = loadItemsData();
+  if (!cur || !cur.duelWeapons) return { problems: ['js/items-data.js missing or without duelWeapons'], changed: [] };
+  const W = duelWeaponTable();
+  if (!W) return { problems: [], changed: [], skipped: 'js/duel-game.js not loadable in Node' };
+  const fresh = duelWeapons(D, W).table, changed = [];
+  for (const k of Object.keys(fresh)) {
+    const a = cur.duelWeapons[k] || {}, b = fresh[k];
+    if (a.style !== b.style || a.reach !== b.reach || a.pow !== b.pow) changed.push(k + ': ' + [a.style, a.reach, a.pow].join('/') + ' → ' + [b.style, b.reach, b.pow].join('/'));
+  }
+  const curItems = new Map((cur.items || []).map(it => [it.id, it]));
+  let nItems = 0;
+  for (const it of D.items) {
+    if (!it.duel || !it.duel.key) continue;
+    nItems++;
+    const a = (curItems.get(it.id) || {}).duel || {}, b = itemDuel(it, D, fresh);
+    if (a.style !== b.style || a.reach !== b.reach || a.pow !== b.pow) changed.push(it.id + ' (' + it.duel.key + '): ' + [a.style, a.reach, a.pow].join('/') + ' → ' + [b.style, b.reach, b.pow].join('/'));
+  }
+  return { problems: changed.length ? ['duelWeapons drift vs duel-game.js WEAPONS (' + changed.length + ' keys / items; rerun node tools/gen-items.js js): ' + changed.slice(0, 12).join(', ')] : [], changed, n: Object.keys(fresh).length, nItems };
+}
+
 // ------------------------------------------------------------------ runtime data --
-function runtimeData(D, kit) {
+function runtimeData(D, kit, duel) {
+  duel = duel || { src: 'items.json', table: D.duelWeapons };
   const items = D.items.map(it => {
     const o = Object.assign({}, it);
     const av = {};
@@ -112,6 +174,7 @@ function runtimeData(D, kit) {
       av[sid] = b;
     }
     o.availability = av;
+    if (duel.src === 'duel-game.js' && it.duel) o.duel = itemDuel(it, D, duel.table);
     // giftK 的作用范围（ITEMS §7.2）：「以宝物赏赐 / 外交时价值 ×k」= 持有者送出的任何宝物（holder: true）；「以之赏赐」= 这件本身
     if (it.ability && it.ability.effects.some(e => e.t === 'giftK')) {
       o.ability = Object.assign({}, it.ability, { effects: it.ability.effects.map(e => (e.t === 'giftK' ? Object.assign({}, e, { holder: /以宝物/.test(it.ability.desc || '') }) : e)) });
@@ -121,7 +184,7 @@ function runtimeData(D, kit) {
   const out = {
     version: D.meta.version, generator: 'tools/gen-items.js from design-v4/items.json',
     meta: { counts: D.meta.counts, distribution: D.meta.distribution },
-    rarities: D.rarities, slots: D.slots, types: D.types, duelWeapons: D.duelWeapons, statKeys: D.statKeys, cultures: D.cultures,
+    rarities: D.rarities, slots: D.slots, types: D.types, duelWeapons: duel.table, duelWeaponsSource: duel.src, statKeys: D.statKeys, cultures: D.cultures,
     kits: D.kits, fig2type: D.fig2type, styleFallback: D.styleFallback,
     items, shops: D.shops, classic: D.classic, world: D.world,
     kitWeapon: kit.table, kitWeaponSource: kit.src,
@@ -201,14 +264,19 @@ function main() {
     if (kd.skipped) console.log('  kitWeapon drift: skipped (' + kd.skipped + ')');
     else if (kd.problems.length) console.log('PROBLEM: ' + kd.problems[0]);
     else console.log('  kitWeapon drift: none (' + kd.n + ' generals vs ' + kd.src + ')');
-    return rep.problems.length + kd.problems.length;
+    const dd = duelDrift(D);
+    if (dd.skipped) console.log('  duelWeapons drift: skipped (' + dd.skipped + ')');
+    else if (dd.problems.length) console.log('PROBLEM: ' + dd.problems[0]);
+    else console.log('  duelWeapons drift: none (' + dd.n + ' keys and ' + dd.nItems + ' weapons vs duel-game.js)');
+    return rep.problems.length + kd.problems.length + dd.problems.length;
   }
   if (rep.problems.length && !ARGS.includes('--force')) { console.log('js/items-data.js not written (fix the problems or pass --force)'); return rep.problems.length; }
   const kit = kitWeapons(D, opt('kit-from', 'figure'));
-  const data = runtimeData(D, kit);
+  const duel = duelWeapons(D);
+  const data = runtimeData(D, kit, duel);
   const bytes = writeJs(data);
-  console.log(`js/items-data.js written: ${(bytes / 1024).toFixed(0)} KB, hash ${data.hash}, kit weapons ${Object.keys(kit.table).length} (from ${kit.src})`);
+  console.log(`js/items-data.js written: ${(bytes / 1024).toFixed(0)} KB, hash ${data.hash}, kit weapons ${Object.keys(kit.table).length} (from ${kit.src}), duel weapons from ${duel.src}`);
   return 0;
 }
 if (require.main === module) process.exitCode = main();
-module.exports = { kitWeapons, kitDrift, runtimeData, loadItemsData, JSON_PATH };
+module.exports = { kitWeapons, kitDrift, duelWeapons, duelDrift, itemDuel, runtimeData, loadItemsData, JSON_PATH };

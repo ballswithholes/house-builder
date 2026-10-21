@@ -22,6 +22,7 @@
    SG.TitleUI.icon(postId, f, size) → HTML                   印信（占位；SG.TitleUI.iconHook = (postId, culture, size) => html 可替换）
    SG.TitleUI.officeTag(gen) → HTML                          城池面板 / 武将列表的官名小标签（家族色）；无官职时 ''
    SG.TitleUI.adminLine(city) → HTML                         「主政：荀彧（尚书令）」（君主坐镇、由文官代理时）
+   SG.TitleUI.cardLine(unit, model?) → HTML                  战场情报卡的官职一行：印信 + 官名 + 品阶 + 至多两项战斗效果（+ 主将的「统率+3%」）；无官职时 ''
    SG.TitleUI.current → 打开中的画面状态（测试用：{ f, el, fam, sheet, edict }）；SG.TitleUI.close()
    载入：ui.js、titles.js 之后，strategy-screen.js 之前（INTEGRATION §11）。
    类名（本文件注入的样式，前缀 .sg-office-）：.sg-office（对话框）、-head、-rank、-board、-row、-grade、-cell（.f-war / .f-intel / .f-pol）、
@@ -47,6 +48,10 @@
   const isPhone = () => typeof innerHeight === 'number' && innerHeight <= 540;
   // 现有音效：click hit fire rock horn win lose coin duel magic march（js/audio.js；授官的专属音效由音频工作流登记）
   const sfx = (name, vol) => { try { if (SG.Sfx && name === 'click' && SG.Sfx.click) SG.Sfx.click(); else if (SG.Sfx && SG.Sfx.play) SG.Sfx.play(name, vol || 0.6); } catch (e) { /* 无音频 */ } };
+  // DOMESTIC-FX 的授官声（TITLES §9.1）：按下 cmd-press-title；仪式 sting:title，档次 good = 五品、great = 三品 / 一品（其余 normal；
+  // 晋位：R2–R3 good、R4–R5 great）。短乐没有登记时（SG.Sfx.cmdSting 返回 null）退回现有的音效
+  const stingTier = t => (t >= 4 ? 'great' : t === 3 ? 'good' : 'normal');
+  const sting = (tier, fallback) => { let r = null; try { if (SG.Sfx && typeof SG.Sfx.cmdSting === 'function') r = SG.Sfx.cmdSting('title', tier); } catch (e) { r = null; } if (!r) sfx(fallback, 0.5); };
   const voice = (gen, key, vars) => { try { if (SG.Voice && typeof SG.Voice.say === 'function') SG.Voice.say(gen, key, vars); } catch (e) { /* 无人声 */ } };
   const portrait = (gen, size) => {
     if (SG.Portrait && typeof SG.Portrait.el === 'function') { try { return SG.Portrait.el(gen, { size }); } catch (e) { /* 无头像 */ } }
@@ -149,7 +154,7 @@
 .sg-office-names button:disabled { opacity: .35; cursor: default; }
 .sg-office-fx { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: .15rem 1rem; font-size: .88rem; border-top: 1px solid #b89a68; padding-top: .35rem; }
 .sg-office-fx .up { color: #1d6b3a; } .sg-office-fx .down { color: #9a2b1f; } .sg-office-fx small { color: #6b5d4a; }
-.sg-office-cost { width: 100%; display: flex; flex-wrap: wrap; gap: .2rem 1rem; justify-content: space-between; font-size: .9rem; padding-right: 3.6rem; box-sizing: border-box; }
+.sg-office-cost { width: 100%; display: flex; flex-wrap: wrap; gap: .2rem 1rem; justify-content: space-between; font-size: .9rem; padding-right: 5rem; box-sizing: border-box; }
 .sg-office-warn { width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; font-size: .8rem; color: #9a2b1f; }
 .sg-office-warn .sg-portrait { border-radius: .25rem; }
 .sg-office-btns { display: flex; gap: .6rem; margin-top: .2rem; }
@@ -205,6 +210,9 @@
 .sg-office-rung .sg-office-rr { font-size: .8rem; color: var(--sg-muted, #ada392); line-height: 1.4; }
 .sg-office-rung .sg-office-rr .ok { color: var(--sg-good, #73d98c); } .sg-office-rung .sg-office-rr .no { color: var(--sg-bad, #ff7361); }
 .sg-office-rung .sg-btn { min-height: 40px; }
+.sg-office-lv { display: inline-flex; gap: 2px; margin: 0 .15em; vertical-align: -.05em; }
+.sg-office-lv i { width: .5em; height: .82em; border: 1px solid currentColor; border-radius: 1px; box-sizing: border-box; opacity: .5; }
+.sg-office-lv i.on { background: currentColor; opacity: 1; }
 .sg-office-hist { font-size: .82rem; color: var(--sg-muted, #ada392); line-height: 1.5; }
 .sg-office-acts { display: flex; flex-wrap: wrap; gap: .4rem; }
 .sg-office-acts .sg-btn { min-height: 44px; }
@@ -217,6 +225,12 @@
 .sg-office-tab.is-v4 .sg-office-rung .sg-office-rr .ok { color: #1d6b3a; } .sg-office-tab.is-v4 .sg-office-rung .sg-office-rr .no { color: #9a2b1f; }
 .sg-office-tag { display: inline-block; margin-left: .35rem; padding: 0 .3rem; border-radius: .25rem; font-family: var(--sg-font-title); font-size: .78em; line-height: 1.35; color: #fff6e6; background: var(--fc); vertical-align: middle; white-space: nowrap; }
 .sg-office-tag.is-suspended { opacity: .6; text-decoration: line-through; }
+.sg-card-office { display: flex; align-items: center; flex-wrap: wrap; gap: 0 .3rem; line-height: 1.5; }
+.sg-card-office .sg-office-ins { width: 18px; height: 18px; flex: 0 0 auto; }
+.sg-card-office .sg-office-tag { margin-left: 0; }
+.sg-card-office-g { font-size: .82em; opacity: .75; }
+.sg-card-office-fx { color: #9fe0a8; font-size: .9em; white-space: nowrap; }
+.sg-card-office-off { color: #b9b0a4; font-size: .9em; }
 @media (prefers-reduced-motion: reduce) {
   .sg-office-sheet, .sg-office-edict, .sg-office-seat.is-new, .sg-office-seat.is-free.has-cand, .sg-office-rank .sg-office-bar i { animation: none !important; transition: none !important; }
 }
@@ -307,6 +321,7 @@
   function officeTag(gen) {
     const Ti = T();
     if (!Ti || !Ti.enabled || !gen || !Ti.isValid(gen)) return '';
+    injectStyle();
     const o = Ti.officeOf(gen);
     return `<span class="sg-office-tag${o.suspended ? ' is-suspended' : ''}" style="--fc:${o.color}" title="${esc(o.familyZh + ' · ' + o.grade + (o.suspended ? ' · 虚衔' : ''))}">${esc(o.name)}</span>`;
   }
@@ -317,6 +332,33 @@
     if (!a || c.governor < 0 || a.id === c.governor) return '';
     const o = Ti.officeOf(a);
     return `主政：${esc(a.name)}${o ? '（' + esc(o.name) + '）' : ''}`;
+  }
+  // 战场情报卡的一行（TITLES §9.6「Battle」）：小印信 + 官名（家族色）+ 本官的战斗效果；他是主将、本方有统率加成时注「统率」。
+  // battle-controller.showCard 调用（INTEGRATION 请求：W5）；无官职 / 官爵关闭时 ''。情报卡不接受指针（pointer-events: none），所以效果直接写出来
+  // 情报卡上的短名（效果字典的中文名太长）：最多两项 + 主将的统率，一行放得下
+  const CARD_SHORT = { atk: '攻', def: '防', morale: '士气', critArmy: '会心', tac: '计策', tacHit: '计中', tacRes: '识破' };
+  const CARD_KEYS = Object.keys(CARD_SHORT);
+  function cardFx(e) {
+    const D = SG.TitlesData, unit = D && D.effects[e.key] ? D.effects[e.key].unit : '';
+    const v = unit === 'flat' ? String(Math.round(e.value)) : pctTxt(e.value) + (unit === 'pp' ? 'pp' : '%');
+    return CARD_SHORT[e.key] + '+' + v;
+  }
+  function cardLine(u, model) {
+    const Ti = T();
+    if (!Ti || !Ti.enabled || !u || !u.gen || !Ti.isValid(u.gen)) return '';
+    const o = Ti.officeOf(u.gen);
+    if (!o) return '';
+    injectStyle();
+    const off = o.captive ? '被俘，暂不生效' : o.suspended ? '虚衔，暂不生效' : '';
+    const fx = off ? [] : Ti.effects(o.post).filter(e => CARD_KEYS.indexOf(e.key) >= 0 && e.live !== false && e.value > 0).slice(0, 2).map(cardFx);
+    if (!off && model && u.side !== undefined && typeof model.commander === 'function' && model.commander(u.side) === u) {
+      const a = Ti.sideBonus(model, u.side, 'cmdAtk'), d = Ti.sideBonus(model, u.side, 'cmdDef');
+      if (a > 0 && Math.abs(a - d) < 1e-9) fx.push('统率+' + pctTxt(a) + '%');
+      else if (a > 0 || d > 0) fx.push('统率' + (a > 0 ? '攻+' + pctTxt(a) + '%' : '') + (d > 0 ? '防+' + pctTxt(d) + '%' : ''));
+    }
+    const tail = off ? `<span class="sg-card-office-off">${off}</span>` : fx.length ? `<span class="sg-card-office-fx">${esc(fx.join(' '))}</span>` : '';
+    const tip = o.familyZh + ' · ' + o.grade + (fx.length ? '：' + fx.join(' ') : '') + (off ? '（' + off + '）' : '');
+    return `<div class="sg-card-office" title="${esc(tip)}">${icon(o.post, o.faction, 18)}<span class="sg-office-tag${o.suspended ? ' is-suspended' : ''}" style="--fc:${o.color}">${esc(o.name)}</span><span class="sg-card-office-g">${esc(o.grade)}</span>${tail}</div>`;
   }
   function badge(f) { const Ti = T(), g = G(); if (!Ti || !Ti.enabled || !g) return 0; return Ti.pending(f === undefined ? g.player : f); }
 
@@ -590,7 +632,7 @@
     const Ti = T();
     const res = Ti.grant(cur.f, gen, postId, nameIdx);
     if (!res.ok) { UI().toast(esc(res.why)); return null; }
-    sfx('coin');
+    sfx('cmd-press-title', 0.7);
     closeLayer('sheet'); closeLayer('edict');
     cur.lastSeat = gen.id;
     await ceremony(res);
@@ -703,7 +745,7 @@
       try { return Promise.resolve(SG.TitleArt.ceremony({ gen, ruler, office, culture: Ti.cultureOf(gen.faction), size })); } catch (e) { /* 回到占位 */ }
     }
     voice(ruler, 'title.grant', { title: office.name });
-    sfx(size === 'grand' ? 'horn' : size === 'medium' ? 'win' : 'coin', 0.5);
+    sting(stingTier(office.tier), size === 'grand' ? 'horn' : size === 'medium' ? 'win' : 'coin');
     return stage(size, root => {
       root.style.setProperty('--fcd', office.fam === 'war' ? '#8e2419' : office.fam === 'intel' ? '#1f4a82' : '#1d6b3a');
       if (size === 'grand') {
@@ -739,7 +781,7 @@
     if (!r || !(to > from)) return Promise.resolve();
     const size = to >= 4 ? 'grand' : to >= 2 ? 'medium' : 'small';
     voice(r, 'title.rankUp');
-    sfx(size === 'grand' ? 'horn' : 'win', 0.5);
+    sting(to >= 4 ? 'great' : 'good', size === 'grand' ? 'horn' : 'win');
     return stage(size, root => {
       if (size === 'grand') el('div', 'sg-office-lanterns', '<i></i><i></i><i></i><i></i>', root);
       const pe = portrait(r, size === 'grand' ? 130 : 100);
@@ -803,6 +845,13 @@
   }
 
   // ------------------------------------------------------------------ 人物菜单「官爵」页 --
+  // 条件的小块：ok 绿色 ✓、否则红色 ✗（文字里另有符号，不只靠颜色）
+  function reqSpan(ok, text) { return `<span class="${ok ? 'ok' : 'no'}">${esc(text)} ${ok ? '✓' : '✗'}</span>`; }
+  // 等级条（§9.4 的「▓▓▓▓░」）：需 n 级时 n 格，已到的格实心、未到的空框（CSS 小格，颜色随条件的绿 / 红）
+  function levelBar(lv, need) {
+    const n = Math.max(1, need | 0), k = Math.max(0, Math.min(n, lv | 0));
+    return `<span class="sg-office-lv" role="img" aria-label="等级 ${k} / ${n}">` + '<i class="on"></i>'.repeat(k) + '<i></i>'.repeat(n - k) + '</span>';
+  }
   function tab(gen) {
     injectStyle();
     const Ti = T(), g = G();
@@ -847,13 +896,20 @@
         const rung = el('div', 'sg-office-rung' + (o && o.tier === t && o.fam === fam ? ' is-cur' : ''), null, lad);
         rung.style.setProperty('--fc', famColor(fam));
         el('div', 'sg-office-rg', esc(tr.grade), rung);
+        // §9.4 每级一行条件：「等级 ▓▓▓▓░ 4 / 5 ✓」「武力 98 > 80 ✓」「名额 2 / 2 ✗ 国势达到 10.0 后增加」——✓ / ✗ 与颜色并用（色盲也读得出）
         const reqs = [];
         const lv = gen.level || 1;
-        reqs.push(`<span class="${lv >= tr.reqLevel ? 'ok' : 'no'}">等级 ${lv} / ${tr.reqLevel}</span>`);
-        if (tr.reqStat) reqs.push(`<span class="${Ti.base(gen, fam) > tr.reqStat ? 'ok' : 'no'}">${STAT_ZH[fam]} ${Ti.base(gen, fam)} > ${tr.reqStat}</span>`);
+        reqs.push(`<span class="${lv >= tr.reqLevel ? 'ok' : 'no'}">等级 ${levelBar(lv, tr.reqLevel)} ${lv} / ${tr.reqLevel} ${lv >= tr.reqLevel ? '✓' : '✗'}</span>`);
+        if (tr.reqStat) {
+          const v = Ti.base(gen, fam);
+          reqs.push(reqSpan(v > tr.reqStat, v > tr.reqStat ? `${STAT_ZH[fam]} ${v} > ${tr.reqStat}` : `${STAT_ZH[fam]} ${v}，需 > ${tr.reqStat}`));
+        }
         const cap = Ti.caps(f)[t - 1];
         const used = Ti.holders(f).filter(h => h.office.tier === t && !h.office.suspended).length;
-        reqs.push(`<span class="${used < cap ? 'ok' : 'no'}">名额 ${used} / ${cap}</span>`);
+        // 他本人就在这一品任职：这一席是他的，算作满足
+        const self = !!(o && o.tier === t && !o.suspended);
+        const hint = !self && used >= cap && Ti.seatHint ? Ti.seatHint(f, t) : '';
+        reqs.push(reqSpan(self || used < cap, `名额 ${used} / ${cap}` + (self ? '（本人在任）' : '') + (hint ? ' ' + hint : '')));
         el('div', 'sg-office-rr', posts.map(p => esc(Ti.postName(f, p.id, 0))).join(' · ') + '<br>' + reqs.join(' · '), rung);
         const canUp = posts.find(p => (!o || t > o.tier) && Ti.canGrant(f, gen, p.id).ok);
         if (canUp) UI().button(rung, o ? '晋升' : '授官', after(() => grant(gen, canUp.id)), { small: true, primary: true });
@@ -876,7 +932,7 @@
   }
 
   const TitleUI = {
-    open, close, grant, confirm: confirmCard, manage, tab, ceremony, rankUp, flush, badge, icon, officeTag, adminLine,
+    open, close, grant, confirm: confirmCard, manage, tab, ceremony, rankUp, flush, badge, icon, officeTag, adminLine, cardLine,
     iconHook: null, lastCeremony: null, CEREMONY_MS: LEN,   // 各档仪式的长度（毫秒；测试可临时调长以便截图）
     get current() { const c = state.cur; return c ? { f: c.f, el: c.el, fam: c.fam, sheet: !!c.sheet, edict: !!c.edict } : null; },
     // 测试用

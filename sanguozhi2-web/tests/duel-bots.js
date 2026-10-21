@@ -1168,6 +1168,9 @@ section(12, 'strings vs AI (balance)', () => {
   ok(bL.brk === 0, `AI war <= 35 should never break strings (${bL.brk})`);
   // 迟滞对付的是受击硬直中按节拍的看破（§9.3）；迟滞超过 0.08 秒放人后被挡、再在举防中格开下一步，是设计里的「反制之反制」，不算在内
   ok(dH.hsPct <= 0.7 * bH.hsPct, `delaying H steps should cut the AI's hitstun break rate by >= 30% (${dH.hsPct.toFixed(0)}% vs ${bH.hsPct.toFixed(0)}%)`);
+  // 规格原文（§15.2 (12)）按总看破率算「低 30%」；上面的门槛只算受击硬直中的看破（COMBAT-V4 §20 变更记录 D7，待规格方认可）。总看破率照样打印
+  const relTot = bH.pct > 0 ? 1 - dH.pct / bH.pct : 0;
+  console.log(`  ${relTot >= 0.3 ? 'spec text met:' : 'SPEC QUESTION (not a failure):'} total AI break rate vs the delay bot is ${(100 * relTot).toFixed(0)}% lower than vs combo (spec text >= 30%; the gate uses hitstun breaks, COMBAT-V4 §20 D7)`);
   // 电脑对电脑：整串打满（8/8 命中）的次数（每名电脑每场）
   // 每名电脑每场整串数约 0.6（n 600：关羽 / 吕布镜像 0.61–0.63），n 20 时 σ ≈ 0.09，离门槛 0.5 只有约 1.3σ：取 n ≥ 60（σ ≈ 0.05）
   const nf = Math.max(60, n);

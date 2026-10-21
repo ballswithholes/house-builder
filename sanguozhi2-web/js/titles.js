@@ -16,6 +16,7 @@
    gen.officeBest = 1..5（本势力授过的最高品阶：每品的授官忠诚只给一次；换势力时清零）| 没有该字段
    gen.officeLog  = [[monthIndex, postId, nameIdx, kind]]（≤ 8 条；kind：grant promote move revoke demote suspend restore lost）
    faction.rank   = 1..5        G.officeSeq = 授官计数（虚衔先后的依据；顶层存档键 'officeSeq'）
+   faction.officeCredit = { c, mi }（电脑势力的礼金额度，CFG.ai；第 7 相用过才有）  faction.officeGift = { year, gold }（玩家本年礼金）
    这些字段只在有状态时才出现（授过官的武将才有 office / officeBest / officeLog），关掉官爵的存档与 v4 去掉官爵相同。
 
    ---- SG.Titles（TITLES §10.2）----
@@ -35,7 +36,8 @@
    hireWithPromise(target, recruiter, f, cityId, opts?) → { ok, hired, office, promise }（成功时立即授官）
    candidates(f, postId) → [{ gen, ok, why, merit, stat, cur }]（候选名单，合格者在前）
    validate(gen) validateAll() refresh(f) → { rankFrom, rankTo, suspended, restored }   monthStart() → [新闻]
-   aiManage(f) → [授官结果]   aiManageAll()   fillByMerit(f, apply?) → [{ gen, post, kind, cost, payFrom }]
+   aiManage(f) → [授官结果]   aiManageAll()   startCourt()（新局：电脑的开局官职，不收礼金）   aiCredit(f) → 礼金额度 | null
+   fillByMerit(f, apply?) → [{ gen, post, kind, cost, payFrom }]
    pending(f) → n（「官制」按钮的角标：有合格人选的空缺数）   history(gen) → [文字]   takeNews() / takeEvents()
    init(G) / migrate(G, from) / load(G, data) / saveKeys ['officeSeq']（SG.MigrateV4 自动发现：TITLES 第二个迁移）
    stats（本局统计：grants gifts passedOver suspends restores revokes demotes aiRefused ms）
@@ -67,6 +69,15 @@
     clock: null,                               // 统计计时的时钟（null = performance.now）
     live: {},                                  // hookLive 的强制值（{ tac: true } …；缺省按载入的模块判断）
     aiNewsTier: 4,                             // 他国三品以上的任命，且与玩家接壤时才见于记录（§9.6）
+    // §8 电脑「花多少」（INTEGRATION §5.1 的钱袋之内，官爵自己的规则；与 ITEMS 的买装额度同理）：
+    //   礼金额度：每个电脑势力每月记 creditOfPurse × 钱袋份额（SG.AIBudget.share）× 本月总收入，至多 creditCapMonths 个月；
+    //   礼金要钱袋与这份额度都够。开局没有官职、钱袋又空，额度不设时电脑把头两年的钱袋几乎全花在礼金上（第 1 年 16 %、
+    //   第 2 年 10 % 的总收入，见 tests/titles.js §9），弱小的势力因此早早被吞并；额度把每年的礼金压在总收入的约 5 % 以内
+    //   （TITLES §12.1「礼金 ≤ 总收入 5 %」逐年成立，而不只是 25 年的平均）。creditShare：数字时直接当作「总收入的份额」
+    //   （测试与对照用）；creditOfPurse = null 且 creditShare = null 时不设额度（只受钱袋限制，即旧行为）
+    //   startCourt：新局（GameState.newGame，§8「新局为每个电脑势力跑一次」）电脑势力按功绩任命开局的官职，不收礼金——剧本开始时
+    //   他们已在任（开局人人 1 级，只有九品；钱袋为空，照 §8 付礼金一个也授不了）。玩家势力不受影响（§8：玩家从不自动授官）
+    ai: { creditOfPurse: 0.23, creditShare: null, creditCapMonths: 24, startCourt: true },
   };
   const FAMS = Object.freeze(['war', 'intel', 'pol']);
   const STAT_ZH = { war: '武力', intel: '智力', pol: '政治' };
@@ -499,6 +510,32 @@
     }
     return best && A.canSpend(best, cost, 'title') ? best : null;
   }
+  // 电脑的礼金额度（CFG.ai，§8）：faction.officeCredit = { c: 额度, mi: 记账的月 }（随存档；只有电脑势力在第 7 相用过才有）。
+  // 每月第一次用到时记一次 creditRate() × 本月总收入（SG.AIBudget.income：第 7 相 accrue 记下的），至多 creditCapMonths 个月。
+  // 不设额度时返回 null（只受钱袋限制）
+  function creditRate() {
+    const A = CFG.ai || {};
+    if (typeof A.creditShare === 'number') return A.creditShare;
+    if (typeof A.creditOfPurse !== 'number') return null;
+    const AIB = SG.AIBudget, D = SG.Balance && SG.Balance.Decisions;
+    const share = AIB && +AIB.share > 0 ? +AIB.share : D && +D.aiPurseShare > 0 ? +D.aiPurseShare : 0.22;
+    return A.creditOfPurse * share;
+  }
+  function creditOf(f) {
+    const k = creditRate();
+    if (k === null || !SG.AIBudget) return null;
+    const g = G(), fa = g && g.factions[f];
+    if (!fa) return null;
+    let r = fa.officeCredit;
+    if (!r || typeof r !== 'object') r = fa.officeCredit = { c: 0, mi: -1 };
+    if (r.mi !== g.monthIndex) {
+      const AIB = SG.AIBudget;
+      const inc = AIB && AIB.income && typeof AIB.income.get === 'function' ? +AIB.income.get(f) || 0 : 0;
+      r.c = Math.min((+r.c || 0) + k * inc, (+(CFG.ai.creditCapMonths) || 24) * k * Math.max(1, inc));
+      r.mi = g.monthIndex;
+    }
+    return r;
+  }
   function playerPayer(f, x, cost) {
     const g = G();
     if (!(cost > 0)) return null;
@@ -598,11 +635,13 @@
       if (bad) { res.why = bad.text; return res; }
     }
     res.cost = cur ? (p.tier > cur.tier ? giftOf(p.tier, cur.tier) : 0) : giftOf(p.tier, 0);
+    if (opts.free) res.cost = 0;   // 开局的官职（CFG.ai.startCourt）：剧本开始时已在任，不收礼金
     if (res.cost > 0) {
       if (opts.ai) {
-        const A = SG.AIBudget;
-        // 钱袋不够时 payer 必然找不到城（INTEGRATION §5.1 canSpend）：先看钱袋，省去逐城计算保留额
+        const A = SG.AIBudget, cr = creditOf(f);
+        // 钱袋不够时 payer 必然找不到城（INTEGRATION §5.1 canSpend）：先看钱袋，省去逐城计算保留额；礼金额度（CFG.ai）同样
         if (A && typeof A.purseOf === 'function' && A.purseOf(f) < res.cost) res.payFrom = null;
+        else if (cr && cr.c < res.cost) res.payFrom = null;
         else res.payFrom = A ? aiPayer(A, f, res.cost, opts.resCache) : playerPayer(f, x, res.cost);
       } else res.payFrom = playerPayer(f, x, res.cost);
       if (!res.payFrom) { res.why = `礼金不足（需 ${res.cost} 金）`; return res; }
@@ -627,8 +666,10 @@
     const g = G(), p = POST[postId], m = mi();
     // 礼金
     if (c.cost > 0) {
-      if (opts.ai && SG.AIBudget) SG.AIBudget.spend(c.payFrom, c.cost, 'title');
-      else c.payFrom.gold -= c.cost;
+      if (opts.ai && SG.AIBudget) {
+        SG.AIBudget.spend(c.payFrom, c.cost, 'title');
+        const cr = creditOf(f); if (cr) cr.c -= c.cost;
+      } else c.payFrom.gold -= c.cost;
       ST.gifts += c.cost; if (opts.ai) ST.aiGifts += c.cost;
       noteGift(f, c.cost);
     }
@@ -939,17 +980,18 @@
     if (!skipRefresh) refresh(f);
     const cap = caps(f);
     const A = SG.AIBudget;
-    // 电脑：钱袋连最便宜的礼金（50）都付不起时一个也授不了（INTEGRATION §5.1），不必逐品计算
+    // 电脑：钱袋（或礼金额度，CFG.ai）连最便宜的礼金（50）都付不起时一个也授不了（INTEGRATION §5.1），不必逐品计算
     if (payMode === 'ai' && A && typeof A.purseOf === 'function') {
       let minGift = Infinity;
       for (let t = 1; t <= 5; t++) if (cap[t - 1] > 0) minGift = Math.min(minGift, t === 1 ? tierOf(1).grantGold : tierOf(t).grantGold - tierOf(t - 1).grantGold);
-      if (!(A.purseOf(f) >= minGift)) { let free = false; for (let t = 1; t <= 5 && !free; t++) if (cap[t - 1] > tierActive(f, t, null)) free = true; if (free) ST.aiRefused++; return done; }
+      const cr = creditOf(f);
+      if (!(A.purseOf(f) >= minGift) || (cr && !(cr.c >= minGift))) { let free = false; for (let t = 1; t <= 5 && !free; t++) if (cap[t - 1] > tierActive(f, t, null)) free = true; if (free) ST.aiRefused++; return done; }
     }
     // 候选人：非君主、未被俘；每人的现任品阶、本月是否已任免、功绩、够格的最高品阶（不论名额）只算一次
     const resCache = new Map();
     const cands = [];
     const pool = [];
-    const grp = payMode === 'ai' && groups && groups.g === g && groups.mi === mi() ? groups.map.get(f) || EMPTY : null;
+    const grp = payMode !== 'player' && groups && groups.g === g && groups.mi === mi() ? groups.map.get(f) || EMPTY : null;
     for (const x of grp || g.generals) {
       if (x.faction !== f || x.dead) continue;
       pool.push(x);
@@ -973,8 +1015,8 @@
           if (k < bk || (k === bk && (c.m > bm || (c.m === bm && c.x.id < best.x.id)))) { bk = k; bm = c.m; best = c; bp = p; }
         }
         if (!best) break;
-        const r = grant(f, best.x, bp.id, undefined, { ai: payMode === 'ai', trusted: true, pool, resCache });
-        if (!r.ok) { if (payMode === 'ai') ST.aiRefused++; break; }   // 礼金付不起（钱袋或城的保留）→ 这一品停手（INTEGRATION §5）
+        const r = grant(f, best.x, bp.id, undefined, { ai: payMode === 'ai' || payMode === 'start', free: payMode === 'start', trusted: true, pool, resCache });
+        if (!r.ok) { if (payMode === 'ai') ST.aiRefused++; break; }   // 礼金付不起（钱袋、礼金额度或城的保留）→ 这一品停手（INTEGRATION §5）
         best.cur = t; best.ch = true;
         done.push(r);
       }
@@ -990,6 +1032,15 @@
     return r;
   }
   function aiManageAll() { const g = G(); if (!on() || !g) return; validateAll(); for (const f of g.factions) if (f.alive && f.id !== g.player) aiManage(f.id); }
+  // 新局的开局官职（CFG.ai.startCourt，§8 newGame）：同一套按功绩授官，不收礼金（也不动钱袋与礼金额度）；授官忠诚照给、越级者照算
+  function startCourt() {
+    const g = G();
+    if (!on() || !g) return [];
+    validateAll();
+    const out = [];
+    for (const f of g.factions) if (f.alive && f.id !== g.player) for (const r of meritPlan(f.id, 'start')) out.push(r);
+    return out;
+  }
   // 玩家的「按功绩授官」（§8 委任）：apply = false 时只给出方案（在影子状态上算，算完原样还原）
   function fillByMerit(f, apply) {
     const g = G();
@@ -1058,7 +1109,8 @@
     try {
       for (const f of g.factions) if (!(f.rank >= 1 && f.rank <= 5)) f.rank = upRank(power(f.id));
       rebuild(g);
-      if (newGame) aiManageAll();   // §8：新局为每个电脑势力跑一次（钱袋为空时什么也不授；与设计原型相同）
+      // §8：新局为每个电脑势力跑一次。钱袋此时为空，照付礼金一个也授不了：CFG.ai.startCourt（缺省开）时按开局官职授（不收礼金）
+      if (newGame) { if (CFG.ai && CFG.ai.startCourt) startCourt(); else aiManageAll(); }
     } finally { SG.G = prev; }
   }
   function init(g) { index(); installHooks(); setupState(g, true); }
@@ -1176,7 +1228,8 @@
     canGrant, grant, revoke, canRevoke, revokeCost, demote, demoteCost, setName, promiseBonus, hireWithPromise,
     validate, validateAll, refresh, enforce, monthStart, hints, takeNews, takeEvents, hookLive, giftsThisYear,
     hintRecords: () => lastHints.slice(),
-    aiManage, aiManageAll, fillByMerit, prefBranch, pickPost,
+    seatHint: (f, t) => nextSeatHint(f, t).replace(/^——/, ''),   // 「国势达到 10.0 后增加」（名额已满或未开时；没有更高的位阶时为空）
+    aiManage, aiManageAll, startCourt, fillByMerit, prefBranch, pickPost, aiCredit: f => { const r = creditOf(f); return r ? r.c : null; }, creditRate,
     init, migrate, load,
     installHooks, installProviders, providers: PROVIDERS, stats: ST,
     resetStats() { for (const k of Object.keys(ST)) ST[k] = 0; },

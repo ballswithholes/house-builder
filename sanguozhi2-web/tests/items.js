@@ -8,11 +8,11 @@
      §3 经济与电脑（全电脑战役）：买装占总收入 8–15 %、193 年武力 ≥ 60 的电脑武将中位装备件数 ≥ 2、每城 ≥ 4 件货、
         珍品在本城每 6–10 个月出现一次、传国玉玺 195 年前被找到 ≥ 70 %、自由支出后无城跌破 0、每月耗时
      §4 战斗：整套装备的交换比（按品级）、宝具的平均价值（参照一次普通攻击）；§4b 电脑对电脑战术战斗装备关 / 开（攻方胜率 ±3 pp、天数 ±1）
-   用法：node tests/items.js [--quick]      快速档（约 1 分钟）：§3 经典 12 种子 × 5 年 + 世界 2 种子 × 3 年，另「全开」经典 8 × 4、世界 2 × 3
+   用法：node tests/items.js [--quick]      快速档（约 1 分钟）：§3 经典 12 种子 × 5 年 + 世界 2 种子 × 3 年，另「全开」经典 4 × 8、世界 2 × 3
          node tests/items.js --full         夜间档：经典 40 × 20 年、世界 10 × 20 年（ITEMS §17.4 的 200 / 100 局按需加 --seeds）
          选项 --seeds N（经典种子数）、--years N、--only §4b,§3（只跑这几节）
-   FLAG 行：规格的预期与规格的算法 / 数据对不上、要规格作者定的数（不算失败；报告列出）
-   退出码 = 失败数
+   FLAG 行：没过的规格门槛——规格的预期与规格的算法 / 数据对不上、要规格作者定的数（快速档不算失败，夜间档算；报告列出）
+   退出码 = 失败数（--full：失败数 + FLAG 数）
    ========================================================================== */
 const path = require('path');
 const fs = require('fs');
@@ -79,6 +79,13 @@ section('§1 catalogue (ITEMS §17.1; tools/gen-items.js check)', () => {
     if (kd.skipped) info('kitWeapon drift check skipped: ' + kd.skipped);
     else ok(kd.changed.length === 0, 'kitWeapon matches the current SG.Figure.lookOf (' + kd.n + ' generals)' + (kd.changed.length ? ': ' + kd.changed.slice(0, 8).join(', ') : ''));
   } catch (e) { ok(false, 'kitWeapon drift check threw: ' + e.message); }
+  // duelWeapons（style / reach / pow）与每件兵器自己的 duel 数都与 duel-game.js 的 WEAPONS 一致（W5 的兵器平衡为准；改了之后要重跑 node tools/gen-items.js js）
+  try {
+    const dd = require(path.join(ROOT, 'tools', 'gen-items.js')).duelDrift(JSON.parse(fs.readFileSync(path.join(ROOT, 'design-v4', 'items.json'), 'utf8')));
+    if (dd.skipped) info('duelWeapons drift check skipped: ' + dd.skipped);
+    else ok(dd.changed.length === 0, 'duelWeapons and every weapon\'s own duel style / reach / pow match duel-game.js WEAPONS (' + dd.n + ' keys, ' + dd.nItems + ' weapons)' + (dd.changed.length ? ': ' + dd.changed.slice(0, 8).join(', ') : ''));
+    eq(D.duelWeaponsSource, 'duel-game.js', 'duelWeapons generated from duel-game.js');
+  } catch (e) { ok(false, 'duelWeapons drift check threw: ' + e.message); }
   // giftK 的作用范围写在数据里（以宝物赏赐 = 持有者；以之赏赐 = 本件）
   const gk = D.items.filter(it => it.ability && it.ability.effects.some(e => e.t === 'giftK'));
   ok(gk.length === 10 && gk.every(it => it.ability.effects.filter(e => e.t === 'giftK').every(e => typeof e.holder === 'boolean' && e.holder === /以宝物/.test(it.ability.desc))), 'giftK effects carry holder scope (' + gk.filter(it => it.ability.effects.some(e => e.holder)).length + ' holder / ' + gk.length + ')');
@@ -625,6 +632,112 @@ section('§2j review fixes: noCounter conditions, charge, awe, escape / capture,
 });
 
 // ======================================================================================= §4 battle ==
+section('§2k AI gear credit (gearOfPurse × the AIBudget purse share; ITEMS §13.3 / §17.4)', () => {
+  const g = newGame('liubei', 77);
+  g.player = -1;
+  const AIB = SG.AIBudget, A = Items.CFG.ai;
+  AIB.reset();
+  const f = g.factions.find(x => x.alive && g.cityCount(x.id) >= 3).id;
+  for (const c of g.cities) if (c.owner === f) c.gold = 50000;
+  const setPurse = v => { g.aiBudget = g.aiBudget || { purse: {} }; g.aiBudget.purse = g.aiBudget.purse || {}; g.aiBudget.purse[f] = v; };
+  // 额度的份额 = gearOfPurse × 钱袋份额（Decisions.aiPurseShare / AIBudget.ShareByDifficulty，DESIGN-V4 §20 问题 2）
+  const K = Items.gearShare();
+  near(K, A.gearOfPurse * AIB.share, 1e-12, `gearShare() = gearOfPurse × purse share (${A.gearOfPurse} × ${AIB.share} = ${K.toFixed(4)})`);
+  ok(K >= 0.12 && K <= 0.14, 'default allowance ≈ 13 % of gross at the default 22 % purse (' + (100 * K).toFixed(2) + ' %)');
+  {
+    const B0 = SG.Balance;
+    SG.Balance = Object.assign({}, B0, { Decisions: Object.assign({}, B0.Decisions, { aiPurseShare: 0.30 }) });
+    near(Items.gearShare(), A.gearOfPurse * 0.30, 1e-12, 'the allowance follows Decisions.aiPurseShare (0.30)');
+    SG.Balance = Object.assign({}, B0, { AIBudget: Object.assign({}, B0.AIBudget, { ShareByDifficulty: { easy: 0.18, normal: 0.22, hard: 0.26 } }) });
+    const d0 = g.difficulty; g.difficulty = 'hard';
+    near(Items.gearShare(), A.gearOfPurse * 0.26, 1e-12, '… and AIBudget.ShareByDifficulty (hard 0.26)');
+    g.difficulty = d0; SG.Balance = B0;
+    A.gearShare = 0.05;
+    eq(Items.gearShare(), 0.05, 'a numeric CFG.ai.gearShare overrides (tests / comparisons)');
+    A.gearShare = null;
+  }
+  // 额度每月记一次：gearShare() × 本月总收入，至多 gearCapMonths 个月
+  g.items.aiGear = {};
+  AIB.income.set(f, 1000);
+  const r = Items.gearCredit(f);
+  near(r.c, K * 1000, 1e-9, 'credit accrues gearShare × gross once');
+  Items.gearCredit(f);
+  near(g.items.aiGear[f].c, K * 1000, 1e-9, 'a second call in the same month does not accrue again');
+  g.items.aiGear[f] = { c: 1e9, mi: -1 };
+  near(Items.gearCredit(f).c, A.gearCapMonths * K * 1000, 1e-6, `credit capped at ${A.gearCapMonths} months`);
+  // 钱袋很满、额度只有一个月：这个月的买装 ≤ 额度
+  setPurse(1e6);
+  g.items.aiGear[f] = { c: 0, mi: -1 };
+  const spent0 = AIB.stats.byKind.gear || 0;
+  Items.aiShop(f);
+  const spent = (AIB.stats.byKind.gear || 0) - spent0;
+  ok(spent > 0 && spent <= K * 1000 + 1e-9, `AI gear spend in a month > 0 and ≤ the month's credit (${spent} ≤ ${(K * 1000).toFixed(1)})`);
+  ok(g.items.aiGear[f].c >= -1e-9, 'credit never negative (' + g.items.aiGear[f].c + ')');
+  // 没有额度（收入 0）：一件也不买，钱袋不动
+  g.items.aiGear[f] = { c: 0, mi: -1 };
+  AIB.income.set(f, 0);
+  const p0 = AIB.purseOf(f);
+  eq(Items.aiShop(f), 0, 'no credit → no purchase');
+  eq(AIB.purseOf(f), p0, 'purse untouched without credit');
+  // 额度大、钱袋空：仍不买（两样都要）
+  g.items.aiGear[f] = { c: 1e6, mi: g.monthIndex };
+  setPurse(0);
+  eq(Items.aiShop(f), 0, 'empty purse → no purchase even with credit');
+  // 钱袋空的月份额度照记（mi 是上个月、收入 > 0）：不买，额度涨一个月
+  g.items.aiGear[f] = { c: 100, mi: g.monthIndex - 1 };
+  AIB.income.set(f, 1000);
+  const b0 = Items.stats.aiBuys;
+  eq(Items.aiShop(f), 0, 'empty purse, income 1000: nothing bought …');
+  near(g.items.aiGear[f].c, 100 + K * 1000, 1e-9, '… but the month\'s allowance still accrues (100 → ' + g.items.aiGear[f].c.toFixed(1) + ')');
+  eq(Items.stats.aiBuys, b0, '… and no purchase was counted');
+  // 买装的预检用本势力武将表数在城武将（免得每城扫全部武将）：与 SG.AIBudget.reserve 的算式、判据相同
+  {
+    const bad = g.cities.filter(c => c.owner >= 0 && Items.reserveGold(c) !== AIB.reserve(c).gold);
+    eq(bad.length, 0, 'AI purchase precheck reserve == SG.AIBudget.reserve(c).gold in every owned city' + (bad.length ? ' (' + bad[0].name + ')' : ''));
+  }
+  // 尚未接入的效果（INTEGRATION：captureP 还没进 Conquest.apply；免令牌外交、同盟好感下限、查看敌城也没有调用方）：
+  // pendingEffects 列出它们，商店与人物卡标「暂未生效」；接线标记设上之后不再列
+  {
+    const P = id => Items.pendingEffects(id);
+    const esc = D.items.filter(it => it.stats && it.stats.escape).length;
+    ok(P('chitu').indexOf('溃散时脱身') >= 0 && P('zhaoye').indexOf('救主') >= 0 && P(D.items.find(it => it.name === '套马索').id).indexOf('擒将') >= 0, 'pendingEffects: 赤兔 脱身, 照夜玉狮子 救主, 套马索 擒将');
+    ok(D.items.filter(it => P(it).length).length >= esc, `every item with a 脱身 stat (${esc}) is marked pending`);
+    Items.captureWired = true;
+    eq(P('chitu').length, 0, 'captureWired = true → 赤兔 no longer pending');
+    Items.captureWired = false;
+    ok(P(D.items.find(it => it.name === '传国玉玺').id).indexOf('免令牌外交') >= 0 && P(D.items.find(it => it.name === '浑天仪').id).indexOf('查看敌城') >= 0, '传国玉玺 免令牌外交 / 浑天仪 查看敌城 pending until wired');
+  }
+  // 旧存档（没有 aiGear）：ensure 补一个空表
+  delete g.items.aiGear;
+  Items.ensure(g);
+  eq(JSON.stringify(g.items.aiGear), '{}', 'ensure() adds an empty aiGear to an older save');
+  AIB.reset();
+  // 真的存档路径（GameState JSON → fromJSON）：读档后的下两个月与不读档一模一样（额度、买到的东西、钱袋）
+  {
+    const ga = newGame('cao', 31);
+    ga.player = -1;
+    AIB.reset();
+    months(ga, 14);
+    ok(Object.keys(ga.items.aiGear).length >= 3 && Object.values(ga.items.aiGear).some(x => x.c > 0), 'after 14 months several AI factions carry a credit (' + Object.keys(ga.items.aiGear).length + ')');
+    const text = JSON.stringify(ga);
+    const gb = GameState.fromJSON(text);
+    eq(JSON.stringify(gb.items.aiGear), JSON.stringify(ga.items.aiGear), 'aiGear survives GameState save / load');
+    const run = gg => {
+      SG.G = gg; SG.Random.seed(4242); Items.resetStats();
+      const pb = JSON.stringify(gg.aiBudget || {});
+      months(gg, 2);
+      return { aiGear: JSON.stringify(gg.items.aiGear), buys: JSON.stringify(Items.stats.buys), spend: Items.stats.spend, purse: JSON.stringify(gg.aiBudget || {}), armoury: JSON.stringify(gg.factions.map(x => (x.armoury || []).map(u => gg.items.inst[u] && gg.items.inst[u].id))), pb };
+    };
+    const ra = run(ga), rb = run(gb);
+    eq(rb.aiGear, ra.aiGear, 'reloaded vs continuous: the same credits two months later');
+    eq(rb.buys + ' ' + rb.spend, ra.buys + ' ' + ra.spend, `… the same AI purchases (${ra.buys}, ${ra.spend} gold)`);
+    eq(rb.purse, ra.purse, '… the same purses');
+    eq(rb.armoury, ra.armoury, '… the same armouries');
+    ok(ra.spend > 0, 'some AI gear was bought in those two months');
+    AIB.reset();
+  }
+});
+
 section('§4 battle: full set exchange ratio by rarity (ITEMS §0, §17.3) and 宝具 values', () => {
   // 代表套装（spear + 札甲 + 盔 + 盾 + 战马 的品级 profile；一半攻击为冲锋），交换比 = 攻 × 防 × (1 + 冲锋 / 2)
   const P = k => D.types[k].profile;
@@ -804,22 +917,31 @@ section('§4b tactical battles, items off vs on with AI kits only, paired seeds 
 section('§3 all-AI campaigns: AI gear spending, items per general, shops, rare cadence, 传国玉玺, reserves, time (ITEMS §17.4)', () => {
   // 快速档：经典 12 种子 × 5 年（到 195 年，传国玉玺的门槛也量）+ 世界 2 × 3 年；另跑「全部第四版系统同开」一遍量 8–15 % 的买装门槛
   const cfg = FULL ? { classic: [argN('--seeds', 40), argN('--years', 20)], world: [10, 20] } : { classic: [argN('--seeds', 12), argN('--years', 5)], world: [2, 3] };
-  const cfgAll = FULL ? { classic: [20, 20], world: [4, 20] } : { classic: [8, 4], world: [2, 3] };
+  // 全开的快速档用 4 × 8 年（同样 32 种子年）：前 4 年官爵礼金占去钱袋的一半，8 × 4 年量的是开局而不是 §17.4 的长局份额
+  const cfgAll = FULL ? { classic: [20, 20], world: [4, 20] } : { classic: [4, 8], world: [2, 3] };
   const V4 = ['Titles', 'Engage', 'Tourney'].filter(n => SG[n] && typeof SG[n] === 'object' && 'enabled' in SG[n]);
+  // 进程 CPU 时间（process.cpuUsage；每月两次系统调用，不像墙钟那样被别的进程拉长）
+  const cpuMs = () => { const u = process.cpuUsage(); return (u.user + u.system) / 1000; };
   function campaign(scen, seeds, years, allOn) {
     const t0 = Date.now();
     for (const n of V4) SG[n].enabled = !!allOn;
     SG.AIBudget.reset(); Items.resetStats();
-    let msItems = 0, months2 = 0;
+    let msItems = 0, months2 = 0, cpuEnd = 0, cpuGear = 0;
+    // 第 7 相（自由支出）只有装备在花钱时（只开装备）= 电脑买装 + 换装 + 卖装（§13.7）
+    const A = SG.StrategyAI, pd = A.phaseDiscretionary;
+    A.phaseDiscretionary = function () { const t = cpuMs(); try { return pd.apply(this, arguments); } finally { cpuGear += cpuMs() - t; } };
     const per193 = [], shopMin = [], cadence = [], sealFound = [];
+    let g = null;
+    try {
     for (let s = 1; s <= seeds; s++) {
-      const g = newGame(scen === 'world' ? 'roma' : 'liubei', 100 + s, scen);
+      g = newGame(scen === 'world' ? 'roma' : 'liubei', 100 + s, scen);
       g.player = -1;
       const gone = {}, was = {};
       for (let m = 0; m < years * 12; m++) {
         SG.StrategyAI.runAI([]);
-        const ta = process.hrtime.bigint();
+        const ta = process.hrtime.bigint(), ca = cpuMs();
         SG.StrategyAI.endMonth();
+        cpuEnd += cpuMs() - ca;
         msItems += Number(process.hrtime.bigint() - ta) / 1e6;
         months2++;
         if (m === 0) shopMin.push(Math.min(...g.cities.map(c => c.shop.stock.length)));
@@ -833,19 +955,30 @@ section('§3 all-AI campaigns: AI gear spending, items per general, shops, rare 
         if (g.year === 195 && g.month === 1) sealFound.push(g.items.hiddenFound.indexOf('chuanguoxi') >= 0 || Items.count('chuanguoxi') > 0);
       }
     }
+    } finally { A.phaseDiscretionary = pd; }
     for (const n of V4) SG[n].enabled = false;
     const a = SG.AIBudget.stats;
     const share = (a.byKind.gear || 0) / Math.max(1, a.gross);
+    const sy = seeds * years, buys = Object.assign({}, Items.stats.buys), perSY = {};
+    for (const t of ['common', 'uncommon', 'rare', 'epic']) perSY[t] = (buys[t] || 0) / sy;
     const tag = `${scen}${allOn ? ' (all v4 on: ' + (V4.join(' + ') || 'none loaded') + ')' : ' (items alone)'} ${seeds} seeds × ${years} y`;
     info(`${tag}: AI gear spending ${(100 * share).toFixed(2)} % of gross (${a.byKind.gear || 0} / ${Math.round(a.gross)})` + (allOn ? `; title ${(100 * (a.byKind.title || 0) / Math.max(1, a.gross)).toFixed(2)} %` : '') +
-      `; buys ${JSON.stringify(Items.stats.buys)}, sold ${Items.stats.sold}, hidden found ${Items.stats.hiddenFound}  [${((Date.now() - t0) / 1000).toFixed(0)} s]`);
-    return { share, below0: a.below0, per193, shopMin, cadence, sealFound, msItems, months2, restockMs: Items.stats.restockMs };
+      `; AI buys ${JSON.stringify(buys)} = per seed-year common ${perSY.common.toFixed(1)} / uncommon ${perSY.uncommon.toFixed(1)} / rare ${perSY.rare.toFixed(2)}, sold ${Items.stats.sold}, hidden found ${Items.stats.hiddenFound}  [${((Date.now() - t0) / 1000).toFixed(0)} s]`);
+    // 补货的稳态成本：最后一局最后一月的货架复制 40 份，各补一次下个月的货（不取 SG.Random；取最快的四分之一，避开机器上别的负载）
+    const snap = g.cities.map(c => c.shop), cp = sh => ({ stock: sh.stock.map(e => Object.assign({}, e)), merchant: sh.merchant ? Object.assign({}, sh.merchant, { stock: sh.merchant.stock.map(e => Object.assign({}, e)) }) : null });
+    const rs = [];
+    for (let r = 0; r < 40; r++) { g.cities.forEach((c, i) => { c.shop = cp(snap[i]); }); const t = cpuMs(); Items.restockAll(); rs.push(cpuMs() - t); }
+    g.cities.forEach((c, i) => { c.shop = snap[i]; });
+    rs.sort((x, y) => x - y);
+    return { share, below0: a.below0, per193, shopMin, cadence, sealFound, msItems, months2, restockMs: Items.stats.restockMs, perSY, sy,
+      cpuEnd: cpuEnd / months2, cpuGear: cpuGear / months2, restockQ25: rs[Math.floor(rs.length / 4)], factions: g.factions.length };
   }
   for (const scen of ['classic', 'world']) {
     const [seeds, years] = cfg[scen];
     const r = campaign(scen, seeds, years, false);
-    // 只开装备时买装可以用满 22 % 的钱袋（官爵礼金、营建、节庆都不在）：查它在钱袋之内、不低于 8 %；8–15 % 是全开的门槛（下面）
-    ok(r.share >= 0.08 && r.share <= 0.22 + 0.01, `${scen} AI gear spending (items alone) between 8 % and the 22 % purse (${(100 * r.share).toFixed(2)} %)`);
+    // 只开装备时钱袋全给买装（官爵礼金、营建、节庆都不在），买装额度（CFG.ai.gearOfPurse × 钱袋份额）仍把它留在 8–15 %
+    const lo1 = scen === 'world' && !FULL ? 0.07 : 0.08;   // 世界快速档只有 2 × 3 年，下限留 1 pp 的噪声
+    ok(r.share >= lo1 && r.share <= 0.15, `${scen} AI gear spending (items alone) in ${(100 * lo1).toFixed(0)}–15 % (${(100 * r.share).toFixed(2)} %)`);
     eq(r.below0, 0, scen + ' no city below 0 after a gear purchase');
     if (r.per193.length) ok(median(r.per193) >= 2, `${scen} median items per AI general with war ≥ 60 in 193: ${median(r.per193)} (≥ 2)`);
     ok(Math.min(...r.shopMin) >= 4, scen + ' every city has ≥ 4 stock entries after month 1');
@@ -863,7 +996,17 @@ section('§3 all-AI campaigns: AI gear spending, items per general, shops, rare 
     }
     if (r.sealFound.length) info(`${scen}: 传国玉玺 found by 195 in ${r.sealFound.filter(Boolean).length} / ${r.sealFound.length} runs`);
     if (r.sealFound.length) ok(r.sealFound.filter(Boolean).length / r.sealFound.length >= 0.7, `${scen} 传国玉玺 found by 195 in ≥ 70 % of runs (${r.sealFound.filter(Boolean).length} / ${r.sealFound.length})`);
-    info(`${scen}: endMonth (all phases, with items) ${(r.msItems / r.months2).toFixed(2)} ms per month; restock ${(r.restockMs / r.months2).toFixed(2)} ms per month`);
+    info(`${scen}: endMonth (all phases, with items) ${(r.msItems / r.months2).toFixed(2)} ms wall per month; restock ${(r.restockMs / r.months2).toFixed(2)} ms wall per month in the campaign`);
+    // §17.4 / §13.7 的时间（台式机）：endMonth + 电脑买装 ≤ 8 ms、补货 ≤ 1 ms、70 个势力的买装与换装 ≤ 3 ms。这里量进程 CPU 时间；
+    // 这台机器有别的进程同跑（负载见括号），硬门槛留 ×3 的余量，规格的数记为 FLAG（夜间档 FLAG 也算退出码）
+    const load = require('os').loadavg()[0].toFixed(1);
+    info(`${scen}: CPU per month (load ${load}): endMonth ${r.cpuEnd.toFixed(2)} ms (target 8), AI gear phase ${r.cpuGear.toFixed(2)} ms (target 3 for 70 factions), restock steady state ${r.restockQ25.toFixed(2)} ms (target 1)`);
+    ok(r.cpuEnd <= 3 * 8, `${scen}: endMonth CPU ${r.cpuEnd.toFixed(2)} ms per month ≤ 24 (×3 headroom on the 8 ms target)`);
+    ok(r.cpuGear <= 3 * 3, `${scen}: AI gear phase CPU ${r.cpuGear.toFixed(2)} ms per month ≤ 9 (×3 headroom on the 3 ms target)`);
+    ok(r.restockQ25 <= 3 * 1, `${scen}: restock CPU ${r.restockQ25.toFixed(2)} ms ≤ 3 (×3 headroom on the 1 ms target)`);
+    flag(r.cpuEnd <= 8, `${scen}: endMonth + AI shopping ≤ 8 ms per month (ITEMS §17.4): ${r.cpuEnd.toFixed(2)} ms CPU at load ${load}`);
+    flag(r.cpuGear <= 3, `${scen}: AI shopping and equipping ≤ 3 ms per month (ITEMS §13.7): ${r.cpuGear.toFixed(2)} ms CPU at load ${load}`);
+    flag(r.restockQ25 <= 1, `${scen}: restock ≤ 1 ms per month (ITEMS §17.4): ${r.restockQ25.toFixed(2)} ms CPU at load ${load}`);
   }
   // INTEGRATION §5.2 / ITEMS §17.4：全部第四版系统同开时买装占总收入 8–15 %（原型：经典 11.2–11.4 %、世界 8.5 %）
   if (!V4.length) info('all-on gear-spending gate skipped: no other v4 rules module loaded');
@@ -873,9 +1016,57 @@ section('§3 all-AI campaigns: AI gear spending, items per general, shops, rare 
     const lo = scen === 'world' && !FULL ? 0.07 : 0.08;   // 世界快速档只有 2 × 3 年，下限留 1 pp 的噪声
     ok(r.share >= lo && r.share <= 0.15, `${scen} AI gear spending with all v4 systems on (${V4.join(', ')}) in ${(100 * lo).toFixed(0)}–15 %: ${(100 * r.share).toFixed(2)} %`);
     eq(r.below0, 0, scen + ' all-on: no city below 0 after a gear purchase');
+    // 买到什么（不只是花了多少）：设计原型（design-v4/integration，经 js/econ.js 的流水线）经典全开每种子年买
+    // 前 8 年 凡 24.8 / 良 6.6 / 珍 0.05，25 年 凡 9.7（10 731 / 1 200）/ 良 8.4 / 珍 1.8。良品与（长局的）珍品不得少于原型的一半
+    if (scen === 'classic') {
+      const ref = years <= 10 ? { uncommon: 6.6, rare: 0.05, w: '8-year' } : { uncommon: 8.4, rare: 1.8, w: '25-year' };
+      ok(r.perSY.uncommon >= ref.uncommon / 2, `classic all-on: AI uncommon purchases ${r.perSY.uncommon.toFixed(1)} per seed-year ≥ half the prototype's ${ref.w} rate ${ref.uncommon}`);
+      if (ref.rare >= 1) ok(r.perSY.rare >= ref.rare / 2, `classic all-on: AI rare purchases ${r.perSY.rare.toFixed(2)} per seed-year ≥ half the prototype's ${ref.w} rate ${ref.rare}`);
+      else info(`classic all-on: AI rare purchases ${r.perSY.rare.toFixed(2)} per seed-year (prototype ${ref.w}: ${ref.rare}; gated in --full)`);
+    }
   }
 });
 
-console.log(`\n${checks} checks, ${fails} failed, ${flags} flagged (spec questions, not failures)  (${((Date.now() - T0) / 1000).toFixed(0)} s)`);
-console.log(fails === 0 ? 'ALL OK' : 'FAILURES: ' + fails);
-process.exitCode = fails;
+// ============================================================================ §3b survival / conquest pace ==
+// ITEMS §17.4「势力存续与兼并速度 与关掉装备相比在 ±10 % 内」：只开装备 vs 全关（其他第四版模块都关），经典两组种子（1–48、1001–1048）
+// × 10 年；看第 10 年存活势力数与「首个势力过 25 % 城」的中位年份。夜间档合并两组判 ±10 %，每组单独的出入记 FLAG；快速档跳过（太慢）
+section('§3b faction survival and conquest pace, items alone vs off (ITEMS §17.4, --full)', () => {
+  if (!FULL) { info('skipped in the quick run (2 × 96 classic campaigns × 10 y; run with --full or --only §3b --full)'); return; }
+  const others = ['Titles', 'Engage', 'Tourney', 'Combos', 'Crit'].filter(n => SG[n] && typeof SG[n] === 'object' && 'enabled' in SG[n] && typeof SG[n].enabled !== 'function');
+  const was = Items.enabled, wasO = others.map(n => SG[n].enabled);
+  for (const n of others) SG[n].enabled = false;
+  const years = argN('--surv-years', 10), per = argN('--surv-seeds', 48);
+  const run = (on, s0) => {
+    Items.enabled = on; SG.AIBudget.reset();
+    const alive = [], f25 = [];
+    for (let s = s0 + 1; s <= s0 + per; s++) {
+      const g = newGame('liubei', s, 'classic'); g.player = -1;
+      const total = g.cities.length; let t25 = null;
+      for (let m = 0; m < years * 12; m++) {
+        StrategyAI.runAI([]); StrategyAI.endMonth();
+        if (t25 === null) for (const f of g.factions) if (f.alive && g.cityCount(f.id) > total * 0.25) { t25 = (m + 1) / 12; break; }
+      }
+      alive.push(g.factions.filter(f => f.alive).length); f25.push(t25 === null ? 99 : t25);
+    }
+    return { alive, f25 };
+  };
+  const pct = (a, b) => 100 * (b - a) / a;
+  const all = { off: { alive: [], f25: [] }, on: { alive: [], f25: [] } };
+  try {
+    for (const s0 of [0, 1000]) {
+      const off = run(false, s0), on = run(true, s0);
+      for (const [k, v] of [['off', off], ['on', on]]) { all[k].alive.push(...v.alive); all[k].f25.push(...v.f25); }
+      const da = pct(avg(off.alive), avg(on.alive)), df = pct(median(off.f25), median(on.f25));
+      info(`seeds ${s0 + 1}–${s0 + per} × ${years} y: factions alive y${years} ${avg(off.alive).toFixed(2)} → ${avg(on.alive).toFixed(2)} (${da.toFixed(1)} %); first faction > 25 % median ${median(off.f25).toFixed(2)} → ${median(on.f25).toFixed(2)} y (${df.toFixed(1)} %)`);
+      flag(Math.abs(da) <= 10 && Math.abs(df) <= 10, `seeds ${s0 + 1}–${s0 + per} alone within ±10 % (alive ${da.toFixed(1)} %, pace ${df.toFixed(1)} %; one 48-seed set is noisy — the gate is the pooled 96)`);
+    }
+    const da = pct(avg(all.off.alive), avg(all.on.alive)), df = pct(median(all.off.f25), median(all.on.f25));
+    ok(Math.abs(da) <= 10, `pooled ${2 * per} seeds: factions alive y${years} items alone vs off within ±10 % (${avg(all.off.alive).toFixed(2)} → ${avg(all.on.alive).toFixed(2)}, ${da.toFixed(1)} %)`);
+    ok(Math.abs(df) <= 10, `pooled ${2 * per} seeds: conquest pace (first faction > 25 %, median year) within ±10 % (${median(all.off.f25).toFixed(2)} → ${median(all.on.f25).toFixed(2)}, ${df.toFixed(1)} %)`);
+  } finally { Items.enabled = was; others.forEach((n, i) => { SG[n].enabled = wasO[i]; }); }
+});
+
+console.log(`\n${checks} checks, ${fails} failed, ${flags} flagged (ITEMS §17 spec gates still open: the spec's number and the spec's own data / algorithm disagree)  (${((Date.now() - T0) / 1000).toFixed(0)} s)`);
+// FLAG 是没过的规格门槛（等规格作者定），不是「通过」：有 FLAG 时不印 ALL OK；夜间档（--full）FLAG 也算进退出码
+console.log(fails ? 'FAILURES: ' + fails + (flags ? ` (+ ${flags} spec gates open)` : '') : flags ? `NO FAILURES — ${flags} SPEC GATE(S) OPEN (FLAG lines above)` : 'ALL OK');
+process.exitCode = fails + (FULL ? flags : 0);
