@@ -389,70 +389,84 @@ const musicDone = new Promise(resolve => {
     S.ShopScreen = { reveal(rv) { return new Promise(r => setTimeout(() => r('rv:' + rv.id), rv.ms)); } };
     S.Voice.init(); S.Voice.hooks.install();
     const T0 = Date.now();
-    const at = (ms, fn) => setTimeout(() => { try { fn(); } catch (e) { fails.push('music harness step @' + ms + ': ' + e.message); } }, ms);
+    // the steps run in sequence, each check scheduled after the event it follows (the cry warm-up of §8 runs in the same process
+    // and can stall the event loop for a second under load: absolute times would reorder): a "not yet" check is armed in the same
+    // tick as the hook's own timer and so always fires first; a "now it is" check polls up to 4 s
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const until = async (pred, ms) => { const t0 = Date.now(); while (!pred() && Date.now() - t0 < (ms || 4000)) await wait(25); return pred(); };
     const trace = [];
-    X.music('title');
-    ok(st() === 'title/title', 'boot music ' + st());
-    // (a) preview 曹操 → back out (selectRuler false) → the title music returns
-    S.Game.selectRuler('classic');
-    S.Game._focusCapital(S.G, { id: 1 }, 45);
-    at(1700, () => { trace.push(st()); ok(st() === 'map/suite:曹操:map', 'preview did not play 曹操\'s map suite: ' + st()); });
-    at(2100, () => { trace.push(st()); ok(st() === 'title/title', 'backing out of the ruler list left ' + st() + ' (want title/title)'); });
-    // (b) preview 曹操 → the game starts (selectRuler true): no title flash, the strategy screen's music('map') = the player's suite
-    at(2300, () => { selRes = true; S.Game.selectRuler('classic'); S.Game._focusCapital(S.G, { id: 1 }, 45); });
-    at(4050, () => { trace.push(st()); ok(st() === 'map/suite:曹操:map', 'second preview: ' + st()); });
-    at(4400, () => {
-      trace.push(st()); ok(X.musicKind === 'map', 'starting the game flashed back to ' + X.musicKind);
+    const step = async () => {
+      X.music('title');
+      ok(st() === 'title/title', 'boot music ' + st());
+      // (a) preview 曹操 → back out (selectRuler false) → the title music returns
+      let sel = S.Game.selectRuler('classic');
+      S.Game._focusCapital(S.G, { id: 1 }, 45);
+      ok(await until(() => st() === 'map/suite:曹操:map'), 'preview did not play 曹操\'s map suite: ' + st()); trace.push(st());
+      await sel; await wait(20);
+      trace.push(st()); ok(st() === 'title/title', 'backing out of the ruler list left ' + st() + ' (want title/title)');
+      // (b) preview 曹操 → the game starts (selectRuler true): no title flash; the strategy screen's music('map') = the player's suite
+      selRes = true; sel = S.Game.selectRuler('classic'); S.Game._focusCapital(S.G, { id: 1 }, 45);
+      ok(await until(() => st() === 'map/suite:曹操:map'), 'second preview: ' + st()); trace.push(st());
+      await sel; await wait(20);
+      ok(X.musicKind === 'map', 'starting the game flashed back to ' + X.musicKind);
       X.music('map'); trace.push(st()); ok(st() === 'map/suite:刘备:map', 'strategy map after the pick: ' + st());
-    });
-    // (c) council: 外交 open 1.2 s → council@刘备 after 0.6 s; the council holds 1.5 s after it closes, then the map
-    at(4500, () => { const r = new SS().cmdDiplomacy(); r.then(v => ok(v === 'dip', 'wrapped cmdDiplomacy result ' + v)); });
-    at(4900, () => ok(X.musicKind === 'map', 'council switched before the dwell'));
-    at(5300, () => { trace.push(st()); ok(st() === 'council/suite:刘备:council', '外交 did not play the council suite: ' + st()); });
-    at(6400, () => ok(X.musicKind === 'council', 'the council did not hold after 外交 closed: ' + X.musicKind));
-    at(7400, () => { trace.push(st()); ok(st() === 'map/suite:刘备:map', 'closing 外交 did not restore the map: ' + st()); });
-    // nested: 任命 → 官制 board (1 s) — one council scope
-    at(7500, () => { new SS().cmdAppoint().then(v => ok(v === 'app', 'wrapped cmdAppoint result ' + v)); });
-    at(8300, () => { trace.push(st()); ok(X.musicKind === 'council', '任命 → 官制: ' + st()); });
-    at(10300, () => { trace.push(st()); ok(X.musicKind === 'map', 'after the nested board: ' + st()); });
-    // a quick cancel (0.2 s) keeps the map; the 「地域」 style keeps the map
-    at(10400, () => { new SS({ dip: 200 }).cmdDiplomacy(); });
-    at(11200, () => ok(X.musicKind === 'map', 'a 0.2 s 外交 cancel switched the music to ' + X.musicKind));
-    at(11300, () => { X.setSetting('musicStyle', 'region'); new SS({ dip: 1000 }).cmdDiplomacy(); });
-    at(12000, () => { ok(X.musicKind === 'map', 'the 地域 style switched to ' + X.musicKind); });
-    at(12500, () => { X.setSetting('musicStyle', 'suite'); X.music('map');
+      // (c) council: 外交 open 1.2 s → council@刘备 after the 0.6 s dwell; it holds 1.5 s after the close, then the map
+      let r = new SS().cmdDiplomacy();
+      await wait(400); ok(X.musicKind === 'map', 'council switched before the dwell');
+      ok(await until(() => X.musicKind === 'council'), '外交 did not play the council suite: ' + st()); trace.push(st());
+      ok(st() === 'council/suite:刘备:council', '外交 council piece: ' + st());
+      ok(await r === 'dip', 'wrapped cmdDiplomacy result');
+      await wait(300); ok(X.musicKind === 'council', 'the council did not hold after 外交 closed: ' + X.musicKind);
+      ok(await until(() => X.musicKind === 'map'), 'closing 外交 did not restore the map: ' + st()); trace.push(st());
+      ok(st() === 'map/suite:刘备:map', 'after 外交: ' + st());
+      // nested: 任命 → 官制 board (1 s) — one council scope
+      r = new SS().cmdAppoint();
+      ok(await until(() => X.musicKind === 'council'), '任命 → 官制: ' + st()); trace.push(st());
+      ok(await r === 'app', 'wrapped cmdAppoint result');
+      ok(await until(() => X.musicKind === 'map'), 'after the nested board: ' + st()); trace.push(st());
+      // a quick cancel (0.2 s) keeps the map; the 「地域」 style keeps the map
+      await new SS({ dip: 200 }).cmdDiplomacy(); await wait(800);
+      ok(X.musicKind === 'map', 'a 0.2 s 外交 cancel switched the music to ' + X.musicKind);
+      X.setSetting('musicStyle', 'region'); r = new SS({ dip: 1000 }).cmdDiplomacy();
+      await wait(700); ok(X.musicKind === 'map', 'the 地域 style switched to ' + X.musicKind);
+      await r; X.setSetting('musicStyle', 'suite'); X.music('map');
       // (d) news: the first other ruler named → his fanfare; at most one per batch; none right after a succession fanfare
       fan.length = 0;
       ok(new SS().sayNews(['许昌秋收，得粮 300。', '孙坚攻下了庐江。', '曹操与孙坚结盟。']) === 'said', 'wrapped sayNews result');
-    });
-    at(12600, () => {
       ok(fan.length === 1 && /^孙坚@/.test(fan[0]), 'news fanfare: ' + fan.join(' ') + ' (want one, 孙坚)');
       S.Events.emit('faction.succession', 0, gl[2]);       // the player's heir: his fanfare …
       fan.length = 0;
       new SS().sayNews(['曹操攻下了小沛。']);                // … so the news batch right after stays silent
       ok(fan.length === 0, 'news fanfare right after a succession fanfare: ' + fan.join(' '));
-    });
-    // (e) 离间 caught → 曹操's fanfare, then 关羽's report line; 离间 on a ruler → no fanfare
-    at(13200, () => { fan.length = 0; S.Voice.log.length = 0; S.Events.emit('command', 'discord', { f: 0, gen: 2, target: 3, ok: false }); });
-    at(13400, () => { ok(fan.length === 1 && /^曹操@/.test(fan[0]), '离间 caught fanfare: ' + fan.join(' ')); ok(!S.Voice.log.some(x => x.cue === 'miss'), 'the miss line came before the fanfare lead'); });
-    at(14400, () => { const m = S.Voice.log.filter(x => x.cue === 'miss').map(x => x.speaker); ok(m.join(' ') === '关羽', '离间 caught line: ' + m.join(' ')); });
-    at(14500, () => { fan.length = 0; S.Events.emit('command', 'discord', { f: 0, gen: 2, target: 1, ok: false, reason: 'ruler' }); });
-    at(14700, () => ok(fan.length === 0, '离间 on a ruler played a fanfare: ' + fan.join(' ')));
-    // (f) reveal dismissed at 0.3 s → no line; shown 1.5 s → the line
-    at(14800, () => { S.Voice.log.length = 0; S.ShopScreen.reveal({ id: 'E1', to: 0, ms: 300 }).then(v => ok(v === 'rv:E1', 'wrapped reveal result ' + v)); });
-    at(16200, () => { ok(!S.Voice.log.some(x => /^item\./.test(x.cue)), 'a reveal dismissed at 0.3 s still spoke: ' + S.Voice.log.map(x => x.cue).join(' ')); S.ShopScreen.reveal({ id: 'E2', to: 0, ms: 1500 }); });
-    at(17400, () => {
+      await wait(1500);
+      // (e) 离间 caught → 曹操's fanfare, then 关羽's report line (0.9 s later); 离间 on a ruler → no fanfare
+      fan.length = 0; S.Voice.log.length = 0;
+      S.Events.emit('command', 'discord', { f: 0, gen: 2, target: 3, ok: false });
+      ok(fan.length === 1 && /^曹操@/.test(fan[0]), '离间 caught fanfare: ' + fan.join(' '));
+      await wait(200); ok(!S.Voice.log.some(x => x.cue === 'miss'), 'the miss line came before the fanfare lead');
+      ok(await until(() => S.Voice.log.some(x => x.cue === 'miss')), '离间 caught: no line');
+      ok(S.Voice.log.filter(x => x.cue === 'miss').map(x => x.speaker).join(' ') === '关羽', '离间 caught line: ' + S.Voice.log.map(x => x.cue + '@' + x.speaker).join(' '));
+      fan.length = 0;
+      S.Events.emit('command', 'discord', { f: 0, gen: 2, target: 1, ok: false, reason: 'ruler' });
+      ok(fan.length === 0, '离间 on a ruler played a fanfare: ' + fan.join(' '));
+      await wait(1200);
+      // (f) reveal dismissed at 0.3 s → no line; shown 1.5 s → the line
+      S.Voice.log.length = 0;
+      ok(await S.ShopScreen.reveal({ id: 'E1', to: 0, ms: 300 }) === 'rv:E1', 'wrapped reveal result');
+      await wait(1100);
+      ok(!S.Voice.log.some(x => /^item\./.test(x.cue)), 'a reveal dismissed at 0.3 s still spoke: ' + S.Voice.log.map(x => x.cue).join(' '));
+      await S.ShopScreen.reveal({ id: 'E2', to: 0, ms: 1500 });
       const it = S.Voice.log.filter(x => /^item\./.test(x.cue)).map(x => x.cue + '@' + x.speaker);
       ok(it.join(' ') === 'item.epic@刘备', 'a reveal shown 1.5 s: ' + it.join(' ') + ' (want item.epic@刘备)');
       // (g) a 授官 ceremony (1.8 s) switches at once (no dwell) and holds 1.5 s after it
-      S.TitleUI.ceremony().then(v => ok(v === 'cer', 'wrapped ceremony result ' + v));
-    });
-    at(17600, () => { trace.push(st()); ok(X.musicKind === 'council', 'a ceremony did not play the council at once: ' + st()); });
-    at(21300, () => {
-      trace.push(st()); ok(X.musicKind === 'map', 'after the ceremony: ' + st());
+      r = S.TitleUI.ceremony();
+      await wait(100); trace.push(st()); ok(X.musicKind === 'council', 'a ceremony did not play the council at once: ' + st());
+      ok(await r === 'cer', 'wrapped ceremony result');
+      await wait(300); ok(X.musicKind === 'council', 'the council did not hold after the ceremony');
+      ok(await until(() => X.musicKind === 'map'), 'after the ceremony: ' + st()); trace.push(st());
       musicOk = 'music ' + trace.join(' → ') + '; news / 离间 fanfares and reveal cancel checked';
-      resolve();
-    });
+    };
+    step().then(resolve, e => { fails.push('music harness step threw: ' + e.message); resolve(); });
   } catch (e) { fails.push('music harness threw: ' + e.message); resolve(); }
 });
 
