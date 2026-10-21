@@ -1099,7 +1099,7 @@
     });
   }
   // ---- battle (BattleController / BattleView) ----
-    function autoOf(bc) { return !!(bc && (bc.autoPlayer || bc.playerSide < 0 || (bc.M && bc.M.side !== bc.playerSide) || (typeof bc.watching === 'function' && bc.watching()))); }
+  function autoOf(bc) { return !!(bc && (bc.autoPlayer || bc.playerSide < 0 || (bc.M && bc.M.side !== bc.playerSide) || (typeof bc.watching === 'function' && bc.watching()))); }
   function unitOpts(bc, u, extra) {
     const watching = autoOf(bc);
     const player = bc && u && u.side === bc.playerSide;

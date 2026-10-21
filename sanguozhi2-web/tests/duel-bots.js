@@ -952,6 +952,18 @@ section(10, 'strings: rules (scripted, deterministic)', () => {
     };
     const c5 = crush(3), c4 = crush(4);
     ok(c5.crush && c5.blocked === 6 && !c4.crush && c4.blocked === 5, `a blocked finisher crushes the guard after exactly 5 blocked steps, not after 4 (${JSON.stringify(c5)} ${JSON.stringify(c4)})`);
+    // 中间挥空一步就重新数（复核）：已连挡 4 步时，这一步打空（对手在够不着处）→ 计数归零；同一步被挡 → 5
+    const runAfter = far => {
+      const sim = stage('刘备', Object.assign({}, gens['关羽'], { war: gens['刘备'].war }), far ? 6 : 1.4), f = withSeq(sim, 0, 'LMLMLHMH'), o = sim.f[1];
+      o.ctrl.update = () => { o.ctrl.held.guard = true; };
+      f.ctrl.taps[TK['L']]++;
+      until(sim, () => f.state === 'str', 0.2);
+      f.blockedRun = 4;
+      until(sim, () => f.state !== 'str' || f.t >= D.stepMove(f.seqStr, 0, 'L').startup + D.stepMove(f.seqStr, 0, 'L').active + 0.02, 1);
+      return f.blockedRun;
+    };
+    const bw = runAfter(true), bb = runAfter(false);
+    ok(bw === 0 && bb === 5, `a whiffed string step resets the guard-crush count (whiff → ${bw}, blocked → ${bb})`);
   }
   // i. 绝技取消：打中 / 被挡时可取消，挥空不行；绝技的伤害按连击递减（下限 0.6）；任何一串 + 取消 ≤ 50 HP（武力同为 100）
   {
@@ -1124,8 +1136,9 @@ section(12, 'strings vs AI (balance)', () => {
   const STRONG = [['关羽', '关羽'], ['吕布', '吕布']], WEAK = [['孙乾', '孙乾']];
   const set = (kind, pairs, opts) => avg(pairs.map(([p, a]) => play(kind, p, a, n, opts).pct));
   // 胜率：连段机器人（命中确认、踩准节拍）不该打垮同武力电脑，但比只会挡的强；会看破的更强
-  // 看破机器人的真值约 64–66%（n 960–1600），离上限 70% 只有约 1.5σ（n 20 × 8 对时 σ ≈ 3.6）：这一项取 n ≥ 40（σ ≈ 2.6）
-  const combo = set('combo', MID8), hb = set('hbguard', MID8), breaker = avg(MID8.map(([p, a]) => play('breaker', p, a, Math.max(40, n)).pct)), comboS = set('combo', STRONG), comboW = set('combo', WEAK);
+  // 看破机器人的真值约 64–66%（n 960–1600），离上限 70% 只有约 1.5σ（n 20 × 8 对时 σ ≈ 3.6）：这一项取 n ≥ 80（8 对共 640 场，σ ≈ 1.9；
+  // n 40 时 σ ≈ 2.6，种子 7 换了随机数流后实测 72%，约 5% 的运行会误报）
+  const combo = set('combo', MID8), hb = set('hbguard', MID8), breaker = avg(MID8.map(([p, a]) => play('breaker', p, a, Math.max(80, n)).pct)), comboS = set('combo', STRONG), comboW = set('combo', WEAK);
   console.log(`  vs equal mid AI: combo ${combo.toFixed(0)}%, hbguard ${hb.toFixed(0)}%, breaker ${breaker.toFixed(0)}%; combo vs STRONG ${comboS.toFixed(0)}%, vs WEAK ${comboW.toFixed(0)}%`);
   ok(combo >= hb - 5 && combo >= 30 && combo <= 65, `combo vs equal mid AI should be 30-65% and >= hbguard - 5 (${combo.toFixed(0)}% vs ${hb.toFixed(0)}%)`);
   ok(comboS >= 5 && comboS <= 40, `combo vs strong mirrors should be 5-40% (${comboS.toFixed(0)}%)`);
@@ -1293,17 +1306,21 @@ section(13, 'duel crits', () => {
 // ---------------------------------------------------------------- (14) 性能 --
 section(14, 'performance', () => {
   for (let i = 0; i < 3; i++) D.simulate(gens['吕布'], gens['吕布']);
-  // 三批各 20 场取最快的一批（机器上同时有别的进程时，平均值会被拖慢；最快的一批最接近本身的耗时）
-  let ms = Infinity, steps = 0;
+  // 各 20 场一批，取最快的一批。量的是本进程的 CPU 时间（process.cpuUsage），不是墙钟：机器上同时有别的进程时（负载 20–40），
+  // 墙钟连最快的一批也会被拖到 15 ms 以上（复核：负载约 30 时墙钟 15.3 ms，同一份代码空闲时 6.7–8.0 ms）；CPU 时间受排队影响小得多，
+  // 但虚拟机里超售时仍会偏高（负载 23 时 14 ms），所以再加下面的「多量几批」
+  let ms = Infinity, wall = Infinity, steps = 0;
   const M2 = 20;
-  for (let b = 0; b < 3; b++) {
-    const t0 = process.hrtime.bigint(); let st = 0;
+  // 至少五批；超过 15 ms 时再多量几批（至多 15 批），等一个机器不那么忙的时刻——取的是最小值，多量只会更接近真值
+  for (let b = 0; b < 15 && (b < 5 || ms > 15); b++) {
+    const t0 = process.hrtime.bigint(), c0 = process.cpuUsage(); let st = 0;
     for (let i = 0; i < M2; i++) { const r = D.simulate(gens['吕布'], gens['吕布']); st += r.time * 60; }
-    const v = Number(process.hrtime.bigint() - t0) / 1e6 / M2;
+    const c = process.cpuUsage(c0), v = (c.user + c.system) / 1e3 / M2, w = Number(process.hrtime.bigint() - t0) / 1e6 / M2;
     if (v < ms) { ms = v; steps = st; }
+    wall = Math.min(wall, w);
   }
-  console.log(`  D.simulate 吕布 mirror: ${ms.toFixed(1)} ms per duel (${(steps / M2).toFixed(0)} steps)`);
-  ok(ms <= 15, `an AI 吕布 mirror simulates in <= 15 ms (${ms.toFixed(1)} ms)`);
+  console.log(`  D.simulate 吕布 mirror: ${ms.toFixed(1)} ms CPU per duel (${(steps / M2).toFixed(0)} steps; fastest wall-clock batch ${wall.toFixed(1)} ms)`);
+  ok(ms <= 15, `an AI 吕布 mirror simulates in <= 15 ms of CPU time (${ms.toFixed(1)} ms)`);
 });
 
 // ---------------------------------------------------------------- (15) 装备在单挑里与兵器平衡 --

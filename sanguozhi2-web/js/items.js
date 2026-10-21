@@ -472,13 +472,14 @@
     const aHp = abilityHp(x);
     let guardPP = Math.min(d.guardPP, raw(x, 'dGuard'));
     const guardAb = maxOf(abil(x, 'dGuard'), 'k');
-    // 全合一预算：dmg + 0.4 × (HP + 能力体力 + 0.5 × 格挡) ≤ B；超出时先削体力、再削格挡、再削伤害（确定的次序）
+    // 全合一预算：dmg + 0.4 × (HP + 能力体力 + 0.5 × 格挡) ≤ B；超出时先削体力、再削伤害（INTEGRATION §8.3 的次序），
+    // 两样削完仍超出（只剩格挡）才削格挡——确定的次序，不取随机数
     const B = CFG.duelBudget;
     const total = () => dmg + d.hpPerPP * (gearHp + aHp + d.guardHpK * (guardPP + guardAb));
     let over = total() - B;
     if (over > 1e-9) { const cut = Math.min(gearHp, over / d.hpPerPP); gearHp -= cut; over = total() - B; }
-    if (over > 1e-9) { const cut = Math.min(guardPP, over / (d.hpPerPP * d.guardHpK)); guardPP -= cut; over = total() - B; }
     if (over > 1e-9) { dmg = Math.max(0, dmg - over); over = total() - B; }
+    if (over > 1e-9) { const cut = Math.min(guardPP, over / (d.hpPerPP * d.guardHpK)); guardPP -= cut; over = total() - B; }
     const spd = (raw(x, 'dSpd') + maxOf(abil(x, 'dSpd'), 'k')) / 100;
     const move = Math.min(d.move, raw(x, 'dMove')) / 100;
     const guardMax = guardAb > 0 ? d.guardAbsMax : d.guardMax;

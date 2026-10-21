@@ -69,7 +69,7 @@
    SG.Figure.material【= LP 共用材质】· SG.Figure.setRim(color, strength) · SG.Figure.lookOf(gen, opts) · SG.Figure.soldierLook(opts)
    SG.Figure.cultures / weapons / soldierTypes / boneNames / horseBoneNames · SG.Figure.budgets（三角形预算）
 
-   多边形预算（第四版，含兵器与盾，墨线外壳不计）：high ≤ 3.1k（名将 ≤ 3.6k），mid ≤ 1.8k，low（士兵）≤ 900；
+   多边形预算（第四版，含兵器与盾，墨线外壳不计）：high ≤ 3.1k（名将 ≤ 3.2k），mid ≤ 1.8k，low（士兵）≤ 900；
    战马 high ≈ 2.5k，mid ≈ 1.6k，low ≤ 900。超出时按 SQUEEZE 逐级降低细节重建（tpl.squeeze）。SG.Figure.stats().tris 记录实测值。
    ========================================================================== */
 (function () {
@@ -695,9 +695,9 @@
   const SOLDIER_PAL = {
     han: { trousers: '#EADFC4', sleeve: 'team' }, korea: { trousers: '#E4DCC8', sleeve: 'team' },
     nanman: { trousers: '#7A5A3E' }, wa: { trousers: '#3E4A6A' }, yi: { trousers: '#3A3236' },
-    steppe: { trousers: '#6A5440' }, seasia: {}, tarim: { trousers: '#8A6E4E', sleeve: '#E0D4B8' }, kushan: { trousers: '#D4C6A4', sleeve: '#D4C6A4' },
+    steppe: { trousers: '#6A5440', sleeve: '#8C7458' }, seasia: {}, tarim: { trousers: '#8A6E4E', sleeve: '#E0D4B8' }, kushan: { trousers: '#D4C6A4', sleeve: '#D4C6A4' },
     persia: { trousers: '#4A4466', sleeve: '#4A4466' }, arab: { trousers: '#D8CFBC', robe: '#E6DFCF', sleeve: 'cloth' }, roman: {},
-    celt: { trousers: '#7A6A44' }, german: { trousers: '#6A5A44', sleeve: '#8A7A5E' }, sarmatian: { trousers: '#5E4A38' },
+    celt: { trousers: '#7A6A44', sleeve: '#CDBF9C' }, german: { trousers: '#6A5A44', sleeve: '#8A7A5E' }, sarmatian: { trousers: '#5E4A38' },
     india: {}, africa: {}, moor: { trousers: '#D8CDB4', sleeve: '#D8CDB4' },
   };
   const SOLDIER_WEAPON = {
@@ -784,13 +784,13 @@
   // 按《Lanternvale》BipedKit 的做法（经 js/lp-pilot.js 的试点调定）在本文件的人形骨架上建模：每个部件刚性蒙皮在一根骨上，
   // 铰接部件（袍裙侧片、披风、胡须、长发）按顶点位置分骨（MeshBuilder.boneBy）；面朝 +Z、Y 向上、人物左侧为 +X（右手在 −X）。
   // 绑定姿势：A 字（双臂外展 40°，肘直），全部骨骼绑定旋转为单位。
-  // LOD：high（单挑、特写；≤ 3.1k 三角形，名将 ≤ 3.6k）、mid（战场主将、攻击画面将领；≤ 1.8k）、low（士兵；≤ 900）。
+  // LOD：high（单挑、特写；≤ 3.1k 三角形，名将 ≤ 3.2k）、mid（战场主将、攻击画面将领；≤ 1.8k）、low（士兵；≤ 900）。
   const LODK = {
     high: { lim: 7, thigh: 8, tor: 8, hq: 12, hs: 12, eye: 2, ears: 1, pan: 3, det: 2, rnd: 8, fist: [7, 4], sph: [7, 4] },
     mid: { lim: 6, thigh: 6, tor: 8, hq: 9, hs: 10, eye: 1, ears: 1, pan: 2, det: 1, rnd: 6, fist: [5, 2], sph: [5, 2] },
     low: { lim: 5, thigh: 5, tor: 6, hq: 7, hs: 8, eye: 1, ears: 0, pan: 2, det: 0, rnd: 6, fist: [5, 2], sph: [5, 2] },
   };
-  const TRI_BUDGET = { high: 3100, hero: 3300, mid: 1800, low: 900 };
+  const TRI_BUDGET = { high: 3100, hero: 3200, mid: 1800, low: 900 };
   // 超出预算时逐级压缩（细节层次降级，边数减少）
   const SQUEEZE = {
     high: [{ eye: 2, det: 2, pan: 2, rnd: 7 }, { lim: 6, thigh: 6, det: 1, rnd: 7, sph: [6, 3] }, { hq: 9, hs: 10, lim: 6, thigh: 6, det: 1, pan: 2, rnd: 6, sph: [6, 3], fist: [6, 3] }],
@@ -1211,14 +1211,14 @@
       if (!(fat > 0.15)) return;
       const M = this.M, P = M.P, Bv = M.B, N = M.N, T = M.T, V = this.V, k = this.k;
       // 肚腩中心在腰带之上；向下收得快（腰带勒在肚下，肚子盖过腰带），向上缓缓并入胸口
-      const yb = 1.06 * k, A = 0.18 * k * Math.sqrt(fat), w = this.waistR * 1.45;
+      const yb = this.pelvisY + 0.06 * k, A = 0.18 * k * Math.sqrt(fat), w = this.waistR * 1.45;
       // 腰带一圈（含带扣）整体平移、不被拉斜；腰带以下的裙摆再渐渐收回
       const bTop = this.pelvisY + 0.035 * k, bBot = this.pelvisY - 0.045 * k;
       const gUp = y => { const u = (y - yb) / ((y < yb ? 0.06 : 0.085) * k); return Math.exp(-u * u); };
       const gB = Math.max(gUp(bTop), 0.85);        // 腰带（带扣）几乎随肚子一起前移：从正面仍看得到带扣
       const gOf = y => (y >= yb ? gUp(y) : y >= bTop ? Math.max(gUp(y), gB) : y >= bBot ? gB : gB * Math.exp(-((bBot - y) / (0.12 * k)) * ((bBot - y) / (0.12 * k))));
       // 胸骨上的不动（胸肌、胸口那一圈不被斜拉成朝天的亮面）：肚子由腰段（spine）、骨盆段、腰带、裙头鼓出
-      const ok = new Set([B.pelvis, B.spine, B.skirtF, B.skirtB, B.thighL, B.thighR]);
+      const ok = new Set([B.pelvis, B.spine, B.chest, B.skirtF, B.skirtB, B.thighL, B.thighR]);
       const nv = P.length / 3, moved = new Uint8Array(nv);
       for (let i = start; i < nv; i++) {
         if (!ok.has(Bv[i])) continue;
@@ -1240,7 +1240,7 @@
         const o = [N[a * 3], N[a * 3 + 1], N[a * 3 + 2]];
         if (V.dot(n, o) < 0) n = V.neg(n);
         // 新旧法线各半：轮廓出肚子，受光面不至于突然发亮（肚子上沿朝天的面）
-        n = V.norm(V.lerp(o, n, 0.6));
+        n = V.norm(V.lerp(o, n, n[1] > o[1] ? 0.1 : 0.6));
         for (const i of [a, b, c]) { N[i * 3] = n[0]; N[i * 3 + 1] = n[1]; N[i * 3 + 2] = n[2]; }
       }
     }
@@ -1932,7 +1932,7 @@
       M.color = c;
       const a = [s * 0.11 * k, kit.pelvisY, -kit.waistR * kit.depthK - 0.02 * k];
       const m = V.add(a, [s * 0.05 * k, -0.4 * k, -0.12 * k]), b = V.add(a, [s * 0.1 * k, -0.85 * k, -0.18 * k]);
-      M.curvedStrip(a, m, b, 0.06 * k, 0.045 * k, [0, 0, -1], 0.006, D.det >= 2 ? 4 : 2);
+      M.curvedStrip(a, m, b, 0.06 * k, 0.045 * k, [0, 0, -1], 0.006, D.det >= 2 ? 3 : 2);
     }
     M.boneBy(v0, p => (p[1] > kit.pelvisY - 0.08 * k ? B.pelvis : p[1] > kit.J.cape3[1] ? B.skirtB : B.cape3));
     M.windBy(v0, p => 0.5 * clamp01((kit.pelvisY - p[1]) / (0.8 * k)));
@@ -2257,7 +2257,7 @@
           // 雉翎：两根长尾羽，自冠前两侧先向上再向后外方扫开（S 形），黑白相间的羽节，随盔缨骨摆动
           for (const s of [1, -1]) {
             const p0 = kit.capPoint(s * 25, line(25) - 10, 1.05);
-            const n = D.det >= 2 ? 6 : D.det >= 1 ? 5 : 4, pts = [];
+            const n = D.det >= 1 ? 5 : 4, pts = [];
             for (let i = 0; i <= n; i++) {
               const t = i / n, u = 1 - t;
               const c1 = V.add(p0, [s * 0.1 * k, 0.26 * k, 0.02 * k]), c2 = V.add(p0, [s * 0.34 * k, 0.58 * k, -0.2 * k]), e = V.add(p0, [s * 0.52 * k, 0.66 * k, -0.62 * k]);
@@ -2748,11 +2748,11 @@
         // 方天画戟：朱杆、金箍、矛尖 + 两侧月牙刃、红色彩带
         K.shaft(-0.95, 1.4, 0.02, '#7A2A24', 0.05);
         K.spike(-0.95, 0.09, 0.019, PALF.gold, true);
-        for (const y of [-0.85, 0.2, 1.28]) K.ring(y, 0.024, 0.04, PALF.gold);
+        for (const y of [-0.85, 1.28]) K.ring(y, 0.024, 0.04, PALF.gold);
         K.col(PALF.gold); M.cylinder([0, 1.33, 0], 0.03, 0.024, 0.08, K.sides);
         K.blade([[1.41, 0.03, 0.03, 0.009], [1.52, 0.04, 0.04, 0.008], [1.66, 0.032, 0.032, 0.007], [1.86, 0, 0, 0.002]], true, PALF.steel);
         for (const sg of [1, -1]) {
-          K.arcBlade(1.37, sg * 0.04, 0.12, sg > 0 ? -1.15 : PI + 1.15, sg > 0 ? 1.15 : PI - 1.15, t => 0.05 * (1 - Math.pow(2 * t - 1, 2)) + 0.004, 0.006, '#E8EEF2', det >= 1 ? 6 : 3);
+          K.arcBlade(1.37, sg * 0.04, 0.12, sg > 0 ? -1.15 : PI + 1.15, sg > 0 ? 1.15 : PI - 1.15, t => 0.05 * (1 - Math.pow(2 * t - 1, 2)) + 0.004, 0.006, '#E8EEF2', det >= 1 ? 5 : 3);
           K.col(PALF.gold); M.segment([0, 1.37, 0], [0, 1.37, sg * 0.05], 0.012, 0.012, 4);
         }
         if (det >= 1) {

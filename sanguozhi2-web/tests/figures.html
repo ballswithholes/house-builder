@@ -254,7 +254,7 @@
     renderPoseButtons();
   }
   // ------------------------------------------------------------ 自动检查（?mode=check）--
-  // 倒地 / 跪地片段不穿地、双手长兵左手在杆上、三角形预算（第四版：high 3.1k / 名将 3.3k / mid 1.8k / 士兵 900 / 战马）、裸身肤色与面部一致、士兵群绘制次数（含阴影、墨线）
+  // 倒地 / 跪地片段不穿地、双手长兵左手在杆上、三角形预算（第四版：high 3.1k / 名将 3.2k / mid 1.8k / 士兵 900 / 战马）、裸身肤色与面部一致、士兵群绘制次数（含阴影、墨线）
   function runChecks() {
     const R = [], ok = (name, pass, info) => R.push({ name, pass, info });
     const v = new THREE.Vector3(), a = new THREE.Vector3(), b = new THREE.Vector3(), g = new THREE.Vector3(), ab = new THREE.Vector3(), ag = new THREE.Vector3();
@@ -291,8 +291,8 @@
     const W2 = SG.Scenarios && SG.Scenarios.world;
     const all = W2 ? W2.Generals.map(l => l.split('|')[0]) : names;
     const step = Q.has('all') ? 1 : 6;
-    // 第四版预算（含兵器与盾，墨线外壳不计）：high ≤ 3.1k（名将 ≤ 3.6k）、mid ≤ 1.8k、士兵 low ≤ 900；战马 high ≤ 2.6k、mid ≤ 1.8k、low ≤ 900
-    const BUD = SG.Figure.budgets || { high: 3100, hero: 3600, mid: 1800, low: 900 };
+    // 第四版预算（含兵器与盾，墨线外壳不计）：high ≤ 3.1k（名将 ≤ 3.2k）、mid ≤ 1.8k、士兵 low ≤ 900；战马 high ≤ 2.6k、mid ≤ 1.8k、low ≤ 900
+    const BUD = SG.Figure.budgets || { high: 3100, hero: 3200, mid: 1800, low: 900 };
     let hi = 0, hh = 0, mid = 0, lo = 0, hn = '', hhn = '', mn = '', ln = '', sq = 0;
     for (let i = 0; i < all.length; i += step) for (const lod of ['high', 'mid']) {
       const f = SG.Figure.general(gen(all[i]), { lod, color: gen(all[i]).color });
